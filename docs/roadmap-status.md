@@ -12,7 +12,7 @@
 > **Last reviewed:** 2026-06-10
 
 **Status:** Canonical roadmap tracking document
-**Last updated:** 2026-06-10 (Sprint 1 truth pass: H4/H5/H6 clusters labeled unwired; acceptance tier 628 passed at `85109e4`; full-suite count unverified — see [suite truncation analysis](analysis/suite-truncation-root-cause-2026-06-10.md))
+**Last updated:** 2026-06-10 (Sprint 1 truth pass: H4/H5/H6 clusters labeled unwired; acceptance tier snapshot `628 passed` at `85109e4` on 2026-06-10; historical evidence snapshot, not current collection; full-suite count unverified — see [suite truncation analysis](analysis/suite-truncation-root-cause-2026-06-10.md))
 **Owner:** TBD
 
 > **Canonical source of truth.** All other status docs (`docs/security/risk-register-and-threat-model-2026-06-02.md`, `docs/analysis/defeat-scenarios-and-cascade-effects-2026-06-02.md`, `docs/analysis/active-findings-status-ledger-2026-06-06.md`) defer to this document for overall completion status. Per-item test evidence lives in the risk register §9.
@@ -26,7 +26,7 @@ Provide a single source of truth for roadmap item status, ownership, confidence,
 | Horizon | Name | Target Outcome | Owner | Status | Confidence | Next Gate | Exit Evidence |
 |---------|------|----------------|-------|--------|------------|-----------|---------------|
 | H0 | Claim and risk hygiene | Public claims, risk register, docs gates, and tool warnings are owned | governance | Complete | High | H1 | H0 exit evidence met; all M0 checks pass |
-| H1 | Daily operator loop | Setup, daily cockpit, plan, execute, approve, verify, recover, and remember are one coherent journey | governance | Complete | High | H2 | Journey acceptance tests pass across CLI/TUI baseline; acceptance tier 628 passed at `85109e4` (2026-06-10) |
+| H1 | Daily operator loop | Setup, daily cockpit, plan, execute, approve, verify, recover, and remember are one coherent journey | governance | Complete | High | H2 | Journey acceptance tests pass across CLI/TUI baseline; acceptance tier snapshot `628 passed` at `85109e4` (2026-06-10) |
 | H2 | Multi-surface continuity | CLI, TUI, IDE, dashboard, background, cloud, and gateway share one run-state contract | TBD | Partially fixed — M2 foundation wired | Medium | WDA-002 | M2 acceptance complete; full surface parity (IDE/dashboard/cloud) still open |
 | H3 | Ecosystem trust | MCP, plugins, skills, hooks, subagents, and automations are explainable, revocable, and testable | TBD | Partially fixed — M3 tests pass | Medium | WDC-002 | M3 acceptance complete; general-user trust onboarding simplification still open |
 | H4 | Durable team operations | Long-running and team workflows have durable execution, control-plane views, policy, audit, and cost attribution | TBD | Partially fixed — shadow wired | Low | WDA-004 | Policy/RBAC shadow-wired (WDA-002/003); consensus deferred (ADR 0029) |
@@ -214,3 +214,7 @@ Current evidence package:
   `docs/work-log/documentation-optimization-work-items-2026-06-04.md`
 - Phase 0 governance closure evidence is tracked in
   `docs/work-log/phase-0-governance-closure-report-2026-06-04.md`
+- Full pytest collection is expected to run from the development environment
+  declared in `pyproject.toml`; `hypothesis` already appears under
+  `project.optional-dependencies.dev`, so the June 11 collection failure was an
+  environment provisioning gap rather than a missing dependency declaration.

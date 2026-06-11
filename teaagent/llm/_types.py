@@ -97,6 +97,57 @@ class LLMSafetyBlock:
     detail: str = ''
 
 
+class CostSource(str, Enum):
+    """How the cost figure in GovernanceMetadata was obtained."""
+
+    ESTIMATED = 'estimated'
+    UNKNOWN = 'unknown'
+
+
+class RefusalClass(str, Enum):
+    """Normalized classification of why a provider declined to generate content."""
+
+    NONE = 'none'
+    SAFETY_BLOCK = 'safety_block'
+    CONTENT_FILTER = 'content_filter'
+    RATE_LIMIT = 'rate_limit'
+    CONTEXT_LENGTH = 'context_length'
+    AUTH_ERROR = 'auth_error'
+    PROVIDER_ERROR = 'provider_error'
+    UNKNOWN = 'unknown'
+
+
+class ToolCallFormat(str, Enum):
+    """Wire format the provider used to represent tool calls in its raw response."""
+
+    ANTHROPIC = 'anthropic'
+    OPENAI = 'openai'
+    GEMINI = 'gemini'
+    NORMALIZED = 'normalized'
+    NONE = 'none'
+
+
+@dataclass(frozen=True)
+class GovernanceMetadata:
+    """Required governance fields every provider adapter must populate.
+
+    Any field the provider cannot supply must use its explicit sentinel
+    (UNKNOWN / None) rather than a default zero that looks like real data.
+    """
+
+    provider_id: str
+    model_id: str
+    input_tokens: int
+    output_tokens: int
+    tokens_known: bool
+    estimated_cost_cents: float
+    cost_source: CostSource
+    actual_cost_cents: Optional[float]
+    tool_call_format: ToolCallFormat
+    refusal_class: RefusalClass
+    streaming_supported: bool
+
+
 @dataclass(frozen=True)
 class LLMRequest:
     messages: list[LLMMessage]
@@ -120,14 +171,45 @@ class LLMResponse:
     output_tokens: int = 0
     tool_calls: list[LLMToolCall] = field(default_factory=list)
     safety: Optional[LLMSafetyBlock] = None
+    governance: Optional[GovernanceMetadata] = None
+
+    def __post_init__(self) -> None:
+        if self.governance is None:
+            from teaagent.llm._config import _estimate_cost  # noqa: PLC0415
+
+            tokens_known = self.input_tokens > 0 or self.output_tokens > 0
+            cost = (
+                _estimate_cost(
+                    self.provider, self.model, self.input_tokens, self.output_tokens
+                )
+                if tokens_known
+                else 0.0
+            )
+            object.__setattr__(
+                self,
+                'governance',
+                GovernanceMetadata(
+                    provider_id=self.provider,
+                    model_id=self.model,
+                    input_tokens=self.input_tokens,
+                    output_tokens=self.output_tokens,
+                    tokens_known=tokens_known,
+                    estimated_cost_cents=cost,
+                    cost_source=CostSource.ESTIMATED
+                    if tokens_known
+                    else CostSource.UNKNOWN,
+                    actual_cost_cents=None,
+                    tool_call_format=ToolCallFormat.NORMALIZED,
+                    refusal_class=RefusalClass.NONE,
+                    streaming_supported=False,
+                ),
+            )
 
     @property
     def estimated_cost_cents(self) -> float:
-        from teaagent.llm._config import _estimate_cost  # noqa: PLC0415
-
-        return _estimate_cost(
-            self.provider, self.model, self.input_tokens, self.output_tokens
-        )
+        g = self.governance
+        assert g is not None  # guaranteed by __post_init__
+        return g.estimated_cost_cents
 
 
 @dataclass(frozen=True)

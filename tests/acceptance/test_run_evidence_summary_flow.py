@@ -12,11 +12,20 @@ Acceptance criteria:
 
 from __future__ import annotations
 
+import io
 import json
+from contextlib import redirect_stdout
+from pathlib import Path
+from unittest.mock import patch
 
+from conftest import FakeAdapter
+
+from teaagent.cli import main
+from teaagent.plan import load_plan_contract
 from teaagent.run_evidence import (
     build_run_evidence_bundle,
 )
+from teaagent.run_receipt import build_run_receipt, check_receipt_completeness
 from teaagent.run_store import RunStore
 from teaagent.types import AuditLogger
 
@@ -257,6 +266,99 @@ def test_evidence_summary_sensitive_values_redacted(tmp_path):
     bundle_dict = bundle.to_dict()
     bundle_json = json.dumps(bundle_dict)
     assert 'my secret password' not in bundle_json, 'Sensitive content must be redacted'
+
+
+def test_real_run_receipt_completeness_from_plan(tmp_path: Path) -> None:
+    """A governed run from plan should produce a complete human receipt."""
+    calc = tmp_path / 'calc.py'
+    test_file = tmp_path / 'test_calc.py'
+    calc.write_text('def add(a, b):\n    return a - b\n', encoding='utf-8')
+    test_file.write_text(
+        'from calc import add\n\ndef test_add():\n    assert add(1, 2) == 3\n',
+        encoding='utf-8',
+    )
+
+    plans_dir = tmp_path / '.teaagent' / 'plans'
+    plans_dir.mkdir(parents=True, exist_ok=True)
+    plan_artifact = plans_dir / 'receipt-complete.md'
+    plan_artifact.write_text(
+        '# Plan\n\n'
+        '## Summary\n'
+        '- **Task:** Fix calc.py so pytest passes\n\n'
+        '## Files likely touched\n'
+        '- `calc.py`\n'
+        '- `test_calc.py`\n',
+        encoding='utf-8',
+    )
+    plan_contract = load_plan_contract(plan_artifact, root=tmp_path)
+
+    adapter = FakeAdapter(
+        [
+            json.dumps(
+                {
+                    'type': 'tool',
+                    'tool_name': 'workspace_write_file',
+                    'arguments': {
+                        'path': 'calc.py',
+                        'content': 'def add(a, b):\n    return a + b\n',
+                    },
+                    'call_id': 'write-calc',
+                }
+            ),
+            json.dumps(
+                {
+                    'type': 'tool',
+                    'tool_name': 'workspace_run_shell_inspect',
+                    'arguments': {'command': "rg 'return a \\+ b' calc.py"},
+                    'call_id': 'verify-calc',
+                }
+            ),
+            '{"type":"final","content":"calc fixed and verified"}',
+        ]
+    )
+
+    run_out = io.StringIO()
+    with (
+        patch('teaagent.cli.create_llm_adapter', return_value=adapter),
+        redirect_stdout(run_out),
+    ):
+        run_code = main(
+            [
+                'run',
+                'gpt',
+                '--from-plan',
+                str(plan_artifact),
+                '--root',
+                str(tmp_path),
+                '--permission-mode',
+                'prompt',
+                '--allow-external-plan',
+                '--require-plan',
+                '--approve-call-id',
+                'write-calc',
+                '--max-iterations',
+                '8',
+                '--max-tool-calls',
+                '8',
+            ]
+        )
+
+    run_payload = json.loads(run_out.getvalue())
+    assert run_code == 0
+    assert run_payload['status'] == 'completed'
+    assert run_payload['plan_contract']['content_hash'] == plan_contract.content_hash
+    assert run_payload['run_evidence']['commands_run']
+    assert run_payload['run_evidence']['approvals']
+
+    receipt = build_run_receipt(RunStore(tmp_path), run_payload['run_id'], tmp_path)
+    assert check_receipt_completeness(receipt, include_plan=True) == []
+    assert 'Permission mode: prompt' in receipt
+    assert f'Plan: {plan_contract.rel_path}' in receipt
+    assert 'Final result: calc fixed and verified' in receipt
+    assert 'Commands run:' in receipt
+    assert '- [redacted] [exit 0]' in receipt
+    assert 'Approvals:' in receipt
+    assert 'workspace_write_file: granted' in receipt
 
 
 def test_evidence_summary_serialization(tmp_path):

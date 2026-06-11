@@ -30,6 +30,7 @@ from teaagent.llm import (
     LLMMessage,
     LLMRequest,
 )
+from teaagent.llm._types import CostSource
 from teaagent.memory import MemoryCatalog, memory_entries_to_prompt
 from teaagent.policy import PermissionMode
 from teaagent.prompt import (
@@ -276,7 +277,10 @@ class ModelDecisionEngine:
                 )
             )
             last_response_content = response.content
-            self.usage.cost_cents += float(response.estimated_cost_cents)
+            g = response.governance
+            assert g is not None
+            if g.cost_source != CostSource.UNKNOWN:
+                self.usage.cost_cents += float(response.estimated_cost_cents)
             self.usage.input_tokens += int(response.input_tokens)
             self.usage.output_tokens += int(response.output_tokens)
             context['_cost_cents'] = self.usage.cost_cents
@@ -770,6 +774,8 @@ def _run_chat_agent_impl(
     run_started_extra = _apply_plan_contract(runner, context_extra) or {}
     run_started_extra = {
         **run_started_extra,
+        'provider': str(context_extra.get('provider', '') or ''),
+        'model': str(context_extra.get('model', '') or config.model or ''),
         'permission_mode': config.permission_mode.value,
     }
 

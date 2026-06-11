@@ -6,6 +6,8 @@ import json
 import os
 import pty
 import tempfile
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 from unittest.mock import MagicMock, PropertyMock, patch
 
@@ -251,7 +253,14 @@ def test_state_panel_no_error() -> None:
             input_fn=lambda _p: '',
             output_fn=output.append,
         )
-        tui._print_state_panel()
+        stdout = StringIO()
+        with redirect_stdout(stdout):
+            tui._print_state_panel()
+
+        rendered = stdout.getvalue()
+        assert 'TeaAgent TUI' in rendered
+        assert 'State Panel' in rendered
+        assert 'error:' not in rendered.lower()
 
     # ── TASK-DD2-013: Hardened path tests ─────────────────────────────────────
 

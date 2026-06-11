@@ -53,3 +53,10 @@ Before claiming a feature **Stable**, it must have:
 - Documented CLI or API entry point
 - Acceptance or integration test reference in [maturity-matrix.md](maturity-matrix.md)
 - Known failure modes listed in [threat-model.md](threat-model.md) when security-relevant
+
+## Claim Traceability
+
+Top-10 product claims are tracked with evidence commands and acceptance test references in
+[docs/architecture/claim-to-test-traceability-matrix.md](architecture/claim-to-test-traceability-matrix.md).
+Claims without a test reference must be labelled **roadmap**, not current capability.
+The matrix is validated by `tests/acceptance/test_claim_traceability.py`.

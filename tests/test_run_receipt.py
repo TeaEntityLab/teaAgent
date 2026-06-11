@@ -6,8 +6,10 @@ import json
 import tempfile
 
 from teaagent.evidence_summary import build_evidence_summary
+from teaagent.run_evidence import build_run_evidence_bundle
 from teaagent.run_receipt import (
     build_run_receipt,
+    check_receipt_completeness,
     extract_run_receipt_context,
     format_run_receipt,
 )
@@ -31,20 +33,79 @@ def test_format_run_receipt_includes_required_sections():
                 'task': 'fix failing test',
                 'provider': 'anthropic',
                 'model': 'claude-sonnet',
+                'permission_mode': 'workspace-write',
+                'plan_path': '.teaagent/plans/receipt.md',
+                'plan_content_hash': 'abc123',
+            },
+        },
+        {
+            'event_type': 'tool_call_started',
+            'timestamp': '2026-06-06T10:01:00Z',
+            'payload': {
+                'tool_name': 'workspace_write_file',
+                'call_id': 'write-1',
+                'arguments': {'path': 'foo.py', 'content': 'x'},
             },
         },
         {
             'event_type': 'tool_call_completed',
-            'timestamp': '2026-06-06T10:01:00Z',
+            'timestamp': '2026-06-06T10:01:30Z',
             'payload': {
                 'tool_name': 'workspace_write_file',
+                'call_id': 'write-1',
                 'arguments': {'path': 'foo.py', 'content': 'x'},
+                'result': {'path': 'foo.py', 'exit_code': 0},
+            },
+        },
+        {
+            'event_type': 'approval_requested',
+            'timestamp': '2026-06-06T10:01:40Z',
+            'payload': {
+                'call_id': 'write-1',
+                'tool_name': 'workspace_write_file',
+                'auto_approved': False,
+                'arguments': {'path': 'foo.py'},
+            },
+        },
+        {
+            'event_type': 'approval_granted',
+            'timestamp': '2026-06-06T10:01:45Z',
+            'payload': {
+                'call_id': 'write-1',
+                'tool_name': 'workspace_write_file',
+                'auto_approved': False,
+                'approved_by': 'tester',
+                'arguments': {'path': 'foo.py'},
+            },
+        },
+        {
+            'event_type': 'tool_call_started',
+            'timestamp': '2026-06-06T10:02:00Z',
+            'payload': {
+                'tool_name': 'workspace_run_shell_mutate',
+                'call_id': 'verify-1',
+                'arguments': {'command': 'python -m pytest -q'},
+            },
+        },
+        {
+            'event_type': 'tool_call_completed',
+            'timestamp': '2026-06-06T10:02:30Z',
+            'payload': {
+                'tool_name': 'workspace_run_shell_mutate',
+                'call_id': 'verify-1',
+                'arguments': {'command': 'python -m pytest -q'},
+                'result': {
+                    'command': 'python -m pytest -q',
+                    'exit_code': 0,
+                    'stdout': '1 passed',
+                    'stderr': '',
+                },
             },
         },
         {
             'event_type': 'run_completed',
             'timestamp': '2026-06-06T10:05:00Z',
-            'payload': {'cost_cents': 42},
+            'payload': {'cost_cents': 42, 'answer': 'calc fixed'},
         },
     ]
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -58,13 +119,24 @@ def test_format_run_receipt_includes_required_sections():
             root=tmpdir,
             store=store,
         )
-        text = format_run_receipt(summary, context)
+        text = format_run_receipt(
+            summary,
+            context,
+            bundle=build_run_evidence_bundle(tmpdir, run_id),
+            events=events,
+        )
         assert 'Run receipt: receipt-001' in text
         assert 'Goal: fix failing test' in text
         assert 'Provider/model: anthropic / claude-sonnet' in text
+        assert 'Permission mode: workspace-write' in text
+        assert 'Plan: .teaagent/plans/receipt.md' in text
+        assert 'Plan hash: abc123' in text
         assert 'Audit log:' in text
         assert 'workspace_write_file' in text
+        assert 'python -m pytest -q [exit 0]' in text
+        assert 'Final result: calc fixed' in text
         assert 'Cost:' in text
+        assert check_receipt_completeness(text, include_plan=True) == []
 
 
 def test_build_run_receipt_for_missing_run():

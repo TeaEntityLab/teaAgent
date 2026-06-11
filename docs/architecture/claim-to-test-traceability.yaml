@@ -1,0 +1,203 @@
+# Claim-to-Test Traceability Matrix (machine-readable)
+# See: docs/architecture/claim-to-test-traceability-matrix.md
+# Validated by: tests/acceptance/test_claim_traceability.py
+
+version: "1"
+last_verified: "2026-06-11"
+
+claims:
+  - id: C1
+    name: local-first
+    claim: >
+      TeaAgent runs against a local workspace root with explicit permission modes.
+      No cloud delegation by default.
+    source_docs:
+      - path: README.md
+        line: 8
+        excerpt: "local-first harness you operate"
+      - path: docs/product-contract.md
+        line: 9
+        excerpt: "Local-first by default — runs against a workspace root"
+    acceptance_tests:
+      - tests/acceptance/test_workspace_edit_flow.py
+      - tests/acceptance/test_first_hour_e2e_flow.py
+    evidence_command: "teaagent run \"summarize the test suite\" --permission-mode read-only --root ."
+    status: shipping
+    gap: >
+      No negative assertion that a cloud endpoint is never called in default mode.
+      Coverage is structural (all acceptance tests use local tmp_path).
+
+  - id: C2
+    name: provider-agnostic
+    claim: >
+      TeaAgent adapts to multiple LLM providers via a provider-adapter pattern;
+      not tied to one model vendor.
+    source_docs:
+      - path: README.md
+        line: 198
+        excerpt: "(14 providers)"
+      - path: docs/product-contract.md
+        line: 10
+        excerpt: "Provider-adapter based — connects to LLM providers"
+    acceptance_tests:
+      - tests/acceptance/test_provider_matrix_consistency_flow.py
+      - tests/acceptance/test_live_provider_conformance_flow.py
+    evidence_command: "pytest tests/acceptance/test_provider_matrix_consistency_flow.py -v"
+    status: shipping
+    gap: >
+      Live multi-provider conformance test skips without TEAAGENT_ACCEPT_LIVE_CONFORMANCE env var.
+      "14 providers" count is only verified by registry-vs-docs consistency, not by exercising
+      each provider adapter.
+
+  - id: C3
+    name: permission-modes
+    claim: >
+      Five permission modes enforced at the harness level: read-only, workspace-write,
+      prompt, allow, danger-full-access.
+    source_docs:
+      - path: docs/product-contract.md
+        line: 14
+        excerpt: "Permission-mode enforced — read-only, workspace-write, prompt, allow, and danger-full-access are first-class"
+      - path: README.md
+        line: 198
+        excerpt: "(5 permission modes)"
+    acceptance_tests:
+      - tests/acceptance/test_plan_mode_read_only_flow.py
+      - tests/acceptance/test_automation_permission_and_autopropose_flow.py
+    evidence_command: "pytest tests/acceptance/test_plan_mode_read_only_flow.py -v"
+    status: shipping
+    gap: >
+      No single test exercises all five modes in one run. danger-full-access coverage is
+      indirect (via policy-as-code test). prompt and allow modes are exercised indirectly
+      in automation tests.
+
+  - id: C4
+    name: policy-as-code
+    claim: >
+      Workspace policy.yaml defines deny rules that block matching tool calls before execution.
+    source_docs:
+      - path: docs/acceptance.md
+        line: 89
+        excerpt: "test_policy_as_code_flow.py | Policy-as-code deny rules"
+      - path: docs/product-contract.md
+        line: 11
+        excerpt: "Tool-boundary centered — all side effects flow through ToolRegistry, ApprovalPolicy"
+    acceptance_tests:
+      - tests/acceptance/test_policy_as_code_flow.py
+    evidence_command: "pytest tests/acceptance/test_policy_as_code_flow.py -v"
+    status: shipping
+    gap: null
+
+  - id: C5
+    name: cost-boundary
+    claim: >
+      Hard cost cap enforced via --max-estimated-cost-cents; run aborts if budget ceiling is hit.
+    source_docs:
+      - path: README.md
+        line: 31
+        excerpt: "Cost cap | ✅ hard budget via `--max-estimated-cost-cents`"
+      - path: docs/strategy/reflective-strategic-assessment-2026-06-06.md
+        line: 67
+        excerpt: "Hard cost cap (`--max-estimated-cost-cents`) | Stable"
+    acceptance_tests:
+      - tests/acceptance/test_automation_budget_caps_flow.py
+      - tests/acceptance/test_cost_tracking_flow.py
+    evidence_command: "pytest tests/acceptance/test_automation_budget_caps_flow.py tests/acceptance/test_cost_tracking_flow.py -v"
+    status: shipping
+    gap: >
+      Parent cost caps are NOT propagated to child agents (documented gap). The claim covers
+      single-agent runs only. Child-propagation is roadmap.
+
+  - id: C6
+    name: audit-log
+    claim: >
+      Every iteration, tool call, approval decision, and final result is recorded in per-run
+      append-only JSONL with SHA-256 hash-chain and sensitive-value redaction.
+    source_docs:
+      - path: docs/product-contract.md
+        line: 12
+        excerpt: "Audit-first — every iteration, tool call, approval decision, and final result is recorded"
+      - path: docs/strategy/reflective-strategic-assessment-2026-06-06.md
+        line: 66
+        excerpt: "Append-only JSONL audit log with SHA-256 hash-chain | Stable"
+    acceptance_tests:
+      - tests/acceptance/test_audit_chain_integrity_flow.py
+    evidence_command: "pytest tests/acceptance/test_audit_chain_integrity_flow.py -v"
+    status: shipping
+    gap: null
+
+  - id: C7
+    name: run-evidence
+    claim: >
+      Evidence bundle includes changed files, commands run, tests passed, approvals granted,
+      denied actions, cost totals, known failures, and rollback path.
+    source_docs:
+      - path: docs/acceptance.md
+        line: 98
+        excerpt: "test_run_evidence_summary_flow.py | Run evidence summary"
+    acceptance_tests:
+      - tests/acceptance/test_run_evidence_summary_flow.py
+    evidence_command: "pytest tests/acceptance/test_run_evidence_summary_flow.py -v"
+    status: shipping
+    gap: null
+
+  - id: C8
+    name: undo-recovery
+    claim: >
+      Undo journal captures pre-write workspace state; teaagent undo --last restores modified
+      and new files to the pre-run baseline.
+    source_docs:
+      - path: docs/acceptance.md
+        line: 93
+        excerpt: "test_run_undo_acceptance_flow.py | Reversible change recovery"
+      - path: README.md
+        line: 30
+        excerpt: "Undo | ✅ `teaagent undo --last`"
+    acceptance_tests:
+      - tests/acceptance/test_run_undo_acceptance_flow.py
+      - tests/acceptance/test_agent_undo_cli_flow.py
+    evidence_command: "teaagent undo --last"
+    status: shipping
+    gap: null
+
+  - id: C9
+    name: plan-spec-gate
+    claim: >
+      --require-plan binds a run to a plan artifact; --from-plan records plan provenance in the
+      audit trail. High-risk runs without a plan are blocked when the gate is enabled.
+    source_docs:
+      - path: docs/product-contract.md
+        line: 32
+        excerpt: "hash-anchored edits, protected paths, optional plan binding (--from-plan, --require-plan)"
+      - path: docs/roadmap-status.md
+        line: 110
+        excerpt: "SCL-P0-001 | Bind high-risk runs to a spec or plan receipt. | Complete"
+    acceptance_tests:
+      - tests/acceptance/test_plan_cli_flow.py
+      - tests/acceptance/test_from_plan_cli_flow.py
+      - tests/acceptance/test_plan_mode_read_only_flow.py
+    evidence_command: "pytest tests/acceptance/test_plan_cli_flow.py tests/acceptance/test_from_plan_cli_flow.py -v"
+    status: shipping
+    gap: null
+
+  - id: C10
+    name: docs-as-control-plane
+    claim: >
+      The docs corpus is the governance control plane. Claims in docs must correspond to
+      verifiable test evidence. Stale docs are a governance failure, not a cosmetic issue.
+    source_docs:
+      - path: docs/analysis/intent-reassessment-and-worklist-2026-06-11.md
+        line: 146
+        excerpt: "If docs are the control plane, stale evidence inside docs is not cosmetic"
+      - path: docs/analysis/teaagent-evidence-ledger-2026-06-04.md
+        line: 41
+        excerpt: "the docs corpus is now a control plane. Its job is to keep state truthful"
+    acceptance_tests:
+      - tests/acceptance/test_docs_acceptance_count_accuracy.py
+      - tests/acceptance/test_claim_traceability.py
+    evidence_command: "pytest tests/acceptance/test_docs_acceptance_count_accuracy.py tests/acceptance/test_claim_traceability.py -v"
+    status: experimental
+    gap: >
+      Stale docs = governance failure is a design principle, not a fully automated check.
+      Drift-detection tests enforce count accuracy and claim-file existence, but do not verify
+      claim-text accuracy against code behavior. Semantic drift detection is roadmap.

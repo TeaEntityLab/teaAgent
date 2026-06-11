@@ -12,6 +12,32 @@
 > When the two files disagree, use this file for claim hygiene rules and the
 > self-comparison matrix for competitor-by-competitor rows.
 
+## 2026-06-11 Claim Classes and Capability Surfaces
+
+The 2026-06-11 intent reassessment
+([source](intent-reassessment-and-worklist-2026-06-11.md)) treats competitive
+wording as a three-part stack: evidence, inference, and positioning.
+
+- Evidence: behavior documented in the repo, tests, or the source-backed
+  comparison corpus.
+- Inference: a bounded comparison or synthesis drawn from that evidence.
+- Positioning: public-facing wording that must stay conditional unless it is
+  separately sourced and dated.
+
+Capability surfaces to use when classifying TeaAgent claims:
+
+| Surface | TeaAgent status as of 2026-06-11 | Claim posture |
+| --- | --- | --- |
+| Local CLI / TUI | Implemented and central to the current product shape. | Evidence |
+| IDE | No first-class extension is shipped in this corpus. | Gap / negative evidence |
+| Cloud / background | Experimental or gated; not production-validated here. | Conditional |
+| Enterprise / admin | Governance primitives exist, but deployment evidence is incomplete. | Conditional |
+| Open-source / self-hosted | Yes. | Evidence |
+| Provider / model flexibility | Yes. | Evidence |
+
+Use this surface map to keep comparisons bounded. If a claim crosses surfaces,
+rewrite it as evidence plus inference rather than as a universal fact.
+
 ---
 
 ## Freshness Rule
@@ -60,7 +86,7 @@ Volatile or unsafe without same-day refresh:
 
 | Claim candidate | Allowed wording | Disallowed wording | Reason |
 | --- | --- | --- | --- |
-| TeaAgent has a governance advantage. | "TeaAgent's strongest differentiator in this repo is local-first governance: tool schemas, approval modes, audit records, cost caps, run evidence, and provider flexibility." | "TeaAgent is the most secure coding agent." | Security superiority requires independent audit and complete competitor review. |
+| TeaAgent has a governance advantage. | "Evidence: TeaAgent exposes tool schemas, approval modes, audit records, cost caps, run evidence, and provider flexibility. Inference: those primitives make local-first governance TeaAgent's strongest differentiator in this repo and selected comparison set." | "TeaAgent is the most secure coding agent." | Security superiority requires independent audit and complete competitor review. |
 | Competitors lead on remote agents. | "Several major competitors now offer hosted or remote async agent workflows." | "Everyone else is remote-first." | Aider/OpenCode and local IDE modes remain relevant local-first or terminal-first options. |
 | TeaAgent is remote-agent-ready. | "TeaAgent has local subagent and swarm experiments, but remote-ready claims are blocked by WS2 safety gates." | "TeaAgent already supports production remote multi-agent teams." | Durable queues, budget inheritance, isolation defaults, and crash recovery are not complete. |
 | TeaAgent has audit primitives. | "TeaAgent has hash-chained audit logs and exportable run evidence in the codebase." | "TeaAgent is compliance-certified." | Certification and operational controls are not the same as local primitives. |
@@ -92,12 +118,13 @@ Volatile or unsafe without same-day refresh:
 
 ## Current Safe Positioning
 
-Safe concise positioning:
+Safe concise positioning, current to 2026-06-11:
 
 > TeaAgent is a local-first, provider-agnostic governance harness for agentic
-> coding work. Its near-term advantage is not polished remote delegation; it is
-> making model decisions, tool calls, approvals, cost estimates, file changes,
-> run evidence, and recovery paths inspectable.
+> coding work. As of 2026-06-11, the strongest comparative evidence is in the
+> local CLI/TUI governance path: making model decisions, tool calls, approvals,
+> cost estimates, file changes, run evidence, and recovery paths inspectable.
+> IDE, cloud/background, and enterprise packaging remain partial or gated.
 
 Unsafe positioning:
 
@@ -149,4 +176,3 @@ The durable conclusions remain useful:
 4. Compare every competitor on the same axis before making a comparative claim.
 5. Label every TeaAgent-side assertion as code evidence, inference, plan, or unknown.
 6. Update this file when a public claim moves from unsafe to conditionally safe.
-

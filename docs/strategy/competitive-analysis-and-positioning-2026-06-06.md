@@ -23,6 +23,16 @@
 > `docs/analysis/`, use that for verified competitor claims and treat this
 > document as the strategic framing layer only.
 
+> **2026-06-11 claim hygiene overlay:** Treat the comparison below as
+> point-in-time and surface-specific. In this document, evidence means behavior
+> documented in the repo or in the source-backed comparison corpus; inference
+> means a bounded synthesis from that evidence; positioning means the intended
+> market story and is not a factual claim unless separately sourced and dated.
+> The current comparison surfaces are local CLI/TUI, IDE, cloud/background,
+> enterprise/admin, open-source/self-hosted, and provider/model flexibility.
+> When a claim crosses surfaces, prefer the audit file first:
+> [competitive-claim-audit-2026-06-06.md](../analysis/competitive-claim-audit-2026-06-06.md).
+
 ---
 
 ## Table of Contents
@@ -427,15 +437,16 @@ The market in mid-2026 has a clear structure:
 | IDE integration | Cursor / Cline | Challenger — TUI/CLI first |
 | Remote async work | Cursor / Devin | Not competing yet — gated by WS2 |
 | Terminal UX | OpenCode / Aider | Competitive — similar surface, deeper governance |
-| Governance/audit | TeaAgent | **Leader within OSS** |
-| Cost enforcement | TeaAgent / Devin | **Leader in OSS**; Devin leads in enterprise SaaS |
+| Governance/audit | TeaAgent | Strongest governance bundle in this comparison set |
+| Cost enforcement | TeaAgent / Devin | Strongest hard-cap story in this comparison set; Devin leads in enterprise SaaS |
 | Multi-provider | TeaAgent / OpenCode | Joint leaders |
 | Open source | TeaAgent / OpenCode / Aider | Three-way tie |
 
-The governance and cost enforcement axis is the only axis where TeaAgent is
-clearly ahead across the open-source competitive set. Everything else is either
-a competitive weakness or a shared position. The go-to-market strategy must
-consolidate around this genuine advantage.
+Within this comparison set, governance and cost enforcement are TeaAgent's
+clearest advantages. Treat that as a positioning inference, not a universal
+ranking. Everything else is either a competitive weakness or a shared position.
+The go-to-market strategy should consolidate around that evidence-backed
+strength.
 
 ---
 
@@ -478,9 +489,10 @@ consolidate around this genuine advantage.
   `teaagent/audit.py` and `teaagent/audit_chain.py`. This is not the same as
   "logging to a file." Hash-chaining means log entries are cryptographically
   linked — a deleted or modified entry breaks the chain and can be detected.
-  No other open-source tool in this set has documented an equivalent. Claude Code
-  has hooks that can export events, but the integrity guarantee is not documented.
-  Devin has MCP audit logs, but no published integrity mechanism.
+  Inference: no other open-source tool in this set is documented here with an
+  equivalent. Claude Code has hooks that can export events, but the integrity
+  guarantee is not documented. Devin has MCP audit logs, but no published
+  integrity mechanism.
 
 - **Audit integrity:** The hash-chain specifically provides tamper evidence that
   compliance scenarios require. This is TeaAgent's most technically differentiated
@@ -488,9 +500,10 @@ consolidate around this genuine advantage.
 
 - **Hard cost caps:** TeaAgent enforces estimated-cost caps as a runtime guard in
   `teaagent/runner/_core.py`. Runs stop when estimated cost reaches the cap.
-  No other OSS tool does this. Devin has session ACU hard caps in their enterprise
-  product. Claude Code and Copilot have soft quota management but not per-run
-  enforcement at the harness level.
+  Inference: no other OSS tool in this set is documented here doing this at the
+  harness level. Devin has session ACU hard caps in their enterprise product.
+  Claude Code and Copilot have soft quota management but not per-run enforcement
+  at the harness level.
 
 - **Operator/user trust split:** TeaAgent has explicit policy vocabulary that
   distinguishes what operators (system deployers) can allow vs. what users can
@@ -523,10 +536,10 @@ consolidate around this genuine advantage.
 
 **Key observations:**
 
-- **TUI:** TeaAgent is one of only two tools in the set with a real interactive
-  terminal UI (the other being OpenCode). This is a meaningful differentiation for
-  server-only or headless environments where a browser-based IDE or web dashboard
-  is not available.
+- **TUI:** TeaAgent is one of two tools in this comparison set with a real
+  interactive terminal UI. That is a meaningful differentiation for
+  server-only or headless environments where a browser-based IDE or web
+  dashboard is not available.
 
 - **First-run setup time:** TeaAgent's governance configuration — HMAC key
   generation, provider setup, permission mode selection — adds friction that other
@@ -540,8 +553,8 @@ consolidate around this genuine advantage.
   in an IDE. This gap must be honest in all positioning material.
 
 - **Cost display:** TeaAgent displays live estimated cost in the TUI. This is a
-  governance signal, not just a cosmetic feature. Developers can see when a run is
-  approaching budget limits before the hard cap fires.
+  governance signal, not just a cosmetic feature. Developers can see when a run
+  is approaching budget limits before the hard cap fires.
 
 ---
 
@@ -566,10 +579,10 @@ consolidate around this genuine advantage.
 **Key observations:**
 
 - **Multi-provider routing:** TeaAgent's 13-provider routing with governance
-  attached at every model call is unique in the OSS set. Claude Code is single-
-  provider (Claude only). This matters when an organization's AI policy requires
-  cost-comparison routing, failover, or vendor diversification. Provider count
-  alone is not an advantage; governed provider routing is.
+  attached at every model call is distinct in this comparison set. Claude Code
+  is single-provider (Claude only). This matters when an organization's AI
+  policy requires cost-comparison routing, failover, or vendor diversification.
+  Provider count alone is not an advantage; governed provider routing is.
 
 - **Remote async agents:** TeaAgent does not have production-ready remote async
   agents. This is an honest gap. Local subagents and swarm experiments exist in
@@ -587,8 +600,8 @@ consolidate around this genuine advantage.
 - **PR creation:** TeaAgent can commit and push code, but there is no first-class
   PR-creation workflow that attaches run evidence to the PR. This is a strategic
   gap: the PR is where governance artifacts (audit log, cost summary, approval
-  trail) should be visible to reviewers. Building this integration would create a
-  unique compliance story for PR-gated development workflows.
+  trail) should be visible to reviewers. Building this integration would
+  strengthen the compliance story for PR-gated development workflows.
 
 ---
 
@@ -607,17 +620,19 @@ consolidate around this genuine advantage.
 
 **Key observations:**
 
-- **Plugin trust boundaries:** TeaAgent's plugin model distinguishes between
-  trusted core tools and third-party extensions with explicit schema and risk
-  annotation requirements. No other OSS tool in this set has documented equivalent
-  plugin trust vocabulary. This matters when deploying in regulated environments
-  where any extension to the agent's tool surface must pass a review gate.
+- **Plugin trust boundaries:** Evidence: TeaAgent's plugin model distinguishes
+  between trusted core tools and third-party extensions with explicit schema and
+  risk annotation requirements. Inference: that gives the plugin story more
+  explicit trust vocabulary than the compared OSS tools document in this set.
+  This matters when deploying in regulated environments where any extension to
+  the agent's tool surface must pass a review gate.
 
-- **HMAC signing:** TeaAgent uses HMAC-signed approval tokens for sensitive
-  operations, providing cryptographic assurance that approval responses have not
-  been forged. This is a security primitive no other tool in the set has
-  documented. It is relevant for organizations worried about prompt injection
-  attacks that could forge approval events.
+- **HMAC signing:** Evidence: TeaAgent uses HMAC-signed approval tokens for
+  sensitive operations, providing cryptographic assurance that approval
+  responses have not been forged. Inference: that is a stronger security
+  primitive than the compared tools document here. It is relevant for
+  organizations worried about prompt injection attacks that could forge
+  approval events.
 
 - **Self-hostable:** TeaAgent, OpenCode, Cline, and Aider are all self-hostable.
   For organizations with data residency requirements, this is not a differentiator
@@ -638,11 +653,12 @@ consolidate around this genuine advantage.
 
 **Key observations:**
 
-- **Per-run cost caps:** TeaAgent and Devin are the only tools that enforce hard
-  per-run cost limits at the harness level. For organizations deploying agents
-  autonomously, this is not a nice-to-have — it is a finance and ops requirement.
-  The difference is that TeaAgent does it in an open-source, self-hosted system,
-  while Devin does it in an enterprise SaaS at enterprise prices.
+- **Per-run cost caps:** Evidence: TeaAgent enforces hard per-run cost limits at
+  the harness level, and Devin documents hard caps in its enterprise product
+  context. Inference: hard per-run cost enforcement is rare in this comparison
+  set and is a real differentiator for TeaAgent. For organizations deploying
+  agents autonomously, this is not a nice-to-have — it is a finance and ops
+  requirement.
 
 - **License:** MIT vs. proprietary is a real procurement differentiator in
   regulated industries. Legal and compliance teams in finance, healthcare, and
@@ -665,10 +681,10 @@ consolidate around this genuine advantage.
 **Key observations:**
 
 - **Production maturity:** TeaAgent is alpha. This is the most important
-  constraint on positioning. Any "enterprise-ready" claim is premature. The
-  maturity story must be honest: governance primitives are implemented and tested,
-  but the product is not GA. The positioning must sell "trust in the primitives"
-  rather than "production-ready today."
+  constraint on positioning. Any broad enterprise-readiness claim is premature.
+  The maturity story must be honest: governance primitives are implemented and
+  tested, but the product is not GA. The positioning must sell "trust in the
+  primitives" rather than "production-ready today."
 
 - **Threat model:** TeaAgent has a documented threat model at `docs/threat-model.md`.
   This is unusual in the OSS set. A documented threat model signals that the
@@ -684,10 +700,12 @@ consolidate around this genuine advantage.
 
 The feature matrices reveal three structural conclusions:
 
-**Conclusion 1: TeaAgent leads the OSS field on governance primitives.**
+**Conclusion 1: TeaAgent has the broadest governance primitive bundle in this
+comparison set.**
 Hash-chained audit, hard cost caps, operator/user trust split, HMAC approval
-signing, policy matrix, and threat model are collectively absent from every other
-OSS tool. No single competitor has the complete bundle. This is the genuine moat.
+signing, policy matrix, and threat model are the recurring differentiators in
+this corpus. No single competitor in the selected set is documented here with
+the complete bundle. That is the genuine moat candidate.
 
 **Conclusion 2: TeaAgent has significant UX gaps relative to IDE-native tools.**
 No VS Code extension, no web UI, no mobile, and above-average first-run friction
@@ -696,11 +714,12 @@ This gap is not closable quickly without significant investment. Positioning mus
 honestly acknowledge it and target buyers for whom governance value outweighs UX
 polish.
 
-**Conclusion 3: The "only OSS tool with X" framing has a short shelf life.**
-OpenCode is actively developing its permission model. Cline is building enterprise
-controls. Any "only" claim must be bounded to the specific audit/cost/trust
-primitives TeaAgent has and competitors demonstrably lack. Do not let "only"
-claims substitute for continuous governance depth investment.
+**Conclusion 3: Bounded uniqueness claims have a short shelf life.**
+OpenCode is actively developing its permission model. Cline is building
+enterprise controls. Any uniqueness claim must be bounded to the specific
+audit/cost/trust primitives TeaAgent has and competitors demonstrably lack.
+Do not let uniqueness language substitute for continuous governance depth
+investment.
 
 ---
 
@@ -708,9 +727,9 @@ claims substitute for continuous governance depth investment.
 
 ### 3.1 Option A — The Governance Agent
 
-**Positioning statement:** TeaAgent is the only governed agent harness for
-regulated industries — built for environments where every model call, tool
-execution, and cost decision must be auditable and controllable.
+**Positioning statement:** TeaAgent is a governed agent harness for regulated
+industries — built for environments where every model call, tool execution, and
+cost decision must be auditable and controllable.
 
 **Primary buyer:** CISO, Chief Compliance Officer, or Head of Platform Engineering
 in a regulated industry (finance, healthcare, insurance, government, legal).
@@ -740,8 +759,9 @@ team needs to know the agent can't escape its permission boundary."
   the compliance mode
 
 **Quantified win condition:** "If your compliance requirement is agent
-auditability, we are the only open-source option that ships with the primitive
-you need."
+auditability, TeaAgent ships the primitive this repo documents and the selected
+comparison set does not show another OSS/self-hosted/MIT tool with the same
+bundle."
 
 **Risk:**
 - TAM is smaller than the general developer market.
@@ -848,7 +868,7 @@ This is not about feature count. It is about who the tool is designed for.
 
 - **Primary:** Regulated industries and compliance-conscious organizations. "For
   teams that must be able to answer 'what did the agent do, why, and how much did
-  it cost?', TeaAgent is the only open-source option built to answer that question."
+  it cost?', TeaAgent is built around the receipt trail this repo documents."
 
 - **Secondary:** Cost-conscious teams. "Hard budget caps and multi-provider
   routing mean autonomous agents that don't blow your budget. The agent stops
@@ -870,9 +890,9 @@ This is not about feature count. It is about who the tool is designed for.
    permission model is a coherent compliance narrative, not a feature list.
 
 4. It is falsifiable: "We have hash-chained audit logs, hard cost caps, and an
-   operator/user trust split. Show me which competitor has the same bundle in an
-   open-source, self-hostable, MIT-licensed package." As of 2026-06-06, no
-   competitor can match this bundle.
+   operator/user trust split. Show me which competitor in this comparison set
+   documents the same bundle in an open-source, self-hostable, MIT-licensed
+   package." The claim should be rechecked before public reuse.
 
 **Sequencing:**
 
@@ -963,7 +983,8 @@ These are genuine, verifiable advantages as of 2026-06-06, backed by codebase
 evidence:
 
 **Win 1: Hash-chained audit trail.**
-No OSS competitor has a tamper-evident, hash-chained audit log. TeaAgent's
+Inference from the selected comparison set: no OSS competitor here is
+documented with a tamper-evident, hash-chained audit log. TeaAgent's
 `audit_chain.py` provides cryptographic linkage between audit entries such that
 deletions or modifications are detectable. This is the most technically
 differentiated governance primitive in the project. In regulated industries,
@@ -971,30 +992,33 @@ this is the difference between "we have logging" and "we have an audit record."
 
 **Win 2: Hard cost caps with run-level enforcement.**
 TeaAgent enforces an estimated-cost cap per run that stops execution when the
-budget is reached. No open-source competitor does this at the harness level.
-Devin has ACU caps in their enterprise product. Claude Code has soft quota
-settings via the Anthropic API. Neither is the same as a harness-level hard cap
-that the agent cannot circumvent.
+budget is reached. Inference: no open-source competitor in this set is
+documented doing this at the harness level. Devin has ACU caps in their
+enterprise product. Claude Code has soft quota settings via the Anthropic API.
+Neither is the same as a harness-level hard cap that the agent cannot
+circumvent.
 
 **Win 3: Operator/user trust split.**
 TeaAgent's policy model distinguishes between operator-level configuration
 (system deployers) and user-level overrides. This is the governance model
 regulated organizations need for enterprise deployment where IT configures the
-permission floor and users can adjust within those limits. No other OSS tool in
-the competitive set has documented an equivalent trust split.
+permission floor and users can adjust within those limits. Inference: no other
+OSS tool in the competitive set documents an equivalent trust split.
 
 **Win 4: HMAC-signed approval tokens.**
 Approval events in TeaAgent are HMAC-signed, preventing approval forgery via
-prompt injection. This is a security primitive no other tool in the set has
-documented. For organizations worried about adversarial prompts attempting to
-bypass approval requirements, this is a meaningful security control.
+prompt injection. Inference: no other tool in the set documents the same
+approval-signing primitive. For organizations worried about adversarial prompts
+attempting to bypass approval requirements, this is a meaningful security
+control.
 
 **Win 5: MIT license + self-hostable + multi-provider.**
-The combination is unique. Claude Code is proprietary. Kiro and Devin are
-proprietary SaaS. GitHub Copilot is proprietary. Only OpenCode, Cline, and Aider
-match on MIT + self-hostable, but none match on governed multi-provider routing.
-For organizations with data residency requirements, procurement constraints, or
-multi-cloud mandates, this combination clears gates that no SaaS competitor can.
+This combination is rare in the selected comparison set. Claude Code is
+proprietary. Kiro and Devin are proprietary SaaS. GitHub Copilot is proprietary.
+OpenCode, Cline, and Aider match on MIT + self-hostable, but none match on the
+governed multi-provider routing documented in this repo. For organizations with
+data residency requirements, procurement constraints, or multi-cloud mandates,
+this combination clears gates that no SaaS competitor can.
 
 **Win 6: Documented threat model.**
 `docs/threat-model.md` signals that the team has systematically analyzed the
@@ -1116,11 +1140,11 @@ credibility the governance story requires.
 ```
 Are you deploying agents in a regulated industry (finance, healthcare, legal)?
 ├── YES → Do you need an auditable, tamper-evident record of agent actions?
-│         ├── YES → TeaAgent (the only OSS tool with this)
+│         ├── YES → TeaAgent (best fit in this comparison set)
 │         └── NO  → Consider OpenCode or Cline
 └── NO  → Does your team have autonomous agent cost control problems?
           ├── YES → Do you need per-run hard budget enforcement?
-          │         ├── YES → TeaAgent (only OSS tool with hard caps)
+          │         ├── YES → TeaAgent (hard caps documented in this repo)
           │         └── NO  → Claude Code soft quotas or OpenCode
           └── NO  → Do you need multi-provider, provider-agnostic routing?
                     ├── YES → Are governance/audit features important?

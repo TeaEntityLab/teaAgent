@@ -237,6 +237,20 @@ def resolve_git_sandbox_after_run(
     if not sandbox.is_available():
         return
 
+    interactive = sys.stdin.isatty()
+    if not interactive:
+        # Headless runs should not emit prompts or extra stdout that would
+        # corrupt the JSON completion payload. Keep the sandbox branch for
+        # review and record the resolution without user interaction.
+        record_git_sandbox_resolved(
+            audit,
+            run_id,
+            sandbox,
+            resolution='keep',
+            success=True,
+        )
+        return
+
     try:
         diff_result = subprocess.run(
             ['git', 'diff', '--stat', f'{sandbox._original_branch}..HEAD'],

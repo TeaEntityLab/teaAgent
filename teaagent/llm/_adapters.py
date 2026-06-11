@@ -20,6 +20,8 @@ from teaagent.llm._retry import DEFAULT_RETRY_CONFIG, LLMRetryConfig, _call_with
 from teaagent.llm._sse import consume_sse_json_chunks
 from teaagent.llm._transport import UrllibHTTPTransport, build_ssl_context_from_env
 from teaagent.llm._types import (
+    CostSource,
+    GovernanceMetadata,
     HTTPTransport,
     LLMHTTPError,
     LLMRequest,
@@ -28,7 +30,9 @@ from teaagent.llm._types import (
     LLMSafetyBlock,
     LLMToolCall,
     ProviderConfig,
+    RefusalClass,
     SafetyCategory,
+    ToolCallFormat,
 )
 
 logger = logging.getLogger(__name__)
@@ -118,6 +122,54 @@ def _extract_gemini_safety(response: dict[str, Any]) -> 'LLMSafetyBlock | None':
     return None
 
 
+def _openai_refusal_class(response: dict[str, Any]) -> RefusalClass:
+    choices = response.get('choices', [])
+    if choices:
+        finish = choices[0].get('finish_reason', '')
+        if finish == 'content_filter':
+            return RefusalClass.CONTENT_FILTER
+    return RefusalClass.NONE
+
+
+def _gemini_refusal_class(safety: Optional[LLMSafetyBlock]) -> RefusalClass:
+    if safety is not None and safety.blocked:
+        return RefusalClass.SAFETY_BLOCK
+    return RefusalClass.NONE
+
+
+def _build_governance(
+    provider_id: str,
+    model_id: str,
+    input_tokens: int,
+    output_tokens: int,
+    *,
+    tokens_known: bool,
+    refusal_class: RefusalClass,
+    tool_call_format: ToolCallFormat,
+    streaming_supported: bool,
+) -> GovernanceMetadata:
+    from teaagent.llm._config import _estimate_cost  # noqa: PLC0415
+
+    cost = (
+        _estimate_cost(provider_id, model_id, input_tokens, output_tokens)
+        if tokens_known
+        else 0.0
+    )
+    return GovernanceMetadata(
+        provider_id=provider_id,
+        model_id=model_id,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        tokens_known=tokens_known,
+        estimated_cost_cents=cost,
+        cost_source=CostSource.ESTIMATED if tokens_known else CostSource.UNKNOWN,
+        actual_cost_cents=None,
+        tool_call_format=tool_call_format,
+        refusal_class=refusal_class,
+        streaming_supported=streaming_supported,
+    )
+
+
 class OpenAICompatibleAdapter:
     def __init__(
         self,
@@ -193,14 +245,28 @@ class OpenAICompatibleAdapter:
             else:
                 raise
         usage = response.get('usage', {})
+        in_tok = usage.get('prompt_tokens', 0)
+        out_tok = usage.get('completion_tokens', 0)
         return LLMResponse(
             provider=self.provider,
             model=model,
             content=content,
             raw=response,
-            input_tokens=usage.get('prompt_tokens', 0),
-            output_tokens=usage.get('completion_tokens', 0),
+            input_tokens=in_tok,
+            output_tokens=out_tok,
             tool_calls=tool_calls,
+            governance=_build_governance(
+                self.provider,
+                model,
+                in_tok,
+                out_tok,
+                tokens_known=bool(usage),
+                refusal_class=_openai_refusal_class(response),
+                tool_call_format=ToolCallFormat.OPENAI
+                if tool_calls
+                else ToolCallFormat.NONE,
+                streaming_supported=True,
+            ),
         )
 
     def _check_rate_limit(self, key: str) -> None:
@@ -290,6 +356,7 @@ class OpenAICompatibleAdapter:
             self._iter_streaming_lines(payload),
             on_data=_handle,
         )
+        tokens_known = input_tokens > 0 or output_tokens > 0
         return LLMResponse(
             provider=self.provider,
             model=model,
@@ -297,6 +364,16 @@ class OpenAICompatibleAdapter:
             raw={},
             input_tokens=input_tokens,
             output_tokens=output_tokens,
+            governance=_build_governance(
+                self.provider,
+                model,
+                input_tokens,
+                output_tokens,
+                tokens_known=tokens_known,
+                refusal_class=RefusalClass.NONE,
+                tool_call_format=ToolCallFormat.NONE,
+                streaming_supported=True,
+            ),
         )
 
     def _headers(self) -> dict[str, str]:
@@ -531,14 +608,28 @@ class ClaudeAdapter:
         content = _extract_claude_content(response)
         usage = response.get('usage', {})
         tool_calls = _extract_claude_tool_calls(response)
+        in_tok = usage.get('input_tokens', 0)
+        out_tok = usage.get('output_tokens', 0)
         return LLMResponse(
             provider=self.provider,
             model=model,
             content=content,
             raw=response,
-            input_tokens=usage.get('input_tokens', 0),
-            output_tokens=usage.get('output_tokens', 0),
+            input_tokens=in_tok,
+            output_tokens=out_tok,
             tool_calls=tool_calls,
+            governance=_build_governance(
+                self.provider,
+                model,
+                in_tok,
+                out_tok,
+                tokens_known=bool(usage),
+                refusal_class=RefusalClass.NONE,
+                tool_call_format=ToolCallFormat.ANTHROPIC
+                if tool_calls
+                else ToolCallFormat.NONE,
+                streaming_supported=True,
+            ),
         )
 
     def _iter_streaming_lines(self, payload: dict[str, Any]) -> Iterator[bytes]:
@@ -582,6 +673,7 @@ class ClaudeAdapter:
                 chunks.append(text)
 
         consume_sse_json_chunks(self._iter_streaming_lines(payload), on_data=_handle)
+        tokens_known = input_tokens > 0 or output_tokens > 0
         return LLMResponse(
             provider=self.provider,
             model=model,
@@ -589,6 +681,16 @@ class ClaudeAdapter:
             raw={},
             input_tokens=input_tokens,
             output_tokens=output_tokens,
+            governance=_build_governance(
+                self.provider,
+                model,
+                input_tokens,
+                output_tokens,
+                tokens_known=tokens_known,
+                refusal_class=RefusalClass.NONE,
+                tool_call_format=ToolCallFormat.NONE,
+                streaming_supported=True,
+            ),
         )
 
 
@@ -689,15 +791,29 @@ class GeminiAdapter:
         metadata = response.get('usageMetadata', {})
         tool_calls = _extract_gemini_tool_calls(response)
         safety = _extract_gemini_safety(response)
+        in_tok = metadata.get('promptTokenCount', 0)
+        out_tok = metadata.get('candidatesTokenCount', 0)
         return LLMResponse(
             provider=self.provider,
             model=model,
             content=content,
             raw=response,
-            input_tokens=metadata.get('promptTokenCount', 0),
-            output_tokens=metadata.get('candidatesTokenCount', 0),
+            input_tokens=in_tok,
+            output_tokens=out_tok,
             tool_calls=tool_calls,
             safety=safety,
+            governance=_build_governance(
+                self.provider,
+                model,
+                in_tok,
+                out_tok,
+                tokens_known=bool(metadata),
+                refusal_class=_gemini_refusal_class(safety),
+                tool_call_format=ToolCallFormat.GEMINI
+                if tool_calls
+                else ToolCallFormat.NONE,
+                streaming_supported=True,
+            ),
         )
 
     def _iter_streaming_lines(
@@ -742,6 +858,7 @@ class GeminiAdapter:
             self._iter_streaming_lines(model, payload),
             on_data=_handle,
         )
+        tokens_known = input_tokens > 0 or output_tokens > 0
         return LLMResponse(
             provider=self.provider,
             model=model,
@@ -749,4 +866,14 @@ class GeminiAdapter:
             raw={},
             input_tokens=input_tokens,
             output_tokens=output_tokens,
+            governance=_build_governance(
+                self.provider,
+                model,
+                input_tokens,
+                output_tokens,
+                tokens_known=tokens_known,
+                refusal_class=RefusalClass.NONE,
+                tool_call_format=ToolCallFormat.NONE,
+                streaming_supported=True,
+            ),
         )

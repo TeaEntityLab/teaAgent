@@ -523,6 +523,9 @@ def _execute_agent_task(  # noqa: C901
     selected_model = routing.model if routing else args.model
     adapter = args._adapter_factory(args.provider, model=selected_model)
     merged_context_extra: dict[str, Any] = dict(initial_context_extra or {})
+    merged_context_extra.setdefault('provider', args.provider)
+    if selected_model:
+        merged_context_extra.setdefault('model', selected_model)
     if resumed_from:
         merged_context_extra['resumed_from'] = resumed_from
     if plan_contract is not None:

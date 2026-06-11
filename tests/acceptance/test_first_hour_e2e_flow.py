@@ -55,6 +55,7 @@ from unittest.mock import patch
 from conftest import FakeAdapter
 
 from teaagent.cli import main
+from teaagent.plan import load_plan_contract
 from test_support import can_bind_loopback
 
 _GIT_ENV = {
@@ -129,7 +130,7 @@ def test_first_hour_setup_daily_plan_edit_undo(tmp_path: Path) -> None:
         plan_code = main(
             [
                 'agent',
-                'preflight',
+                'plan',
                 'gpt',
                 'Plan fix for calc.py without editing yet',
                 '--root',
@@ -150,7 +151,6 @@ def test_first_hour_setup_daily_plan_edit_undo(tmp_path: Path) -> None:
 
     adapter = FakeAdapter(
         [
-            '{"type":"tool","tool_name":"workspace_read_file","arguments":{"path":"calc.py"},"call_id":"read-calc"}',
             json.dumps(
                 {
                     'type': 'tool',
@@ -162,9 +162,19 @@ def test_first_hour_setup_daily_plan_edit_undo(tmp_path: Path) -> None:
                     'call_id': 'fix-calc',
                 }
             ),
+            json.dumps(
+                {
+                    'type': 'tool',
+                    'tool_name': 'workspace_run_shell_inspect',
+                    'arguments': {'command': "rg 'return a \\+ b' calc.py"},
+                    'call_id': 'verify-calc',
+                }
+            ),
             '{"type":"final","content":"calc fixed; rerun pytest locally to verify"}',
         ]
     )
+    plan_artifact = Path(plan_payload['plan_artifact'])
+    plan_contract = load_plan_contract(plan_artifact, root=tmp_path)
     run_out = io.StringIO()
     with (
         patch('teaagent.cli.create_llm_adapter', return_value=adapter),
@@ -179,8 +189,14 @@ def test_first_hour_setup_daily_plan_edit_undo(tmp_path: Path) -> None:
                 '--root',
                 str(tmp_path),
                 '--permission-mode',
-                'workspace-write',
-                '--skip-plan-check',
+                'prompt',
+                '--from-plan',
+                str(plan_artifact),
+                '--allow-external-plan',
+                '--require-plan',
+                '--git-sandbox-auto-stash',
+                '--approve-call-id',
+                'fix-calc',
                 '--max-iterations',
                 '8',
                 '--max-tool-calls',
@@ -190,10 +206,14 @@ def test_first_hour_setup_daily_plan_edit_undo(tmp_path: Path) -> None:
     run_payload = json.loads(run_out.getvalue())
     assert run_code == 0
     assert run_payload['status'] == 'completed'
+    assert run_payload['plan_contract']['content_hash'] == plan_contract.content_hash
+    assert run_payload['plan_contract']['task'] == plan_contract.task
+    assert run_payload['run_evidence']['commands_run']
+    assert run_payload['run_evidence']['approvals']
     assert 'a + b' in calc.read_text(encoding='utf-8')
 
     pytest_result = subprocess.run(
-        [sys.executable, '-m', 'pytest', '-q'],
+        [sys.executable, '-m', 'pytest', '-q', '-s'],
         cwd=tmp_path,
         capture_output=True,
         text=True,

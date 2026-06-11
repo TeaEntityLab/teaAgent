@@ -315,25 +315,103 @@ def _extract_scope_path(payload: dict[str, Any]) -> str:
 def extract_commands_run(events: list[dict[str, Any]]) -> list[CommandEvidence]:
     """Extract command execution evidence from audit events."""
     commands: list[CommandEvidence] = []
+    by_call_id: dict[str, CommandEvidence] = {}
+
+    def _command_from_payload(payload: dict[str, Any]) -> str:
+        arguments = payload.get('arguments') or payload.get('input') or {}
+        if isinstance(arguments, dict):
+            command = arguments.get('command', arguments.get('cmd', ''))
+            if isinstance(command, str) and command.strip():
+                return command.strip()
+        result = payload.get('result')
+        if isinstance(result, dict):
+            command = result.get('command', '')
+            if isinstance(command, str) and command.strip():
+                return command.strip()
+        return ''
+
+    def _result_int(value: Any) -> int | None:
+        if isinstance(value, bool):
+            return None
+        if isinstance(value, (int, float)):
+            return int(value)
+        return None
+
+    def _append_or_update(
+        *,
+        call_id: str,
+        tool_name: str,
+        command: str,
+        timestamp: Any,
+    ) -> CommandEvidence:
+        existing = by_call_id.get(call_id) if call_id else None
+        if existing is not None:
+            if command and not existing.command:
+                existing.command = command
+            if existing.timestamp is None:
+                existing.timestamp = timestamp
+            return existing
+        entry = CommandEvidence(
+            command=command,
+            tool_name=tool_name,
+            timestamp=timestamp,
+        )
+        commands.append(entry)
+        if call_id:
+            by_call_id[call_id] = entry
+        return entry
+
     for event in events:
         event_type = event.get('event_type')
         payload = event.get('payload') or {}
         if not isinstance(payload, dict):
             continue
 
-        if event_type == 'tool_use':
-            tool_name = payload.get('tool_name', '')
-            # Check if it's a shell/exec command
-            if tool_name in ('exec', 'shell', 'execute_shell_command'):
-                command = payload.get('input', {}).get('command', '')
-                if command:
-                    commands.append(
-                        CommandEvidence(
-                            command=command,
-                            tool_name=tool_name,
-                            timestamp=event.get('created_at'),
-                        )
-                    )
+        if event_type not in {
+            'tool_use',
+            'tool_call_started',
+            'tool_call_completed',
+        }:
+            continue
+
+        tool_name = str(payload.get('tool_name', ''))
+        if tool_name not in {
+            'exec',
+            'shell',
+            'execute_shell_command',
+            'workspace_run_shell_mutate',
+            'workspace_run_shell_inspect',
+            'workspace_run_shell',
+        }:
+            continue
+
+        call_id = str(payload.get('call_id', '') or '')
+        command = _command_from_payload(payload)
+
+        if event_type in {'tool_use', 'tool_call_started'}:
+            _append_or_update(
+                call_id=call_id,
+                tool_name=tool_name,
+                command=command,
+                timestamp=event.get('created_at'),
+            )
+            continue
+
+        result = payload.get('result')
+        if not isinstance(result, dict):
+            continue
+        entry = _append_or_update(
+            call_id=call_id,
+            tool_name=tool_name,
+            command=command,
+            timestamp=event.get('created_at'),
+        )
+        if 'exit_code' in result:
+            entry.exit_code = _result_int(result.get('exit_code'))
+        if isinstance(result.get('stdout'), str):
+            entry.stdout = result.get('stdout')
+        if isinstance(result.get('stderr'), str):
+            entry.stderr = result.get('stderr')
     return commands
 
 
@@ -363,66 +441,63 @@ def extract_tests(events: list[dict[str, Any]]) -> list[TestEvidence]:
 def extract_approvals(events: list[dict[str, Any]]) -> list[ApprovalEvidence]:
     """Extract approval evidence from audit events."""
     approvals: list[ApprovalEvidence] = []
+
+    def approval_for(call_id: str) -> ApprovalEvidence | None:
+        return next((a for a in approvals if a.call_id == call_id), None)
+
+    def append_or_update(
+        *,
+        payload: dict[str, Any],
+        timestamp: Any,
+        approved: bool = False,
+        denied: bool = False,
+    ) -> None:
+        call_id = str(payload.get('call_id', '') or '')
+        existing = approval_for(call_id)
+        scope_path = _extract_scope_path(payload)
+        if existing is None:
+            approvals.append(
+                ApprovalEvidence(
+                    call_id=call_id,
+                    tool_name=payload.get('tool_name', ''),
+                    approved=approved,
+                    auto_approved=payload.get('auto_approved', False),
+                    denied=denied,
+                    timestamp=timestamp,
+                    authority_type=payload.get('authority_type', ''),
+                    approved_by=payload.get('approved_by', ''),
+                    scope_path=scope_path,
+                )
+            )
+            return
+        existing.approved = existing.approved or approved
+        existing.denied = existing.denied or denied
+        existing.auto_approved = payload.get('auto_approved', existing.auto_approved)
+        existing.authority_type = payload.get('authority_type', existing.authority_type)
+        existing.approved_by = payload.get('approved_by', existing.approved_by)
+        if scope_path:
+            existing.scope_path = scope_path
+
     for event in events:
         event_type = event.get('event_type')
         payload = event.get('payload') or {}
         if not isinstance(payload, dict):
             continue
 
-        scope_path = _extract_scope_path(payload)
-
-        if event_type == 'approval_requested':
-            approvals.append(
-                ApprovalEvidence(
-                    call_id=payload.get('call_id', ''),
-                    tool_name=payload.get('tool_name', ''),
-                    approved=False,
-                    auto_approved=payload.get('auto_approved', False),
-                    timestamp=event.get('created_at'),
-                    authority_type=payload.get('authority_type', ''),
-                    scope_path=scope_path,
-                )
+        if event_type in {'approval_requested', 'tool_call_pending_approval'}:
+            append_or_update(payload=payload, timestamp=event.get('created_at'))
+        elif event_type in {'approval_granted', 'tool_call_approved'}:
+            append_or_update(
+                payload=payload,
+                timestamp=event.get('created_at'),
+                approved=True,
             )
-        elif event_type == 'approval_granted':
-            call_id = payload.get('call_id', '')
-            existing = next((a for a in approvals if a.call_id == call_id), None)
-            if existing:
-                existing.approved = True
-                existing.auto_approved = payload.get('auto_approved', False)
-                existing.authority_type = payload.get('authority_type', '')
-                existing.approved_by = payload.get('approved_by', '')
-                if scope_path:
-                    existing.scope_path = scope_path
-            else:
-                approvals.append(
-                    ApprovalEvidence(
-                        call_id=call_id,
-                        tool_name=payload.get('tool_name', ''),
-                        approved=True,
-                        auto_approved=payload.get('auto_approved', False),
-                        timestamp=event.get('created_at'),
-                        authority_type=payload.get('authority_type', ''),
-                        approved_by=payload.get('approved_by', ''),
-                        scope_path=scope_path,
-                    )
-                )
-        elif event_type == 'approval_denied':
-            call_id = payload.get('call_id', '')
-            existing = next((a for a in approvals if a.call_id == call_id), None)
-            if existing:
-                existing.denied = True
-            else:
-                approvals.append(
-                    ApprovalEvidence(
-                        call_id=call_id,
-                        tool_name=payload.get('tool_name', ''),
-                        approved=False,
-                        denied=True,
-                        timestamp=event.get('created_at'),
-                        authority_type=payload.get('authority_type', ''),
-                        scope_path=scope_path,
-                    )
-                )
+        elif event_type in {'approval_denied', 'tool_call_denied'}:
+            append_or_update(
+                payload=payload,
+                timestamp=event.get('created_at'),
+                denied=True,
+            )
     return approvals
 
 

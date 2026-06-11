@@ -112,6 +112,10 @@ def test_resolve_git_sandbox_discard_choice(monkeypatch) -> None:
         'teaagent.cli._handlers._agent.sandbox_resolution.subprocess.run',
         MagicMock(return_value=MagicMock(stdout='')),
     )
+    monkeypatch.setattr(
+        'teaagent.cli._handlers._agent.sandbox_resolution.sys.stdin',
+        MagicMock(isatty=lambda: True),
+    )
     monkeypatch.setattr('builtins.input', lambda _prompt='': 'd')
 
     result = MagicMock(status='failed')
@@ -129,3 +133,40 @@ def test_resolve_git_sandbox_discard_choice(monkeypatch) -> None:
     sandbox.discard.assert_called_once()
     audit.record.assert_called_once()
     assert audit.record.call_args[1]['resolution'] == 'discard'
+
+
+def test_resolve_git_sandbox_headless_keeps_without_prompt(monkeypatch) -> None:
+    audit = MagicMock()
+    sandbox = MagicMock()
+    sandbox.is_available.return_value = True
+    sandbox._original_branch = 'main'
+    sandbox._branch_name = 'teaagent-sandbox-run1'
+    sandbox._stash_id = None
+    sandbox._run_id = 'run1'
+
+    monkeypatch.setattr(
+        'teaagent.cli._handlers._agent.sandbox_resolution.sys.stdin',
+        MagicMock(isatty=lambda: False),
+    )
+    run_spy = MagicMock()
+    monkeypatch.setattr(
+        'teaagent.cli._handlers._agent.sandbox_resolution.subprocess.run',
+        run_spy,
+    )
+
+    resolve_git_sandbox_after_run(
+        audit=audit,
+        run_id='run1',
+        sandbox=sandbox,
+        args=MagicMock(root='/tmp'),
+        result=MagicMock(status='completed'),
+        show_interactive_diff=MagicMock(return_value=True),
+    )
+
+    run_spy.assert_not_called()
+    sandbox.merge.assert_not_called()
+    sandbox.discard.assert_not_called()
+    sandbox.keep.assert_not_called()
+    audit.record.assert_called_once()
+    assert audit.record.call_args[1]['resolution'] == 'keep'
+    assert audit.record.call_args[1]['success'] is True

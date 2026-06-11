@@ -10,6 +10,7 @@ from teaagent.chat_agent import _apply_plan_contract
 from teaagent.plan import load_plan_contract
 from teaagent.policy import ApprovalPolicy
 from teaagent.runner import AgentRunner
+from teaagent.runner._plan_validator import PlanValidator
 from teaagent.types import AuditLogger, PermissionMode, ToolRegistry
 
 
@@ -80,6 +81,66 @@ def test_apply_plan_contract_binds_validator_write_scope(tmp_path: Path) -> None
     )
     assert drift is not None
     assert 'outside the approved plan scope' in drift
+
+
+def test_plan_validator_evaluate_write_gate_allows_scoped_write() -> None:
+    validator = PlanValidator(
+        approval_policy=ApprovalPolicy(permission_mode=PermissionMode.PROMPT),
+    )
+    validator.set_plan_contract(
+        {
+            'rel_path': '.teaagent/plans/scope.md',
+            'file_targets': ['allowed.txt'],
+            'content_hash': 'abc123',
+        }
+    )
+
+    gate_error = validator.evaluate_write_gate(
+        tool_name='workspace_write_file',
+        context={},
+        tool_arguments={'path': 'allowed.txt', 'content': 'ok'},
+    )
+
+    assert gate_error is None
+
+
+def test_plan_validator_evaluate_write_gate_blocks_drift_before_lint() -> None:
+    validator = PlanValidator(
+        approval_policy=ApprovalPolicy(permission_mode=PermissionMode.PROMPT),
+    )
+    validator.set_plan_contract(
+        {
+            'rel_path': '.teaagent/plans/scope.md',
+            'file_targets': ['allowed.txt'],
+            'content_hash': 'abc123',
+        }
+    )
+    validator.set_read_only_lint_errors(['lint error'])
+
+    gate_error = validator.evaluate_write_gate(
+        tool_name='workspace_write_file',
+        context={},
+        tool_arguments={'path': 'blocked.txt', 'content': 'nope'},
+    )
+
+    assert gate_error is not None
+    assert 'outside the approved plan scope' in gate_error
+
+
+def test_plan_validator_evaluate_write_gate_blocks_read_only_lint() -> None:
+    validator = PlanValidator(
+        approval_policy=ApprovalPolicy(permission_mode=PermissionMode.READ_ONLY),
+    )
+    validator.set_read_only_lint_errors(['lint error'])
+
+    gate_error = validator.evaluate_write_gate(
+        tool_name='workspace_write_file',
+        context={},
+        tool_arguments={'path': 'anything.txt', 'content': 'nope'},
+    )
+
+    assert gate_error is not None
+    assert 'read-only runs cannot invoke tools' in gate_error
 
 
 # ---------------------------------------------------------------------------

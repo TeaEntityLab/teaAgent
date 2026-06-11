@@ -611,13 +611,13 @@ class AgentRunner:
                 tool_name=decision.tool_name,
                 arguments=decision.arguments,
             )
-        drift_error = self.plan_validator.validate_write_allowed(
+        gate_error = self.plan_validator.evaluate_write_gate(
             tool_name=decision.tool_name,
             context=cast(dict[str, Any], context),
             tool_arguments=decision.arguments,
         )
-        if drift_error:
-            raise ToolPermissionError(drift_error)
+        if gate_error:
+            raise ToolPermissionError(gate_error)
         # Auto mode: block disallowed tools, auto-approve allowed ones
         self.auto_mode_manager.validate_tool_allowed(decision.tool_name)
         auto_approve_policy = self.auto_mode_manager.get_auto_approve_policy()
@@ -626,11 +626,11 @@ class AgentRunner:
         try:
             # Get plan contract from plan validator
             plan_contract = self.plan_validator.get_plan_contract()
-
-            # Check read-only lint errors
-            lint_error = self.plan_validator.check_read_only_lint_errors()
-            if lint_error:
-                raise ToolPermissionError(lint_error)
+            preapproved_by_call_id = (
+                tool.annotations.destructive
+                and bool(decision.call_id)
+                and decision.call_id in self.approval_policy.preapproved_call_ids
+            )
 
             self.approval_policy.assert_allowed(
                 tool_name=decision.tool_name,
@@ -643,6 +643,18 @@ class AgentRunner:
                 description=tool.description,
                 handler=tool.handler,
             )
+            if preapproved_by_call_id:
+                self.audit.record(
+                    'tool_call_approved',
+                    run_id,
+                    call_id=decision.call_id,
+                    tool_name=decision.tool_name,
+                    arguments=decision.arguments,
+                    authority_type='preapproved_call_id',
+                    approved_by='cli --approve-call-id',
+                    auto_approved=True,
+                    scope='call_id',
+                )
         except ToolPermissionError as exc:
             reason_code = getattr(exc, 'reason_code', None)
             reason_code_str = reason_code.value if reason_code else None

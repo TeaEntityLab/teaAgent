@@ -178,9 +178,9 @@ def _process_event_approvals(
                     'scope': str(payload.get('scope', '')),
                 }
             )
-    elif event_type == 'approval_granted':
+    elif event_type in {'approval_granted', 'tool_call_approved'}:
         _update_approval_decision(approvals, payload, ts, 'granted')
-    elif event_type == 'approval_denied':
+    elif event_type in {'approval_denied', 'tool_call_denied'}:
         _update_approval_decision(approvals, payload, ts, 'denied')
 
 

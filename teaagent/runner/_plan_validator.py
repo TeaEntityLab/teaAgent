@@ -102,6 +102,33 @@ class PlanValidator:
             plan_contract=self._plan_contract,
         )
 
+    def evaluate_write_gate(
+        self,
+        *,
+        tool_name: str,
+        context: dict[str, Any],
+        tool_arguments: dict[str, Any] | None = None,
+    ) -> str | None:
+        """Return the first blocking reason for a write tool request.
+
+        This wrapper keeps the runner's pre-write gate evaluation in one place
+        while preserving the existing order of checks:
+
+        1. plan-before-write enforcement
+        2. plan scope enforcement
+        3. read-only registry lint enforcement
+
+        Returns ``None`` when the write can proceed to approval handling.
+        """
+        drift_error = self.validate_write_allowed(
+            tool_name=tool_name,
+            context=context,
+            tool_arguments=tool_arguments,
+        )
+        if drift_error:
+            return drift_error
+        return self.check_read_only_lint_errors()
+
     def check_read_only_lint_errors(self) -> Optional[str]:
         """Check if there are read-only lint errors that should block execution.
 

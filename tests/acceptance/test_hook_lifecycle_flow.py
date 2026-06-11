@@ -50,6 +50,8 @@ from __future__ import annotations
 
 import contextlib
 
+import pytest
+
 from teaagent.hooks import (
     HookError,
     HookPermissionMode,
@@ -183,12 +185,8 @@ def test_permission_check_deny_pattern():
         deny_patterns=['.git/*'],
         destructive_tools=frozenset(['workspace_write_file']),
     )
-    try:
-        hook_fn('workspace_write_file', {'path': '.git/config'})
-    except HookError:
-        pass
-    else:
-        raise AssertionError('expected HookError for deny_pattern match')
+    with pytest.raises(HookError, match='matches denied pattern'):
+        hook_fn('workspace_read_file', {'path': '.git/config'})
 
 
 def test_permission_check_allow_pattern():

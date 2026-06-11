@@ -22,9 +22,19 @@ class RunReceiptContext:
     goal: str = ''
     provider: str = ''
     model: str = ''
+    permission_mode: str = ''
+    plan_path: str = ''
+    plan_content_hash: str = ''
+    final_result: str = ''
     audit_path: str = ''
     resume_state: str = 'none'
     tools_used: list[str] = field(default_factory=list)
+
+
+def _truncate_text(text: str, *, limit: int = 220) -> str:
+    if len(text) <= limit:
+        return text
+    return text[: max(0, limit - 1)].rstrip() + '…'
 
 
 def _safe_payload(event: dict[str, Any]) -> dict[str, Any]:
@@ -63,6 +73,40 @@ def _derive_resume_state(
     return 'none'
 
 
+def receipt_completeness_checklist(*, include_plan: bool = False) -> tuple[str, ...]:
+    """Return required fragments for a minimum complete human run receipt."""
+    fragments = (
+        'Run receipt:',
+        'Goal:',
+        'Provider/model:',
+        'Permission mode:',
+        'Cost:',
+        'Audit log:',
+        'Resume/checkpoint:',
+        'Final result:',
+        'Tools used (',
+        'Files touched:',
+        'Commands run:',
+        '[exit ',
+        'Approvals:',
+        'Rollback/undo:',
+    )
+    if include_plan:
+        return fragments[:4] + ('Plan:', 'Plan hash:') + fragments[4:]
+    return fragments
+
+
+def check_receipt_completeness(
+    receipt_text: str, *, include_plan: bool = False
+) -> list[str]:
+    """Return missing fragments from the human-readable receipt text."""
+    return [
+        fragment
+        for fragment in receipt_completeness_checklist(include_plan=include_plan)
+        if fragment not in receipt_text
+    ]
+
+
 def extract_run_receipt_context(
     events: list[dict[str, Any]],
     *,
@@ -73,6 +117,10 @@ def extract_run_receipt_context(
     goal = ''
     provider = ''
     model = ''
+    permission_mode = ''
+    plan_path = ''
+    plan_content_hash = ''
+    final_result = ''
     for event in events:
         if event.get('event_type') != 'run_started':
             continue
@@ -80,6 +128,19 @@ def extract_run_receipt_context(
         goal = str(payload.get('task', goal) or goal)
         provider = str(payload.get('provider', provider) or provider)
         model = str(payload.get('model', model) or model)
+        permission_mode = str(
+            payload.get('permission_mode', permission_mode) or permission_mode
+        )
+        plan_path = str(payload.get('plan_path', plan_path) or plan_path)
+        plan_content_hash = str(
+            payload.get('plan_content_hash', plan_content_hash) or plan_content_hash
+        )
+
+    for event in events:
+        if event.get('event_type') != 'run_completed':
+            continue
+        payload = _safe_payload(event)
+        final_result = str(payload.get('answer', final_result) or final_result)
 
     for event in events:
         if event.get('event_type') != 'model_route':
@@ -101,6 +162,10 @@ def extract_run_receipt_context(
         goal=goal,
         provider=provider,
         model=model,
+        permission_mode=permission_mode,
+        plan_path=plan_path,
+        plan_content_hash=plan_content_hash,
+        final_result=final_result,
         audit_path=audit_path,
         resume_state='none',
         tools_used=_collect_tools_used(events),
@@ -136,6 +201,11 @@ def format_run_receipt(  # noqa: C901
         lines.append(
             f'Provider/model: {context.provider or "?"} / {context.model or "?"}'
         )
+    lines.append(f'Permission mode: {context.permission_mode or "?"}')
+    if context.plan_path:
+        lines.append(f'Plan: {context.plan_path}')
+    if context.plan_content_hash:
+        lines.append(f'Plan hash: {context.plan_content_hash}')
     lines.append(f'Cost: {_format_cost(summary)}')
     lines.append(f'Audit log: {context.audit_path}')
     lines.append(f'Resume/checkpoint: {context.resume_state}')
@@ -145,6 +215,9 @@ def format_run_receipt(  # noqa: C901
         if summary.finished_at:
             window = f'{summary.started_at} → {summary.finished_at}'
         lines.append(f'Window: {window}')
+
+    if context.final_result:
+        lines.append(f'Final result: {_truncate_text(context.final_result)}')
 
     if context.tools_used:
         lines.append(
@@ -163,12 +236,24 @@ def format_run_receipt(  # noqa: C901
         if len(summary.changed_files) > 20:
             lines.append(f'  ... and {len(summary.changed_files) - 20} more')
 
-    if summary.commands_run:
+    commands_run: list[Any] = []
+    if bundle and bundle.commands_run:
+        commands_run = list(bundle.commands_run)
+    elif summary.commands_run:
+        commands_run = list(summary.commands_run)
+
+    if commands_run:
         lines.append('Commands run:')
-        for cmd in summary.commands_run[:10]:
-            command = cmd.get('command', '')
+        for cmd in commands_run[:10]:
+            command = getattr(cmd, 'command', '') or (
+                cmd.get('command', '') if isinstance(cmd, dict) else ''
+            )
             if command:
-                lines.append(f'  - {command}')
+                exit_code = getattr(cmd, 'exit_code', None)
+                if isinstance(cmd, dict):
+                    exit_code = cmd.get('exit_code', exit_code)
+                suffix = f' [exit {exit_code}]' if exit_code is not None else ''
+                lines.append(f'  - {command}{suffix}')
 
     if summary.tests_executed:
         lines.append(f'Tests run: {summary.tests_executed} tool call(s)')
@@ -178,12 +263,30 @@ def format_run_receipt(  # noqa: C901
         for test in bundle.tests[:10]:
             lines.append(f'  - {test.test_name}: {test.status}')
 
-    if summary.approvals:
+    approval_rows: list[dict[str, Any]] = list(summary.approvals)
+    if not approval_rows and bundle and bundle.approvals:
+        for approval in bundle.approvals:
+            decision = (
+                'denied'
+                if approval.denied
+                else 'granted'
+                if approval.approved
+                else 'pending'
+            )
+            approval_rows.append(
+                {
+                    'tool_name': approval.tool_name,
+                    'decision': decision,
+                    'scope': approval.scope_path,
+                }
+            )
+
+    if approval_rows:
         lines.append('Approvals:')
-        for approval in summary.approvals[:10]:
-            tool = approval.get('tool_name', '?')
-            decision = approval.get('decision', '?')
-            scope = approval.get('scope', '')
+        for app in approval_rows[:10]:
+            tool = app.get('tool_name', '?')
+            decision = app.get('decision', '?')
+            scope = app.get('scope', '')
             suffix = f' ({scope})' if scope else ''
             lines.append(f'  - {tool}: {decision}{suffix}')
 

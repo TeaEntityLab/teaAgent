@@ -42,7 +42,12 @@ acceptance flow writes the user TUI state file. In sandboxed environments, run
 them with permission to bind localhost ports and write the TeaAgent state
 directory.
 
-**Current acceptance test count: `621 passed`** (pytest-collected guard target; suite summary at `docs/generated/suite-summary.json`, 2026-06-11)
+**Current acceptance test count: `643 passed`** (pytest-collected guard target; suite summary at `docs/generated/suite-summary.json`, 2026-06-11)
+
+Keep historical acceptance-count snapshots in dated analysis or roadmap docs.
+This file only owns the live guard target.
+
+Product claim-to-test traceability: [`docs/architecture/claim-to-test-traceability-matrix.md`](architecture/claim-to-test-traceability-matrix.md).
 
 ## Acceptance Flows
 
@@ -163,12 +168,12 @@ directory.
 
 ## Current Status
 
-Acceptance collection currently reports `446` acceptance tests, matching the
-headline above. The last recorded supported-interpreter full-suite verification
+The live acceptance count above is the only current acceptance-count claim in
+this document. The last recorded supported-interpreter full-suite verification
 in the June 5 daily-driver finalization package reported `4265 passed, 0 failed, 6 skipped`
-on Python 3.14.4 (4265 = 4090 baseline + 175 new tests across P0–P2 workstreams). Treat that full-suite
-number as a dated evidence snapshot, not as a substitute for re-running
-`python3 -m pytest -q` before a release or safety claim.
+on Python 3.14.4 (4265 = 4090 baseline + 175 new tests across P0–P2 workstreams).
+Treat that full-suite number as a dated evidence snapshot, not as a substitute
+for re-running `python3 -m pytest -q` before a release or safety claim.
 
 Note: 12 pre-existing test failures were fixed as part of this stream — 5 caused
 by the new built-in RSS skill discovery path (patched `_BUILTIN_SKILL_DIR`), 3

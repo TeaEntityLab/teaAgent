@@ -55,6 +55,12 @@ from teaagent.llm._transport import (  # noqa: F401
     UrllibHTTPTransport as UrllibHTTPTransport,
 )
 from teaagent.llm._types import (  # noqa: F401
+    CostSource as CostSource,
+)
+from teaagent.llm._types import (  # noqa: F401
+    GovernanceMetadata as GovernanceMetadata,
+)
+from teaagent.llm._types import (  # noqa: F401
     HTTPTransport as HTTPTransport,
 )
 from teaagent.llm._types import (  # noqa: F401
@@ -100,5 +106,11 @@ from teaagent.llm._types import (  # noqa: F401
     ProviderKeyError as ProviderKeyError,
 )
 from teaagent.llm._types import (  # noqa: F401
+    RefusalClass as RefusalClass,
+)
+from teaagent.llm._types import (  # noqa: F401
     SafetyCategory as SafetyCategory,
+)
+from teaagent.llm._types import (  # noqa: F401
+    ToolCallFormat as ToolCallFormat,
 )

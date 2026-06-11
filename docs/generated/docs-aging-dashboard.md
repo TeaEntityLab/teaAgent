@@ -4,7 +4,7 @@
 
 **Stale threshold:** 90 days since `Last reviewed`
 **Current-truth docs scanned:** 17
-**Needs attention:** 4
+**Needs attention:** 5
 
 Regenerate: `python3 scripts/report_docs_aging.py`
 
@@ -27,6 +27,12 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 | Document | Status | Last reviewed | File mtime | Notes |
 | --- | --- | --- | --- | --- |
 | `README.md` | stale_by_mtime | 2026-06-06 | 2026-06-07 | Missing owner banner; File modified after last reviewed date |
+
+### roadmap
+
+| Document | Status | Last reviewed | File mtime | Notes |
+| --- | --- | --- | --- | --- |
+| `docs/roadmap-status.md` | stale_by_mtime | 2026-06-10 | 2026-06-11 | File modified after last reviewed date |
 
 ### verification
 

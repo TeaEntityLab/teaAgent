@@ -5,6 +5,8 @@ Verifies: tool registration, schema validation, error handling.
 
 from __future__ import annotations
 
+import pytest
+
 from teaagent.github_integration import (
     github_create_pr,
     github_list_prs,
@@ -29,15 +31,8 @@ def test_github_create_pr_no_token() -> None:
     import os
 
     if 'GITHUB_TOKEN' not in os.environ and 'GH_TOKEN' not in os.environ:
-        try:
+        with pytest.raises(PermissionError, match='GitHub token not found'):
             github_create_pr('owner/repo', 'title', 'branch')
-            # Should not reach here - PermissionError should be raised
-            raise AssertionError(
-                'Expected PermissionError when GITHUB_TOKEN is not set'
-            )
-        except PermissionError:
-            # Expected: no GitHub token available, so PermissionError is raised
-            pass
 
 
 def test_github_list_prs_registration_schema() -> None:
