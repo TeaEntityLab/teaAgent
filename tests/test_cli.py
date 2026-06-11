@@ -509,6 +509,7 @@ def test_doctor_aigateway_wizard_reads_keychain_token_when_input_empty() -> None
 
 
 def test_doctor_providers_outputs_checks() -> None:
+    """Doctor providers outputs provider checks."""
     output = io.StringIO()
     with (
         patch('teaagent.cli.check_llm_configuration', return_value=(True, 'ok')),
@@ -517,7 +518,10 @@ def test_doctor_providers_outputs_checks() -> None:
     ):
         security_run.return_value.returncode = 1
         security_run.return_value.stdout = ''
-        main(['doctor', 'providers'])
+        exit_code = main(['doctor', 'providers'])
+    result = output.getvalue()
+    assert isinstance(exit_code, int)
+    assert len(result) > 0, 'Expected non-empty output from doctor providers'
 
 
 def test_cli_with_missing_required_argument() -> None:

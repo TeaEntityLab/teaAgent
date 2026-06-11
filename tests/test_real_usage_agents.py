@@ -84,7 +84,10 @@ class CliAgentRunScenarios(unittest.TestCase):
         key = _opencodezen_api_key()
         if not key:
             self.skipTest(SKIP_REASON)
-        with patch.dict(os.environ, {'OPENCODEZEN_API_KEY': key}):
+        with (
+            patch.dict(os.environ, {'OPENCODEZEN_API_KEY': key}),
+            patch('builtins.input', return_value='m'),
+        ):
             out = io.StringIO()
             with redirect_stdout(out):
                 exit_code = main(
@@ -141,7 +144,10 @@ class CliAgentRunScenarios(unittest.TestCase):
         key = _opencodezen_api_key()
         if not key:
             self.skipTest(SKIP_REASON)
-        with patch.dict(os.environ, {'OPENCODEZEN_API_KEY': key}):
+        with (
+            patch.dict(os.environ, {'OPENCODEZEN_API_KEY': key}),
+            patch('builtins.input', return_value='m'),
+        ):
             out = io.StringIO()
             with redirect_stdout(out):
                 exit_code = main(
@@ -186,7 +192,10 @@ class CliAgentRunScenarios(unittest.TestCase):
         key = _opencodezen_api_key()
         if not key:
             self.skipTest(SKIP_REASON)
-        with patch.dict(os.environ, {'OPENCODEZEN_API_KEY': key}):
+        with (
+            patch.dict(os.environ, {'OPENCODEZEN_API_KEY': key}),
+            patch('builtins.input', return_value='m'),
+        ):
             out = io.StringIO()
             with redirect_stdout(out):
                 exit_code = main(
