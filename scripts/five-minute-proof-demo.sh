@@ -208,13 +208,20 @@ with tempfile.TemporaryDirectory(prefix="teaagent-proof-") as _tmp:
     # ── STEP 2-4: Full governed run ─────────────────────────────────────────
     step(2, "Approval + edit — governed run with plan, approval, and git sandbox")
     note(f"Plan: {plan_file.relative_to(root)}")
-    note("Approval granted for call_id='fix-write' (simulates user click)")
+    note("Approval granted for scoped payload digest (simulates user click)")
 
     has_git = _git_baseline(root)
     if not has_git:
         note("git not available — undo will use UndoJournal fallback")
 
     plan_contract = load_plan_contract(plan_file, root=root)
+
+    # Compute digest for the write approval
+    from teaagent.policy import compute_scoped_payload_digest
+    write_digest = compute_scoped_payload_digest(
+        "workspace_write_file",
+        {"path": "calc.py", "content": _FIXED_SRC}
+    )
 
     run_out = io.StringIO()
     with (
@@ -230,7 +237,7 @@ with tempfile.TemporaryDirectory(prefix="teaagent-proof-") as _tmp:
             "--allow-external-plan",
             "--require-plan",
             "--git-sandbox-auto-stash",
-            "--approve-call-id", "fix-write",
+            "--approve-scoped", f"workspace_write_file:{write_digest}",
             "--max-iterations", "8",
             "--max-tool-calls", "8",
         ])

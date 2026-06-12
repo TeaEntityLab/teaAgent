@@ -43,6 +43,35 @@ def _derive_policy_source(routing_reason: str) -> str:
     return 'category'
 
 
+def _parse_approve_scoped(scoped_approvals: list[str]) -> frozenset[str]:
+    """Parse --approve-scoped arguments into a frozenset of digests.
+
+    Each argument is expected in the format TOOL:SHA256, where SHA256 is
+    a 64-character lowercase hex string.
+
+    Args:
+        scoped_approvals: List of 'TOOL:SHA256' strings from --approve-scoped.
+
+    Returns:
+        frozenset of digest strings.
+
+    Raises:
+        SystemExit: If format is invalid.
+    """
+    digests = []
+    for arg in scoped_approvals:
+        if ':' not in arg:
+            sys.exit(f'--approve-scoped expects TOOL:SHA256 format, got: {arg}')
+        parts = arg.split(':', 1)
+        if len(parts) != 2:
+            sys.exit(f'--approve-scoped expects TOOL:SHA256 format, got: {arg}')
+        _tool_name, digest = parts
+        if len(digest) != 64 or not all(c in '0123456789abcdef' for c in digest):
+            sys.exit(f'--approve-scoped expects TOOL:SHA256 (64 hex chars), got: {arg}')
+        digests.append(digest)
+    return frozenset(digests)
+
+
 def _display_recovery_guidance(
     result: RunResult,
     args: argparse.Namespace,
@@ -804,6 +833,9 @@ def _execute_agent_task(  # noqa: C901
     stream_handlers = build_run_stream_handlers(args, audit)
     use_stream = stream_handlers.stream and adapter_supports_streaming(adapter)
     max_estimated_cost_cents = getattr(args, 'max_estimated_cost_cents', 500)
+    approved_payload_digests = _parse_approve_scoped(
+        getattr(args, 'approve_scoped', [])
+    )
     config = factory.create_chat_agent_config(
         max_iterations=args.max_iterations,
         max_tool_calls=args.max_tool_calls,
@@ -812,6 +844,7 @@ def _execute_agent_task(  # noqa: C901
         model=selected_model,
         permission_mode=resolved_permission_mode,
         approved_call_ids=frozenset(args.approve_call_id),
+        approved_payload_digests=approved_payload_digests,
         enable_subagent=args.subagent,
         max_subagent_depth=args.max_subagent_depth,
         heartbeat_seconds=args.heartbeat,

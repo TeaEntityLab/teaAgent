@@ -297,3 +297,105 @@ def test_collect_pytest_nodes_raises_on_failure():
             raise AssertionError('Expected RuntimeError to be raised')
         except RuntimeError as e:
             assert 'pytest collection failed' in str(e)
+
+
+def test_classify_test_type_path_heuristic_acceptance():
+    """Test that files under tests/acceptance/ are classified as behavior."""
+    from audit_test_quality import classify_test_type
+
+    # Create a fake path under tests/acceptance/
+    test_path = Path('/repo/tests/acceptance/test_some_flow.py')
+    test_type = classify_test_type(test_path)
+    assert test_type == 'behavior'
+
+
+def test_classify_test_type_path_heuristic_lifecycle():
+    """Test that files under tests/lifecycle/ are classified as lifecycle."""
+    from audit_test_quality import classify_test_type
+
+    test_path = Path('/repo/tests/lifecycle/test_event_sequence.py')
+    test_type = classify_test_type(test_path)
+    assert test_type == 'lifecycle'
+
+
+def test_classify_test_type_path_heuristic_adversarial():
+    """Test that files with 'adversarial' in name are classified as adversarial."""
+    from audit_test_quality import classify_test_type
+
+    test_path = Path('/repo/tests/test_adversarial_boundary.py')
+    test_type = classify_test_type(test_path)
+    assert test_type == 'adversarial'
+
+
+def test_classify_test_type_default_contract():
+    """Test that other files default to contract type."""
+    from audit_test_quality import classify_test_type
+
+    test_path = Path('/repo/tests/test_some_unit.py')
+    test_type = classify_test_type(test_path)
+    assert test_type == 'contract'
+
+
+def test_classify_test_type_explicit_pytestmark_override():
+    """Test that explicit pytestmark = pytest.mark.test_type() overrides path heuristic."""
+    from audit_test_quality import classify_test_type
+
+    # Even though path says "acceptance" (behavior), explicit marker says "contract"
+    source = "pytestmark = pytest.mark.test_type('contract')\n\ndef test_something():\n    assert True\n"
+    test_path = Path('/repo/tests/acceptance/test_override.py')
+    test_type = classify_test_type(test_path, source)
+    assert test_type == 'contract'
+
+
+def test_classify_test_type_explicit_comment_override():
+    """Test that explicit # test-type: comment overrides path heuristic."""
+    from audit_test_quality import classify_test_type
+
+    source = '# test-type: lifecycle\n\ndef test_something():\n    assert True\n'
+    test_path = Path('/repo/tests/test_some_flow.py')
+    test_type = classify_test_type(test_path, source)
+    assert test_type == 'lifecycle'
+
+
+def test_classify_test_type_precedence_pytestmark_over_comment():
+    """Test that pytestmark takes precedence over comment."""
+    from audit_test_quality import classify_test_type
+
+    source = (
+        "pytestmark = pytest.mark.test_type('behavior')\n"
+        '# test-type: contract\n'
+        '\ndef test_something():\n    assert True\n'
+    )
+    test_path = Path('/repo/tests/test_flow.py')
+    test_type = classify_test_type(test_path, source)
+    assert test_type == 'behavior'
+
+
+def test_scan_test_file_includes_test_type():
+    """Test that scan_test_file populates test_type field."""
+    with tempfile.TemporaryDirectory() as tmp:
+        acceptance_dir = Path(tmp) / 'acceptance'
+        acceptance_dir.mkdir()
+        test_file = acceptance_dir / 'test_flow.py'
+        test_file.write_text(
+            'def test_user_flow():\n    assert True\n', encoding='utf-8'
+        )
+
+        metrics = scan_test_file(test_file)
+
+        assert metrics.test_type == 'behavior'
+
+
+def test_scan_test_file_with_explicit_test_type_marker():
+    """Test that explicit marker is respected during scanning."""
+    with tempfile.TemporaryDirectory() as tmp:
+        test_file = Path(tmp) / 'test_explicit.py'
+        test_file.write_text(
+            "pytestmark = pytest.mark.test_type('adversarial')\n\n"
+            'def test_rejects_bad_input():\n    assert True\n',
+            encoding='utf-8',
+        )
+
+        metrics = scan_test_file(test_file)
+
+        assert metrics.test_type == 'adversarial'

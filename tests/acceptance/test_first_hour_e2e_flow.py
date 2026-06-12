@@ -175,6 +175,13 @@ def test_first_hour_setup_daily_plan_edit_undo(tmp_path: Path) -> None:
     )
     plan_artifact = Path(plan_payload['plan_artifact'])
     plan_contract = load_plan_contract(plan_artifact, root=tmp_path)
+
+    # Compute digest for the write approval
+    from teaagent.policy import compute_scoped_payload_digest
+
+    write_args = {'path': 'calc.py', 'content': 'def add(a, b):\n    return a + b\n'}
+    write_digest = compute_scoped_payload_digest('workspace_write_file', write_args)
+
     run_out = io.StringIO()
     with (
         patch('teaagent.cli.create_llm_adapter', return_value=adapter),
@@ -195,8 +202,8 @@ def test_first_hour_setup_daily_plan_edit_undo(tmp_path: Path) -> None:
                 '--allow-external-plan',
                 '--require-plan',
                 '--git-sandbox-auto-stash',
-                '--approve-call-id',
-                'fix-calc',
+                '--approve-scoped',
+                f'workspace_write_file:{write_digest}',
                 '--max-iterations',
                 '8',
                 '--max-tool-calls',

@@ -4,7 +4,8 @@
 
 **Stale threshold:** 90 days since `Last reviewed`
 **Current-truth docs scanned:** 17
-**Needs attention:** 4
+**Needs attention (working tier only):** 3
+**Archive-tier docs (exempt from staleness):** 1
 
 Regenerate: `python3 scripts/report_docs_aging.py`
 
@@ -20,13 +21,7 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 
 | Document | Status | Last reviewed | File mtime | Notes |
 | --- | --- | --- | --- | --- |
-| `docs/INDEX.md` | stale_by_mtime | 2026-06-06 | 2026-06-10 | Missing owner banner; File modified after last reviewed date |
-
-### project
-
-| Document | Status | Last reviewed | File mtime | Notes |
-| --- | --- | --- | --- | --- |
-| `README.md` | stale_by_mtime | 2026-06-06 | 2026-06-07 | Missing owner banner; File modified after last reviewed date |
+| `docs/INDEX.md` | stale_by_mtime | 2026-06-06 | 2026-06-12 | Missing owner banner; File modified after last reviewed date |
 
 ### roadmap
 
@@ -34,24 +29,32 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 | --- | --- | --- | --- | --- |
 | `docs/roadmap-status.md` | stale_by_mtime | 2026-06-10 | 2026-06-12 | File modified after last reviewed date |
 
-## Review Triggers
+## Archive Tier (Dated, Immutable Records — Exempt from Staleness Checks)
 
-| Document | Owner | Review trigger |
-| --- | --- | --- |
-| `README.md` | project | README feature claims, golden path, or provider count changes. |
-| `docs/INDEX.md` | docs | New front-door docs, supersession links, or validation command changes. |
-| `docs/USAGE.md` | daily-driver | CLI/TUI command behavior, permission modes, or surface recipes change. |
-| `docs/cli.md` | cli | CLI flags, subcommands, or handler behavior changes. |
-| `docs/acceptance.md` | verification | Acceptance test inventory or count changes. |
-| `docs/roadmap-status.md` | roadmap | Roadmap horizon, milestone, or track status changes. |
-| `docs/daily-driver-current-status.md` | daily-driver | TUI, chat, agent mode, approval, cost, undo, or resume behavior changes. |
-| `docs/release-checklist.md` | release | Release gates, survey cadence, or validation workflow changes. |
-| `docs/backlog-priority.md` | strategy | Backlog priorities or shipped/beta status claims change. |
-| `docs/maturity-matrix.md` | governance | Subsystem maturity labels change. |
-| `docs/terminology.md` | governance | Canonical terminology or state vocabulary changes. |
-| `docs/architecture.md` | architecture | Architecture claims, provider count, or module boundaries change. |
-| `docs/tui-daily-driver-guide.md` | daily-driver | TUI operator loop or recovery pointers change. |
-| `docs/permission-and-approval-playbook.md` | security | Approval, permission, or MCP trust behavior changes. |
-| `docs/governance/README.md` | governance | Governance index or process entry points change. |
-| `docs/plans/ticket-plans/index.md` | daily-driver | Ticket closure status or execution order changes. |
-| `docs/analysis/active-findings-status-ledger-2026-06-06.md` | daily-driver | Finding closure status or new CG/AG/DS ids. |
+These docs are dated records and are not expected to be kept current.
+
+| Document | Owner |
+| --- | --- |
+| `docs/analysis/active-findings-status-ledger-2026-06-06.md` | daily-driver |
+
+## Review Triggers (Current-Truth Docs)
+
+| Document | Owner | Tier | Review trigger |
+| --- | --- | --- | --- |
+| `README.md` | project | working | README feature claims, golden path, or provider count changes. |
+| `docs/INDEX.md` | docs | working | New front-door docs, supersession links, or validation command changes. |
+| `docs/USAGE.md` | daily-driver | working | CLI/TUI command behavior, permission modes, or surface recipes change. |
+| `docs/cli.md` | cli | working | CLI flags, subcommands, or handler behavior changes. |
+| `docs/acceptance.md` | verification | working | Acceptance test inventory or count changes. |
+| `docs/roadmap-status.md` | roadmap | working | Roadmap horizon, milestone, or track status changes. |
+| `docs/daily-driver-current-status.md` | daily-driver | working | TUI, chat, agent mode, approval, cost, undo, or resume behavior changes. |
+| `docs/release-checklist.md` | release | working | Release gates, survey cadence, or validation workflow changes. |
+| `docs/backlog-priority.md` | strategy | working | Backlog priorities or shipped/beta status claims change. |
+| `docs/maturity-matrix.md` | governance | working | Subsystem maturity labels change. |
+| `docs/terminology.md` | governance | working | Canonical terminology or state vocabulary changes. |
+| `docs/architecture.md` | architecture | working | Architecture claims, provider count, or module boundaries change. |
+| `docs/tui-daily-driver-guide.md` | daily-driver | working | TUI operator loop or recovery pointers change. |
+| `docs/permission-and-approval-playbook.md` | security | working | Approval, permission, or MCP trust behavior changes. |
+| `docs/governance/README.md` | governance | working | Governance index or process entry points change. |
+| `docs/plans/ticket-plans/index.md` | daily-driver | working | Ticket closure status or execution order changes. |
+| `docs/analysis/active-findings-status-ledger-2026-06-06.md` | daily-driver | archive | Finding closure status or new CG/AG/DS ids. |

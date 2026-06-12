@@ -2,6 +2,9 @@
 
 Generates a deterministic report of current-truth doc freshness grouped by
 owner surface. Secondary to docs/INDEX.md.
+
+Archive-tier docs (with YYYY-MM-DD date pattern) are excluded from staleness
+warnings as they are immutable records, not live promises.
 """
 
 from __future__ import annotations
@@ -26,8 +29,14 @@ _REVIEW_TRIGGER = re.compile(
     r'>\s*\*\*Review trigger:\*\*\s*(.+?)(?:\n|$)', re.IGNORECASE
 )
 _OWNER_SURFACE = re.compile(r'>\s*\*\*Owns:\*\*\s*(.+?)(?:\n|$)', re.IGNORECASE)
+_ARCHIVE_DATE_PATTERN = re.compile(r'\d{4}-\d{2}-\d{2}')
 
 STALE_DAYS = 90
+
+
+def _is_archive_tier(rel_path: str) -> bool:
+    """Return True if doc is archive-tier (contains YYYY-MM-DD date pattern)."""
+    return bool(_ARCHIVE_DATE_PATTERN.search(rel_path))
 
 
 class DocReviewEntry(NamedTuple):
@@ -134,6 +143,7 @@ class DocAgingRow:
     file_mtime: str
     status: str
     notes: list[str]
+    tier: str = 'working'  # constitution, working, or archive
 
 
 def _parse_review_date(text: str) -> datetime | None:
@@ -154,6 +164,8 @@ def _scan_doc(
 ) -> DocAgingRow:
     path = repo_root / entry.rel_path
     notes: list[str] = []
+    tier = 'archive' if _is_archive_tier(entry.rel_path) else 'working'
+
     if not path.is_file():
         return DocAgingRow(
             rel_path=entry.rel_path,
@@ -163,6 +175,7 @@ def _scan_doc(
             file_mtime='missing',
             status='missing',
             notes=['File not found'],
+            tier=tier,
         )
 
     text = path.read_text(encoding='utf-8')
@@ -202,6 +215,7 @@ def _scan_doc(
         file_mtime=file_mtime,
         status=status,
         notes=notes,
+        tier=tier,
     )
 
 
@@ -214,7 +228,11 @@ def generate_docs_aging_dashboard(
         _scan_doc(entry, repo_root=repo_root, stale_days=stale_days)
         for entry in DOC_REVIEW_REGISTRY
     ]
-    stale_rows = [row for row in rows if row.status != 'fresh']
+    # Exclude archive-tier docs from staleness warnings (they are immutable records)
+    stale_rows = [
+        row for row in rows if row.status != 'fresh' and row.tier != 'archive'
+    ]
+    archive_rows = [row for row in rows if row.tier == 'archive']
     grouped: dict[str, list[DocAgingRow]] = {}
     for row in stale_rows:
         grouped.setdefault(row.owner, []).append(row)
@@ -226,38 +244,55 @@ def generate_docs_aging_dashboard(
         '',
         f'**Stale threshold:** {stale_days} days since `Last reviewed`',
         f'**Current-truth docs scanned:** {len(rows)}',
-        f'**Needs attention:** {len(stale_rows)}',
+        f'**Needs attention (working tier only):** {len(stale_rows)}',
+        f'**Archive-tier docs (exempt from staleness):** {len(archive_rows)}',
         '',
         'Regenerate: `python3 scripts/report_docs_aging.py`',
         '',
     ]
 
     if not stale_rows:
-        lines.append('All scanned current-truth docs are fresh.')
+        lines.append('All scanned current-truth working-tier docs are fresh.')
         lines.append('')
-        return '\n'.join(lines)
+    else:
+        lines.append('## Stale Or Incomplete By Owner Surface')
+        lines.append('')
+        for owner in sorted(grouped):
+            lines.append(f'### {owner}')
+            lines.append('')
+            lines.append('| Document | Status | Last reviewed | File mtime | Notes |')
+            lines.append('| --- | --- | --- | --- | --- |')
+            for row in sorted(grouped[owner], key=lambda item: item.rel_path.lower()):
+                note = '; '.join(row.notes) if row.notes else '—'
+                lines.append(
+                    f'| `{row.rel_path}` | {row.status} | {row.last_reviewed or "—"} | '
+                    f'{row.file_mtime} | {note} |'
+                )
+            lines.append('')
 
-    lines.append('## Stale Or Incomplete By Owner Surface')
-    lines.append('')
-    for owner in sorted(grouped):
-        lines.append(f'### {owner}')
+    if archive_rows:
+        lines.append(
+            '## Archive Tier (Dated, Immutable Records — Exempt from Staleness Checks)'
+        )
         lines.append('')
-        lines.append('| Document | Status | Last reviewed | File mtime | Notes |')
-        lines.append('| --- | --- | --- | --- | --- |')
-        for row in sorted(grouped[owner], key=lambda item: item.rel_path.lower()):
-            note = '; '.join(row.notes) if row.notes else '—'
-            lines.append(
-                f'| `{row.rel_path}` | {row.status} | {row.last_reviewed or "—"} | '
-                f'{row.file_mtime} | {note} |'
-            )
+        lines.append(
+            'These docs are dated records and are not expected to be kept current.'
+        )
+        lines.append('')
+        lines.append('| Document | Owner |')
+        lines.append('| --- | --- |')
+        for row in sorted(archive_rows, key=lambda item: item.rel_path.lower()):
+            lines.append(f'| `{row.rel_path}` | {row.owner} |')
         lines.append('')
 
-    lines.append('## Review Triggers')
+    lines.append('## Review Triggers (Current-Truth Docs)')
     lines.append('')
-    lines.append('| Document | Owner | Review trigger |')
-    lines.append('| --- | --- | --- |')
+    lines.append('| Document | Owner | Tier | Review trigger |')
+    lines.append('| --- | --- | --- | --- |')
     for row in rows:
-        lines.append(f'| `{row.rel_path}` | {row.owner} | {row.review_trigger} |')
+        lines.append(
+            f'| `{row.rel_path}` | {row.owner} | {row.tier} | {row.review_trigger} |'
+        )
     lines.append('')
     return '\n'.join(lines)
 

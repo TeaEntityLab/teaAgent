@@ -26,6 +26,7 @@ class RunSetupRequest:
     max_tool_calls: int = 10
     max_estimated_cost_cents: int | None = 500
     approved_call_ids: frozenset[str] = frozenset()
+    approved_payload_digests: frozenset[str] = frozenset()
     use_approval_store: bool = True
     run_id: str | None = None
     resumed_from: str | None = None
@@ -76,6 +77,7 @@ def build_approval_policy(
         approval_store = ApprovalPresetStore(request.root)
     return ApprovalPolicy(
         preapproved_call_ids=request.approved_call_ids,
+        preapproved_payload_digests=request.approved_payload_digests,
         allow_all_destructive=request.allow_destructive,
         full_access_acknowledged=request.allow_destructive,
         permission_mode=(

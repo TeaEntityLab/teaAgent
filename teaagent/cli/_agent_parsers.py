@@ -179,6 +179,13 @@ def add_agent_run_arguments(
         help='Approve one exact destructive tool call id. Can be repeated.',
     )
     p.add_argument(
+        '--approve-scoped',
+        action='append',
+        default=[],
+        metavar='TOOL:SHA256',
+        help='Pre-run scoped approval binding tool name and canonical args digest (repeatable). Compute via teaagent.policy.compute_scoped_payload_digest.',
+    )
+    p.add_argument(
         '--hitl-approval',
         action='store_true',
         help=(

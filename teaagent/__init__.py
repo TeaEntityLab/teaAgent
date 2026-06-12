@@ -220,7 +220,10 @@ if TYPE_CHECKING:
         AgentRunner,
         ApprovalRequest,
         Decision,
+        EventSpine,
         FinalAnswer,
+        RunEvent,
+        RunEventType,
         ToolRequest,
     )
     from teaagent.skill_loader import (

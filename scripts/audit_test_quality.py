@@ -79,6 +79,8 @@ class FileMetrics:
         self.skip_decorators: dict[str, bool] = {}  # test_name -> has_skip
         self.skip_reasons: dict[str, bool] = {}  # test_name -> has explicit skip reason
         self.mock_counts: dict[str, int] = {}  # test_name -> mock count
+        self.test_type: str = 'contract'  # default test type
+        self.test_types_per_function: dict[str, str] = {}  # test_name -> type
 
 
 def _decorator_name(node: ast.AST) -> str:
@@ -165,6 +167,9 @@ def scan_test_file(file_path: Path) -> FileMetrics:
         print(f'Warning: syntax error in {file_path}: {e}', file=sys.stderr)
         metrics.has_syntax_error = True
         return metrics
+
+    # Classify test type based on path and explicit markers
+    metrics.test_type = classify_test_type(file_path, source)
 
     for node in ast.walk(tree):
         if isinstance(
@@ -294,6 +299,55 @@ def infer_tier(path: Path) -> str:
     return 'unit'
 
 
+def classify_test_type(file_path: Path, source_text: str | None = None) -> str:
+    """Classify test type based on path heuristics and optional explicit markers.
+
+    Rules (in precedence order):
+    1. If source contains pytest.mark.test_type('<type>'), use that type
+    2. If source contains # test-type: <type> comment, use that type
+    3. If path contains tests/acceptance/ → "behavior"
+    4. If path contains tests/lifecycle/ → "lifecycle"
+    5. If filename contains "adversarial" → "adversarial"
+    6. Otherwise → "contract" (default)
+
+    Valid types: contract, behavior, adversarial, lifecycle
+    """
+    # Check for explicit pytestmark or comment override in source
+    if source_text:
+        for line in source_text.splitlines():
+            # Check for pytestmark = pytest.mark.test_type('...')
+            if 'pytestmark' in line and 'test_type' in line:
+                # Extract type from pytestmark = pytest.mark.test_type('<type>')
+                for test_type in ('contract', 'behavior', 'adversarial', 'lifecycle'):
+                    if (
+                        f"test_type('{test_type}')" in line
+                        or f'test_type("{test_type}")' in line
+                    ):
+                        return test_type
+
+            # Check for # test-type: <type> comment
+            if '# test-type:' in line:
+                parts = line.split('# test-type:')
+                if len(parts) > 1:
+                    type_str = parts[1].strip().lower()
+                    if type_str in ('contract', 'behavior', 'adversarial', 'lifecycle'):
+                        return type_str
+
+    # Apply path heuristics
+    path_str = _repo_relative(file_path)
+
+    if '/acceptance/' in f'/{path_str}':
+        return 'behavior'
+
+    if '/lifecycle/' in f'/{path_str}':
+        return 'lifecycle'
+
+    if 'adversarial' in file_path.name:
+        return 'adversarial'
+
+    return 'contract'
+
+
 def metrics_to_json(all_metrics: list[FileMetrics], total_nodes: int) -> dict[str, Any]:
     """Convert metrics to JSON schema."""
     files_data = []
@@ -305,6 +359,7 @@ def metrics_to_json(all_metrics: list[FileMetrics], total_nodes: int) -> dict[st
         file_data = {
             'path': _repo_relative(metrics.path),
             'collected_tests': len(metrics.test_functions),
+            'test_type': metrics.test_type,
             'domain': infer_domain(metrics.path),
             'tier': infer_tier(metrics.path),
             'purpose_status': 'documented' if metrics.docstrings else 'missing',
@@ -403,13 +458,41 @@ def metrics_to_markdown(all_metrics: list[FileMetrics], total_nodes: int) -> str
         if no_assert_tests:
             lines.append(f'| {_repo_relative(metrics.path)} | {len(no_assert_tests)} |')
 
+    # Add per-type summary
+    lines.extend(
+        [
+            '',
+            '## Per-Type Summary',
+            '',
+            '| Type | Files | Test Functions |',
+            '|------|-------|----------------|',
+        ]
+    )
+
+    # Calculate per-type statistics
+    type_stats: dict[str, tuple[int, int]] = {}  # type -> (file_count, test_count)
+    for metrics in all_metrics:
+        if metrics.has_syntax_error:
+            continue
+        test_type = metrics.test_type
+        file_count, test_count = type_stats.get(test_type, (0, 0))
+        type_stats[test_type] = (
+            file_count + 1,
+            test_count + len(metrics.test_functions),
+        )
+
+    for test_type in ('contract', 'behavior', 'adversarial', 'lifecycle'):
+        if test_type in type_stats:
+            file_count, test_count = type_stats[test_type]
+            lines.append(f'| {test_type} | {file_count} | {test_count} |')
+
     lines.extend(
         [
             '',
             '## Per-File Audit',
             '',
-            '| File | Tests | Docstrings | Assertions | Avg Asserts/Test | Mocks | Risk Flags |',
-            '|------|-------|------------|------------|-----------------|-------|------------|',
+            '| File | Type | Tests | Docstrings | Assertions | Avg Asserts/Test | Mocks | Risk Flags |',
+            '|------|------|-------|------------|------------|-----------------|-------|------------|',
         ]
     )
 
@@ -432,6 +515,7 @@ def metrics_to_markdown(all_metrics: list[FileMetrics], total_nodes: int) -> str
 
         lines.append(
             f'| {_repo_relative(metrics.path)} | '
+            f'{metrics.test_type} | '
             f'{len(metrics.test_functions)} | '
             f'{len(metrics.docstrings)} | '
             f'{sum(metrics.assertion_counts.values())} | '

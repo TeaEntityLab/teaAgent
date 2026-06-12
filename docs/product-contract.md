@@ -1,6 +1,8 @@
 # TeaAgent Product Contract
 
-Last updated: 2026-05-28
+> **Last reviewed:** 2026-06-13
+> **Review trigger:** Persona framing, external-adoption claims, or strategic positioning changes.
+> **Direction record:** [Harness-First Direction](../strategy/harness-first-direction-2026-06-13.md)
 
 ## What TeaAgent Is
 
@@ -26,7 +28,11 @@ ModelDecisionEngine → AgentRunner → ToolRegistry → ApprovalPolicy → Work
 - Not a complete sandbox guarantee unless Code Mode container backend or git/worktree isolation is configured.
 - Not enterprise-proven by community adoption alone — maturity labels apply per feature ([maturity-matrix.md](maturity-matrix.md)).
 
-## Primary User Outcomes
+## Primary User (Owner-Operator)
+
+**The owner-operator** is a single person who is simultaneously the maintainer, daily user, and governance auditor of his own runs. This is TeaAgent's current and validated persona.
+
+Core interactions:
 
 1. **Inspect a repo safely** — read-only analysis with audit trail.
 2. **Make bounded code changes** — hash-anchored edits, protected paths, optional plan binding (`--from-plan`, `--require-plan`).
@@ -34,17 +40,25 @@ ModelDecisionEngine → AgentRunner → ToolRegistry → ApprovalPolicy → Work
 4. **Replay and recover** — run store, undo journal, `teaagent runs trace|export|replay`.
 5. **Extend with guardrails** — plugins, MCP, skills under manifest and policy gates.
 
-## Competitive Positioning
+## Differentiators (Owner-Operator Scope)
 
-For developers who want coding-agent automation with **strict tool governance, auditability, and permission boundaries** — not maximum agent orchestration surface area.
+For a maintainer operating his own governance harness with **strict tool governance, auditability, and permission boundaries** in a local-first context.
 
-Differentiators:
+Evidence-backed capabilities:
 
 - Tool contract lint (`teaagent tool lint`)
 - Permission matrix enforcement (see `tests/policy/test_permission_matrix.py`)
 - Audit completeness checks (`teaagent runs export`)
 - Plan-before-write opt-in (`--require-plan`)
 - Validation profiles (`--validate` + `--validation-profile`)
+
+## Future Goals (Aspirational)
+
+These personas and use cases are **not current capabilities** and appear here to document forward direction. They may become evidence-backed in a future release, but no present-tense claim is made.
+
+- **Ordinary developer daily driver** — simplifying friction for non-auditor users
+- **Team operator** — multi-user approval workflows and delegated governance
+- **Enterprise deployment** — federated multi-agent runs, policy auditing, hosted dashboards
 
 ## Release Expectations
 

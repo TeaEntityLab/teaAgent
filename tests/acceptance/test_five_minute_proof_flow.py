@@ -190,6 +190,12 @@ def test_proof_steps2_through_6_full_governed_run(tmp_path: Path) -> None:
     adapter = FakeAdapter(list(_FAKE_RESPONSES))
 
     # ── Steps 2–4: governed agent run ─────────────────────────────────────
+    # Compute digest for the write approval
+    from teaagent.policy import compute_scoped_payload_digest
+
+    write_args = {'path': 'calc.py', 'content': _FIXED_SRC}
+    write_digest = compute_scoped_payload_digest('workspace_write_file', write_args)
+
     run_out = io.StringIO()
     with (
         patch('teaagent.cli.create_llm_adapter', return_value=adapter),
@@ -210,8 +216,8 @@ def test_proof_steps2_through_6_full_governed_run(tmp_path: Path) -> None:
                 '--allow-external-plan',
                 '--require-plan',
                 '--git-sandbox-auto-stash',
-                '--approve-call-id',
-                'fix-write',  # pre-authorise the write call
+                '--approve-scoped',
+                f'workspace_write_file:{write_digest}',
                 '--max-iterations',
                 '8',
                 '--max-tool-calls',
@@ -295,6 +301,12 @@ def test_proof_step5_receipt_includes_evidence_bundle_path(tmp_path: Path) -> No
     _, plan_file = _setup_workspace(tmp_path)
 
     adapter = FakeAdapter(list(_FAKE_RESPONSES))
+    # Compute digest for the write approval
+    from teaagent.policy import compute_scoped_payload_digest
+
+    write_args = {'path': 'calc.py', 'content': _FIXED_SRC}
+    write_digest = compute_scoped_payload_digest('workspace_write_file', write_args)
+
     run_out = io.StringIO()
     with (
         patch('teaagent.cli.create_llm_adapter', return_value=adapter),
@@ -314,8 +326,8 @@ def test_proof_step5_receipt_includes_evidence_bundle_path(tmp_path: Path) -> No
                 str(plan_file),
                 '--allow-external-plan',
                 '--require-plan',
-                '--approve-call-id',
-                'fix-write',
+                '--approve-scoped',
+                f'workspace_write_file:{write_digest}',
                 '--max-iterations',
                 '8',
                 '--max-tool-calls',

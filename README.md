@@ -1,11 +1,12 @@
 # TeaAgent
 
-> **Last reviewed:** 2026-06-06
+> **Last reviewed:** 2026-06-13
 > **Review trigger:** README feature claims, golden path, or provider count changes.
+> **Direction record:** [Harness-First Direction](docs/strategy/harness-first-direction-2026-06-13.md) (owner-operator persona, aspirational adoption)
 
-Governance-first agent harness for autonomous coding tasks. Thin orchestration layer with tool governance, state boundaries, audit logging, and destructive-tool approval.
+A personal, local-first governance harness for autonomous coding tasks — built by and for the owner-operator who maintains, uses, and audits his own runs. Thin orchestration layer with tool governance, state boundaries, audit logging, and destructive-tool approval.
 
-**TeaAgent is not** a generic IDE agent clone or hosted cloud delegate. It is a local-first harness you operate — with explicit permission modes, hash-chained audit logs, and verification commands a security reviewer can run. See [When Not to Use TeaAgent](docs/guides/when-not-to-use-teaagent.md) for honest non-fit cases.
+**TeaAgent is not** a generic IDE agent clone, enterprise multi-user platform, or hosted cloud delegate. It is a local-first harness you operate — with explicit permission modes, hash-chained audit logs, and verification commands a security reviewer can run. See [When Not to Use TeaAgent](docs/guides/when-not-to-use-teaagent.md) for honest non-fit cases.
 
 ## Governance-first harness
 
@@ -19,7 +20,7 @@ Governance-first agent harness for autonomous coding tasks. Thin orchestration l
 
 Trust model: [Trust and Audit Whitepaper](docs/governance/trust-and-audit-whitepaper.md). Enterprise NIST mapping: [Security Whitepaper](docs/security-whitepaper.md).
 
-**Start by persona:** [Solo CLI](docs/guides/getting-started-solo-cli.md) · [Team operator](docs/guides/getting-started-team-operator.md) · [Tool/plugin author](docs/guides/getting-started-tool-plugin-author.md) · [Security reviewer](docs/guides/getting-started-security-reviewer.md)
+**Getting started:** [Owner-operator quickstart](docs/guides/getting-started-solo-cli.md) · [Tool/plugin author](docs/guides/getting-started-tool-plugin-author.md) · [Security reviewer](docs/guides/getting-started-security-reviewer.md)
 
 ## What makes it different
 

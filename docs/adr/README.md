@@ -33,6 +33,7 @@ This directory contains all Architecture Decision Records (ADRs) for the TeaAgen
 | 0025 | Shared ChatSessionController for Chat Surfaces | Accepted and Implemented | 2026-06-01 | 2026-06-04 13:18:00 +0800 |
 | 0029 | Consensus Validation Deferred Behind Approval Queue | Accepted | 2026-06-10 | 2026-12-10 (expiry review) |
 | 0031 | Shadow Mode Exit Criteria | Proposed | 2026-06-12 | 2026-09-12 (expiry review) |
+| 0032 | Run Event Taxonomy and Event Spine | Accepted | 2026-06-13 | - |
 
 ## ADR Categories
 
@@ -48,13 +49,14 @@ This directory contains all Architecture Decision Records (ADRs) for the TeaAgen
 - **0007**: ANP Adapter Boundary - External federation boundary
 - **0008**: P4 Strategic Posture - Storage, TLS, P2P auth posture
 
-### Governance Hardening (0009, 0022-0024, 0029, 0031)
+### Governance Hardening (0009, 0022-0024, 0029, 0031-0032)
 - **0009**: 5-Loop Governance System - Comprehensive governance loops
 - **0022**: Centralized Approval Queue for Subagents - Batch approval management
 - **0023**: Strict Plan-Before-Write Enforcement - Plan validation
 - **0024**: Automated Memory Invalidation - Memory hygiene
 - **0029**: Consensus Validation Deferred Behind Approval Queue - Consensus gate deferral
 - **0031**: Shadow Mode Exit Criteria - Policy/RBAC shadow→enforce promotion path
+- **0032**: Run Event Taxonomy and Event Spine - Unified run-lifecycle event contract
 
 ### Multi-Agent & Swarm (0019)
 - **0019**: Phase 4 - Federated Swarm Consensus & Peer Attestations - Swarm coordination

@@ -734,6 +734,43 @@ class ApprovalStoreManager:
             arguments=arguments,
         )
 
+    def handle_payload_digest_preapproved(
+        self,
+        *,
+        call_id: str,
+        tool_name: str,
+        arguments: dict[str, Any],
+        preapproved_payload_digests: frozenset[str],
+    ) -> bool:
+        from teaagent.policy import compute_scoped_payload_digest
+
+        if not self.approval_store or not self.approval_origin_run_id:
+            return False
+        digest = compute_scoped_payload_digest(tool_name, arguments)
+        if digest not in preapproved_payload_digests:
+            return False
+        if (
+            self.approval_store.check_scoped_approval(
+                run_id=self.approval_origin_run_id,
+                call_id=call_id,
+                tool_name=tool_name,
+                arguments=arguments,
+            )
+            is None
+        ):
+            self.approval_store.add_scoped_approval(
+                run_id=self.approval_origin_run_id,
+                call_id=call_id,
+                tool_name=tool_name,
+                arguments=arguments,
+            )
+        return self.approval_store.try_consume_scoped_approval(
+            run_id=self.approval_origin_run_id,
+            call_id=call_id,
+            tool_name=tool_name,
+            arguments=arguments,
+        )
+
 
 class ApprovalManager:
     """Unified manager composing PermissionModeEnforcer, JITApprovalManager,
@@ -756,6 +793,7 @@ class ApprovalManager:
         allow_all_destructive: bool = False,
         full_access_acknowledged: bool = False,
         preapproved_call_ids: frozenset[str] = frozenset(),
+        preapproved_payload_digests: frozenset[str] = frozenset(),
         extra_path_keys: set[str] | None = None,
         approval_backend: _ApprovalBackend | None = None,
         tenant_id: str = 'default',
@@ -771,6 +809,7 @@ class ApprovalManager:
         self.allow_all_destructive = allow_all_destructive
         self.full_access_acknowledged = full_access_acknowledged
         self.preapproved_call_ids = preapproved_call_ids
+        self.preapproved_payload_digests = preapproved_payload_digests
         self._extra_path_keys: set[str] = extra_path_keys or set()
 
         self._permission_enforcer = PermissionModeEnforcer(
@@ -896,6 +935,18 @@ class ApprovalManager:
             call_id=call_id,
             tool_name=tool_name,
             arguments=arguments,
+        ):
+            return
+
+        if (
+            arguments is not None
+            and self.preapproved_payload_digests
+            and self._store_manager.handle_payload_digest_preapproved(
+                call_id=call_id,
+                tool_name=tool_name,
+                arguments=arguments,
+                preapproved_payload_digests=self.preapproved_payload_digests,
+            )
         ):
             return
 

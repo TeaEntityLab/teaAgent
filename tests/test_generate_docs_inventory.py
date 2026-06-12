@@ -31,6 +31,37 @@ def test_generate_docs_inventory_is_deterministic(tmp_path: Path) -> None:
     assert 'Not current truth' in first
     assert '`alpha/a.md`' in first
     assert '`beta/b.md`' in first
+    # Check that tier column is present
+    assert '| Tier |' in first
+
+
+def test_classify_tier_constitution(tmp_path: Path) -> None:
+    module = _load_inventory_module()
+    assert module._classify_tier('product-contract.md') == 'constitution'
+    assert module._classify_tier('architecture.md') == 'constitution'
+    assert module._classify_tier('terminology.md') == 'constitution'
+    assert module._classify_tier('acceptance.md') == 'constitution'
+    assert module._classify_tier('roadmap-status.md') == 'constitution'
+    assert module._classify_tier('agent-contribution-contract.md') == 'constitution'
+    assert (
+        module._classify_tier('strategy/harness-first-direction-2026-06-13.md')
+        == 'constitution'
+    )
+    assert module._classify_tier('governance-compliance.md') == 'constitution'
+
+
+def test_classify_tier_archive(tmp_path: Path) -> None:
+    module = _load_inventory_module()
+    assert module._classify_tier('analysis/foo-2026-06-12.md') == 'archive'
+    assert module._classify_tier('analysis/review-2026-01-01.md') == 'archive'
+    assert module._classify_tier('some-doc-2025-12-25.md') == 'archive'
+
+
+def test_classify_tier_working(tmp_path: Path) -> None:
+    module = _load_inventory_module()
+    assert module._classify_tier('USAGE.md') == 'working'
+    assert module._classify_tier('cli.md') == 'working'
+    assert module._classify_tier('adr/0001-foo.md') == 'working'
 
 
 def test_check_docs_inventory_detects_stale_output(tmp_path: Path) -> None:

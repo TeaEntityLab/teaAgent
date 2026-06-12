@@ -78,6 +78,7 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     'Document': ('teaagent.rag', 'Document'),
     'EvalCase': ('teaagent.eval', 'EvalCase'),
     'EvalReport': ('teaagent.eval', 'EvalReport'),
+    'EventSpine': ('teaagent.runner', 'EventSpine'),
     'ExportManifest': ('teaagent.run_export', 'ExportManifest'),
     'FallbackKnowledgeBackend': (
         'teaagent.external_backends',
@@ -164,6 +165,8 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     'ResolvedConfig': ('teaagent.config_loader', 'ResolvedConfig'),
     'RunBudget': ('teaagent.budget', 'RunBudget'),
     'RunCancelledError': ('teaagent.errors', 'RunCancelledError'),
+    'RunEvent': ('teaagent.runner', 'RunEvent'),
+    'RunEventType': ('teaagent.runner', 'RunEventType'),
     'RunRollup': ('teaagent.daily', 'RunRollup'),
     'RunStore': ('teaagent.run_store', 'RunStore'),
     'RunSummary': ('teaagent.run_store', 'RunSummary'),

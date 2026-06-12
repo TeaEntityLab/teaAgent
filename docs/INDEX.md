@@ -58,6 +58,7 @@ governance ledgers should prefer the canonical set above.
 
 | Topic | Evidence package |
 | --- | --- |
+| **June 12 reflective intent critical review** | [Intent Critical Review and Worklist 2026-06-12](analysis/intent-critical-review-and-worklist-2026-06-12.md) |
 | **June 10 system critical review package (current)** | [System Critical Review Package 2026-06-10](analysis/system-critical-review-2026-06-10-INDEX.md) |
 | June 10 engineering critique refresh | [Engineering Architecture Critique Refresh](analysis/engineering-critique-refresh-2026-06-10.md) |
 | June 10 remote multi-agent readiness refresh | [Remote Multi-Agent Readiness Refresh](analysis/remote-multi-agent-readiness-refresh-2026-06-10.md) |

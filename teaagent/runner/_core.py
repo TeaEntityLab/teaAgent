@@ -48,6 +48,7 @@ logger = logging.getLogger(__name__)
 
 from ._approval_manager import RunnerApprovalCoordinator  # noqa: E402
 from ._auto_mode_manager import AutoModeManager  # noqa: E402
+from ._events import EventSpine, RunEventType  # noqa: E402
 from ._plan_validator import PlanValidator  # noqa: E402
 from ._types import (  # noqa: E402
     ApprovalHandler,
@@ -126,6 +127,7 @@ class AgentRunner:
         decision_log: Any = None,
         phase_tracker: Optional[PhaseTracker] = None,
         usage_reader: Optional[UsageReader] = None,
+        event_spine: Optional[EventSpine] = None,
     ) -> None:
         self.registry = registry
         self.audit = audit
@@ -146,6 +148,7 @@ class AgentRunner:
         self.workspace_root = workspace_root
         self.decision_log = decision_log
         self._usage_reader = usage_reader
+        self.event_spine = event_spine or EventSpine()
 
         # Initialize manager classes
         self.approval_policy = approval_policy or ApprovalPolicy()
@@ -449,6 +452,7 @@ class AgentRunner:
         if run_started_extra:
             started_payload.update(run_started_extra)
         self.audit.record('run_started', current_run_id, **started_payload)
+        self.event_spine.emit(RunEventType.RUN_STARTED, current_run_id, started_payload)
         return (
             current_run_id,
             context,
@@ -479,15 +483,19 @@ class AgentRunner:
                 **emit_proof_of_use_audit(proof_bundle),
             )
 
+        run_completed_payload = {
+            'answer': decision.content,
+            'metadata': enriched_metadata,
+            'cost_cents': cost_cents,
+            'input_tokens': input_tokens,
+            'output_tokens': output_tokens,
+        }
         self.audit.record(
             'run_completed',
             run_id,
-            answer=decision.content,
-            metadata=enriched_metadata,
-            cost_cents=cost_cents,
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
+            **run_completed_payload,
         )
+        self.event_spine.emit(RunEventType.RUN_COMPLETED, run_id, run_completed_payload)
         extra_meta: dict[str, Any] = {}
         if self.auto_mode_manager.is_enabled():
             extra_meta['auto_mode'] = self.auto_mode_manager.summary()
@@ -523,15 +531,19 @@ class AgentRunner:
         output_tokens: int,
     ) -> RunResult:
         """Handle an AgentHarnessError and return the run result."""
+        run_failed_payload = {
+            'category': exc.category,
+            'message': str(exc),
+            'cost_cents': cost_cents,
+            'input_tokens': input_tokens,
+            'output_tokens': output_tokens,
+        }
         self.audit.record(
             'run_failed',
             run_id,
-            category=exc.category,
-            message=str(exc),
-            cost_cents=cost_cents,
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
+            **run_failed_payload,
         )
+        self.event_spine.emit(RunEventType.RUN_FAILED, run_id, run_failed_payload)
         self._emit_summary(
             run_id=run_id,
             cost_cents=cost_cents,
@@ -561,15 +573,19 @@ class AgentRunner:
         output_tokens: int,
     ) -> RunResult:
         """Handle a system error and return the run result."""
+        system_failed_payload = {
+            'category': ErrorCategory.SYSTEM,
+            'message': str(exc),
+            'cost_cents': cost_cents,
+            'input_tokens': input_tokens,
+            'output_tokens': output_tokens,
+        }
         self.audit.record(
             'run_failed',
             run_id,
-            category=ErrorCategory.SYSTEM,
-            message=str(exc),
-            cost_cents=cost_cents,
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
+            **system_failed_payload,
         )
+        self.event_spine.emit(RunEventType.RUN_FAILED, run_id, system_failed_payload)
         self._emit_summary(
             run_id=run_id,
             cost_cents=cost_cents,
@@ -587,6 +603,17 @@ class AgentRunner:
             input_tokens=input_tokens,
             output_tokens=output_tokens,
         )
+
+    def _check_payload_digest_approval(
+        self, tool_name: str, arguments: dict[str, Any] | None
+    ) -> bool:
+        """Check if this tool+args combo is approved by a preapproved payload digest."""
+        if not arguments or not self.approval_policy.preapproved_payload_digests:
+            return False
+        from teaagent.policy import compute_scoped_payload_digest
+
+        digest = compute_scoped_payload_digest(tool_name, arguments)
+        return digest in self.approval_policy.preapproved_payload_digests
 
     def _execute_tool_decision(  # noqa: C901
         self,
@@ -632,6 +659,15 @@ class AgentRunner:
                 and bool(decision.call_id)
                 and decision.call_id in self.approval_policy.preapproved_call_ids
             )
+            preapproved_by_payload_digest = (
+                tool.annotations.destructive
+                and bool(decision.arguments)
+                and decision.arguments is not None
+                and bool(self.approval_policy.preapproved_payload_digests)
+                and self._check_payload_digest_approval(
+                    decision.tool_name, decision.arguments
+                )
+            )
 
             self.approval_policy.assert_allowed(
                 tool_name=decision.tool_name,
@@ -655,6 +691,18 @@ class AgentRunner:
                     approved_by='cli --approve-call-id',
                     auto_approved=True,
                     scope='call_id',
+                )
+            elif preapproved_by_payload_digest:
+                self.audit.record(
+                    'tool_call_approved',
+                    run_id,
+                    call_id=decision.call_id,
+                    tool_name=decision.tool_name,
+                    arguments=decision.arguments,
+                    authority_type='preapproved_payload_digest',
+                    approved_by='cli --approve-scoped',
+                    auto_approved=True,
+                    scope='payload_digest',
                 )
         except ToolPermissionError as exc:
             exc_reason_code: DenialReasonCode | None = getattr(exc, 'reason_code', None)
@@ -737,6 +785,9 @@ class AgentRunner:
             }
             context['observations'].append(err_observation)
             self.audit.record('tool_call_failed', run_id, **err_observation)
+            self.event_spine.emit(
+                RunEventType.TOOL_CALL_FAILED, run_id, err_observation
+            )
             if self.checkpoint_store is not None:
                 self.checkpoint_store.save(run_id, context)
             return tool_calls, context
@@ -788,6 +839,7 @@ class AgentRunner:
             observation.update(_long_meta)
         context['observations'].append(observation)
         self.audit.record('tool_call_completed', run_id, **observation)
+        self.event_spine.emit(RunEventType.TOOL_CALL_COMPLETED, run_id, observation)
         if self.checkpoint_store is not None:
             self.checkpoint_store.save(run_id, context)
         if (
@@ -819,15 +871,19 @@ class AgentRunner:
         output_tokens: int,
     ) -> RunResult:
         """Handle budget exceeded case and return the run result."""
+        budget_exceeded_payload = {
+            'category': ErrorCategory.MODEL_LOGIC,
+            'message': 'iteration budget exceeded',
+            'cost_cents': cost_cents,
+            'input_tokens': input_tokens,
+            'output_tokens': output_tokens,
+        }
         self.audit.record(
             'run_failed',
             run_id,
-            category=ErrorCategory.MODEL_LOGIC,
-            message='iteration budget exceeded',
-            cost_cents=cost_cents,
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
+            **budget_exceeded_payload,
         )
+        self.event_spine.emit(RunEventType.RUN_FAILED, run_id, budget_exceeded_payload)
         self._emit_summary(
             run_id=run_id,
             cost_cents=cost_cents,
@@ -871,7 +927,11 @@ class AgentRunner:
         while iterations < self.budget.max_iterations:
             iterations += 1
             self.auto_mode_manager.record_iteration()
-            self.audit.record('iteration_started', current_run_id, iteration=iterations)
+            iteration_payload = {'iteration': iterations}
+            self.audit.record('iteration_started', current_run_id, **iteration_payload)
+            self.event_spine.emit(
+                RunEventType.ITERATION_STARTED, current_run_id, iteration_payload
+            )
             self.phase_tracker.record_iteration()
             try:
                 if self.cancel_token is not None and self.cancel_token.is_set():

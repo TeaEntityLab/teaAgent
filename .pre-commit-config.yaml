@@ -48,3 +48,12 @@ repos:
         entry: bash -c 'if [ "${TEAAGENT_PRECOMMIT_FULL:-0}" = 1 ]; then env UV_CACHE_DIR=.uv-cache uv run pytest -q; else env UV_CACHE_DIR=.uv-cache uv run pytest tests/test_p0_harness.py tests/test_surface_auth_hardening.py tests/test_policy.py tests/test_phase5_context_bus.py tests/test_governance_hardening.py tests/regression/ tests/acceptance/test_subagent_lineage_flow.py -q; fi'
         language: system
         pass_filenames: false
+      - id: check-docs-inventory
+        name: check-docs-inventory
+        # Fail the commit if docs/generated/docs-inventory.md is stale. --check is
+        # read-only: it never writes, so a failure forces the committer to run the
+        # generator and stage the result. (A regenerate-then-check entry would pass
+        # trivially while leaving the regenerated file unstaged.)
+        entry: python3 scripts/generate_docs_inventory.py --check
+        language: system
+        pass_filenames: false

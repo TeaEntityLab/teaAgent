@@ -89,6 +89,7 @@ class ChatAgentConfig:
     permission_mode: PermissionMode = PermissionMode.PROMPT
     memory_limit: int = 5
     approved_call_ids: frozenset[str] = frozenset()
+    approved_payload_digests: frozenset[str] = frozenset()
     enable_subagent: bool = False
     max_subagent_depth: int = 1
     heartbeat_seconds: float = 0.0
@@ -650,6 +651,7 @@ def _create_runner_and_engine(
             max_tool_calls=config.max_tool_calls,
             max_estimated_cost_cents=config.max_estimated_cost_cents,
             approved_call_ids=config.approved_call_ids,
+            approved_payload_digests=config.approved_payload_digests,
             use_approval_store=config.use_approval_store,
             run_id=run_id,
             resumed_from=context_extra.get('resumed_from'),

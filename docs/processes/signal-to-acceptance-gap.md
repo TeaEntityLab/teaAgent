@@ -13,6 +13,9 @@ traceable, triaged, and either filed as roadmap work or explicitly deferred.
 
 This process enforces the principle that community feedback is signal, not fact
 (see [TeaAgent Product Principles](../strategy/teaagent-product-principles-2026-06-04.md)).
+It also enforces the 2026-06-13 harness-first direction: competitor signals are
+not feature-parity commands. They are inputs for governed harness work or
+owner-operator ergonomics hypotheses.
 
 ## Signal Sources
 
@@ -24,6 +27,22 @@ This process enforces the principle that community feedback is signal, not fact
 | DeepWiki / documentation comparison | `scripts/refresh_agent_readme_survey.md` | High — verifiable feature inventory |
 | Direct user feedback | Support channels, daily-driver sessions | Medium-High — real usage but small sample |
 | Ecosystem announcements (MCP, ACP, A2A specs) | Spec-watch, protocol changelogs | High — authoritative spec changes |
+
+## Harness-First Routing Gate
+
+Before Phase 2 triage, classify every captured signal into exactly one route:
+
+| Route | Use when | Next artifact |
+|---|---|---|
+| **Adopt** | The signal strengthens TeaAgent's harness control path and has clear authority, audit, rollback, cost, and evidence semantics. | Acceptance gap or ticket |
+| **Hypothesis** | The signal is an ergonomics or UX clue for the owner-operator, but has not been validated in real TeaAgent use. | `docs/work-log/operator-friction-log.md` entry tagged `[hypothesis: source, date]` |
+| **Defer** | The signal is competitor parity, marketing positioning, external adoption, hosted/remote/IDE catch-up, or otherwise outside the current harness-first non-goals. | Dated rationale and re-evaluation trigger |
+| **ADR Required** | The signal would add a second agent framework, a long-lived public API/schema, or a new governance/control-loop contract. | ADR before any implementation ticket |
+
+Signals may move from **Hypothesis** to **Adopt** only after the owner confirms the
+friction in real use or repository evidence shows a governance gap. Signals may
+move from **Defer** only when a dated trigger changes the current direction, such
+as a quarterly refresh, publication review, or release-blocking eval gate.
 
 ## Process
 
@@ -42,15 +61,17 @@ Artifact: raw signal entry in the monitoring process doc or a dated survey.
 
 ### Phase 2: Gap Triage
 
-For each signal that represents a genuine gap:
+For each signal routed to **Adopt** or **ADR Required**:
 
 1. **Map to use-case** — Find or create a row in `docs/use-cases.md`.
    If the signal maps to an existing use-case, note it as a new sub-capability.
 2. **Assess severity** — Score based on:
-   - **User impact**: How many daily-driver workflows are affected?
+   - **Harness impact**: Does it improve orchestration, tool governance, state
+     boundaries, audit, validation, approval, rollback, or cost control?
    - **Trust risk**: Does the gap weaken governance, audit, or safety?
-   - **Competitive urgency**: Is a competitor gaining adoption because of this?
-3. **Assign priority** — P0 (trust/safety), P1 (daily workflow), P2 (ecosystem/niche).
+   - **Owner friction**: Has the owner hit this in real use, or is it still only
+     a hypothesis?
+3. **Assign priority** — P0 (trust/safety), P1 (owner daily workflow), P2 (ecosystem/niche).
 4. **Propose response**:
    - **File acceptance gap** — Create a ticket with acceptance criteria.
    - **Defer with rationale** — Document why this gap is not acted on now.
@@ -58,6 +79,11 @@ For each signal that represents a genuine gap:
      and close the signal.
 
 Artifact: triaged entry with priority, severity rationale, and response decision.
+
+Signals routed to **Hypothesis** do not create roadmap truth. They stay in the
+operator friction log until the owner validates or rejects them. Signals routed
+to **Defer** do not create new surveys or strategy docs unless a documented
+review trigger applies.
 
 ### Phase 3: Acceptance Gap Filing
 
@@ -103,6 +129,9 @@ During the [quarterly refresh process](../release-checklist.md#quarterly-refresh
   (e.g., "revisit if competitor ships approval gates").
 - Closed signals that were dismissed because "already covered" must cite the
   specific TeaAgent capability that covers them.
+- Hypothesis entries must remain labeled as hypotheses until owner-validated in
+  real use.
+- Feature-parity signals must not bypass the harness-first routing gate.
 - The quarterly refresh checklist in `docs/release-checklist.md` gates the
   signal-to-gap pipeline.
 
@@ -115,3 +144,5 @@ During the [quarterly refresh process](../release-checklist.md#quarterly-refresh
 - [Use Cases](../use-cases.md)
 - [Use Case Matrix](../use-case-matrix.md)
 - [Backlog Priority](../backlog-priority.md)
+- [Operator Friction Log](../work-log/operator-friction-log.md)
+- [Harness-First Direction](../strategy/harness-first-direction-2026-06-13.md)

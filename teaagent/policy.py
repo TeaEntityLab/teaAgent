@@ -46,6 +46,8 @@ class ApprovalPolicy:
 
     # CLI/TUI ``--approve-call-id`` / ``approve <call_id>`` — binds scoped approval at execute time.
     preapproved_call_ids: frozenset[str] = field(default_factory=frozenset)
+    # CLI ``--approve-scoped`` — preapproved payload digests (tool+args hash)
+    preapproved_payload_digests: frozenset[str] = field(default_factory=frozenset)
     allow_all_destructive: bool = False
     # Explicit full-access gate (P0-TR-001): ``allow_all_destructive`` only
     # matters when the session has already been promoted to danger-full-access.
@@ -91,6 +93,7 @@ class ApprovalPolicy:
                 allow_all_destructive=self.allow_all_destructive,
                 full_access_acknowledged=self.full_access_acknowledged,
                 preapproved_call_ids=self.preapproved_call_ids,
+                preapproved_payload_digests=self.preapproved_payload_digests,
                 extra_path_keys=self.extra_path_keys,
                 tenant_id=self.tenant_id,
             ),
@@ -443,6 +446,29 @@ class ApprovalPolicy:
     def __del__(self) -> None:
         with contextlib.suppress(Exception):
             self._signature_executor.shutdown(wait=False, cancel_futures=True)
+
+
+def compute_scoped_payload_digest(
+    tool_name: str, arguments: dict[str, Any] | None
+) -> str:
+    """Compute a scoped approval digest from tool name and arguments.
+
+    This digest includes only the tool name and arguments (not call_id),
+    allowing payload-based preapproval independent of model-controlled call IDs.
+
+    Args:
+        tool_name: Name of the tool being called.
+        arguments: Arguments passed to the tool.
+
+    Returns:
+        SHA256 hex digest of the canonical payload JSON.
+    """
+    canonical = json.dumps(
+        {'tool_name': tool_name, 'arguments': arguments or {}},
+        sort_keys=True,
+        separators=(',', ':'),
+    )
+    return hashlib.sha256(canonical.encode('utf-8')).hexdigest()
 
 
 def parse_permission_mode(value: str) -> PermissionMode:
