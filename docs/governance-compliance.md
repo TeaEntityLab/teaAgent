@@ -16,6 +16,14 @@
 - `governance-gate` job in `.github/workflows/ci.yml`
 - `pytest tests/test_governance_compliance.py` (15 tests)
 - `pytest tests/test_governance_fuzz.py`
+- `use-case-matrix` job in `.github/workflows/ci.yml` includes docs consistency gate (line 38-39): `python3 scripts/validate_docs_consistency.py`
+
+## Branch protection requirements
+
+To prevent drift gate failures from landing on main (V1-b enforcement gap):
+- The `use-case-matrix` CI job must be configured as a **required check** in GitHub branch protection rules for the `main` branch
+- This ensures that commits with failing docs consistency validation cannot be merged
+- Configuration path: GitHub repo → Settings → Branches → Branch protection rule for `main` → Require status checks to pass before merging → add `use-case-matrix`
 
 ## Manual review
 

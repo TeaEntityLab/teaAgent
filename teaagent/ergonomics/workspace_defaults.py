@@ -19,6 +19,9 @@ except ModuleNotFoundError:  # pragma: no cover - py3.10
         tomllib = None
         TOMLLIB_AVAILABLE = False
 
+# Sentinel value to detect when an argument was not explicitly set by the user
+_UNSET = object()
+
 DEFAULT_KEYS = {
     'provider': None,
     'model': None,
@@ -168,5 +171,17 @@ def apply_workspace_defaults_to_namespace(
         if not hasattr(args, key):
             continue
         current = getattr(args, key, None)
-        if current in (None, '', 0, 0.0, DEFAULT_KEYS.get(key)):
+        if current is _UNSET:
+            # Flag not given on the CLI — config may fill it.
             setattr(args, key, value)
+        elif key == 'permission_mode':
+            # A concrete mode is an explicit user choice; config never
+            # overrides it (V8: neither demotion nor escalation).
+            continue
+        elif current in (None, '', 0, 0.0, DEFAULT_KEYS.get(key)):
+            setattr(args, key, value)
+
+    # If neither CLI nor config produced a mode, fall back to the default
+    # so the sentinel never leaks into downstream parsing.
+    if getattr(args, 'permission_mode', None) is _UNSET:
+        args.permission_mode = DEFAULT_KEYS['permission_mode']

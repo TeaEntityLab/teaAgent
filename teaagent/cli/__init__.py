@@ -298,6 +298,7 @@ def main(
         _apply_log_format(args)
         _normalize_optional_provider_args(args)
         _require_provider_for_agent_commands(args)
+        _finalize_permission_mode(args)
         return args.func(args)
     except ProviderKeyError as e:
         from teaagent.cli._formatting import format_error_block
@@ -795,6 +796,7 @@ def apply_config_defaults(args: argparse.Namespace) -> None:  # noqa: C901
     if getattr(args, 'command', None) in {'init', 'setup'}:
         return
     from teaagent.ergonomics.workspace_defaults import (
+        _UNSET,
         apply_workspace_defaults_to_namespace,
         load_workspace_defaults,
     )
@@ -839,8 +841,28 @@ def apply_config_defaults(args: argparse.Namespace) -> None:  # noqa: C901
         # check all providers.
         if command == 'doctor' and doctor_command == 'all' and key == 'provider':
             continue
-        if getattr(args, key) == defaults.get(key):
+        current = getattr(args, key)
+        if current is _UNSET:
+            # Flag not given on the CLI — config may fill it.
             setattr(args, key, value)
+        elif key == 'permission_mode':
+            # A concrete mode is an explicit user choice; config never
+            # overrides it (V8: neither demotion nor escalation).
+            continue
+        elif current == defaults.get(key):
+            setattr(args, key, value)
+
+
+def _finalize_permission_mode(args: argparse.Namespace) -> None:
+    """Replace a leftover sentinel with the default mode before dispatch.
+
+    Guarantees no handler ever sees the ``_UNSET`` object, regardless of
+    which config layers ran for this command.
+    """
+    from teaagent.ergonomics.workspace_defaults import _UNSET, DEFAULT_KEYS
+
+    if getattr(args, 'permission_mode', None) is _UNSET:
+        args.permission_mode = DEFAULT_KEYS['permission_mode']
 
 
 def resolve_config_path(explicit: Optional[str]) -> Optional[Path]:

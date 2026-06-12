@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 from typing import Callable
 
+from teaagent.ergonomics.workspace_defaults import _UNSET
 from teaagent.llm import available_providers
 from teaagent.types import PermissionMode
 
@@ -57,7 +58,7 @@ def _cockpit(subparsers: argparse._SubParsersAction, handler: Callable) -> None:
     p.add_argument(
         '--permission-mode',
         choices=[mode.value for mode in PermissionMode],
-        default=PermissionMode.PROMPT.value,
+        default=_UNSET,
         help='Permission mode label for cockpit approval state.',
     )
     p.add_argument(
@@ -124,7 +125,7 @@ def _session(
     resume.add_argument(
         '--permission-mode',
         choices=[mode.value for mode in PermissionMode],
-        default=PermissionMode.PROMPT.value,
+        default=_UNSET,
     )
     resume.set_defaults(func=handlers['session_resume'], command='session')
 
@@ -178,7 +179,7 @@ def _approval(
     check.add_argument('--root', default='.')
     check.add_argument(
         '--permission-mode',
-        default=PermissionMode.PROMPT.value,
+        default=_UNSET,
         choices=[mode.value for mode in PermissionMode],
     )
     check.add_argument('--path', default=None, help='Tool path argument to match.')
@@ -205,7 +206,7 @@ def _approval(
     explain.add_argument('--root', default='.')
     explain.add_argument(
         '--permission-mode',
-        default=PermissionMode.PROMPT.value,
+        default=_UNSET,
         choices=[mode.value for mode in PermissionMode],
     )
     explain.add_argument('--path', default=None, help='Tool path argument to match.')
@@ -502,7 +503,7 @@ def _journal(subparsers: argparse._SubParsersAction, handler: Callable) -> None:
     p.add_argument(
         '--permission-mode',
         choices=[mode.value for mode in PermissionMode],
-        default=PermissionMode.PROMPT.value,
+        default=_UNSET,
     )
     p.add_argument(
         '--context-profile',

@@ -4,7 +4,7 @@
 
 **Stale threshold:** 90 days since `Last reviewed`
 **Current-truth docs scanned:** 17
-**Needs attention:** 5
+**Needs attention:** 4
 
 Regenerate: `python3 scripts/report_docs_aging.py`
 
@@ -32,13 +32,7 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 
 | Document | Status | Last reviewed | File mtime | Notes |
 | --- | --- | --- | --- | --- |
-| `docs/roadmap-status.md` | stale_by_mtime | 2026-06-10 | 2026-06-11 | File modified after last reviewed date |
-
-### verification
-
-| Document | Status | Last reviewed | File mtime | Notes |
-| --- | --- | --- | --- | --- |
-| `docs/acceptance.md` | stale_by_mtime | 2026-06-10 | 2026-06-11 | File modified after last reviewed date |
+| `docs/roadmap-status.md` | stale_by_mtime | 2026-06-10 | 2026-06-12 | File modified after last reviewed date |
 
 ## Review Triggers
 

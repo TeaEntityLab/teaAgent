@@ -21,6 +21,10 @@ from teaagent.config_loader import (
     ResolvedConfig,
     load_workspace_config,
 )
+from teaagent.ergonomics.workspace_defaults import (
+    _UNSET,
+    apply_workspace_defaults_to_namespace,
+)
 
 # ---------------------------------------------------------------------------
 # ResolvedConfig
@@ -581,3 +585,101 @@ def test_config_resolver_with_absolute_path():
     result = rc.resolve()
     # Should handle absolute path
     assert isinstance(result, type(result))
+
+
+# ---------------------------------------------------------------------------
+# V8-a: Config priority fix for permission_mode (fifth-pass correction)
+# ---------------------------------------------------------------------------
+
+
+def test_explicit_permission_mode_not_overridden_by_config(tmp_path):
+    """V8-a: Explicit --permission-mode should not be overridden by config."""
+    import argparse
+    import os
+
+    # Create a mock args namespace with explicit permission mode
+    args = argparse.Namespace()
+    args.command = 'run'
+    args.permission_mode = 'prompt'  # Explicitly set
+    args.root = str(tmp_path)
+
+    # Create a config file that tries to override to read-only
+    config_file = tmp_path / '.teaagent' / 'config.toml'
+    config_file.parent.mkdir(parents=True, exist_ok=True)
+    config_file.write_text('permission_mode = "read-only"')
+
+    # Change to the temp directory so config loading works
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(str(tmp_path))
+        # Apply workspace defaults
+        apply_workspace_defaults_to_namespace(args, root=str(tmp_path))
+
+        # Explicit setting should be preserved, not overridden by config
+        assert args.permission_mode == 'prompt', (
+            'Explicit permission mode should not be overridden by config'
+        )
+    finally:
+        os.chdir(original_cwd)
+
+
+def test_unset_permission_mode_uses_config_value(tmp_path):
+    """V8-a: Unset permission mode should use config value."""
+    import argparse
+    import os
+
+    # Create a mock args namespace with unset permission mode
+    args = argparse.Namespace()
+    args.command = 'run'
+    args.permission_mode = _UNSET  # Not explicitly set
+    args.root = str(tmp_path)
+
+    # Create a config file with permission mode
+    config_file = tmp_path / '.teaagent' / 'config.toml'
+    config_file.parent.mkdir(parents=True, exist_ok=True)
+    config_file.write_text('permission_mode = "read-only"')
+
+    # Change to the temp directory so config loading works
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(str(tmp_path))
+        # Apply workspace defaults
+        apply_workspace_defaults_to_namespace(args, root=str(tmp_path))
+
+        # Unset permission mode should use config value
+        assert args.permission_mode == 'read-only', (
+            'Unset permission mode should use config value'
+        )
+    finally:
+        os.chdir(original_cwd)
+
+
+def test_config_allow_does_not_override_explicit_prompt(tmp_path):
+    """V8-a: Config 'allow' should not override explicit 'prompt' (security direction)."""
+    import argparse
+    import os
+
+    # Create a mock args namespace with explicit permission mode
+    args = argparse.Namespace()
+    args.command = 'run'
+    args.permission_mode = 'prompt'  # Explicitly set to safe mode
+    args.root = str(tmp_path)
+
+    # Create a config file that tries to override to allow (less safe)
+    config_file = tmp_path / '.teaagent' / 'config.toml'
+    config_file.parent.mkdir(parents=True, exist_ok=True)
+    config_file.write_text('permission_mode = "allow"')
+
+    # Change to the temp directory so config loading works
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(str(tmp_path))
+        # Apply workspace defaults
+        apply_workspace_defaults_to_namespace(args, root=str(tmp_path))
+
+        # Explicit safe setting should be preserved, not overridden by unsafe config
+        assert args.permission_mode == 'prompt', (
+            'Explicit safe permission mode should not be overridden by unsafe config'
+        )
+    finally:
+        os.chdir(original_cwd)

@@ -216,6 +216,12 @@ jobs:
           echo "Comparing test assertions against base: $BASE"
           python3 scripts/check_test_assertion_regression.py --base "$BASE"
 
+      - name: Agent contribution contract gate (V4-a)
+        # Validates agent-authored commits comply with contribution contract.
+        # NO SELF-SERVICE BYPASS: Agents cannot bypass their own governance gate (V4-c fix).
+        # Manual bypass requires human intervention via GitHub UI only.
+        run: python3 scripts/check_agent_contribution_contract.py --commit HEAD
+
   governance-gate:
     runs-on: ubuntu-latest
     # Run after lint passes, before package build

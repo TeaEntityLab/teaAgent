@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 from typing import Any, Callable, Optional, cast
 
+# Import sentinel from workspace_defaults to detect unset arguments
+from teaagent.ergonomics.workspace_defaults import _UNSET
 from teaagent.types import PermissionMode
 
 
@@ -187,7 +189,7 @@ def add_agent_run_arguments(
     p.add_argument(
         '--permission-mode',
         choices=[mode.value for mode in PermissionMode],
-        default=PermissionMode.PROMPT.value,
+        default=_UNSET,
         help='Permission mode for workspace tools.',
     )
     p.add_argument(
@@ -456,7 +458,7 @@ def _preflight(
     p.add_argument(
         '--permission-mode',
         choices=[mode.value for mode in PermissionMode],
-        default=PermissionMode.PROMPT.value,
+        default=_UNSET,
         help='Permission mode to report.',
     )
     p.add_argument(
@@ -579,7 +581,7 @@ def _daily(
     p.add_argument(
         '--permission-mode',
         choices=[mode.value for mode in PermissionMode],
-        default=PermissionMode.PROMPT.value,
+        default=_UNSET,
         help='Permission mode to report and recommend.',
     )
     p.add_argument(
@@ -745,7 +747,7 @@ def _resume(
     p.add_argument(
         '--permission-mode',
         choices=[mode.value for mode in PermissionMode],
-        default=PermissionMode.PROMPT.value,
+        default=_UNSET,
         help='Permission mode for workspace tools.',
     )
     p.add_argument(

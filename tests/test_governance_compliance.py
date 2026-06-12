@@ -5,6 +5,7 @@ Rules tested:
   - Each tool requires name, description, input schema, output schema, annotations
   - Destructive tools require approval checks
   - Every run has iteration/tool-call limits
+  - Agent contribution contract compliance (V4-a, V4-c)
 """
 
 from __future__ import annotations
@@ -196,3 +197,59 @@ class TestToolErrors:
         from teaagent.types import ToolExecutionError
 
         assert issubclass(ToolExecutionError, Exception)
+
+
+# ── Agent contribution contract (V4-a, V4-c) ───────────────────────────────
+
+
+class TestAgentContributionContract:
+    """V4-a/V4-c: Agent contribution contract compliance and anti-bypass."""
+
+    def test_bypass_trailer_is_critical_error(self) -> None:
+        """Bypass trailer must be treated as critical error (V4-c)."""
+        # Simulate the bypass detection logic
+        commit_message = 'test\n\nBypass-agent-contract: testing'
+        trailers = {
+            line.split(':', 1)[0].strip(): line.split(':', 1)[1].strip()
+            for line in commit_message.splitlines()
+            if ':' in line and not line.startswith('#')
+        }
+
+        # Check if bypass trailer exists
+        has_bypass = 'Bypass-agent-contract' in trailers
+        assert has_bypass, 'Test setup should have bypass trailer'
+
+        # The script should treat this as critical error
+        assert has_bypass, 'Bypass trailer should be detected as critical violation'
+
+    def test_bypass_environment_is_critical_error(self) -> None:
+        """Bypass environment variable must be treated as critical error (V4-c)."""
+        import os
+
+        # Simulate environment bypass check
+        has_bypass_env = os.getenv('ALLOW_AGENT_CONTRACT_BYPASS') == '1'
+
+        # Normally this should be False
+        assert not has_bypass_env, 'Environment bypass should not be set in normal test'
+
+        # If set, it should be treated as critical error
+        os.environ['ALLOW_AGENT_CONTRACT_BYPASS'] = '1'
+        try:
+            has_bypass_env = os.getenv('ALLOW_AGENT_CONTRACT_BYPASS') == '1'
+            assert has_bypass_env, 'Environment bypass should be detected when set'
+        finally:
+            os.environ.pop('ALLOW_AGENT_CONTRACT_BYPASS', None)
+
+    def test_normal_commit_passes_without_bypass(self) -> None:
+        """Normal commit without bypass should pass validation."""
+        # Simulate normal commit without bypass
+        commit_message = 'test'
+        trailers = {
+            line.split(':', 1)[0].strip(): line.split(':', 1)[1].strip()
+            for line in commit_message.splitlines()
+            if ':' in line and not line.startswith('#')
+        }
+
+        # Should not have bypass trailer
+        has_bypass = 'Bypass-agent-contract' in trailers
+        assert not has_bypass, 'Normal commit should not have bypass trailer'

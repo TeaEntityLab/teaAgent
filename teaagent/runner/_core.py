@@ -16,6 +16,7 @@ from teaagent.context import ContextCompactor
 from teaagent.errors import (
     AgentHarnessError,
     BudgetExceededError,
+    DenialReasonCode,
     ErrorCategory,
     InvalidToolDecision,
     RunCancelledError,
@@ -656,8 +657,8 @@ class AgentRunner:
                     scope='call_id',
                 )
         except ToolPermissionError as exc:
-            reason_code = getattr(exc, 'reason_code', None)
-            reason_code_str = reason_code.value if reason_code else None
+            exc_reason_code: DenialReasonCode | None = getattr(exc, 'reason_code', None)
+            reason_code_str = exc_reason_code.value if exc_reason_code else None
             approval_request = self.approval_manager.create_approval_request(
                 call_id=decision.call_id,
                 tool_name=decision.tool_name,
@@ -687,7 +688,7 @@ class AgentRunner:
                         # Include approval metadata in the exception for later extraction
                         raise ToolPermissionError(
                             f'Tool call pending approval: {decision.tool_name}',
-                            reason_code=reason_code,
+                            reason_code=exc_reason_code,
                             approval_request=approval_request,
                         ) from None
                     raise
