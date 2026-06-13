@@ -124,6 +124,27 @@ class ToolPermissionError(AgentHarnessError):
         self.approval_request: Optional[Any] = approval_request
 
 
+class PlanGateError(ToolPermissionError):
+    """Raised when the plan gate blocks a write.
+
+    A subclass of :class:`ToolPermissionError` so existing
+    ``except ToolPermissionError`` handlers still catch it, but distinguishable
+    so the runner does not route a plan-gate block into the approval /
+    pending-approval flow (a plan-gate block is not resolved by approving the
+    call — it needs a covering plan). Skips the approval-oriented hint.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        reason_code: Optional[DenialReasonCode] = None,
+    ) -> None:
+        super(ToolPermissionError, self).__init__(message, hint=None)
+        self.reason_code = reason_code
+        self.approval_request = None
+
+
 class ToolExecutionError(AgentHarnessError):
     category = ErrorCategory.SYSTEM
 

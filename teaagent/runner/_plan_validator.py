@@ -193,7 +193,7 @@ class PlanGateInterceptor:
         if plan_contract is not None:
             context['plan_contract'] = plan_contract
 
-        from teaagent.errors import ToolPermissionError
+        from teaagent.errors import PlanGateError, ToolPermissionError
 
         try:
             gate_error = self._pv.evaluate_write_gate(
@@ -203,11 +203,13 @@ class PlanGateInterceptor:
             )
         except ToolPermissionError as exc:
             # evaluate_write_gate can raise directly from assert_write_allowed.
+            # Re-raise as PlanGateError so the runner does not treat a plan-gate
+            # block as an approvable action once approval is also an interceptor.
             self.last_decision = str(exc)
             if self._raise_on_deny:
-                raise
+                raise PlanGateError(str(exc)) from None
             return
 
         self.last_decision = gate_error
         if gate_error and self._raise_on_deny:
-            raise ToolPermissionError(gate_error)
+            raise PlanGateError(gate_error)
