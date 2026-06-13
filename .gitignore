@@ -12,3 +12,6 @@ build/
 .uv-cache/
 .git/hooks/
 .agents
+
+# Sisyphus planning-tool scratch (not version-controlled; drafts can contradict the plan-of-record)
+.sisyphus/
