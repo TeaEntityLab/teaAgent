@@ -150,6 +150,17 @@ def test_validate_roadmap_status_passes_for_repo_roadmap() -> None:
     assert errors == []
 
 
+def test_current_roadmap_stays_owner_operator_harness_first() -> None:
+    root = Path(__file__).resolve().parents[1]
+    roadmap = (root / 'docs' / 'roadmap-status.md').read_text(encoding='utf-8')
+
+    assert 'owner-operator' in roadmap
+    assert 'owner packaging and local distribution'.lower() in roadmap.lower()
+    assert 'general-user trust onboarding' not in roadmap
+    assert 'Packaging and adoption' not in roadmap
+    assert 'external-facing release channels' not in roadmap
+
+
 def test_validate_roadmap_status_detects_missing_h0_truth_links() -> None:
     roadmap = (
         '# Roadmap Status\n\n'

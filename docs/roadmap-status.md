@@ -9,13 +9,15 @@
 > or historical review reasoning in dated analysis files.
 >
 > **Review trigger:** Roadmap horizon, milestone, or track status changes.
-> **Last reviewed:** 2026-06-10
+> **Last reviewed:** 2026-06-14
 
 **Status:** Canonical roadmap tracking document
-**Last updated:** 2026-06-10 (Sprint 1 truth pass: H4/H5/H6 clusters labeled unwired; acceptance tier snapshot `628 passed` at `85109e4` on 2026-06-10; historical evidence snapshot, not current collection; full-suite count unverified — see [suite truncation analysis](analysis/suite-truncation-root-cause-2026-06-10.md))
+**Last updated:** 2026-06-14 (harness-first alignment: owner-operator is the current validated persona; external adoption and hosted/team expansion remain future hypotheses until real owner friction or explicit external evidence reopens them. Prior acceptance tier snapshot `628 passed` at `85109e4` on 2026-06-10 is historical evidence, not a current collection; full-suite count unverified — see [suite truncation analysis](analysis/suite-truncation-root-cause-2026-06-10.md))
 **Owner:** TBD
 
 > **Canonical source of truth.** All other status docs (`docs/security/risk-register-and-threat-model-2026-06-02.md`, `docs/analysis/defeat-scenarios-and-cascade-effects-2026-06-02.md`, `docs/analysis/active-findings-status-ledger-2026-06-06.md`) defer to this document for overall completion status. Per-item test evidence lives in the risk register §9.
+
+> **Direction note, 2026-06-14.** Roadmap rows describe owner-operator harness work unless explicitly labeled future or aspirational. External adoption, hosted deployment, enterprise/team operations, and broad daily-driver claims are not current goals.
 
 ## Purpose
 
@@ -28,10 +30,10 @@ Provide a single source of truth for roadmap item status, ownership, confidence,
 | H0 | Claim and risk hygiene | Public claims, risk register, docs gates, and tool warnings are owned | governance | Complete | High | H1 | H0 exit evidence met; all M0 checks pass |
 | H1 | Daily operator loop | Setup, daily cockpit, plan, execute, approve, verify, recover, and remember are one coherent journey | governance | Complete | High | H2 | Journey acceptance tests pass across CLI/TUI baseline; acceptance tier snapshot `628 passed` at `85109e4` (2026-06-10) |
 | H2 | Multi-surface continuity | CLI, TUI, IDE, dashboard, background, cloud, and gateway share one run-state contract | TBD | Partially fixed — M2 foundation wired | Medium | WDA-002 | M2 acceptance complete; full surface parity (IDE/dashboard/cloud) still open |
-| H3 | Ecosystem trust | MCP, plugins, skills, hooks, subagents, and automations are explainable, revocable, and testable | TBD | Partially fixed — M3 tests pass | Medium | WDC-002 | M3 acceptance complete; general-user trust onboarding simplification still open |
-| H4 | Durable team operations | Long-running and team workflows have durable execution, control-plane views, policy, audit, and cost attribution | TBD | Partially fixed — shadow wired | Low | WDA-004 | Policy/RBAC shadow-wired (WDA-002/003); consensus deferred (ADR 0029); shadow mode exit criteria defined (ADR 0031, expiry 2026-09-12) |
+| H3 | Ecosystem trust | MCP, plugins, skills, hooks, subagents, and automations are explainable, revocable, and testable for the owner-operator | TBD | Partially fixed — M3 tests pass | Medium | WDC-002 | M3 acceptance complete; owner-operator trust onboarding simplification still open |
+| H4 | Durable owner/agent operations | Long-running owner-operator and co-maintainer-agent workflows have durable execution, control-plane views, policy, audit, and cost attribution | TBD | Partially fixed — shadow wired | Low | WDA-004 | Policy/RBAC shadow-wired (WDA-002/003); consensus deferred (ADR 0029); shadow mode exit criteria defined (ADR 0031, expiry 2026-09-12) |
 | H5 | Quality and eval loop | Prompt/runtime/model changes cannot silently degrade daily outcomes | TBD | Partially fixed — release gate wired | Low | WDA-005 | Release eval gate in CI (WDA-004/WDD-001); offline conversational corpus |
-| H6 | Packaging and adoption | Desktop/client-server and external-facing release channels have supply-chain, update, and support plans | TBD | Partially fixed — unwired | Low | WDA-005 | `update/*` package implemented but unwired; no single-platform proof yet |
+| H6 | Owner packaging and local distribution | Desktop/client-server and local release channels have supply-chain, update, rollback, and support plans for owner-operated use | TBD | Partially fixed — unwired | Low | WDA-005 | `update/*` package implemented but unwired; no owner-platform proof yet |
 
 ## Milestones
 
@@ -43,7 +45,7 @@ Provide a single source of truth for roadmap item status, ownership, confidence,
 | M3 | 8-14 weeks | Extension activation explain, MCP trust onboarding, subagent review/merge | TBD | Complete | High | M4 complete | Extension activation explain acceptance, MCP trust onboarding acceptance, subagent review/merge acceptance |
 | M4 | 12-22 weeks | Background/cloud durability, gateway task intake, control-plane operator cockpit | TBD | Pending | Low | BG-001 complete | Background full lifecycle acceptance, gateway task intake acceptance, control-plane operator cockpit acceptance |
 | M5 | Ongoing | Prompt/runtime/model/provider gating, repo-map benchmarking, release evidence bundles | TBD | Pending | Low | EVAL-001 complete | Prompt change regression suite, repo-map benchmark corpus, release evidence bundle in release profile |
-| M6 | After M1-M4 | Desktop/client-server packaging with trust, update, rollback, session attach | TBD | Pending | Low | PKG-001 complete | Packaged launch smoke, signing/SBOM/update docs, desktop session attach acceptance |
+| M6 | After M1-M4 | Desktop/client-server packaging for owner-operated trust, update, rollback, session attach | TBD | Pending | Low | PKG-001 complete | Packaged launch smoke, signing/SBOM/update docs, desktop session attach acceptance |
 
 ## Track A - Roadmap Governance and Claim Hygiene
 

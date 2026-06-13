@@ -12,7 +12,7 @@ follow dated evidence documents only when you need the reasoning trail.
 
 | Need | Start here | Status rule |
 | --- | --- | --- |
-| What can a daily user trust today? | [Daily-Driver Current Status](daily-driver-current-status.md) | Current truth; update whenever TUI, chat, agent mode, approval, cost, undo, or resume behavior changes. |
+| What can the owner-operator trust today? | [Daily-Driver Current Status](daily-driver-current-status.md) | Current truth for owner-operated daily use; update whenever TUI, chat, agent mode, approval, cost, undo, or resume behavior changes. |
 | What is the current documentation-state assessment? | [Documentation State Review](analysis/documentation-state-review-2026-06-04.md) | Current dated evidence for corpus shape, drift risks, and consolidation priorities. |
 | What is the documentation operating model? | [Documentation Operating Model](governance/documentation-operating-model-2026-06-04.md) | Governance rulebook for claim types, TTL, owners, supersession, and CI guard targets. |
 | What should be done next? | [Work Direction Execution Index](plans/work-direction-execution-index-2026-06-10.md) | Sprint 1 truth pass (WDA-001, WDB-001, WDB-003, WDG-001/002) after the June 10 critical review. |
@@ -45,15 +45,16 @@ governance ledgers should prefer the canonical set above.
 
 | Question | Canonical source |
 | --- | --- |
-| Current daily-driver behavior | [Daily-Driver Current Status](daily-driver-current-status.md) |
+| Current owner-operated daily behavior | [Daily-Driver Current Status](daily-driver-current-status.md) |
 | Acceptance flow inventory | [Acceptance Coverage](acceptance.md) |
 | Roadmap state | [Roadmap Status](roadmap-status.md) |
-| Ticket execution order (daily-driver) | [Ticket Execution Plans](plans/ticket-plans/index.md) |
+| Ticket execution order for current harness work | [Ticket Execution Plans](plans/ticket-plans/index.md) |
 | Work direction Sprint 1 tickets | [Work Direction Execution Index](plans/work-direction-execution-index-2026-06-10.md) |
 | Module ownership and inspection paths | [Module Documentation Index](modules/INDEX.md) |
 | Release gates | [Release Checklist](release-checklist.md) and [Daily-Driver Release Gates](governance/daily-driver-release-gates-2026-06-02.md) |
 | Permission and approval behavior | [Permission And Approval Playbook](permission-and-approval-playbook.md) |
 | Operator trust model | [Operator Trust Model](operator-trust-model.md) |
+| Owner friction intake | [Operator Friction Log](work-log/operator-friction-log.md) |
 
 ## Evidence And Review
 
@@ -94,10 +95,10 @@ governance ledgers should prefer the canonical set above.
 | June 6 risk and trust model critique | [Risk And Trust Model Critique](analysis/risk-and-trust-model-critique-2026-06-06.md) |
 | Phase 0-to-1 outlook | [Phase 0 To Phase 1 Outlook](strategy/phase-0-to-phase-1-outlook-2026-06-04.md) |
 | Malleable governed agent harness | [Malleable Governed Agent Harness](strategy/malleable-governed-agent-harness-2026-06-03.md) |
-| Daily-driver roadmap rationale | [Daily-Driver Roadmap Rationale](strategy/daily-driver-roadmap-rationale-2026-06-04.md) |
-| Daily-driver critique and counterarguments | [Daily-Driver Critique And Counterarguments](reviews/daily-driver-critique-and-counterarguments-2026-06-04.md) |
-| Daily-driver docs package review | [Daily-Driver Docs Package Review](reviews/daily-driver-docs-package-review-2026-06-02.md) |
-| Daily-driver red-team review | [Daily-Driver Red Team Review](reviews/daily-driver-red-team-review-2026-06-02.md) |
+| Historical daily-driver roadmap rationale | [Daily-Driver Roadmap Rationale](strategy/daily-driver-roadmap-rationale-2026-06-04.md) |
+| Historical daily-driver critique and counterarguments | [Daily-Driver Critique And Counterarguments](reviews/daily-driver-critique-and-counterarguments-2026-06-04.md) |
+| Historical daily-driver docs package review | [Daily-Driver Docs Package Review](reviews/daily-driver-docs-package-review-2026-06-02.md) |
+| Historical daily-driver red-team review | [Daily-Driver Red Team Review](reviews/daily-driver-red-team-review-2026-06-02.md) |
 
 ## Processes
 
@@ -107,8 +108,8 @@ governance ledgers should prefer the canonical set above.
 | Competitor gap watch | [OpenCode Gap Watch](processes/opencode-gap-watch.md) |
 | Community presence and dev-rel | [Community Presence](processes/community-presence.md) |
 | Post-fix re-audit | [Postfix Reaudit Process](processes/postfix-reaudit-process.md) |
-| Daily-driver verification | [Daily-Driver Verification](processes/daily-driver-verification.md) |
-| Daily-driver manual QA smoke | [Daily-Driver Manual QA Smoke](processes/daily-driver-manual-qa-smoke.md) |
+| Owner-operated daily verification | [Daily-Driver Verification](processes/daily-driver-verification.md) |
+| Owner-operated manual QA smoke | [Daily-Driver Manual QA Smoke](processes/daily-driver-manual-qa-smoke.md) |
 | Quarterly competitor refresh | [Quarterly Competitor Refresh Process](processes/quarterly-competitor-refresh.md) · [Release Checklist](release-checklist.md) |
 | Trust and audit whitepaper | [Trust and Audit Whitepaper](governance/trust-and-audit-whitepaper.md) |
 | When not to use TeaAgent | [When Not to Use TeaAgent](guides/when-not-to-use-teaagent.md) |
@@ -137,7 +138,7 @@ governance ledgers should prefer the canonical set above.
 | [Work Direction Decomposition](plans/work-direction-decomposition-2026-06-10.md) | Full WD-A … WD-H backlog with acceptance gates. |
 | [Documentation Optimization Master Plan](plans/documentation-optimization-master-plan-2026-06-04.md) | Prioritizing documentation work by stability, UX, risk, and ROI. |
 | [Documentation Optimization Work Items](work-log/documentation-optimization-work-items-2026-06-04.md) | Concrete task execution ledger. |
-| [Daily-Driver Complete Work Plan](plans/daily-driver-complete-work-plan-risk-roi-2026-06-04.md) | Daily-driver risk, feasibility, ROI, and sequence. |
+| [Daily-Driver Complete Work Plan](plans/daily-driver-complete-work-plan-risk-roi-2026-06-04.md) | Historical daily-driver risk, feasibility, ROI, and sequence; use harness-first direction for current persona claims. |
 | [Roadmap Work Items](work-log/roadmap-work-items-2026-06-04.md) | Product roadmap work items and acceptance criteria. |
 | [Phase 0 Priority Work Items](work-log/phase-0-priority-work-items-2026-06-04.md) | Trust-repair tasks derived from project-state review. |
 | [Phase 0 Governance Closure Report](work-log/phase-0-governance-closure-report-2026-06-04.md) | Closure evidence for coverage omit, dependency audit, and ADR-state governance. |

@@ -2,7 +2,7 @@
 
 > **Last reviewed:** 2026-06-13
 > **Review trigger:** README feature claims, golden path, or provider count changes.
-> **Direction record:** [Harness-First Direction](docs/strategy/harness-first-direction-2026-06-13.md) (owner-operator persona, aspirational adoption)
+> **Direction record:** [Harness-First Direction](docs/strategy/harness-first-direction-2026-06-13.md) (owner-operator harness-first current direction)
 
 A personal, local-first governance harness for autonomous coding tasks — built by and for the owner-operator who maintains, uses, and audits his own runs. Thin orchestration layer with tool governance, state boundaries, audit logging, and destructive-tool approval.
 

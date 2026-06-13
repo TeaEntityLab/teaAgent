@@ -11,6 +11,14 @@
 This log is the intake surface for owner-operator friction. It keeps TeaAgent's
 UX work tied to real harness use instead of competitor feature parity.
 
+## Current Intake Status
+
+- Owner evidence entries: 0.
+- Competitor-derived hypotheses: 0.
+- Direction implication: UX work may improve scaffolding, but it must not claim
+  evidence-backed friction closure until an owner-written entry exists or repo
+  evidence shows a governance gap.
+
 Use this log when:
 
 - the owner hits friction while asking, approving, undoing, resuming, reading a
@@ -26,23 +34,51 @@ Use this log when:
 - Hypothesis entries must be tagged `[hypothesis: source, date]`.
 - Hypothesis entries must not become roadmap truth until the owner confirms the
   friction in real use or repository evidence shows a governance gap.
-- A closed entry must cite the commit, test, or document that resolved it.
+- A closed entry must cite the commit, test, or document that resolved it; `n/a`
+  is allowed only for open or rejected entries.
 - Do not use this log for public positioning, competitor ranking, or feature
   parity requests.
+- Agents may ask the intake prompts below, but must not answer them on the
+  owner's behalf.
 
-## Entry Format
+## Quick Capture
+
+Use one dated line while the friction is fresh. Expand it with the structured
+fields only when the entry is promoted to work.
 
 ```markdown
 ### YYYY-MM-DD - Short title
 
 - **Type:** evidence | hypothesis
 - **Source:** owner real use | [hypothesis: source, date]
+- **One-line capture:** I tried __; expected __; got __.
+- **Status:** open | closed | rejected
+```
+
+## Socratic Intake Prompts
+
+1. What were you trying to do without opening docs?
+2. Which command, screen, receipt, or output made you pause?
+3. Which approval, audit, cost, rollback, or state fact did you need earlier?
+4. What would have made ask, approve, verify, or undo obvious?
+5. Is this friction one-off, repeated, or caused by a hidden config/source?
+
+## Expanded Entry Format
+
+```markdown
+### YYYY-MM-DD - Short title
+
+- **Type:** evidence | hypothesis
+- **Source:** owner real use | [hypothesis: source, date]
+- **Context:** command/surface/run phase, if known
+- **Run/receipt:** run ID, receipt link, audit path, or `n/a`
 - **Attempted:** What the owner or source tried to do.
 - **Expected:** What should have happened.
 - **Actual:** What happened instead.
 - **Harness impact:** approval | audit | rollback | cost | receipt | state | validation | ergonomics
 - **Status:** open | closed | rejected
 - **Closure evidence:** commit/test/doc link, or `n/a`
+- **Promoted to:** ticket/acceptance-gap link, or `n/a`
 ```
 
 ## Owner Evidence Entries

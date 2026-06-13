@@ -56,15 +56,17 @@ register_interceptor(fn, *, name: str) -> None
   # Interceptors run in registration order before consumers
   # Exceptions propagate (veto semantics)
 
-register_consumer(fn, *, name: str) -> None
-  # Callable[[RunEvent], None]; never veto
+register_consumer(fn, *, name: str, critical: bool = False) -> None
+  # Callable[[RunEvent], None]; isolated by default
   # Consumers run after interceptors
-  # Exceptions are caught, logged, and isolated (never affect run)
+  # Exceptions are caught, logged, and isolated unless critical=True
+  # Critical consumers propagate to preserve required durability boundaries
 
-emit(event: RunEvent) -> None
+emit(type_: RunEventType, run_id: str, payload: Mapping[str, Any]) -> None
   # Fire an event: run interceptors in order, then consumers
   # If any interceptor raises, propagate immediately (no further subscribers run)
-  # If any consumer raises, log and continue
+  # If any non-critical consumer raises, log and continue
+  # If any critical consumer raises, propagate
   # Return normally on success or after isolated consumer failure
 ```
 
@@ -80,13 +82,15 @@ emit(event: RunEvent) -> None
 **Consumers:**
 - Represent audit, receipt building, evidence, ContextBus, webhook sinks
 - Run after all interceptors complete
-- Each wrapped in try/except (exception logged via logging module, never propagates)
-- Never affect the run (crash-safe)
+- Each wrapped in try/except by default (exception logged via logging module)
+- Non-critical consumers never affect the run (crash-safe)
+- Critical consumers may propagate when their side effect is part of the
+  required safety boundary, such as compliance-mode audit durability
 - Used for side effects and derived state
 
 ### 4. HookRegistry Alignment
 
-Existing Claude-Code hook names (SessionStart, PreToolUse, PostToolUse, etc.) are preserved as **aliases** to RunEventType members where semantically equivalent (e.g., PRE_TOOL_USE ← PreToolUse). The public hook API (teaagent/hooks.py) will be re-homed onto the spine in a later migration step (M5).
+Existing Claude-Code hook names (SessionStart, PreToolUse, PostToolUse, etc.) remain the public `teaagent/hooks.py` API. The spine taxonomy includes semantically equivalent typed hook-observability events (for example, `PRE_TOOL_USE`) so later integration can bridge the public hook API without changing hook names.
 
 ### 5. Compliance with ADR 0030
 
@@ -210,7 +214,7 @@ belonged on the spine.
 
 ```
 RUN_STARTED              # Run begins; payload: run_id, task, model, etc.
-SESSION_START            # Session begins (alias: SessionStart)
+SESSION_START            # Session begins; equivalent public hook: SessionStart
 PLAN_RESOLVED            # Plan loaded/validated
 ITERATION_STARTED        # Iteration loop begins
 DECISION_RECEIVED        # Model returns a decision (tool call or final answer)
@@ -228,15 +232,15 @@ RUN_FAILED               # Run ends in failure
 RUN_PENDING_APPROVAL     # Run paused for approval
 RUN_CANCELLED            # Run cancelled by user
 RECEIPT_EMITTED          # Receipt finalized
-SESSION_END              # Session ends (alias: SessionEnd)
+SESSION_END              # Session ends; equivalent public hook: SessionEnd
 SKILL_LOAD               # Skill loaded
 MODEL_ROUTE              # Model routed (provider selection)
 GIT_SANDBOX_STARTED      # Sandbox workspace initialized
 GIT_SANDBOX_RESOLVED     # Sandbox resolved/cleaned
 UNDO_PERFORMED           # Undo action executed
-PRE_TOOL_USE             # Hook: before tool execution (alias: PreToolUse)
-POST_TOOL_USE            # Hook: after tool execution (alias: PostToolUse)
-PRE_COMPACT              # Hook: before context compaction (alias: PreCompact)
+PRE_TOOL_USE             # Hook observability: before tool execution; public hook: PreToolUse
+POST_TOOL_USE            # Hook observability: after tool execution; public hook: PostToolUse
+PRE_COMPACT              # Hook observability: before context compaction; public hook: PreCompact
 ```
 
 The M0 spike covers RUN_STARTED, ITERATION_STARTED, TOOL_CALL_REQUESTED, TOOL_CALL_COMPLETED, TOOL_CALL_FAILED, RUN_COMPLETED, RUN_FAILED. Extended events are added in later phases as gates migrate.
