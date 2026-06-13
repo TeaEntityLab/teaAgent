@@ -22,8 +22,14 @@ from teaagent import (
     ToolAnnotations,
     ToolRegistry,
     ToolRequest,
+    audit_event_to_run_event_type,
 )
-from teaagent.runner._events import run_event_to_audit_event_type
+from teaagent.errors import ToolPermissionError
+from teaagent.runner._events import (
+    _AUDIT_EVENT_TO_RUN_EVENT_TYPE,
+    _RUN_EVENT_TO_AUDIT_EVENT_TYPE,
+    run_event_to_audit_event_type,
+)
 
 
 def build_test_registry() -> ToolRegistry:
@@ -418,9 +424,18 @@ def test_golden_audit_fixture_failed_run(tmp_path: Path) -> None:
 # normalizing only nondeterministic fields. It locks the consumer-derived audit
 # stream so any change to the mapper/consumer that alters event order or payload
 # shape turns this test red (ADR 0032 M1 invariant; T001 byte-equivalence).
+#
+# M3 Slice B added tool_call_requested (the plan-gate interceptor emit) —
+# the contract was extended to include this event. The six original entries
+# (run_started, iteration_started, tool_call_started, tool_call_completed,
+# iteration_started, run_completed) retain their shape.
 _GOLDEN_COMPLETED_CONTRACT: list[tuple[str, tuple[str, ...]]] = [
     ('run_started', ('replayed_observations', 'task')),
     ('iteration_started', ('iteration',)),
+    (
+        'tool_call_requested',
+        ('arguments', 'tool_name'),
+    ),
     (
         'tool_call_started',
         ('annotations', 'arguments', 'call_id', 'reasoning', 'tool_name'),
@@ -467,3 +482,280 @@ def test_m1_audit_stream_matches_frozen_contract(tmp_path: Path) -> None:
         (e['event_type'], tuple(sorted(e.get('payload', {}).keys()))) for e in entries
     ]
     assert observed == _GOLDEN_COMPLETED_CONTRACT
+
+
+def test_all_run_event_types_round_trip_through_mappers() -> None:
+    """Every RunEventType member round-trips through both mapper directions.
+
+    Covers all 26 members (7 M0 + 19 M2 evidence-event taxonomy) — forward
+    through run_event_to_audit_event_type then back through
+    audit_event_to_run_event_type, and inverse through the dict mappers.
+    """
+    for event_type in RunEventType:
+        aud_type = run_event_to_audit_event_type(event_type)
+        back = audit_event_to_run_event_type(aud_type)
+        assert back == event_type
+
+    for aud_type, run_type in _AUDIT_EVENT_TO_RUN_EVENT_TYPE.items():
+        assert _RUN_EVENT_TO_AUDIT_EVENT_TYPE[run_type] == aud_type
+
+    assert len(_RUN_EVENT_TO_AUDIT_EVENT_TYPE) == len(RunEventType)
+    assert len(_AUDIT_EVENT_TO_RUN_EVENT_TYPE) == len(RunEventType)
+
+
+# ---------------------------------------------------------------------------
+# M3-T001: PlanGateInterceptor unit tests
+# ---------------------------------------------------------------------------
+
+
+def _make_tcr_event(
+    tool_name: str,
+    arguments: dict[str, Any] | None = None,
+    plan_contract: Any = None,
+) -> RunEvent:
+    """Build a TOOL_CALL_REQUESTED RunEvent for testing."""
+    payload: dict[str, Any] = {'tool_name': tool_name}
+    if arguments is not None:
+        payload['arguments'] = arguments
+    if plan_contract is not None:
+        payload['plan_contract'] = plan_contract
+    return RunEvent(
+        type=RunEventType.TOOL_CALL_REQUESTED,
+        run_id='test-plan-gate',
+        payload=payload,
+        seq=1,
+    )
+
+
+def _make_plan_validator(
+    permission_mode: str = 'prompt',
+    require_plan: bool = False,
+    skip_plan_check: bool = False,
+) -> Any:
+    """Build a PlanValidator with minimal configuration."""
+    from teaagent.approval_manager import PermissionMode
+    from teaagent.policy import ApprovalPolicy
+
+    policy = ApprovalPolicy(permission_mode=PermissionMode(permission_mode))
+    from teaagent.runner._plan_validator import PlanValidator
+
+    return PlanValidator(
+        approval_policy=policy,
+        require_plan=require_plan,
+        skip_plan_check=skip_plan_check,
+    )
+
+
+def test_plan_gate_interceptor_ignores_non_tool_events() -> None:
+    """PlanGateInterceptor is a no-op for non-TOOL_CALL_REQUESTED events."""
+    from teaagent.runner._plan_validator import PlanGateInterceptor
+
+    interceptor = PlanGateInterceptor(_make_plan_validator())
+    event = RunEvent(
+        type=RunEventType.RUN_STARTED,
+        run_id='test',
+        payload={},
+        seq=1,
+    )
+    # Should not raise.
+    interceptor(event)
+    assert interceptor.last_decision is None
+
+
+def test_plan_gate_interceptor_allows_write_tool_without_plan_check() -> None:
+    """Write tool passes when plan check is not required."""
+    from teaagent.runner._plan_validator import PlanGateInterceptor
+
+    interceptor = PlanGateInterceptor(_make_plan_validator())
+    event = _make_tcr_event('workspace_write_file', arguments={'path': 'test.txt'})
+    interceptor(event)
+    assert interceptor.last_decision is None
+
+
+def test_plan_gate_interceptor_blocks_write_when_plan_required() -> None:
+    """Write tool with require_plan=True but no plan contract is blocked."""
+    from teaagent.approval_manager import PermissionMode
+    from teaagent.policy import ApprovalPolicy
+    from teaagent.runner._plan_validator import PlanGateInterceptor, PlanValidator
+
+    policy = ApprovalPolicy(permission_mode=PermissionMode.WORKSPACE_WRITE)
+    pv = PlanValidator(approval_policy=policy, require_plan=True)
+    interceptor = PlanGateInterceptor(pv)
+
+    # No plan_contract in payload → should be blocked.
+    event = _make_tcr_event('workspace_write_file', arguments={'path': 'test.txt'})
+    with pytest.raises(ToolPermissionError) as exc_info:
+        interceptor(event)
+    assert 'plan' in str(exc_info.value).lower()
+    assert interceptor.last_decision is not None
+
+
+def test_plan_gate_interceptor_shadow_mode_does_not_raise() -> None:
+    """Shadow mode (raise_on_deny=False) records decision without raising."""
+    from teaagent.approval_manager import PermissionMode
+    from teaagent.policy import ApprovalPolicy
+    from teaagent.runner._plan_validator import PlanGateInterceptor, PlanValidator
+
+    policy = ApprovalPolicy(permission_mode=PermissionMode.WORKSPACE_WRITE)
+    pv = PlanValidator(approval_policy=policy, require_plan=True)
+    interceptor = PlanGateInterceptor(pv, raise_on_deny=False)
+
+    event = _make_tcr_event('workspace_write_file', arguments={'path': 'test.txt'})
+    # Should NOT raise in shadow mode.
+    interceptor(event)
+    assert interceptor.last_decision is not None
+
+
+def test_plan_gate_interceptor_allows_non_write_tool() -> None:
+    """Non-write tools pass regardless of plan state."""
+    from teaagent.approval_manager import PermissionMode
+    from teaagent.policy import ApprovalPolicy
+    from teaagent.runner._plan_validator import PlanGateInterceptor, PlanValidator
+
+    policy = ApprovalPolicy(permission_mode=PermissionMode.WORKSPACE_WRITE)
+    pv = PlanValidator(approval_policy=policy, require_plan=True)
+    interceptor = PlanGateInterceptor(pv)
+
+    # A read-only tool like glob_search should always pass the gate.
+    event = _make_tcr_event('glob_search', arguments={'pattern': '**/*.py'})
+    interceptor(event)
+    assert interceptor.last_decision is None
+
+
+# ---------------------------------------------------------------------------
+# M3-T002 Slice A: parity test — interceptor decision == inline decision
+# ---------------------------------------------------------------------------
+
+
+def _interceptor_decision(
+    interceptor: Any,
+    tool_name: str,
+    arguments: dict[str, Any] | None = None,
+    plan_contract: Any = None,  # noqa: ANN401
+) -> str | None:
+    """Compute the plan gate decision via the interceptor path.
+
+    Returns the error string (blocked) or None (allowed).
+    """
+    event = _make_tcr_event(tool_name, arguments, plan_contract)
+    try:
+        interceptor(event)
+        return interceptor.last_decision
+    except ToolPermissionError as exc:
+        return str(exc)
+
+
+def _inline_decision(
+    plan_validator: Any,
+    tool_name: str,
+    arguments: dict[str, Any] | None = None,
+    plan_contract: Any = None,  # noqa: ANN401
+) -> str | None:
+    """Compute the plan gate decision via the inline path (evaluate_write_gate).
+
+    Returns the error string (blocked) or None (allowed).
+    """
+    context: dict[str, Any] = {}
+    if plan_contract is not None:
+        context['plan_contract'] = plan_contract
+    try:
+        return plan_validator.evaluate_write_gate(
+            tool_name=tool_name,
+            context=context,
+            tool_arguments=arguments,
+        )
+    except ToolPermissionError as exc:
+        return str(exc)
+
+
+_PLAN_PARITY_SCENARIOS = [
+    # (name, permission_mode, require_plan, tool_name, arguments, plan_contract, expect_denied)
+    (
+        'write_in_prompt_mode',
+        'prompt',
+        False,
+        'workspace_write_file',
+        {'path': 'x.txt'},
+        None,
+        False,
+    ),
+    (
+        'write_in_workspace_write_no_plan',
+        'workspace-write',
+        True,
+        'workspace_write_file',
+        {'path': 'x.txt'},
+        None,
+        True,
+    ),
+    (
+        'write_in_workspace_write_with_plan',
+        'workspace-write',
+        True,
+        'workspace_write_file',
+        {'path': 'x.txt'},
+        {'content_hash': 'abc'},
+        False,
+    ),
+    (
+        'read_only_glob',
+        'read-only',
+        False,
+        'glob_search',
+        {'pattern': '**/*.py'},
+        None,
+        False,
+    ),
+]
+
+
+def test_plan_gate_interceptor_parity() -> None:
+    """Interceptor decision matches inline decision for every key scenario.
+
+    Drives the allow path and each plan-drift denial reason code,
+    asserting the interceptor produces the same error string (or None)
+    as the still-authoritative inline ``PlanValidator.evaluate_write_gate()``.
+    """
+    from teaagent.approval_manager import PermissionMode
+    from teaagent.policy import ApprovalPolicy
+    from teaagent.runner._plan_validator import PlanGateInterceptor, PlanValidator
+
+    errors: list[str] = []
+    for (
+        name,
+        perm_mode_str,
+        require_plan,
+        tool_name,
+        arguments,
+        plan_contract,
+        expect_denied,
+    ) in _PLAN_PARITY_SCENARIOS:
+        policy = ApprovalPolicy(permission_mode=PermissionMode(perm_mode_str))
+        pv = PlanValidator(approval_policy=policy, require_plan=require_plan)
+        interceptor = PlanGateInterceptor(pv)
+
+        inline_result = _inline_decision(pv, tool_name, arguments, plan_contract)
+        interceptor_result = _interceptor_decision(
+            interceptor, tool_name, arguments, plan_contract
+        )
+
+        if inline_result != interceptor_result:
+            errors.append(
+                f'{name}: inline={inline_result!r} != interceptor={interceptor_result!r}'
+            )
+        if expect_denied:
+            assert inline_result is not None, (
+                f'{name}: expected denial but inline allowed'
+            )
+            assert interceptor_result is not None, (
+                f'{name}: expected denial but interceptor allowed'
+            )
+        else:
+            assert inline_result is None, (
+                f'{name}: expected allow but inline denied: {inline_result}'
+            )
+            assert interceptor_result is None, (
+                f'{name}: expected allow but interceptor denied: {interceptor_result}'
+            )
+
+    assert not errors, 'Parity mismatches:\n' + '\n'.join(errors)

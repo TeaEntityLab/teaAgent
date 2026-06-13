@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 from ._approval_manager import RunnerApprovalCoordinator  # noqa: E402
 from ._auto_mode_manager import AutoModeManager  # noqa: E402
 from ._events import EventSpine, RunEventType, register_audit_consumer  # noqa: E402
-from ._plan_validator import PlanValidator  # noqa: E402
+from ._plan_validator import PlanGateInterceptor, PlanValidator  # noqa: E402
 from ._types import (  # noqa: E402
     ApprovalHandler,
     BudgetPromptHandler,
@@ -171,6 +171,22 @@ class AgentRunner:
             require_plan=require_plan,
             skip_plan_check=skip_plan_check,
         )
+
+        # M3-T002 Slice A: register the plan gate interceptor in SHADOW mode.
+        # It computes its decision on TOOL_CALL_REQUESTED but does NOT veto;
+        # the inline evaluate_write_gate below stays authoritative. The parity
+        # test asserts interceptor decision == inline decision per reason code.
+        # Slice B (separate commit) flips this to enforce and removes the inline
+        # gate.
+        self._plan_gate_interceptor = PlanGateInterceptor(
+            self.plan_validator,
+            raise_on_deny=False,
+        )
+        self.event_spine.register_interceptor(
+            self._plan_gate_interceptor,
+            name='plan_gate_shadow',
+        )
+
         self.auto_mode_manager = AutoModeManager(
             auto_mode_config=auto_mode_config,
         )
@@ -624,6 +640,25 @@ class AgentRunner:
                 tool_name=decision.tool_name,
                 arguments=decision.arguments,
             )
+
+        # M3-T002 Slice A: emit TOOL_CALL_REQUESTED so the SHADOW plan-gate
+        # interceptor records its decision (it does not veto). The inline gate
+        # below remains authoritative until Slice B.
+        tcr_payload: dict[str, Any] = {
+            'tool_name': decision.tool_name,
+        }
+        if decision.arguments is not None:
+            tcr_payload['arguments'] = decision.arguments
+        plan_contract = context.get('plan_contract')
+        if plan_contract is not None:
+            tcr_payload['plan_contract'] = plan_contract
+        self.event_spine.emit(
+            RunEventType.TOOL_CALL_REQUESTED,
+            run_id,
+            tcr_payload,
+        )
+
+        # M3-T002 Slice A: inline plan gate stays authoritative (removed in B).
         gate_error = self.plan_validator.evaluate_write_gate(
             tool_name=decision.tool_name,
             context=cast(dict[str, Any], context),
@@ -631,6 +666,7 @@ class AgentRunner:
         )
         if gate_error:
             raise ToolPermissionError(gate_error)
+
         # Auto mode: block disallowed tools, auto-approve allowed ones
         self.auto_mode_manager.validate_tool_allowed(decision.tool_name)
         auto_approve_policy = self.auto_mode_manager.get_auto_approve_policy()

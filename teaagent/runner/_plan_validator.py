@@ -6,6 +6,7 @@ from typing import Any, Optional
 
 from teaagent.governance.plan_gate import assert_write_allowed, assert_write_scope
 from teaagent.policy import ApprovalPolicy, PermissionMode
+from teaagent.runner._events import RunEvent, RunEventType
 from teaagent.spec_exemption import ExemptionDetector, SpecExemptionReceipt
 
 
@@ -147,3 +148,66 @@ class PlanValidator:
     def get_plan_contract(self) -> Any:
         """Get the current plan contract."""
         return self._plan_contract
+
+
+class PlanGateInterceptor:
+    """EventSpine interceptor that enforces the plan gate on TOOL_CALL_REQUESTED.
+
+    Evaluates ``PlanValidator.evaluate_write_gate()`` and raises
+    ``ToolPermissionError`` if the write is blocked by plan policy, read-only
+    lint, or scope drift.
+
+    In shadow mode (``raise_on_deny=False``) the interceptor records its
+    decision without vetoing — used for parity testing before enforcement
+    is enabled.
+    """
+
+    def __init__(
+        self,
+        plan_validator: PlanValidator,
+        *,
+        raise_on_deny: bool = True,
+    ) -> None:
+        self._pv = plan_validator
+        self._raise_on_deny = raise_on_deny
+        # Exposed for parity assertions: set after each invocation.
+        self.last_decision: str | None = None
+
+    def __call__(self, event: RunEvent) -> None:
+        """Evaluate the plan gate for TOOL_CALL_REQUESTED events.
+
+        Args:
+            event: The run event.
+
+        Raises:
+            ToolPermissionError: If the gate blocks and raise_on_deny is True.
+        """
+        if event.type != RunEventType.TOOL_CALL_REQUESTED:
+            return
+
+        tool_name = event.payload['tool_name']
+        arguments = event.payload.get('arguments')
+        # Reconstruct minimal context from event payload for plan_contract check.
+        context: dict[str, Any] = {}
+        plan_contract = event.payload.get('plan_contract')
+        if plan_contract is not None:
+            context['plan_contract'] = plan_contract
+
+        from teaagent.errors import ToolPermissionError
+
+        try:
+            gate_error = self._pv.evaluate_write_gate(
+                tool_name=tool_name,
+                context=context,
+                tool_arguments=arguments,
+            )
+        except ToolPermissionError as exc:
+            # evaluate_write_gate can raise directly from assert_write_allowed.
+            self.last_decision = str(exc)
+            if self._raise_on_deny:
+                raise
+            return
+
+        self.last_decision = gate_error
+        if gate_error and self._raise_on_deny:
+            raise ToolPermissionError(gate_error)
