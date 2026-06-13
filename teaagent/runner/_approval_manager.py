@@ -6,7 +6,9 @@ from pathlib import Path
 from typing import Any, Optional
 
 from teaagent.audit import AuditLogger
+from teaagent.errors import ToolPermissionError
 from teaagent.policy import ApprovalPolicy, JITApprovalState, PermissionMode
+from teaagent.runner._events import RunEvent, RunEventType
 
 from ._types import ApprovalHandler, ApprovalRequest
 
@@ -156,3 +158,65 @@ class RunnerApprovalCoordinator:
             run_id,
             **blocked_payload,
         )
+
+
+class ApprovalGateInterceptor:
+    """EventSpine interceptor that enforces the approval gate on ``TOOL_CALL_REQUESTED``.
+
+    Evaluates ``ApprovalPolicy.assert_allowed()`` and raises
+    ``ToolPermissionError`` if the tool call is denied by the approval policy.
+
+    In shadow mode (``raise_on_deny=False``) the interceptor records its
+    decision without vetoing — used for parity testing before enforcement
+    is enabled.
+    """
+
+    def __init__(
+        self,
+        approval_policy: ApprovalPolicy,
+        *,
+        raise_on_deny: bool = True,
+    ) -> None:
+        self._approval_policy = approval_policy
+        self._raise_on_deny = raise_on_deny
+        # Exposed for parity assertions: set after each invocation.
+        self.last_decision: str | None = None
+
+    def __call__(self, event: RunEvent) -> None:
+        """Evaluate the approval gate for TOOL_CALL_REQUESTED events.
+
+        Args:
+            event: The run event.
+
+        Raises:
+            ToolPermissionError: If the gate blocks and raise_on_deny is True.
+        """
+        if event.type != RunEventType.TOOL_CALL_REQUESTED:
+            return
+
+        tool_name: str = event.payload['tool_name']
+        arguments: dict[str, Any] | None = event.payload.get('arguments')
+        plan_contract: Any = event.payload.get('plan_contract')
+        call_id: str = event.payload.get('call_id', '')
+
+        # Extract annotations from payload, defaulting to safe values.
+        annotations: dict[str, Any] = event.payload.get('annotations', {})
+        destructive: bool = annotations.get('destructive', False)
+        read_only: bool = annotations.get('read_only', False)
+        description: str = event.payload.get('description', '')
+
+        try:
+            self._approval_policy.assert_allowed(
+                tool_name=tool_name,
+                call_id=call_id,
+                destructive=destructive,
+                arguments=arguments,
+                plan_contract=plan_contract,
+                read_only=read_only,
+                description=description,
+            )
+            self.last_decision = None
+        except ToolPermissionError as exc:
+            self.last_decision = str(exc)
+            if self._raise_on_deny:
+                raise
