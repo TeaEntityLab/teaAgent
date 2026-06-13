@@ -172,19 +172,18 @@ class AgentRunner:
             skip_plan_check=skip_plan_check,
         )
 
-        # M3-T002 Slice A: register the plan gate interceptor in SHADOW mode.
-        # It computes its decision on TOOL_CALL_REQUESTED but does NOT veto;
-        # the inline evaluate_write_gate below stays authoritative. The parity
-        # test asserts interceptor decision == inline decision per reason code.
-        # Slice B (separate commit) flips this to enforce and removes the inline
-        # gate.
+        # M3-T002 Slice B: the plan gate is now the authoritative EventSpine
+        # interceptor (enforce mode). It vetoes TOOL_CALL_REQUESTED by raising
+        # ToolPermissionError when the write is blocked by plan policy or
+        # read-only lint. Slice A proved its decision equals the (now removed)
+        # inline gate per reason code.
         self._plan_gate_interceptor = PlanGateInterceptor(
             self.plan_validator,
-            raise_on_deny=False,
+            raise_on_deny=True,
         )
         self.event_spine.register_interceptor(
             self._plan_gate_interceptor,
-            name='plan_gate_shadow',
+            name='plan_gate',
         )
 
         self.auto_mode_manager = AutoModeManager(
@@ -641,9 +640,10 @@ class AgentRunner:
                 arguments=decision.arguments,
             )
 
-        # M3-T002 Slice A: emit TOOL_CALL_REQUESTED so the SHADOW plan-gate
-        # interceptor records its decision (it does not veto). The inline gate
-        # below remains authoritative until Slice B.
+        # M3-T002 Slice B: the plan gate is the EventSpine interceptor. Emitting
+        # TOOL_CALL_REQUESTED runs it; it raises ToolPermissionError if the
+        # write is blocked. The inline evaluate_write_gate was removed here —
+        # Slice A proved the interceptor's decision is identical.
         tcr_payload: dict[str, Any] = {
             'tool_name': decision.tool_name,
         }
@@ -657,15 +657,6 @@ class AgentRunner:
             run_id,
             tcr_payload,
         )
-
-        # M3-T002 Slice A: inline plan gate stays authoritative (removed in B).
-        gate_error = self.plan_validator.evaluate_write_gate(
-            tool_name=decision.tool_name,
-            context=cast(dict[str, Any], context),
-            tool_arguments=decision.arguments,
-        )
-        if gate_error:
-            raise ToolPermissionError(gate_error)
 
         # Auto mode: block disallowed tools, auto-approve allowed ones
         self.auto_mode_manager.validate_tool_allowed(decision.tool_name)
