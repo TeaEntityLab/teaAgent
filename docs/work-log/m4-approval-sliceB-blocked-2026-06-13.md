@@ -116,3 +116,28 @@ this decision.
 `bcd9369` is HEAD-ish for this thread: PlanGateError (`5b5f007`) + approval
 Slice A (`2da5d6c`, interceptor + unit parity, NOT wired) + this report. No
 enforce cutover landed. Working tree clean.
+
+---
+
+## RESOLVED — Owner chose (B), 2026-06-13
+
+The owner chose **option (B): approval enforcement stays inline.** The approval
+gate is legitimately runtime-stateful (live JIT/session state, tool handler,
+auto-mode-swappable policy) and is NOT moved to an EventSpine interceptor.
+
+Actions taken:
+- Reverted approval Slice A (`2da5d6c`) — the `ApprovalGateInterceptor` and its
+  unit/parity tests — via revert commit, since under (B) it is unused code and
+  unused code is drift. Approval enforcement is back to its proven inline path,
+  unchanged.
+- **Approval observability needs no new code:** the approval audit events
+  (`tool_call_approved`, `tool_call_denied`, `tool_call_pending_approval`,
+  `approval_*`) were already typed in M2-T002 and are surfaced by the M2-T001
+  reader from the audit JSONL. So the spine carries approval *observability*
+  (for evidence/receipts via the M6 fold) without moving enforcement.
+- `PlanGateError` (`5b5f007`) is retained: harmless under (B) and a small
+  improvement (plan blocks no longer show the misleading "approve this" hint).
+  Its original approval-coexistence justification no longer applies.
+
+**Net M4 redefinition:** M4 = budget gate only. The plan gate (M3) is the one
+governance gate that moved to an interceptor; approval stays inline by design.
