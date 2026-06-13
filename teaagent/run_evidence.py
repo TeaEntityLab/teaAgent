@@ -9,11 +9,14 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from teaagent.asset_provenance import ProvenanceRecord
 from teaagent.proof_of_use import ProofOfUseBundle, build_proof_of_use
 from teaagent.run_store import RunStore
+
+if TYPE_CHECKING:
+    from teaagent.runner._events import RunEvent
 
 
 @dataclass
@@ -795,6 +798,68 @@ def build_run_evidence_bundle(
     except FileNotFoundError:
         return RunEvidenceBundle(run_id=run_id, goal_id=goal_id)
 
+    return _assemble_evidence_bundle(events, root=root, run_id=run_id, goal_id=goal_id)
+
+
+def build_evidence_from_events(
+    events: list['RunEvent'],
+    *,
+    root: str | Path,
+    run_id: str,
+    goal_id: str = '',
+) -> RunEvidenceBundle:
+    """Fold a typed ``RunEvent`` stream into a :class:`RunEvidenceBundle`.
+
+    ADR 0032 M6 (FOLD-T001): the read-side counterpart to
+    :func:`build_run_evidence_bundle`. Where the legacy builder sources raw
+    audit dicts directly from :class:`RunStore`, this builder folds the **typed**
+    event stream produced by ``read_run_events_from_audit`` /
+    ``read_run_events_from_jsonl`` (M2-T001 reader). Because every evidence-
+    bearing audit event is now typed in ``RunEventType`` (M2 + M3 + M5), the
+    typed reader is lossless for evidence, so this bundle equals the legacy
+    bundle for the same run.
+
+    This is a **parallel** builder: the legacy path stays the default (no
+    fallback flag, ADR 0032 Q1); parity is asserted by test, not a runtime
+    switch. The two builders share :func:`_assemble_evidence_bundle`, so they
+    cannot drift — the only difference is the event *source*.
+
+    Args:
+        events: Typed run events (from the M2-T001 reader over persisted audit).
+        root: Workspace root directory.
+        run_id: Run identifier.
+        goal_id: Optional goal identifier to link this run to a GoalRecord.
+    """
+    from teaagent.runner._events import run_event_to_audit_event_type
+
+    event_dicts: list[dict[str, Any]] = [
+        {
+            'event_type': run_event_to_audit_event_type(e.type),
+            'run_id': e.run_id,
+            'payload': dict(e.payload),
+            'created_at': e.created_at,
+        }
+        for e in events
+    ]
+    return _assemble_evidence_bundle(
+        event_dicts, root=root, run_id=run_id, goal_id=goal_id
+    )
+
+
+def _assemble_evidence_bundle(
+    events: list[dict[str, Any]],
+    *,
+    root: str | Path,
+    run_id: str,
+    goal_id: str = '',
+) -> RunEvidenceBundle:
+    """Assemble a :class:`RunEvidenceBundle` from raw audit-event dicts.
+
+    Shared by :func:`build_run_evidence_bundle` (legacy/RunStore source) and
+    :func:`build_evidence_from_events` (typed-stream fold) so the two paths
+    cannot diverge. Pure over the supplied ``events`` plus on-disk artifacts
+    (undo journal, context health) keyed by ``root``/``run_id``.
+    """
     commands = extract_commands_run(events)
     tests = extract_tests(events)
     approvals = extract_approvals(events)

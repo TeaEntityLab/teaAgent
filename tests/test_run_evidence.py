@@ -303,3 +303,191 @@ def test_redaction_config_build_patterns():
     cfg_full = RedactionConfig()
     patterns_full = cfg_full.build_patterns()
     assert len(patterns_full) > 0
+
+
+# ---------------------------------------------------------------------------
+# ADR 0032 M6 (FOLD-T001): evidence-bundle fold over the typed event stream
+# ---------------------------------------------------------------------------
+
+
+def _write_run(root: str, run_id: str, events: list[dict]) -> None:
+    """Persist raw audit-event dicts as a RunStore JSONL for the run."""
+    import json
+
+    from teaagent.run_store import RunStore
+
+    path = RunStore(root).run_path(run_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text('\n'.join(json.dumps(e) for e in events) + '\n', encoding='utf-8')
+
+
+def _assert_fold_matches_legacy(events: list[dict], run_id: str) -> RunEvidenceBundle:
+    """Legacy bundle (RunStore source) must equal the typed-stream fold."""
+    from teaagent.run_evidence import build_evidence_from_events
+    from teaagent.run_store import RunStore
+    from teaagent.runner._events import read_run_events_from_audit
+
+    with tempfile.TemporaryDirectory() as root:
+        _write_run(root, run_id, events)
+
+        legacy = build_run_evidence_bundle(root, run_id)
+
+        typed = read_run_events_from_audit(RunStore(root).show_run(run_id))
+        folded = build_evidence_from_events(typed, root=root, run_id=run_id)
+
+        assert folded.to_dict() == legacy.to_dict()
+    return legacy
+
+
+def test_m6_fold_equals_legacy_on_success_run():
+    """Success run with commands, tests, and an approval folds losslessly."""
+    events = [
+        {
+            'event_type': 'run_started',
+            'run_id': 'r-ok',
+            'payload': {},
+            'created_at': '2026-06-13T10:00:00+00:00',
+        },
+        {
+            'event_type': 'tool_use',
+            'run_id': 'r-ok',
+            'payload': {
+                'tool_name': 'workspace_run_shell',
+                'input': {'command': 'pytest -q'},
+                'call_id': 'c1',
+            },
+            'created_at': '2026-06-13T10:00:01+00:00',
+        },
+        {
+            'event_type': 'tool_call_completed',
+            'run_id': 'r-ok',
+            'payload': {
+                'tool_name': 'workspace_run_shell',
+                'call_id': 'c1',
+                'result': {'exit_code': 0, 'stdout': 'ok'},
+            },
+            'created_at': '2026-06-13T10:00:02+00:00',
+        },
+        {
+            'event_type': 'test_run',
+            'run_id': 'r-ok',
+            'payload': {
+                'test_name': 'unit',
+                'test_file': 'tests/test_x.py',
+                'passed': True,
+            },
+            'created_at': '2026-06-13T10:00:03+00:00',
+        },
+        {
+            'event_type': 'approval_requested',
+            'run_id': 'r-ok',
+            'payload': {'call_id': 'c2', 'tool_name': 'workspace_write_file'},
+            'created_at': '2026-06-13T10:00:04+00:00',
+        },
+        {
+            'event_type': 'approval_granted',
+            'run_id': 'r-ok',
+            'payload': {
+                'call_id': 'c2',
+                'tool_name': 'workspace_write_file',
+                'authority_type': 'jit_prompt',
+                'approved_by': 'user',
+            },
+            'created_at': '2026-06-13T10:00:05+00:00',
+        },
+        {
+            'event_type': 'run_completed',
+            'run_id': 'r-ok',
+            'payload': {'cost_cents': 1.0},
+            'created_at': '2026-06-13T10:00:06+00:00',
+        },
+    ]
+    bundle = _assert_fold_matches_legacy(events, 'r-ok')
+    # Guard against a vacuous pass: the fixture must actually carry evidence.
+    assert bundle.commands_run and bundle.approvals
+
+
+def test_m6_fold_equals_legacy_on_failure_run():
+    """Failed run with a tool error folds losslessly."""
+    events = [
+        {
+            'event_type': 'run_started',
+            'run_id': 'r-fail',
+            'payload': {},
+            'created_at': '2026-06-13T11:00:00+00:00',
+        },
+        {
+            'event_type': 'tool_use',
+            'run_id': 'r-fail',
+            'payload': {
+                'tool_name': 'workspace_run_shell',
+                'input': {'command': 'make build'},
+                'call_id': 'c1',
+            },
+            'created_at': '2026-06-13T11:00:01+00:00',
+        },
+        {
+            'event_type': 'tool_error',
+            'run_id': 'r-fail',
+            'payload': {
+                'tool_name': 'workspace_run_shell',
+                'call_id': 'c1',
+                'error': 'boom',
+            },
+            'created_at': '2026-06-13T11:00:02+00:00',
+        },
+        {
+            'event_type': 'run_failed',
+            'run_id': 'r-fail',
+            'payload': {'error': 'build failed'},
+            'created_at': '2026-06-13T11:00:03+00:00',
+        },
+    ]
+    _assert_fold_matches_legacy(events, 'r-fail')
+
+
+def test_m6_fold_equals_legacy_on_pending_approval_run():
+    """Pending-approval run (requested, not resolved) folds losslessly."""
+    events = [
+        {
+            'event_type': 'run_started',
+            'run_id': 'r-pend',
+            'payload': {},
+            'created_at': '2026-06-13T12:00:00+00:00',
+        },
+        {
+            'event_type': 'tool_call_pending_approval',
+            'run_id': 'r-pend',
+            'payload': {'call_id': 'c1', 'tool_name': 'workspace_write_file'},
+            'created_at': '2026-06-13T12:00:01+00:00',
+        },
+    ]
+    _assert_fold_matches_legacy(events, 'r-pend')
+
+
+def test_m6_fold_preserves_created_at_in_command_timestamps():
+    """The typed RunEvent carries created_at, so folded command timestamps
+    match the legacy (audit-sourced) timestamps rather than collapsing to None.
+    """
+    from teaagent.run_evidence import build_evidence_from_events
+    from teaagent.run_store import RunStore
+    from teaagent.runner._events import read_run_events_from_audit
+
+    events = [
+        {
+            'event_type': 'tool_use',
+            'run_id': 'r-ts',
+            'payload': {
+                'tool_name': 'workspace_run_shell',
+                'input': {'command': 'echo hi'},
+                'call_id': 'c1',
+            },
+            'created_at': '2026-06-13T13:00:01+00:00',
+        },
+    ]
+    with tempfile.TemporaryDirectory() as root:
+        _write_run(root, 'r-ts', events)
+        typed = read_run_events_from_audit(RunStore(root).show_run('r-ts'))
+        assert typed[0].created_at == '2026-06-13T13:00:01+00:00'
+        folded = build_evidence_from_events(typed, root=root, run_id='r-ts')
+        assert folded.commands_run[0].timestamp == '2026-06-13T13:00:01+00:00'

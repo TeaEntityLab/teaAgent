@@ -95,12 +95,20 @@ class RunEvent:
 
     Each event carries a type, run identifier, monotonic sequence number,
     and typed payload (mapping of event-specific data).
+
+    ``created_at`` is the originating audit entry's ISO-8601 timestamp when the
+    event is read back from persisted audit (M6 fold); it is ``None`` for events
+    freshly emitted on the live spine (the in-process bus does not stamp time —
+    seq is the live ordering key). It is intrinsic, load-bearing evidence
+    metadata: the evidence fold threads it into command/test/approval timestamps,
+    so the typed stream must not drop it.
     """
 
     type: RunEventType
     run_id: str
     payload: Mapping[str, Any]
     seq: int
+    created_at: str | None = None
 
 
 # Subscriber protocol aliases for type hints
@@ -311,12 +319,15 @@ def read_run_events_from_audit(
         run_id = entry.get('run_id', '')
         payload = entry.get('payload', {})
 
-        # Construct a RunEvent with the mapped type, run_id, payload, and seq.
+        # Construct a RunEvent with the mapped type, run_id, payload, seq, and
+        # the originating audit timestamp (load-bearing evidence metadata; the
+        # M6 fold threads created_at into command/test/approval timestamps).
         event = RunEvent(
             type=run_event_type,
             run_id=run_id,
             payload=payload,
             seq=seq,
+            created_at=entry.get('created_at'),
         )
         events.append(event)
 
