@@ -63,3 +63,56 @@ JIT-approved-then-enforced path, so the latent regression went unobserved.
   emit `budget_warning` audit events, so a shadow budget interceptor must NOT
   be given `audit=` while inline budget warnings remain, or warnings
   double-write.
+
+---
+
+## Update — reference approach attempted, deeper coupling found (2026-06-13)
+
+Per the owner's "use the reference approach" decision, I extended the
+interceptor to recover the runtime inputs (jit_state via a provider callable,
+handler via a registry reference). That closes gaps 1-2. But wiring Slice B
+surfaced a **third** runtime-coupling gap:
+
+3. **`self.approval_policy` is swapped at runtime by auto-mode.** In
+   `_execute_tool_decision`, after the `TOOL_CALL_REQUESTED` emit,
+   `get_auto_approve_policy()` may reassign `self.approval_policy`
+   (`_core.py` ~line 664-665). The inline `assert_allowed` then runs against
+   the *new* policy. An interceptor that captured `approval_policy` at
+   construction holds the *stale* reference → divergence under auto-mode. Fix
+   would require a policy **provider** too (and re-ordering the emit after the
+   swap).
+
+## Architectural finding and recommendation (owner decision needed)
+
+The plan gate moved to an interceptor cleanly because it is nearly stateless
+(`evaluate_write_gate` over context). The **approval gate is deeply
+runtime-coupled**: its decision depends on (1) live JIT/session state,
+(2) the tool handler, and (3) a permission policy that auto-mode can swap
+mid-call — none of which live in the event payload. Making the interceptor
+faithful means turning it into a thin shim that reaches back into runner state
+for *all three* via providers. That is doable but couples the "pure interceptor
+on an event" model tightly to runner internals, and each provider is a
+regression surface (gaps 1-3 were each invisible to the unit parity test).
+
+**Two honest options for the owner:**
+
+- **(A) Heavy shim:** give the interceptor policy/jit_state/handler providers,
+  re-order the emit after the auto-mode swap, and extend the parity test to
+  cover JIT-approved, handler-gated, and auto-mode-swapped cases. Completes the
+  spine vision (approval is an interceptor) at the cost of coupling.
+- **(B) Leave approval inline (recommended):** keep the approval gate as a
+  runner concern (it is legitimately stateful), and have the spine carry an
+  approval *observability* event (e.g. emit the decision as a consumer-only
+  event for evidence/receipts) rather than moving enforcement into an
+  interceptor. The spine/interceptor model fits stateless gates (plan); forcing
+  a stateful gate into it is the source of every gap here.
+
+Budget gate (still pending) is closer to plan (cost thresholds) than to
+approval, so it is likely interceptor-suitable — but should be assessed after
+this decision.
+
+## Current committed state (unchanged, clean)
+
+`bcd9369` is HEAD-ish for this thread: PlanGateError (`5b5f007`) + approval
+Slice A (`2da5d6c`, interceptor + unit parity, NOT wired) + this report. No
+enforce cutover landed. Working tree clean.
