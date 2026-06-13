@@ -53,12 +53,27 @@ def test_audit_event_to_run_event_type_m0_events() -> None:
 
 
 def test_audit_event_to_run_event_type_legacy_events_return_none() -> None:
-    """Test that unmapped legacy audit event types return None."""
-    # Legacy event types that are not in M0 should return None, not raise
-    assert audit_event_to_run_event_type('tool_call_started') is None
-    assert audit_event_to_run_event_type('model_route') is None
-    assert audit_event_to_run_event_type('git_sandbox_started') is None
+    """Still-unmapped audit event types return None, not raise."""
+    # Genuinely unmapped (planned for later phases, no taxonomy entry yet).
+    assert audit_event_to_run_event_type('plan_resolved') is None
+    assert audit_event_to_run_event_type('context_compacted') is None
+    assert audit_event_to_run_event_type('session_start') is None
     assert audit_event_to_run_event_type('unknown_event_type') is None
+
+
+def test_audit_event_to_run_event_type_evidence_events_now_mapped() -> None:
+    """M2-T002 (§16): evidence events the bundle reads are now typed/surfaced."""
+    assert audit_event_to_run_event_type('tool_call_started') == (
+        RunEventType.TOOL_CALL_STARTED
+    )
+    assert audit_event_to_run_event_type('model_route') == RunEventType.MODEL_ROUTE
+    assert audit_event_to_run_event_type('git_sandbox_started') == (
+        RunEventType.GIT_SANDBOX_STARTED
+    )
+    assert audit_event_to_run_event_type('approval_granted') == (
+        RunEventType.APPROVAL_GRANTED
+    )
+    assert audit_event_to_run_event_type('undo_applied') == RunEventType.UNDO_APPLIED
 
 
 def test_read_run_events_from_audit_mapped_events_only() -> None:
@@ -95,10 +110,17 @@ def test_read_run_events_from_audit_mapped_events_only() -> None:
         },
         {
             'event_id': 'ev-5',
-            'event_type': 'model_route',  # Legacy: not in M0
+            'event_type': 'model_route',  # evidence event — now mapped (§16)
             'run_id': 'run-test',
             'payload': {'resolved_model': 'claude-opus'},
             'created_at': '2026-06-13T10:00:04+00:00',
+        },
+        {
+            'event_id': 'ev-5b',
+            'event_type': 'plan_resolved',  # still unmapped legacy → skipped
+            'run_id': 'run-test',
+            'payload': {'plan': 'x'},
+            'created_at': '2026-06-13T10:00:04.5+00:00',
         },
         {
             'event_id': 'ev-6',
@@ -111,26 +133,23 @@ def test_read_run_events_from_audit_mapped_events_only() -> None:
 
     events = read_run_events_from_audit(entries)
 
-    # Only mapped events should appear: run_started, tool_call_requested, tool_call_completed, run_completed
-    # (tool_call_started and model_route are skipped)
-    assert len(events) == 4
+    # All taxonomy events surface (M0 + M2 evidence: tool_call_started and
+    # model_route now mapped per §16). Only still-unmapped plan_resolved skips.
+    assert [e.type for e in events] == [
+        RunEventType.RUN_STARTED,
+        RunEventType.TOOL_CALL_STARTED,
+        RunEventType.TOOL_CALL_REQUESTED,
+        RunEventType.TOOL_CALL_COMPLETED,
+        RunEventType.MODEL_ROUTE,
+        RunEventType.RUN_COMPLETED,
+    ]
 
-    # Check event types in order
-    assert events[0].type == RunEventType.RUN_STARTED
-    assert events[1].type == RunEventType.TOOL_CALL_REQUESTED
-    assert events[2].type == RunEventType.TOOL_CALL_COMPLETED
-    assert events[3].type == RunEventType.RUN_COMPLETED
+    # Monotonic seq over surfaced events only, 1..N.
+    assert [e.seq for e in events] == [1, 2, 3, 4, 5, 6]
 
-    # Check sequence numbers are monotonic starting from 1
-    assert events[0].seq == 1
-    assert events[1].seq == 2
-    assert events[2].seq == 3
-    assert events[3].seq == 4
-
-    # Check run_id and payload preservation
+    # run_id and payload preserved.
     assert all(e.run_id == 'run-test' for e in events)
     assert events[0].payload.get('task') == 'test task'
-    assert events[1].payload.get('call_id') == 'call-1'
 
 
 def test_read_run_events_from_audit_preserves_redaction() -> None:
@@ -184,9 +203,9 @@ def test_read_run_events_from_jsonl_file(tmp_path: Path) -> None:
         },
         {
             'event_id': 'ev-2',
-            'event_type': 'tool_call_started',  # Legacy, will be skipped
+            'event_type': 'plan_resolved',  # still-unmapped legacy → skipped
             'run_id': 'run-jsonl-test',
-            'payload': {'tool_name': 'test_tool'},
+            'payload': {'plan': 'x'},
             'created_at': '2026-06-13T10:00:01+00:00',
         },
         {
@@ -216,8 +235,8 @@ def test_read_run_events_from_jsonl_file(tmp_path: Path) -> None:
 
     events = read_run_events_from_jsonl(jsonl_file)
 
-    # Should read 3 events (run_started, tool_call_requested, run_completed)
-    # tool_call_started is skipped as legacy
+    # Should read 3 events (run_started, tool_call_requested, run_completed);
+    # the still-unmapped plan_resolved is skipped.
     assert len(events) == 3
 
     assert events[0].type == RunEventType.RUN_STARTED

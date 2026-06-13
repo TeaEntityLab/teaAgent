@@ -48,11 +48,33 @@ class RunEventType(str, Enum):
     RUN_COMPLETED = 'run_completed'
     RUN_FAILED = 'run_failed'
 
-    # Planned (M1+): PLAN_RESOLVED, DECISION_RECEIVED, TOOL_CALL_APPROVED,
-    # TOOL_CALL_DENIED, CONTEXT_COMPACTED, BUDGET_CHECKPOINT, ITERATION_COMPLETED,
-    # FINAL_VALIDATION, RUN_PENDING_APPROVAL, RUN_CANCELLED, RECEIPT_EMITTED,
-    # SESSION_START, SESSION_END, SKILL_LOAD, MODEL_ROUTE, GIT_SANDBOX_STARTED,
-    # GIT_SANDBOX_RESOLVED, UNDO_PERFORMED, PRE_TOOL_USE, POST_TOOL_USE, PRE_COMPACT
+    # M2 evidence-event taxonomy (ADR 0032 §16): the event types the evidence
+    # bundle reads, so the reader can surface them from the audit JSONL.
+    # Mapping/reader only — emit-site migration is deferred (see §16).
+    MODEL_ROUTE = 'model_route'
+    GIT_SANDBOX_STARTED = 'git_sandbox_started'
+    GIT_SANDBOX_RESOLVED = 'git_sandbox_resolved'
+    SKILL_ACTIVATED = 'skill_activated'
+    SKILL_LIFECYCLE_TRANSITION = 'skill_lifecycle_transition'
+    TEST_RUN = 'test_run'
+    UNDO_APPLIED = 'undo_applied'
+    PROVENANCE_COLLECTED = 'provenance_collected'
+    TOOL_CALL_STARTED = 'tool_call_started'
+    TOOL_USE = 'tool_use'
+    TOOL_CALL_APPROVED = 'tool_call_approved'
+    TOOL_CALL_DENIED = 'tool_call_denied'
+    TOOL_CALL_PENDING_APPROVAL = 'tool_call_pending_approval'
+    TOOL_ERROR = 'tool_error'
+    APPROVAL_REQUESTED = 'approval_requested'
+    APPROVAL_GRANTED = 'approval_granted'
+    APPROVAL_DENIED = 'approval_denied'
+    RUN_CANCELLED = 'run_cancelled'
+    RUN_PENDING_APPROVAL = 'run_pending_approval'
+
+    # Planned (later phases): PLAN_RESOLVED, DECISION_RECEIVED,
+    # CONTEXT_COMPACTED, BUDGET_CHECKPOINT, ITERATION_COMPLETED,
+    # FINAL_VALIDATION, RECEIPT_EMITTED, SESSION_START, SESSION_END,
+    # PRE_TOOL_USE, POST_TOOL_USE, PRE_COMPACT
 
 
 @dataclass(frozen=True)
@@ -85,6 +107,26 @@ _RUN_EVENT_TO_AUDIT_EVENT_TYPE: dict[RunEventType, str] = {
     RunEventType.TOOL_CALL_FAILED: 'tool_call_failed',
     RunEventType.RUN_COMPLETED: 'run_completed',
     RunEventType.RUN_FAILED: 'run_failed',
+    # M2 evidence-event taxonomy (§16) — mapping only; not yet spine-emitted.
+    RunEventType.MODEL_ROUTE: 'model_route',
+    RunEventType.GIT_SANDBOX_STARTED: 'git_sandbox_started',
+    RunEventType.GIT_SANDBOX_RESOLVED: 'git_sandbox_resolved',
+    RunEventType.SKILL_ACTIVATED: 'skill_activated',
+    RunEventType.SKILL_LIFECYCLE_TRANSITION: 'skill_lifecycle_transition',
+    RunEventType.TEST_RUN: 'test_run',
+    RunEventType.UNDO_APPLIED: 'undo_applied',
+    RunEventType.PROVENANCE_COLLECTED: 'provenance_collected',
+    RunEventType.TOOL_CALL_STARTED: 'tool_call_started',
+    RunEventType.TOOL_USE: 'tool_use',
+    RunEventType.TOOL_CALL_APPROVED: 'tool_call_approved',
+    RunEventType.TOOL_CALL_DENIED: 'tool_call_denied',
+    RunEventType.TOOL_CALL_PENDING_APPROVAL: 'tool_call_pending_approval',
+    RunEventType.TOOL_ERROR: 'tool_error',
+    RunEventType.APPROVAL_REQUESTED: 'approval_requested',
+    RunEventType.APPROVAL_GRANTED: 'approval_granted',
+    RunEventType.APPROVAL_DENIED: 'approval_denied',
+    RunEventType.RUN_CANCELLED: 'run_cancelled',
+    RunEventType.RUN_PENDING_APPROVAL: 'run_pending_approval',
 }
 
 
