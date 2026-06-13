@@ -798,7 +798,17 @@ def build_run_evidence_bundle(
     except FileNotFoundError:
         return RunEvidenceBundle(run_id=run_id, goal_id=goal_id)
 
-    return _assemble_evidence_bundle(events, root=root, run_id=run_id, goal_id=goal_id)
+    # M6 FOLD-T002 cutover: production evidence is now derived from the TYPED
+    # event stream, not raw audit dicts. Every evidence-bearing audit event is
+    # typed in RunEventType (M2 + M3 + M5), so read_run_events_from_audit is
+    # lossless here; events whose type is not in the taxonomy are not read by any
+    # extractor anyway. The legacy raw-dict assembly is no longer the production
+    # path — it survives only as the shared _assemble_evidence_bundle helper that
+    # the fold also uses, so the two cannot diverge.
+    from teaagent.runner._events import read_run_events_from_audit
+
+    typed = read_run_events_from_audit(events)
+    return build_evidence_from_events(typed, root=root, run_id=run_id, goal_id=goal_id)
 
 
 def build_evidence_from_events(

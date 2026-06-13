@@ -322,17 +322,27 @@ def _write_run(root: str, run_id: str, events: list[dict]) -> None:
 
 
 def _assert_fold_matches_legacy(events: list[dict], run_id: str) -> RunEvidenceBundle:
-    """Legacy bundle (RunStore source) must equal the typed-stream fold."""
-    from teaagent.run_evidence import build_evidence_from_events
-    from teaagent.run_store import RunStore
+    """The typed-stream fold must equal the raw-audit-dict assembly.
+
+    Baselines against ``_assemble_evidence_bundle`` (the raw-dict path) rather
+    than ``build_run_evidence_bundle`` — after the M6 FOLD-T002 cutover the
+    public builder itself folds through the typed reader, so comparing it to the
+    fold would be circular. The invariant that matters is that routing raw audit
+    dicts through ``read_run_events_from_audit`` (typed reader) loses no evidence
+    versus assembling directly from those dicts.
+    """
+    from teaagent.run_evidence import (
+        _assemble_evidence_bundle,
+        build_evidence_from_events,
+    )
     from teaagent.runner._events import read_run_events_from_audit
 
     with tempfile.TemporaryDirectory() as root:
-        _write_run(root, run_id, events)
+        # Raw-dict assembly (pre-cutover production path) is the baseline.
+        legacy = _assemble_evidence_bundle(events, root=root, run_id=run_id)
 
-        legacy = build_run_evidence_bundle(root, run_id)
-
-        typed = read_run_events_from_audit(RunStore(root).show_run(run_id))
+        # Typed-stream fold (current production path) must match it.
+        typed = read_run_events_from_audit(events)
         folded = build_evidence_from_events(typed, root=root, run_id=run_id)
 
         assert folded.to_dict() == legacy.to_dict()
