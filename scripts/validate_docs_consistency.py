@@ -954,6 +954,11 @@ WORK_LOG_LEGACY_STATE_LABELS = frozenset(
         'in progress',
     }
 )
+FRICTION_LOG_EMPTY_LINK_VALUES = frozenset({'', 'n/a', 'na', '-', '—'})
+FRICTION_LOG_ENTRY_SECTIONS = frozenset(
+    {'Owner Evidence Entries', 'Competitor-Derived Hypotheses'}
+)
+FRICTION_LOG_ENTRY_HEADING = re.compile(r'^### \d{4}-\d{2}-\d{2} - .+')
 _CJK_CHAR = re.compile(r'[\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af]')
 
 
@@ -993,6 +998,127 @@ def validate_work_log_canonical_states(
         errors.append(
             f'{path_label} line {line_no}: unrecognized State label {state!r}.'
         )
+    return errors
+
+
+def _normalize_friction_field(value: str) -> str:
+    return re.sub(r'[*_`]', '', value).strip().lower()
+
+
+def _is_empty_friction_link(value: str | None) -> bool:
+    if value is None:
+        return True
+    return _normalize_friction_field(value) in FRICTION_LOG_EMPTY_LINK_VALUES
+
+
+def _extract_operator_friction_entries(
+    friction_log_text: str,
+) -> tuple[list[tuple[int, str, dict[str, str]]], list[str]]:
+    entries: list[tuple[int, str, dict[str, str]]] = []
+    errors: list[str] = []
+    in_fence = False
+    active_section: str | None = None
+    current_line: int | None = None
+    current_title: str | None = None
+    current_fields: dict[str, str] = {}
+
+    for line_no, line in enumerate(friction_log_text.splitlines(), start=1):
+        if line.strip().startswith('```'):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+
+        if line.startswith('## '):
+            if current_line is not None and current_title is not None:
+                entries.append((current_line, current_title, current_fields))
+            current_line = None
+            current_title = None
+            current_fields = {}
+            active_section = line.removeprefix('## ').strip()
+            continue
+
+        if line.startswith('### '):
+            if active_section not in FRICTION_LOG_ENTRY_SECTIONS:
+                continue
+            if current_line is not None and current_title is not None:
+                entries.append((current_line, current_title, current_fields))
+            if not FRICTION_LOG_ENTRY_HEADING.match(line):
+                errors.append(
+                    'operator-friction-log.md entry heading at line '
+                    f'{line_no} must use "### YYYY-MM-DD - Short title".'
+                )
+            current_line = line_no
+            current_title = line.removeprefix('### ').strip()
+            current_fields = {}
+            continue
+
+        if current_line is None:
+            continue
+
+        match = re.match(r'- \*\*(?P<field>[^*]+):\*\*\s*(?P<value>.*)$', line)
+        if match:
+            current_fields[match.group('field').strip()] = match.group('value').strip()
+
+    if current_line is not None and current_title is not None:
+        entries.append((current_line, current_title, current_fields))
+
+    return entries, errors
+
+
+def validate_operator_friction_log(friction_log_text: str) -> list[str]:
+    """Ensure owner-friction entries cannot close without promotion evidence."""
+    entries, errors = _extract_operator_friction_entries(friction_log_text)
+    for line_no, title, fields in entries:
+        entry_type = _normalize_friction_field(fields.get('Type', ''))
+        if entry_type not in {'evidence', 'hypothesis'}:
+            errors.append(
+                f'operator-friction-log.md entry {title!r} at line {line_no} '
+                "has invalid Type; expected 'evidence' or 'hypothesis'."
+            )
+
+        source = _normalize_friction_field(fields.get('Source', ''))
+        if entry_type == 'evidence' and source != 'owner real use':
+            errors.append(
+                f'operator-friction-log.md evidence entry {title!r} at line '
+                f'{line_no} must use Source: owner real use; structured fields '
+                'do not independently prove owner authorship.'
+            )
+        if entry_type == 'hypothesis' and '[hypothesis:' not in source:
+            errors.append(
+                f'operator-friction-log.md hypothesis entry {title!r} at line '
+                f'{line_no} must keep a [hypothesis: source, date] Source.'
+            )
+
+        status = _normalize_friction_field(fields.get('Status', ''))
+        if status not in {'open', 'closed', 'rejected'}:
+            errors.append(
+                f'operator-friction-log.md entry {title!r} at line {line_no} '
+                "has invalid Status; expected 'open', 'closed', or 'rejected'."
+            )
+            continue
+
+        if entry_type == 'hypothesis' and status == 'closed':
+            errors.append(
+                f'operator-friction-log.md hypothesis entry {title!r} at line '
+                f'{line_no} cannot be marked closed; reject it or promote it '
+                'after owner validation.'
+            )
+
+        if status != 'closed':
+            continue
+
+        if _is_empty_friction_link(fields.get('Closure evidence')):
+            errors.append(
+                f'operator-friction-log.md closed entry {title!r} at line {line_no} '
+                'must cite non-n/a Closure evidence.'
+            )
+        if _is_empty_friction_link(fields.get('Promoted to')):
+            errors.append(
+                f'operator-friction-log.md closed entry {title!r} at line {line_no} '
+                'must cite the promoted ticket or acceptance-gap artifact.'
+            )
+
     return errors
 
 
@@ -1511,6 +1637,17 @@ def validate_docs_consistency(
                     path_label=str(work_log_path.relative_to(_REPO_ROOT)),
                 )
             )
+        friction_log_path = (
+            _REPO_ROOT / 'docs' / 'work-log' / 'operator-friction-log.md'
+        )
+        if friction_log_path.is_file():
+            errors.extend(
+                validate_operator_friction_log(
+                    friction_log_path.read_text(encoding='utf-8')
+                )
+            )
+        else:
+            errors.append(f'Operator friction log not found: {friction_log_path}')
 
         index_path = _REPO_ROOT / 'docs' / 'INDEX.md'
         if index_path.is_file():

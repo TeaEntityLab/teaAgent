@@ -154,6 +154,116 @@ def test_validate_roadmap_status_passes_for_repo_roadmap() -> None:
     assert errors == []
 
 
+def test_validate_operator_friction_log_passes_for_repo_log() -> None:
+    root = Path(__file__).resolve().parents[1]
+    log = (root / 'docs' / 'work-log' / 'operator-friction-log.md').read_text(
+        encoding='utf-8'
+    )
+    errors = _VALIDATE_MODULE.validate_operator_friction_log(log)
+    assert errors == []
+
+
+def test_validate_operator_friction_log_detects_closed_without_links() -> None:
+    log = (
+        '# Operator Friction Log\n\n'
+        '## Owner Evidence Entries\n\n'
+        '### 2026-06-14 - Missing closeout\n\n'
+        '- **Type:** evidence\n'
+        '- **Source:** owner real use\n'
+        '- **Status:** closed\n'
+        '- **Closure evidence:** n/a\n'
+        '- **Promoted to:** n/a\n'
+    )
+    errors = _VALIDATE_MODULE.validate_operator_friction_log(log)
+    assert any('Closure evidence' in err for err in errors)
+    assert any('promoted ticket or acceptance-gap artifact' in err for err in errors)
+
+
+def test_validate_operator_friction_log_rejects_closed_hypothesis() -> None:
+    log = (
+        '# Operator Friction Log\n\n'
+        '## Competitor-Derived Hypotheses\n\n'
+        '### 2026-06-14 - Competitor clue\n\n'
+        '- **Type:** hypothesis\n'
+        '- **Source:** [hypothesis: example, 2026-06-14]\n'
+        '- **Status:** closed\n'
+        '- **Closure evidence:** tests/test_example.py\n'
+        '- **Promoted to:** docs/work-log/example-ticket.md\n'
+    )
+    errors = _VALIDATE_MODULE.validate_operator_friction_log(log)
+    assert any(
+        'hypothesis entry' in err and 'cannot be marked closed' in err for err in errors
+    )
+
+
+def test_validate_operator_friction_log_allows_open_unpromoted_entry() -> None:
+    log = (
+        '# Operator Friction Log\n\n'
+        '## Owner Evidence Entries\n\n'
+        '### 2026-06-14 - Still investigating\n\n'
+        '- **Type:** evidence\n'
+        '- **Source:** owner real use\n'
+        '- **Status:** open\n'
+        '- **Closure evidence:** n/a\n'
+        '- **Promoted to:** n/a\n'
+    )
+    errors = _VALIDATE_MODULE.validate_operator_friction_log(log)
+    assert errors == []
+
+
+def test_validate_operator_friction_log_detects_malformed_heading() -> None:
+    log = (
+        '# Operator Friction Log\n\n'
+        '## Owner Evidence Entries\n\n'
+        '### June 14, 2026 - Missing ISO date\n\n'
+        '- **Type:** evidence\n'
+        '- **Source:** owner real use\n'
+        '- **Status:** open\n'
+    )
+    errors = _VALIDATE_MODULE.validate_operator_friction_log(log)
+    assert any('YYYY-MM-DD' in err for err in errors)
+
+
+def test_validate_operator_friction_log_detects_missing_type_field() -> None:
+    log = (
+        '# Operator Friction Log\n\n'
+        '## Owner Evidence Entries\n\n'
+        '### 2026-06-14 - Bad bullet syntax\n\n'
+        '- Type: evidence\n'
+        '- **Source:** owner real use\n'
+        '- **Status:** open\n'
+    )
+    errors = _VALIDATE_MODULE.validate_operator_friction_log(log)
+    assert any('invalid Type' in err for err in errors)
+
+
+def test_validate_operator_friction_log_checks_type_source_consistency() -> None:
+    log = (
+        '# Operator Friction Log\n\n'
+        '## Competitor-Derived Hypotheses\n\n'
+        '### 2026-06-14 - Bad source\n\n'
+        '- **Type:** hypothesis\n'
+        '- **Source:** owner real use\n'
+        '- **Status:** open\n'
+    )
+    errors = _VALIDATE_MODULE.validate_operator_friction_log(log)
+    assert any('[hypothesis: source, date]' in err for err in errors)
+
+
+def test_validate_operator_friction_log_ignores_template_code_fence() -> None:
+    log = (
+        '# Operator Friction Log\n\n'
+        '```markdown\n'
+        '### YYYY-MM-DD - Short title\n'
+        '- **Status:** closed\n'
+        '- **Closure evidence:** n/a\n'
+        '- **Promoted to:** n/a\n'
+        '```\n'
+    )
+    errors = _VALIDATE_MODULE.validate_operator_friction_log(log)
+    assert errors == []
+
+
 def test_current_roadmap_stays_owner_operator_harness_first() -> None:
     root = Path(__file__).resolve().parents[1]
     readme = (root / 'README.md').read_text(encoding='utf-8')
