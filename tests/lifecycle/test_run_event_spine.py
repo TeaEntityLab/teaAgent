@@ -487,9 +487,10 @@ def test_m1_audit_stream_matches_frozen_contract(tmp_path: Path) -> None:
 def test_all_run_event_types_round_trip_through_mappers() -> None:
     """Every RunEventType member round-trips through both mapper directions.
 
-    Covers all 26 members (7 M0 + 19 M2 evidence-event taxonomy) — forward
-    through run_event_to_audit_event_type then back through
-    audit_event_to_run_event_type, and inverse through the dict mappers.
+    Covers all 31 members (7 M0 + 19 M2 evidence-event taxonomy + 5 M5
+    hook-observability taxonomy) — forward through run_event_to_audit_event_type
+    then back through audit_event_to_run_event_type, and inverse through the
+    dict mappers.
     """
     for event_type in RunEventType:
         aud_type = run_event_to_audit_event_type(event_type)
@@ -501,6 +502,30 @@ def test_all_run_event_types_round_trip_through_mappers() -> None:
 
     assert len(_RUN_EVENT_TO_AUDIT_EVENT_TYPE) == len(RunEventType)
     assert len(_AUDIT_EVENT_TO_RUN_EVENT_TYPE) == len(RunEventType)
+
+
+def test_m5_hook_audit_events_are_typed_and_reader_surfaced() -> None:
+    """M5: the 5 hook-observability audit events emitted by the dispatch-layer
+    HookRegistry bridge are typed in RunEventType and mapped both directions, so
+    the M2-T001 reader surfaces them from the audit JSONL for the M6 fold.
+
+    Hook *execution* stays in teaagent/tools.py (it mutates in-flight
+    args/results); only its observability is folded onto the spine — the same
+    taxonomy-only shape as M2 (and the approval/budget observability under the
+    decision-B/B-analog findings).
+    """
+    expected = {
+        'tool_hook_pre_mutation': RunEventType.TOOL_HOOK_PRE_MUTATION,
+        'tool_hook_pre_mutation_blocked': RunEventType.TOOL_HOOK_PRE_MUTATION_BLOCKED,
+        'tool_hook_vetoed': RunEventType.TOOL_HOOK_VETOED,
+        'tool_hook_post_mutation': RunEventType.TOOL_HOOK_POST_MUTATION,
+        'tool_hook_post_failed': RunEventType.TOOL_HOOK_POST_FAILED,
+    }
+    for audit_type, run_type in expected.items():
+        # Reader maps the audit JSONL string -> typed event (non-None => surfaced).
+        assert audit_event_to_run_event_type(audit_type) == run_type
+        # Forward mapping is exact and lossless.
+        assert run_event_to_audit_event_type(run_type) == audit_type
 
 
 # ---------------------------------------------------------------------------

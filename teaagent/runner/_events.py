@@ -71,6 +71,18 @@ class RunEventType(str, Enum):
     RUN_CANCELLED = 'run_cancelled'
     RUN_PENDING_APPROVAL = 'run_pending_approval'
 
+    # M5 hook-observability taxonomy (ADR 0032 M5, owner decision 2026-06-13):
+    # the audit events emitted by the HookRegistry bridge in the tool-dispatch
+    # layer (teaagent/tools.py). Typed + mapped so the M6 fold can surface hook
+    # veto/mutation activity FROM the audit JSONL. Mapping/reader only — hook
+    # *execution* stays in the dispatch layer (it mutates in-flight args/results,
+    # so it is not a pure spine interceptor; see the M5 assessment work-log).
+    TOOL_HOOK_PRE_MUTATION = 'tool_hook_pre_mutation'
+    TOOL_HOOK_PRE_MUTATION_BLOCKED = 'tool_hook_pre_mutation_blocked'
+    TOOL_HOOK_VETOED = 'tool_hook_vetoed'
+    TOOL_HOOK_POST_MUTATION = 'tool_hook_post_mutation'
+    TOOL_HOOK_POST_FAILED = 'tool_hook_post_failed'
+
     # Planned (later phases): PLAN_RESOLVED, DECISION_RECEIVED,
     # CONTEXT_COMPACTED, BUDGET_CHECKPOINT, ITERATION_COMPLETED,
     # FINAL_VALIDATION, RECEIPT_EMITTED, SESSION_START, SESSION_END,
@@ -127,6 +139,13 @@ _RUN_EVENT_TO_AUDIT_EVENT_TYPE: dict[RunEventType, str] = {
     RunEventType.APPROVAL_DENIED: 'approval_denied',
     RunEventType.RUN_CANCELLED: 'run_cancelled',
     RunEventType.RUN_PENDING_APPROVAL: 'run_pending_approval',
+    # M5 hook-observability taxonomy — mapping only; hook execution stays in
+    # the tool-dispatch layer (teaagent/tools.py), not spine-emitted.
+    RunEventType.TOOL_HOOK_PRE_MUTATION: 'tool_hook_pre_mutation',
+    RunEventType.TOOL_HOOK_PRE_MUTATION_BLOCKED: 'tool_hook_pre_mutation_blocked',
+    RunEventType.TOOL_HOOK_VETOED: 'tool_hook_vetoed',
+    RunEventType.TOOL_HOOK_POST_MUTATION: 'tool_hook_post_mutation',
+    RunEventType.TOOL_HOOK_POST_FAILED: 'tool_hook_post_failed',
 }
 
 
