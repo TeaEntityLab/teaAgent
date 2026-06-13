@@ -167,6 +167,12 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     'RunCancelledError': ('teaagent.errors', 'RunCancelledError'),
     'RunEvent': ('teaagent.runner', 'RunEvent'),
     'RunEventType': ('teaagent.runner', 'RunEventType'),
+    'audit_event_to_run_event_type': (
+        'teaagent.runner',
+        'audit_event_to_run_event_type',
+    ),
+    'read_run_events_from_audit': ('teaagent.runner', 'read_run_events_from_audit'),
+    'read_run_events_from_jsonl': ('teaagent.runner', 'read_run_events_from_jsonl'),
     'RunRollup': ('teaagent.daily', 'RunRollup'),
     'RunStore': ('teaagent.run_store', 'RunStore'),
     'RunSummary': ('teaagent.run_store', 'RunSummary'),
@@ -291,6 +297,7 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         'teaagent.external_backends',
         'register_code_parse_backend',
     ),
+    'register_audit_consumer': ('teaagent.runner', 'register_audit_consumer'),
     'register_git_tools': ('teaagent.workspace_tools', 'register_git_tools'),
     'register_hybrid_backend': ('teaagent.hybrid_search', 'register_hybrid_backend'),
     'register_knowledge_backend': (

@@ -19,9 +19,12 @@ The EventSpine is sync-first, in-process, and deterministic: no threads, no queu
 
 from __future__ import annotations
 
+import json
 import logging
+from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Mapping
 
 if TYPE_CHECKING:
@@ -100,6 +103,27 @@ def run_event_to_audit_event_type(event_type: RunEventType) -> str:
             f'Supported: {list(_RUN_EVENT_TO_AUDIT_EVENT_TYPE)}'
         )
     return audit_type
+
+
+# Inverse mapping: audit event type string to RunEventType
+_AUDIT_EVENT_TO_RUN_EVENT_TYPE: dict[str, RunEventType] = {
+    v: k for k, v in _RUN_EVENT_TO_AUDIT_EVENT_TYPE.items()
+}
+
+
+def audit_event_to_run_event_type(audit_type: str) -> RunEventType | None:
+    """Map an audit event type string to a ``RunEventType``, or None if unmapped.
+
+    Legacy and unmapped audit event types (e.g. 'tool_call_started', 'model_route',
+    'git_sandbox_started') return None and are safely skipped by the reader.
+
+    Args:
+        audit_type: The audit event type string (from JSONL entry).
+
+    Returns:
+        The corresponding RunEventType, or None if not in the M0 set.
+    """
+    return _AUDIT_EVENT_TO_RUN_EVENT_TYPE.get(audit_type)
 
 
 class EventSpine:
@@ -188,6 +212,86 @@ class EventSpine:
                     f'Consumer {name!r} raised during {type_.value}; continuing. '
                     f'Error: {e}'
                 )
+
+
+def read_run_events_from_audit(
+    entries: Iterable[Mapping[str, Any]],
+) -> list[RunEvent]:
+    """Convert audit JSONL entries to typed RunEvents.
+
+    Iterates over audit event dicts (already-parsed from JSONL), converts
+    those with mapped event types to RunEvents, and skips legacy/unmapped
+    event types. Sequence numbers are 1-based and monotonic over yielded events.
+
+    Redaction is preserved: payloads are passed through as-is from the audit
+    entries without reconstruction or un-redaction.
+
+    Args:
+        entries: An iterable of audit event dicts (from parsed JSONL lines).
+                 Expected keys: event_type, run_id, payload.
+
+    Returns:
+        A list of RunEvent objects in order, with seq 1..N monotonic.
+    """
+    events: list[RunEvent] = []
+    seq = 0
+
+    for entry in entries:
+        audit_type = entry.get('event_type')
+        if audit_type is None:
+            continue
+        run_event_type = audit_event_to_run_event_type(audit_type)
+
+        # Skip entries whose event_type does not map to RunEventType
+        if run_event_type is None:
+            continue
+
+        seq += 1
+        run_id = entry.get('run_id', '')
+        payload = entry.get('payload', {})
+
+        # Construct a RunEvent with the mapped type, run_id, payload, and seq.
+        event = RunEvent(
+            type=run_event_type,
+            run_id=run_id,
+            payload=payload,
+            seq=seq,
+        )
+        events.append(event)
+
+    return events
+
+
+def read_run_events_from_jsonl(path: str | Path) -> list[RunEvent]:
+    """Read a JSONL audit file and convert it to RunEvents.
+
+    Opens the file, parses each non-empty line as JSON, delegates to
+    read_run_events_from_audit, and returns the typed event list.
+
+    Tolerates blank lines and preserves redaction.
+
+    Args:
+        path: Path to the JSONL audit file.
+
+    Returns:
+        A list of RunEvent objects extracted from the file.
+
+    Raises:
+        FileNotFoundError: If the file does not exist.
+        json.JSONDecodeError: If a non-empty line is not valid JSON.
+    """
+    path_obj = Path(path) if isinstance(path, str) else path
+    entries: list[Mapping[str, Any]] = []
+
+    with open(path_obj, encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                # Tolerate blank lines
+                continue
+            entries.append(json.loads(line))
+
+    return read_run_events_from_audit(entries)
 
 
 def register_audit_consumer(spine: EventSpine, audit: AuditLogger) -> None:
