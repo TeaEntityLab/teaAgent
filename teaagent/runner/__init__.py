@@ -1,7 +1,7 @@
 """Agent runner package — decision loop, budget, and approval integration."""
 
 from ._core import AgentRunner, validate_tool_decision
-from ._events import EventSpine, RunEvent, RunEventType
+from ._events import EventSpine, RunEvent, RunEventType, register_audit_consumer
 from ._types import (
     ApprovalHandler,
     ApprovalRequest,
@@ -22,6 +22,7 @@ __all__ = [
     'DecisionFn',
     'EventSpine',
     'FinalAnswer',
+    'register_audit_consumer',
     'RunEvent',
     'RunEventType',
     'RunResult',

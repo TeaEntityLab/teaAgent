@@ -48,7 +48,7 @@ logger = logging.getLogger(__name__)
 
 from ._approval_manager import RunnerApprovalCoordinator  # noqa: E402
 from ._auto_mode_manager import AutoModeManager  # noqa: E402
-from ._events import EventSpine, RunEventType  # noqa: E402
+from ._events import EventSpine, RunEventType, register_audit_consumer  # noqa: E402
 from ._plan_validator import PlanValidator  # noqa: E402
 from ._types import (  # noqa: E402
     ApprovalHandler,
@@ -149,6 +149,7 @@ class AgentRunner:
         self.decision_log = decision_log
         self._usage_reader = usage_reader
         self.event_spine = event_spine or EventSpine()
+        register_audit_consumer(self.event_spine, self.audit)
 
         # Initialize manager classes
         self.approval_policy = approval_policy or ApprovalPolicy()
@@ -451,7 +452,6 @@ class AgentRunner:
         }
         if run_started_extra:
             started_payload.update(run_started_extra)
-        self.audit.record('run_started', current_run_id, **started_payload)
         self.event_spine.emit(RunEventType.RUN_STARTED, current_run_id, started_payload)
         return (
             current_run_id,
@@ -490,11 +490,6 @@ class AgentRunner:
             'input_tokens': input_tokens,
             'output_tokens': output_tokens,
         }
-        self.audit.record(
-            'run_completed',
-            run_id,
-            **run_completed_payload,
-        )
         self.event_spine.emit(RunEventType.RUN_COMPLETED, run_id, run_completed_payload)
         extra_meta: dict[str, Any] = {}
         if self.auto_mode_manager.is_enabled():
@@ -538,11 +533,6 @@ class AgentRunner:
             'input_tokens': input_tokens,
             'output_tokens': output_tokens,
         }
-        self.audit.record(
-            'run_failed',
-            run_id,
-            **run_failed_payload,
-        )
         self.event_spine.emit(RunEventType.RUN_FAILED, run_id, run_failed_payload)
         self._emit_summary(
             run_id=run_id,
@@ -580,11 +570,6 @@ class AgentRunner:
             'input_tokens': input_tokens,
             'output_tokens': output_tokens,
         }
-        self.audit.record(
-            'run_failed',
-            run_id,
-            **system_failed_payload,
-        )
         self.event_spine.emit(RunEventType.RUN_FAILED, run_id, system_failed_payload)
         self._emit_summary(
             run_id=run_id,
@@ -784,7 +769,6 @@ class AgentRunner:
                 'duration_ms': round((time.monotonic() - tool_started_at) * 1000.0, 2),
             }
             context['observations'].append(err_observation)
-            self.audit.record('tool_call_failed', run_id, **err_observation)
             self.event_spine.emit(
                 RunEventType.TOOL_CALL_FAILED, run_id, err_observation
             )
@@ -838,7 +822,6 @@ class AgentRunner:
         if _long_meta is not None:
             observation.update(_long_meta)
         context['observations'].append(observation)
-        self.audit.record('tool_call_completed', run_id, **observation)
         self.event_spine.emit(RunEventType.TOOL_CALL_COMPLETED, run_id, observation)
         if self.checkpoint_store is not None:
             self.checkpoint_store.save(run_id, context)
@@ -878,11 +861,6 @@ class AgentRunner:
             'input_tokens': input_tokens,
             'output_tokens': output_tokens,
         }
-        self.audit.record(
-            'run_failed',
-            run_id,
-            **budget_exceeded_payload,
-        )
         self.event_spine.emit(RunEventType.RUN_FAILED, run_id, budget_exceeded_payload)
         self._emit_summary(
             run_id=run_id,
@@ -928,7 +906,6 @@ class AgentRunner:
             iterations += 1
             self.auto_mode_manager.record_iteration()
             iteration_payload = {'iteration': iterations}
-            self.audit.record('iteration_started', current_run_id, **iteration_payload)
             self.event_spine.emit(
                 RunEventType.ITERATION_STARTED, current_run_id, iteration_payload
             )

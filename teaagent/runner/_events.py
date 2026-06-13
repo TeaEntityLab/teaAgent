@@ -22,7 +22,10 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Mapping
+from typing import TYPE_CHECKING, Any, Callable, Mapping
+
+if TYPE_CHECKING:
+    from teaagent.audit import AuditLogger
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +70,37 @@ class RunEvent:
 Interceptor = Callable[[RunEvent], None]
 Consumer = Callable[[RunEvent], None]
 
+# ---------------------------------------------------------------------------
+# RunEvent → audit event mapping (ADR 0032 M1)
+# ---------------------------------------------------------------------------
+
+_RUN_EVENT_TO_AUDIT_EVENT_TYPE: dict[RunEventType, str] = {
+    RunEventType.RUN_STARTED: 'run_started',
+    RunEventType.ITERATION_STARTED: 'iteration_started',
+    RunEventType.TOOL_CALL_REQUESTED: 'tool_call_requested',
+    RunEventType.TOOL_CALL_COMPLETED: 'tool_call_completed',
+    RunEventType.TOOL_CALL_FAILED: 'tool_call_failed',
+    RunEventType.RUN_COMPLETED: 'run_completed',
+    RunEventType.RUN_FAILED: 'run_failed',
+}
+
+
+def run_event_to_audit_event_type(event_type: RunEventType) -> str:
+    """Map a ``RunEventType`` to the legacy audit event type string.
+
+    Returns the event type string that ``AuditLogger.record()`` expects.
+
+    Raises:
+        ValueError: If the event type is not yet mapped (planned M1+ events).
+    """
+    audit_type = _RUN_EVENT_TO_AUDIT_EVENT_TYPE.get(event_type)
+    if audit_type is None:
+        raise ValueError(
+            f'RunEventType {event_type!r} has no audit event mapping yet. '
+            f'Supported: {list(_RUN_EVENT_TO_AUDIT_EVENT_TYPE)}'
+        )
+    return audit_type
+
 
 class EventSpine:
     """Synchronous, in-process event bus for run-lifecycle events.
@@ -81,7 +115,7 @@ class EventSpine:
     def __init__(self) -> None:
         """Initialize an empty spine with no subscribers."""
         self._interceptors: list[tuple[str, Interceptor]] = []
-        self._consumers: list[tuple[str, Consumer]] = []
+        self._consumers: list[tuple[str, Consumer, bool]] = []
         self._seq = 0
 
     def register_interceptor(self, fn: Interceptor, *, name: str) -> None:
@@ -97,17 +131,24 @@ class EventSpine:
         """
         self._interceptors.append((name, fn))
 
-    def register_consumer(self, fn: Consumer, *, name: str) -> None:
-        """Register a side-effect subscriber (crash-safe).
+    def register_consumer(
+        self, fn: Consumer, *, name: str, critical: bool = False
+    ) -> None:
+        """Register a side-effect subscriber (crash-safe by default).
 
         Consumers run after all interceptors and can never affect the run.
         Each is wrapped in try/except; exceptions are logged and isolated.
 
+        When *critical* is ``True``, exceptions from this consumer propagate
+        instead of being isolated. Use for subscribers whose failure must
+        halt the run (e.g. compliance-mode audit durability).
+
         Args:
-            fn: Callable[[RunEvent], None]; never raises (exceptions caught).
+            fn: Callable[[RunEvent], None].
             name: Human-readable name for logging/debugging.
+            critical: If ``True``, exceptions propagate (not isolated).
         """
-        self._consumers.append((name, fn))
+        self._consumers.append((name, fn, critical))
 
     def emit(
         self, type_: RunEventType, run_id: str, payload: Mapping[str, Any]
@@ -136,12 +177,49 @@ class EventSpine:
                 # Interceptor veto: propagate immediately.
                 raise
 
-        # Run consumers in order; each isolated from failures.
-        for name, consumer in self._consumers:
+        # Run consumers in order; isolated from failures by default.
+        for name, consumer, critical in self._consumers:
             try:
                 consumer(event)
             except Exception as e:
+                if critical:
+                    raise
                 logger.exception(
                     f'Consumer {name!r} raised during {type_.value}; continuing. '
                     f'Error: {e}'
                 )
+
+
+def register_audit_consumer(spine: EventSpine, audit: AuditLogger) -> None:
+    """Register an ``AuditLogger`` as an ``EventSpine`` consumer (ADR 0032 M1).
+
+    The consumer maps each ``RunEvent`` to the legacy audit event type string
+    and calls ``audit.record()``.
+
+    If the audit logger is in compliance mode, the consumer is registered as
+    *critical*, so that ``AuditDurabilityError`` propagates and halts the run.
+
+    Args:
+        spine: The event spine to subscribe to.
+        audit: The audit logger to drive from RunEvents.
+    """
+
+    is_compliance = getattr(audit, '_compliance_mode', False)
+
+    def _audit_consumer(event: RunEvent) -> None:
+        try:
+            audit_type = run_event_to_audit_event_type(event.type)
+        except ValueError:
+            logger.warning(
+                'Skipping audit for unmapped event %s (seq=%d)',
+                event.type.value,
+                event.seq,
+            )
+            return
+        audit.record(audit_type, event.run_id, **dict(event.payload))
+
+    spine.register_consumer(
+        _audit_consumer,
+        name='audit_logger',
+        critical=bool(is_compliance),
+    )
