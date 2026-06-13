@@ -122,6 +122,62 @@ New code lives inside the existing `teaagent/runner/` package (teaagent/runner/_
 | M5 | HookRegistry re-homed onto spine; public hook API documented | Existing hook tests pass via aliases |
 | M6 | ContextBus + webhook sinks consume spine; inline emission paths deleted | No orphaned eventing modules |
 
+### Realized architecture (M1–M7, completed 2026-06-13)
+
+The phases above were the *proposal*. Executed parity-first and assessed against
+the code at each step, the migration converged on a **narrower, sound** outcome —
+recorded here as the durable contract (see the per-phase work-logs under
+`docs/work-log/` and the plan `docs/plans/adr-0032-m1-m6-work-plan-2026-06-13.md`):
+
+- **M1** — done as proposed: `AuditLogger` is an `EventSpine` consumer
+  (`register_audit_consumer`), byte-equivalent on the proof scenario.
+- **M2** — re-scoped to **taxonomy-only**: every evidence/decision audit event is
+  typed in `RunEventType` and mapped both directions; the reader surfaces them
+  from the audit JSONL. (Emit-site migration deferred.)
+- **M3** — **plan gate moved to an interceptor** (the one gate that fit), landed
+  shadow→enforce in two commits with a reason-code parity oracle.
+- **M4** — **approval and budget enforcement STAY INLINE.** Both are
+  runtime-stateful (approval: live JIT/session state + handler + auto-mode-
+  swappable policy; budget: mutable dedup sets + an interactive `on_prompt`
+  side-effect handler + multi-point evolving-cost checks). Forcing them into a
+  pure interceptor-on-event was a regression risk invisible to unit parity tests.
+  Their observability still reaches the fold via typed audit events.
+- **M5** — **hook OBSERVABILITY** is typed onto the spine; **hook EXECUTION stays
+  in the tool-dispatch layer** (`teaagent/tools.py`) because PreToolUse/PostToolUse
+  mutate in-flight args/results, and the session-lifecycle hooks are unwired.
+- **M6** — **evidence/receipts fold over the typed stream** (`build_evidence_from_events`,
+  now the production path inside `build_run_evidence_bundle`). Fixed a real
+  lossiness gap (typed `RunEvent` now carries `created_at`).
+- **M7** — **guard + document (this section).** "ContextBus + webhook consume the
+  spine; delete inline eventing" was **not** done: it is a regression or vacuous.
+
+**The realized invariant (M7), enforced by `scripts/validate_event_spine_wiring.py`
+and `tests/test_event_spine_wiring.py`:**
+
+```
+EventSpine.emit ──(register_audit_consumer, M1)──▶ AuditLogger.record
+                                                         │
+                                add_sink fan-out: webhook, OTel, …
+```
+
+- `EventSpine` (`teaagent/runner/_events.py`) is **the** typed run-lifecycle path.
+- `AuditLogger` (`teaagent/audit.py`) is the **complete event record and the sink
+  hub**, and a spine consumer since M1. Governance events that stay inline
+  (approval, budget, hooks) are written via `audit.record` — that **is** the
+  record, not redundant inline eventing to delete.
+- **Webhook / OTel are audit *sinks***, not direct spine consumers — a direct
+  consumer would see only the spine-emitted subset (a coverage regression).
+- `ContextBus` and the integration `RunEventStream` are **unwired in production**;
+  they are not lifecycle buses. The guard's allowlist names every sanctioned
+  event-delivery surface, so a **new competing lifecycle-event bus fails the gate**
+  and forces a conscious decision. The taxonomy-closure check proves no
+  `RunEventType` is orphaned from the audit record.
+
+**Lesson:** the spine's realized value is the **typed read side** (evidence →
+receipts) and a single typed lifecycle path — not wholesale relocation of
+runtime-stateful enforcement. The plan gate was the one gate that genuinely
+belonged on the spine.
+
 ## Consequences
 
 **Positive:**

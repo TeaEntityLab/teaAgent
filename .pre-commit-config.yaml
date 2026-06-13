@@ -11,6 +11,14 @@ repos:
         entry: python3 scripts/check_circular_imports.py
         language: system
         pass_filenames: false
+      - id: check-event-spine-wiring
+        name: check-event-spine-wiring
+        # ADR 0032 M7 invariant: one typed lifecycle path (EventSpine -> audit
+        # consumer), no orphaned/competing event bus, every RunEventType mapped
+        # to the audit record. Read-only static check.
+        entry: python3 scripts/validate_event_spine_wiring.py
+        language: system
+        pass_filenames: false
       - id: ruff-format
         name: ruff-format
         entry: env UV_CACHE_DIR=.uv-cache uv run ruff format
