@@ -24,10 +24,11 @@ from teaagent import (
     ToolRequest,
     audit_event_to_run_event_type,
 )
-from teaagent.errors import ToolPermissionError
+from teaagent.errors import AuditDurabilityError, ToolPermissionError
 from teaagent.runner._events import (
     _AUDIT_EVENT_TO_RUN_EVENT_TYPE,
     _RUN_EVENT_TO_AUDIT_EVENT_TYPE,
+    register_audit_consumer,
     run_event_to_audit_event_type,
 )
 
@@ -118,6 +119,39 @@ def test_critical_consumer_exception_propagates() -> None:
     spine.register_consumer(failing_critical, name='critical', critical=True)
 
     with pytest.raises(RuntimeError, match='critical failure'):
+        spine.emit(RunEventType.RUN_STARTED, 'run-1', {'task': 'test'})
+
+
+def test_audit_consumer_durability_failure_is_isolated_without_compliance(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Audit consumer failures stay isolated unless compliance mode is enabled."""
+    spine = EventSpine()
+    audit = AuditLogger(compliance_mode=False)
+
+    def failing_record(event_type: str, run_id: str, **payload: Any) -> None:
+        raise AuditDurabilityError('disk failed')
+
+    monkeypatch.setattr(audit, 'record', failing_record)
+    register_audit_consumer(spine, audit)
+
+    spine.emit(RunEventType.RUN_STARTED, 'run-1', {'task': 'test'})
+
+
+def test_audit_consumer_durability_failure_propagates_with_compliance(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Compliance-mode audit consumer is critical and halts on durability loss."""
+    spine = EventSpine()
+    audit = AuditLogger(compliance_mode=True)
+
+    def failing_record(event_type: str, run_id: str, **payload: Any) -> None:
+        raise AuditDurabilityError('disk failed')
+
+    monkeypatch.setattr(audit, 'record', failing_record)
+    register_audit_consumer(spine, audit)
+
+    with pytest.raises(AuditDurabilityError, match='disk failed'):
         spine.emit(RunEventType.RUN_STARTED, 'run-1', {'task': 'test'})
 
 

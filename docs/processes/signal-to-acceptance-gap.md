@@ -3,7 +3,7 @@
 **Status:** Active process
 **Frequency:** Per signal (continuous), reviewed quarterly
 **Owner:** TBD
-**Last reviewed:** 2026-06-05
+**Last reviewed:** 2026-06-14
 
 ## Purpose
 
@@ -84,6 +84,19 @@ Signals routed to **Hypothesis** do not create roadmap truth. They stay in the
 operator friction log until the owner validates or rejects them. Signals routed
 to **Defer** do not create new surveys or strategy docs unless a documented
 review trigger applies.
+
+### Operator-Friction Promotion
+
+Owner-written entries in `docs/work-log/operator-friction-log.md` may promote
+directly to **Adopt** when they expose a real harness gap in approval, audit,
+rollback, cost, receipt, state, validation, or ergonomics. Hypothesis entries
+from competitor or community signals must be owner-validated before promotion.
+
+Every promoted friction entry must carry its source log anchor into the ticket
+or acceptance gap, and the friction log's `Promoted to` field must point back to
+that artifact. A closed promoted entry must also link closure evidence: commit,
+test, or document. If either link is missing, the work is still open even when a
+patch exists.
 
 ### Phase 3: Acceptance Gap Filing
 

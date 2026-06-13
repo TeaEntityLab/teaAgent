@@ -350,13 +350,13 @@ def classify_test_type(file_path: Path, source_text: str | None = None) -> str:
 
 def metrics_to_json(all_metrics: list[FileMetrics], total_nodes: int) -> dict[str, Any]:
     """Convert metrics to JSON schema."""
-    files_data = []
+    files_data: list[dict[str, Any]] = []
 
     for metrics in all_metrics:
         if metrics.has_syntax_error:
             continue
 
-        file_data = {
+        file_data: dict[str, Any] = {
             'path': _repo_relative(metrics.path),
             'collected_tests': len(metrics.test_functions),
             'test_type': metrics.test_type,

@@ -35,7 +35,8 @@ def test_validate_docs_consistency_passes_when_inputs_match(tmp_path: Path) -> N
     )
 
     readme.write_text(
-        '(2 providers)\nexport A_API_KEY=\nexport B_API_KEY=\n', encoding='utf-8'
+        'owner-operator\n(2 providers)\nexport A_API_KEY=\nexport B_API_KEY=\n',
+        encoding='utf-8',
     )
     tier_block = render_tier_markdown()
     acceptance.write_text(
@@ -48,6 +49,7 @@ def test_validate_docs_consistency_passes_when_inputs_match(tmp_path: Path) -> N
     matrix.write_text('| Use Case | Covered |\n| yes |\n', encoding='utf-8')
     roadmap.write_text(
         '# Roadmap Status\n\n'
+        'owner-operator\n'
         '| H0 | Claim and risk hygiene | documentation-current-truth |\n'
         'doc-vs-HEAD guard\n',
         encoding='utf-8',
@@ -79,7 +81,9 @@ def test_validate_docs_consistency_detects_mismatch(tmp_path: Path) -> None:
         'def test_a():\n    assert True\n', encoding='utf-8'
     )
 
-    readme.write_text('(3 providers)\nexport A_API_KEY=\n', encoding='utf-8')
+    readme.write_text(
+        'owner-operator\n(3 providers)\nexport A_API_KEY=\n', encoding='utf-8'
+    )
     acceptance.write_text(
         '`2 passed`\n<!-- ACCEPTANCE_TIERS:START -->\nwrong\n<!-- ACCEPTANCE_TIERS:END -->',
         encoding='utf-8',
@@ -152,13 +156,79 @@ def test_validate_roadmap_status_passes_for_repo_roadmap() -> None:
 
 def test_current_roadmap_stays_owner_operator_harness_first() -> None:
     root = Path(__file__).resolve().parents[1]
+    readme = (root / 'README.md').read_text(encoding='utf-8')
+    index = (root / 'docs' / 'INDEX.md').read_text(encoding='utf-8')
     roadmap = (root / 'docs' / 'roadmap-status.md').read_text(encoding='utf-8')
 
+    errors = _VALIDATE_MODULE.validate_current_direction_claims(
+        readme_text=readme,
+        docs_index_text=index,
+        roadmap_text=roadmap,
+    )
+    assert errors == []
     assert 'owner-operator' in roadmap
     assert 'owner packaging and local distribution'.lower() in roadmap.lower()
     assert 'general-user trust onboarding' not in roadmap
     assert 'Packaging and adoption' not in roadmap
     assert 'external-facing release channels' not in roadmap
+
+
+def test_current_direction_guard_detects_old_adoption_framing() -> None:
+    errors = _VALIDATE_MODULE.validate_current_direction_claims(
+        readme_text=(
+            '# TeaAgent\n'
+            '> **Direction record:** owner-operator harness-first current direction, '
+            'aspirational adoption\n'
+        ),
+        docs_index_text=(
+            '# Index\n'
+            '## Start Here\n'
+            '| What can a daily user trust today? | x | y |\n'
+            '## Current Truth\n'
+            '| Current daily-driver behavior | x |\n'
+        ),
+        roadmap_text=(
+            '# Roadmap Status\n'
+            'owner-operator is the current validated persona; not current goals\n'
+            '## Purpose\n'
+            'owner-operator roadmap\n'
+            '## Roadmap Horizons\n'
+            '| H6 | Packaging and adoption | external-facing release channels |\n'
+            'general-user trust onboarding\n'
+        ),
+    )
+    assert any('aspirational adoption' in err for err in errors)
+    assert any('Packaging and adoption' in err for err in errors)
+    assert any('external-facing release channels' in err for err in errors)
+    assert any('general-user trust onboarding' in err for err in errors)
+
+
+def test_current_direction_guard_ignores_historical_evidence_mentions() -> None:
+    errors = _VALIDATE_MODULE.validate_current_direction_claims(
+        readme_text=(
+            '# TeaAgent\n'
+            '> **Direction record:** owner-operator harness-first current direction\n'
+        ),
+        docs_index_text=(
+            '# Index\n'
+            '## Start Here\n'
+            '| What can the owner-operator trust today? | x | y |\n'
+            '## Current Truth\n'
+            '| Current owner-operated daily behavior | x |\n'
+            '## Evidence And Review\n'
+            '| June 10 conversation experience refresh | '
+            'General-User Conversation Experience Refresh |\n'
+        ),
+        roadmap_text=(
+            '# Roadmap Status\n'
+            'owner-operator is the current validated persona; not current goals\n'
+            '## Purpose\n'
+            'Roadmap purpose.\n'
+            '## Roadmap Horizons\n'
+            '| H6 | Owner packaging and local distribution | owner-operated use |\n'
+        ),
+    )
+    assert errors == []
 
 
 def test_validate_roadmap_status_detects_missing_h0_truth_links() -> None:

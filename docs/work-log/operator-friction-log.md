@@ -36,6 +36,10 @@ Use this log when:
   friction in real use or repository evidence shows a governance gap.
 - A closed entry must cite the commit, test, or document that resolved it; `n/a`
   is allowed only for open or rejected entries.
+- A promoted entry must cite the ticket or acceptance-gap artifact in
+  `Promoted to`; `n/a` is allowed only before promotion or for rejected entries.
+- Closing promoted work requires both links: the downstream artifact in
+  `Promoted to` and the commit/test/doc in `Closure evidence`.
 - Do not use this log for public positioning, competitor ranking, or feature
   parity requests.
 - Agents may ask the intake prompts below, but must not answer them on the
@@ -77,8 +81,8 @@ fields only when the entry is promoted to work.
 - **Actual:** What happened instead.
 - **Harness impact:** approval | audit | rollback | cost | receipt | state | validation | ergonomics
 - **Status:** open | closed | rejected
-- **Closure evidence:** commit/test/doc link, or `n/a`
-- **Promoted to:** ticket/acceptance-gap link, or `n/a`
+- **Closure evidence:** commit/test/doc link; `n/a` only while open or rejected
+- **Promoted to:** ticket/acceptance-gap link; `n/a` only before promotion or when rejected
 ```
 
 ## Owner Evidence Entries

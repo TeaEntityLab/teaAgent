@@ -53,6 +53,17 @@ ROADMAP_H0_ROW = re.compile(
 )
 ROADMAP_DOCUMENTATION_TRUTH = re.compile(r'documentation-current-truth', re.IGNORECASE)
 ROADMAP_DOC_VS_HEAD = re.compile(r'doc-vs-head', re.IGNORECASE)
+CURRENT_DIRECTION_FORBIDDEN_README = ('aspirational adoption',)
+CURRENT_DIRECTION_FORBIDDEN_INDEX_CURRENT = (
+    'What can a daily user trust today?',
+    'Current daily-driver behavior',
+    'Ticket execution order (daily-driver)',
+)
+CURRENT_DIRECTION_FORBIDDEN_ROADMAP = (
+    'Packaging and adoption',
+    'general-user trust onboarding',
+    'external-facing release channels',
+)
 ROADMAP_TABLE_SEPARATOR = re.compile(r'^\|[-:\s|]+\|$')
 ROADMAP_EXIT_COLUMNS = ('Exit Evidence', 'Exit Criteria', 'Risk')
 ROADMAP_REQUIRED_ROW_FIELDS = ('Owner', 'Status', 'Confidence', 'Next Gate')
@@ -664,6 +675,90 @@ def validate_roadmap_status(roadmap_text: str) -> list[str]:
     return errors
 
 
+def _markdown_section(text: str, heading: str) -> str:
+    lines = text.splitlines()
+    start_index: int | None = None
+    heading_level = len(heading) - len(heading.lstrip('#'))
+    for index, line in enumerate(lines):
+        if line.strip() == heading:
+            start_index = index
+            break
+    if start_index is None:
+        return ''
+
+    end_index = len(lines)
+    for index in range(start_index + 1, len(lines)):
+        line = lines[index]
+        if not line.startswith('#'):
+            continue
+        level = len(line) - len(line.lstrip('#'))
+        if level <= heading_level:
+            end_index = index
+            break
+    return '\n'.join(lines[start_index:end_index])
+
+
+def validate_current_truth_framing(
+    *,
+    readme_text: str,
+    docs_index_text: str,
+    roadmap_text: str,
+) -> list[str]:
+    """Keep current-truth front doors aligned to owner-operated harness direction."""
+    errors: list[str] = []
+    readme_header = '\n'.join(readme_text.splitlines()[:8])
+    index_current = _markdown_section(docs_index_text, '## Current Truth')
+    index_start = _markdown_section(docs_index_text, '## Start Here')
+    roadmap_horizons = _markdown_section(roadmap_text, '## Roadmap Horizons')
+    roadmap_header = roadmap_text.split('## Purpose', 1)[0]
+
+    if 'owner-operator harness-first current direction' not in readme_header:
+        errors.append(
+            'README.md direction record must stay owner-operator harness-first.'
+        )
+    if 'owner-operator' not in index_start:
+        errors.append(
+            'docs/INDEX.md Start Here must frame current use as owner-operated.'
+        )
+    if 'owner-operated' not in index_current:
+        errors.append(
+            'docs/INDEX.md Current Truth must frame current use as owner-operated.'
+        )
+    if 'owner-operator is the current validated persona' not in roadmap_header:
+        errors.append(
+            'docs/roadmap-status.md must name owner-operator as the current '
+            'validated persona.'
+        )
+    if 'not current goals' not in roadmap_header:
+        errors.append(
+            'docs/roadmap-status.md must state external adoption/hosted expansion '
+            'are not current goals.'
+        )
+
+    for phrase in CURRENT_DIRECTION_FORBIDDEN_README:
+        if phrase in readme_header:
+            errors.append(
+                f'README.md direction record contains outdated phrase {phrase!r}.'
+            )
+    for phrase in CURRENT_DIRECTION_FORBIDDEN_INDEX_CURRENT:
+        if phrase in index_start or phrase in index_current:
+            errors.append(
+                f'docs/INDEX.md current-truth sections contain outdated phrase '
+                f'{phrase!r}.'
+            )
+    for phrase in CURRENT_DIRECTION_FORBIDDEN_ROADMAP:
+        if phrase in roadmap_horizons:
+            errors.append(
+                f'docs/roadmap-status.md Roadmap Horizons contain outdated phrase '
+                f'{phrase!r}.'
+            )
+
+    return errors
+
+
+validate_current_direction_claims = validate_current_truth_framing
+
+
 def _normalize_roadmap_status(value: str) -> str:
     return re.sub(r'[*_`]', '', value).strip().lower()
 
@@ -1185,6 +1280,7 @@ def validate_docs_consistency(
     catalog_path: Path | None = None,
     use_cases_path: Path | None = None,
     roadmap_status_path: Path | None = None,
+    docs_index_path: Path | None = None,
     pyproject_path: Path | None = None,
     coverage_omit_ledger_path: Path | None = None,
     dependency_audit_policy_path: Path | None = None,
@@ -1214,6 +1310,7 @@ def validate_docs_consistency(
     roadmap_status_doc_path = roadmap_status_path or (
         _REPO_ROOT / 'docs' / 'roadmap-status.md'
     )
+    docs_index_doc_path = docs_index_path or (_REPO_ROOT / 'docs' / 'INDEX.md')
     pyproject_doc_path = pyproject_path or (_REPO_ROOT / 'pyproject.toml')
     coverage_omit_ledger_doc_path = coverage_omit_ledger_path or (
         _REPO_ROOT / 'docs' / 'governance' / 'coverage-omit-ledger.md'
@@ -1240,6 +1337,11 @@ def validate_docs_consistency(
     roadmap_status_text = (
         roadmap_status_doc_path.read_text(encoding='utf-8')
         if roadmap_status_doc_path.is_file()
+        else ''
+    )
+    docs_index_text = (
+        docs_index_doc_path.read_text(encoding='utf-8')
+        if docs_index_doc_path.is_file()
         else ''
     )
 
@@ -1415,6 +1517,13 @@ def validate_docs_consistency(
             errors.extend(
                 validate_index_status_vocabulary(index_path.read_text(encoding='utf-8'))
             )
+        errors.extend(
+            validate_current_truth_framing(
+                readme_text=readme_text,
+                docs_index_text=docs_index_text,
+                roadmap_text=roadmap_status_text,
+            )
+        )
 
         errors.extend(
             validate_durable_docs_language(
