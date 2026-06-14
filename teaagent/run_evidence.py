@@ -151,6 +151,39 @@ class GitSandboxEvidence:
 
 
 @dataclass
+class HookActivityRecord:
+    """A PreToolUse/PostToolUse hook side-effect captured from audit events.
+
+    ADR 0032 M5 hook-observability: surfaces hook veto/mutation activity emitted
+    by the tool-dispatch ``HookRegistry`` (``teaagent/tools.py``) into the
+    evidence bundle so it appears in receipts. ``activity`` is the audit event
+    kind without the ``tool_hook_`` prefix: ``pre_mutation``,
+    ``pre_mutation_blocked``, ``vetoed``, ``post_mutation``, ``post_failed``.
+    """
+
+    activity: str
+    tool_name: str
+    call_id: str = ''
+    error: str = ''
+    added_keys: list[str] = field(default_factory=list)
+    removed_keys: list[str] = field(default_factory=list)
+    modified_keys: list[str] = field(default_factory=list)
+    timestamp: Optional[str] = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            'activity': self.activity,
+            'tool_name': self.tool_name,
+            'call_id': self.call_id,
+            'error': self.error,
+            'added_keys': self.added_keys,
+            'removed_keys': self.removed_keys,
+            'modified_keys': self.modified_keys,
+            'timestamp': self.timestamp,
+        }
+
+
+@dataclass
 class RunEvidenceBundle:
     """Complete evidence bundle for a run."""
 
@@ -178,6 +211,9 @@ class RunEvidenceBundle:
     budget_cap_cents: int | None = None
 
     git_sandbox: GitSandboxEvidence | None = None
+
+    # ── hook observability (ADR 0032 M5) ──
+    hook_activity: list[HookActivityRecord] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
@@ -264,7 +300,49 @@ class RunEvidenceBundle:
             'git_sandbox': self.git_sandbox.to_dict()
             if self.git_sandbox is not None
             else None,
+            'hook_activity': [record.to_dict() for record in self.hook_activity],
         }
+
+
+_HOOK_AUDIT_TYPES: frozenset[str] = frozenset(
+    {
+        'tool_hook_pre_mutation',
+        'tool_hook_pre_mutation_blocked',
+        'tool_hook_vetoed',
+        'tool_hook_post_mutation',
+        'tool_hook_post_failed',
+    }
+)
+
+
+def extract_hook_activity(events: list[dict[str, Any]]) -> list[HookActivityRecord]:
+    """Extract PreToolUse/PostToolUse hook side-effects from audit events.
+
+    Reads the five ``tool_hook_*`` events emitted by the tool-dispatch
+    ``HookRegistry`` so hook veto/mutation activity is represented in the
+    evidence bundle (ADR 0032 M5; review F1).
+    """
+    records: list[HookActivityRecord] = []
+    for event in events:
+        event_type = event.get('event_type')
+        if event_type not in _HOOK_AUDIT_TYPES:
+            continue
+        payload = event.get('payload') or {}
+        if not isinstance(payload, dict):
+            continue
+        records.append(
+            HookActivityRecord(
+                activity=str(event_type)[len('tool_hook_') :],
+                tool_name=str(payload.get('tool_name', '')),
+                call_id=str(payload.get('call_id', '')),
+                error=str(payload.get('error', '')),
+                added_keys=list(payload.get('added_keys') or []),
+                removed_keys=list(payload.get('removed_keys') or []),
+                modified_keys=list(payload.get('modified_keys') or []),
+                timestamp=event.get('created_at'),
+            )
+        )
+    return records
 
 
 def extract_git_sandbox(events: list[dict[str, Any]]) -> GitSandboxEvidence | None:
@@ -877,6 +955,7 @@ def _assemble_evidence_bundle(
     known_gaps = auto_derive_known_gaps(events, commands)
     git_sandbox = extract_git_sandbox(events)
 
+    hook_activity = extract_hook_activity(events)
     undo_mechanism, undo_outcome = _extract_undo_evidence(events)
     store = RunStore(root)
     undo_available = store.undo_path(run_id).is_file()
@@ -915,6 +994,7 @@ def _assemble_evidence_bundle(
         undo_outcome=undo_outcome,
         context_health=ctx_health_dict,
         git_sandbox=git_sandbox,
+        hook_activity=hook_activity,
     )
 
 

@@ -149,10 +149,10 @@ recorded here as the durable contract (see the per-phase work-logs under
 - **M5** — **hook OBSERVABILITY** is typed onto the spine; **hook EXECUTION stays
   in the tool-dispatch layer** (`teaagent/tools.py`) because PreToolUse/PostToolUse
   mutate in-flight args/results, and the session-lifecycle hooks are unwired.
-  *Scope note (review F1): the 5 hook audit events are typed and reader-visible
-  but NOT folded into evidence — no extractor reads them and `RunEvidenceBundle`
-  has no hooks field. Surfacing hook activity in receipts is backlog (needs a
-  bundle field + extractor), not delivered by M5.*
+  *Scope note (review F1, RESOLVED 2026-06-14): the 5 hook audit events are typed
+  and now folded into evidence via `RunEvidenceBundle.hook_activity` +
+  `extract_hook_activity` — hook veto/mutation appears in the bundle/receipt and
+  folds through the typed stream.*
 - **M6** — **evidence/receipts fold over the typed stream** (`build_evidence_from_events`,
   now the production path inside `build_run_evidence_bundle`). Fixed a real
   lossiness gap (typed `RunEvent` now carries `created_at`).
@@ -179,13 +179,19 @@ EventSpine.emit ──(register_audit_consumer, M1)──▶ AuditLogger.record
   they are not lifecycle buses. The guard's allowlist names every sanctioned
   event-delivery surface. The taxonomy-closure check proves no `RunEventType` is
   orphaned from the audit record.
-- *Guard scope (review F3): the orphan-bus check is a **heuristic tripwire**, not
-  a proof. It keys on specific high-signal method names (`register_consumer`,
-  `register_interceptor`, `add_sink`, `on_event`, `publish_delta`,
-  `subscribe_deltas`) and deliberately excludes generic `publish`/`emit` to avoid
-  noise — so a bus shaped like `RunEventStream` (`subscribe`+`emit`) is not
-  detected. It catches the common shapes and forces a conscious allowlist
-  decision for them; it does not guarantee detection of every conceivable bus.*
+- A third check (review F2) AST-discovers the audit `event_type` literals the
+  evidence extractors read (`run_evidence.py`, `proof_of_use.py`) and asserts
+  each is in `RunEventType` — so the M6 FOLD-T002 cutover (which drops unmapped
+  types) can never silently lose evidence as extractors evolve.
+- *Guard scope (review F3, narrowed 2026-06-14): the orphan-bus check keys on
+  high-signal method names (`register_consumer`, `register_interceptor`,
+  `add_sink`, `on_event`, `publish_delta`, `subscribe_deltas`) **plus the
+  `subscribe`+`emit` pub/sub pair** (so the `RunEventStream` shape is now caught).
+  It remains a heuristic — a bus using entirely novel naming could still evade
+  it — but it catches every shape that occurs in-tree and forces a conscious
+  allowlist decision. The F2 discovery similarly resolves `==`/`in` against
+  string literals and module-level `frozenset`/`set` constants; exotic dynamic
+  lookups are out of scope.*
 
 **Lesson:** the spine's realized value is the **typed read side** (evidence →
 receipts) and a single typed lifecycle path — not wholesale relocation of

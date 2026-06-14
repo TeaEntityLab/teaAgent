@@ -20,21 +20,25 @@ architecture is:
   * Webhook / OTel are audit *sinks*, not direct spine consumers (a direct
     consumer would only see the spine-emitted subset — a coverage regression).
 
-Two checks enforce this:
+Three checks enforce this:
 
   A. Taxonomy closure — every RunEventType maps to an audit event type and back
      (no orphaned typed event that cannot reach the audit record).
   B. No orphaned event bus — any class exposing a high-signal lifecycle-event
-     delivery method must be in the curated allowlist below. A *new* competing
-     lifecycle-event bus of a common shape fails the gate, forcing a conscious
-     architecture decision rather than silent drift.
+     delivery method, OR the ``subscribe``+``emit`` pub/sub pair, must be in the
+     curated allowlist below. A *new* competing lifecycle-event bus fails the
+     gate, forcing a conscious architecture decision rather than silent drift.
+  C. Evidence-extractor type coverage (review F2) — every audit ``event_type``
+     the evidence extractors read (run_evidence.py, proof_of_use.py) must be in
+     RunEventType, else the M6 FOLD-T002 cutover would silently drop it from
+     production evidence.
 
-     LIMITATION (heuristic tripwire, not a proof): check B keys on specific
-     method names and deliberately excludes generic ``publish`` / ``emit`` to
-     avoid noise from skill-writer / marketplace / token-streaming. As a result
-     a bus shaped like the integration ``RunEventStream`` (``subscribe`` +
-     ``emit``) is NOT detected. The check catches the common shapes; it does not
-     guarantee detection of every conceivable event bus.
+     LIMITATION (heuristic, not a proof): checks B and C are AST/name-based. B
+     keys on specific method names plus the subscribe+emit pair; a bus using
+     entirely novel naming could still evade it. C resolves ``==``/``in`` against
+     string literals and module-level frozenset/set constants; exotic dynamic
+     event-type lookups are out of scope. Both catch the shapes that actually
+     occur and force a conscious decision for them.
 
 Run: python3 scripts/validate_event_spine_wiring.py
 Exit code 0 when clean, 1 on any violation.
@@ -79,7 +83,17 @@ EVENT_DELIVERY_ALLOWLIST: dict[str, str] = {
     'teaagent.integration.event_stream:RunEventSubscriber': (
         'normalized stream subscriber protocol (unwired in production)'
     ),
+    'teaagent.integration.event_stream:RunEventStream': (
+        'normalized stream pub/sub contract (unwired in production)'
+    ),
 }
+
+# A class defining BOTH of these is a pub/sub event bus (the RunEventStream
+# shape) even though the individual names (subscribe/emit) are too generic to be
+# high-signal on their own. Detecting the *pair* closes the F3 evasion gap
+# without flagging skill-writer/marketplace ``publish`` or token-streaming
+# ``emit`` (none of which define both).
+LIFECYCLE_BUS_PAIR: frozenset[str] = frozenset({'subscribe', 'emit'})
 
 
 def find_event_delivery_classes(root: Path) -> dict[str, set[str]]:
@@ -108,7 +122,9 @@ def find_event_delivery_classes(root: Path) -> dict[str, set[str]]:
                 for child in node.body
                 if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef))
             }
-            signals = methods & LIFECYCLE_BUS_SIGNALS
+            signals = set(methods & LIFECYCLE_BUS_SIGNALS)
+            if methods >= LIFECYCLE_BUS_PAIR:
+                signals |= LIFECYCLE_BUS_PAIR
             if signals:
                 found[f'{module}:{node.name}'] = signals
     return found
@@ -127,6 +143,148 @@ def check_orphan_buses(
                 f'{signals}); route lifecycle events through EventSpine + the '
                 f'audit consumer, or add it to EVENT_DELIVERY_ALLOWLIST with a '
                 f'documented role.'
+            )
+    return errors
+
+
+# Modules whose extractors read audit events by ``event_type`` and feed the
+# evidence bundle. After the M6 FOLD-T002 cutover these reads are served by the
+# typed reader, which drops unmapped types — so each type they compare against
+# must be in RunEventType or it is silently lost from production evidence.
+_EVIDENCE_EXTRACTOR_MODULES: tuple[str, ...] = (
+    'teaagent/run_evidence.py',
+    'teaagent/proof_of_use.py',
+)
+
+
+def _is_event_type_access(node: ast.expr) -> bool:
+    """True if ``node`` reads the ``event_type`` key (``.get('event_type')`` or
+    ``[...]['event_type']``)."""
+    if (
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == 'get'
+        and node.args
+        and isinstance(node.args[0], ast.Constant)
+        and node.args[0].value == 'event_type'
+    ):
+        return True
+    return (
+        isinstance(node, ast.Subscript)
+        and isinstance(node.slice, ast.Constant)
+        and node.slice.value == 'event_type'
+    )
+
+
+def _string_elts(node: ast.expr) -> set[str]:
+    """Return the string constants in a set/list/tuple literal."""
+    out: set[str] = set()
+    if isinstance(node, (ast.Set, ast.List, ast.Tuple)):
+        for elt in node.elts:
+            if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
+                out.add(elt.value)
+    return out
+
+
+def find_evidence_extractor_event_types(repo_root: Path) -> set[str]:
+    """AST-discover the audit ``event_type`` literals the evidence extractors read.
+
+    Handles the patterns actually used: ``event_type == 'x'`` / ``!= 'x'``,
+    ``event_type in {'a', 'b'}`` (inline), and ``event_type in NAME`` where
+    ``NAME`` is a module-level ``frozenset``/``set``/literal of strings (e.g.
+    ``_HOOK_AUDIT_TYPES``). ``event_type`` may be a local bound from an
+    event-type access or the access itself. Exotic/dynamic lookups are out of
+    scope (documented limitation, like the orphan-bus tripwire).
+    """
+    found: set[str] = set()
+    for rel in _EVIDENCE_EXTRACTOR_MODULES:
+        found |= event_types_in_source((repo_root / rel).read_text(encoding='utf-8'))
+    return found
+
+
+def event_types_in_source(source: str) -> set[str]:
+    """Discover event-type literals compared against in one module's source.
+
+    Split out from :func:`find_evidence_extractor_event_types` so the AST logic
+    is unit-testable on seeded source strings.
+    """
+    found: set[str] = set()
+    tree = ast.parse(source)
+
+    # Module-level NAME = {str literals} (incl. frozenset(...)/set(...)),
+    # covering both plain and annotated assignments.
+    named_sets: dict[str, set[str]] = {}
+    et_vars: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            targets = node.targets
+            value: ast.expr | None = node.value
+        elif isinstance(node, ast.AnnAssign):
+            targets = [node.target]
+            value = node.value
+        else:
+            continue
+        if value is None:
+            continue
+        # event_type-bound locals (event_type = e.get('event_type')).
+        if _is_event_type_access(value):
+            for tgt in targets:
+                if isinstance(tgt, ast.Name):
+                    et_vars.add(tgt.id)
+        # named string sets (_HOOK_AUDIT_TYPES = frozenset({...})).
+        if len(targets) == 1 and isinstance(targets[0], ast.Name):
+            elts: set[str] = _string_elts(value)
+            if (
+                isinstance(value, ast.Call)
+                and isinstance(value.func, ast.Name)
+                and value.func.id in ('frozenset', 'set')
+                and value.args
+            ):
+                elts |= _string_elts(value.args[0])
+            if elts:
+                named_sets[targets[0].id] = elts
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Compare):
+            continue
+        left = node.left
+        if not (
+            (isinstance(left, ast.Name) and left.id in et_vars)
+            or _is_event_type_access(left)
+        ):
+            continue
+        for op, comp in zip(node.ops, node.comparators, strict=True):
+            if isinstance(op, (ast.Eq, ast.NotEq)):
+                if isinstance(comp, ast.Constant) and isinstance(comp.value, str):
+                    found.add(comp.value)
+            elif isinstance(op, (ast.In, ast.NotIn)):
+                found |= _string_elts(comp)
+                if isinstance(comp, ast.Name) and comp.id in named_sets:
+                    found |= named_sets[comp.id]
+    return found
+
+
+def check_evidence_extractor_types_typed() -> list[str]:
+    """Every audit type the evidence extractors read must be in RunEventType.
+
+    Closes review F2: after the FOLD-T002 cutover, an extractor reading an
+    untyped audit type would silently drop it from production evidence.
+    """
+    from teaagent.runner._events import _AUDIT_EVENT_TO_RUN_EVENT_TYPE
+
+    discovered = find_evidence_extractor_event_types(_REPO_ROOT)
+    errors: list[str] = []
+    if not discovered:
+        errors.append(
+            'evidence-extractor event-type discovery found nothing — the AST '
+            'scan likely broke; investigate before trusting this gate.'
+        )
+    for audit_type in sorted(discovered):
+        if audit_type not in _AUDIT_EVENT_TO_RUN_EVENT_TYPE:
+            errors.append(
+                f'evidence extractor reads audit type {audit_type!r} which is '
+                f'NOT in RunEventType — the M6 fold would silently drop it. Add '
+                f'it to RunEventType + the audit mapper in teaagent/runner/_events.py.'
             )
     return errors
 
@@ -173,6 +331,7 @@ def validate() -> list[str]:
     """Run all checks against the real repository; return all errors."""
     errors: list[str] = []
     errors.extend(check_taxonomy_closure())
+    errors.extend(check_evidence_extractor_types_typed())
     found = find_event_delivery_classes(_TEAAGENT_ROOT)
     errors.extend(check_orphan_buses(found, EVENT_DELIVERY_ALLOWLIST))
     return errors

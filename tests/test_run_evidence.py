@@ -503,53 +503,61 @@ def test_m6_fold_preserves_created_at_in_command_timestamps():
         assert folded.commands_run[0].timestamp == '2026-06-13T13:00:01+00:00'
 
 
-# Audit event types that the evidence/proof-of-use extractors filter on. After
-# the M6 FOLD-T002 cutover, build_run_evidence_bundle routes through
-# read_run_events_from_audit, which DROPS any audit event whose type is not in
-# RunEventType. So production evidence is lossless ONLY IF every type below is
-# typed. This list is the enforced coupling: if you teach an extractor to read a
-# NEW audit event type, add it here — the test will then fail until that type is
-# also added to RunEventType (otherwise the cutover would silently drop it).
-EVIDENCE_EXTRACTOR_AUDIT_TYPES: frozenset[str] = frozenset(
-    {
-        'run_started',
-        'run_failed',
-        'tool_use',
-        'tool_call_started',
-        'tool_call_completed',
-        'tool_error',
-        'test_run',
-        'approval_requested',
-        'approval_granted',
-        'approval_denied',
-        'tool_call_approved',
-        'tool_call_denied',
-        'tool_call_pending_approval',
-        'model_route',
-        'provenance_collected',
-        'skill_activated',
-        'skill_lifecycle_transition',
-        'git_sandbox_started',
-        'git_sandbox_resolved',
-        'undo_applied',
-    }
-)
+def test_hook_activity_is_folded_into_bundle() -> None:
+    """Hook veto/mutation events reach the evidence bundle (review F1 fix),
+    both via the raw-dict assembly and the typed-stream fold.
+    """
+    from teaagent.run_evidence import build_evidence_from_events, extract_hook_activity
+    from teaagent.runner._events import read_run_events_from_audit
+
+    events = [
+        {
+            'event_type': 'tool_hook_vetoed',
+            'run_id': 'r-hook',
+            'payload': {
+                'call_id': 'c1',
+                'tool_name': 'workspace_write_file',
+                'error': 'blocked by policy',
+            },
+            'created_at': '2026-06-14T01:00:00+00:00',
+        },
+        {
+            'event_type': 'tool_hook_pre_mutation',
+            'run_id': 'r-hook',
+            'payload': {
+                'call_id': 'c2',
+                'tool_name': 'workspace_read_file',
+                'added_keys': ['encoding'],
+                'removed_keys': [],
+                'modified_keys': [],
+            },
+            'created_at': '2026-06-14T01:00:01+00:00',
+        },
+    ]
+
+    # Direct extractor.
+    records = extract_hook_activity(events)
+    assert [r.activity for r in records] == ['vetoed', 'pre_mutation']
+    assert records[0].error == 'blocked by policy'
+    assert records[1].added_keys == ['encoding']
+
+    # Folds through the typed stream (the M5 typing is the prerequisite).
+    typed = read_run_events_from_audit(events)
+    bundle = build_evidence_from_events(typed, root='.', run_id='r-hook')
+    activities = [h['activity'] for h in bundle.to_dict()['hook_activity']]
+    assert activities == ['vetoed', 'pre_mutation']
 
 
 def test_m6_every_evidence_extractor_type_is_typed() -> None:
     """Guard the FOLD-T002 cutover: every audit type the evidence extractors read
     must be in RunEventType, or read_run_events_from_audit would silently drop it
     from production evidence (F2 from the post-migration review).
-    """
-    from teaagent.runner._events import _AUDIT_EVENT_TO_RUN_EVENT_TYPE
 
-    missing = sorted(
-        t
-        for t in EVIDENCE_EXTRACTOR_AUDIT_TYPES
-        if t not in _AUDIT_EVENT_TO_RUN_EVENT_TYPE
+    Delegates to the auto-discovering check in validate_event_spine_wiring so the
+    coupling cannot go stale the way an enumerated list could.
+    """
+    from scripts.validate_event_spine_wiring import (
+        check_evidence_extractor_types_typed,
     )
-    assert not missing, (
-        f'evidence extractors read audit types not in RunEventType: {missing}. '
-        f'The M6 cutover would silently drop them — add them to RunEventType + '
-        f'the audit mapper in teaagent/runner/_events.py.'
-    )
+
+    assert check_evidence_extractor_types_typed() == []
