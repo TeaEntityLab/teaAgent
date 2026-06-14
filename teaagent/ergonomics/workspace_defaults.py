@@ -200,8 +200,17 @@ def resolve_config_provenance(root: str | Path = '.') -> dict[str, dict[str, Any
 
     for key, (env_name, coerce) in _ENV_ONLY.items():
         raw = os.environ.get(env_name)
-        if raw:
-            prov[key] = {'value': coerce(raw), 'source': _env_source(env_name)}
+        if not raw:
+            continue
+        try:
+            value = coerce(raw)
+        except (ValueError, TypeError):
+            # Malformed env value (e.g. TEAAGENT_DAILY_COST_CAP_CENTS=abc):
+            # ignore the override and fall back to the prior layer rather than
+            # crashing every command. The retained source (default/config) makes
+            # it visible in `doctor config` that the env var did not take effect.
+            continue
+        prov[key] = {'value': value, 'source': _env_source(env_name)}
 
     return prov
 

@@ -382,6 +382,12 @@ def doctor_config(args: argparse.Namespace) -> int:
     root = Path(getattr(args, 'root', '.')).resolve()
     prov = resolve_config_provenance(root)
 
+    # Credential-bearing endpoints whose VALUE is redacted in this view even
+    # though the key name is not a generic secret marker (a webhook URL can
+    # embed a token in its path/query). Scoped to this command — not a change to
+    # the global redaction policy. Source/provenance is still shown.
+    _credential_endpoint_keys = {'automation_webhook_url'}
+
     # A list of entries (not a dict keyed by config key): the doctor JSON sink
     # redacts dict VALUES whose KEY is sensitive, which would collapse a
     # secret-keyed entry to a string and lose its provenance. Keying on neutral
@@ -390,7 +396,8 @@ def doctor_config(args: argparse.Namespace) -> int:
     for key in sorted(prov):
         entry = prov[key]
         value = entry['value']
-        if _is_sensitive_key(key) and value not in (None, ''):
+        redact = _is_sensitive_key(key) or key in _credential_endpoint_keys
+        if redact and value not in (None, ''):
             value = _REDACTED
         config.append({'key': key, 'value': value, 'source': entry['source']})
 

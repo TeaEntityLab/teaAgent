@@ -302,6 +302,50 @@ def test_resolve_config_provenance_distinguishes_env_file_from_shell(
     }
 
 
+def test_resolve_config_provenance_ignores_malformed_numeric_env(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A malformed numeric env var is ignored (falls back), not a crash (F-D)."""
+    from teaagent.ergonomics.workspace_defaults import (
+        load_workspace_defaults,
+        resolve_config_provenance,
+    )
+
+    monkeypatch.setenv('TEAAGENT_DAILY_COST_CAP_CENTS', 'not-a-number')
+
+    prov = resolve_config_provenance(tmp_path)
+    assert prov['daily_cost_cap_cents']['value'] == 0  # default, override ignored
+    assert prov['daily_cost_cap_cents']['source'] == 'default'
+    # load_workspace_defaults (derived) must also not crash.
+    assert load_workspace_defaults(tmp_path)['daily_cost_cap_cents'] == 0
+
+
+def test_doctor_config_redacts_webhook_url(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The webhook URL value is redacted (may embed a token) but its source is
+    still shown (F-C)."""
+    import argparse
+    import json
+
+    from teaagent.cli._handlers._doctor import doctor_config
+
+    monkeypatch.setenv(
+        'TEAAGENT_AUTOMATION_WEBHOOK_URL', 'https://example.com/hook?token=abc123secret'
+    )
+    rc = doctor_config(argparse.Namespace(root=str(tmp_path)))
+    assert rc == 0
+
+    cfg = {e['key']: e for e in json.loads(capsys.readouterr().out)['config']}
+    assert 'abc123secret' not in json.dumps(cfg)
+    assert cfg['automation_webhook_url']['value'] != (
+        'https://example.com/hook?token=abc123secret'
+    )
+    assert cfg['automation_webhook_url']['source'] == (
+        'env:TEAAGENT_AUTOMATION_WEBHOOK_URL'
+    )
+
+
 def test_load_workspace_defaults_matches_provenance_values(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

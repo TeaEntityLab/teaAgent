@@ -320,11 +320,14 @@ spine-wide.
 - **Review fix (F-A):** provenance distinguishes the shell environment
   (`env:VAR`) from the workspace env file (`env-file:.teaagent/env`); a var set
   in both is attributed to the shell, which wins. (Initially both were
-  mislabeled `env:` — defeating the point for env-file values.) Residuals,
-  documented not fixed: `automation_webhook_url` is not redacted (could embed a
-  token; consistent with existing redaction policy); a malformed numeric env var
-  raises in both `resolve_config_provenance` and `load_workspace_defaults`
-  (pre-existing, unchanged behavior).
+  mislabeled `env:` — defeating the point for env-file values.)
+- **Review fixes (F-C, F-D):** `automation_webhook_url` value is now redacted in
+  the `doctor config` view (it can embed a token), scoped to that command so the
+  global redaction policy is unchanged; its source is still shown. A malformed
+  numeric env var (e.g. `TEAAGENT_DAILY_COST_CAP_CENTS=abc`) is now ignored —
+  the override falls back to the prior layer instead of crashing every command,
+  and the retained `default`/`config` source makes the no-op visible. All review
+  findings resolved.
 
 ### TASK-006: RunEvent taxonomy ADR + M0 dual-write spike
 - Goal: ADR for event schema; spine emitting alongside audit on the proof scenario.
