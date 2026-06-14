@@ -227,3 +227,98 @@ def test_load_workspace_defaults_reads_toml_on_py310_path(tmp_path: Path) -> Non
     defaults = load_workspace_defaults(tmp_path)
     assert defaults['provider'] == 'gpt'
     assert defaults['automation_webhook_url'] == 'https://example.com/hook'
+
+
+# --- TASK-005: config provenance ------------------------------------------
+
+
+def test_resolve_config_provenance_layers(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Each key reports the precedence layer that set its effective value."""
+    from teaagent.ergonomics.workspace_defaults import resolve_config_provenance
+
+    tea = tmp_path / '.teaagent'
+    tea.mkdir()
+    (tea / 'config.toml').write_text(
+        'provider = "anthropic"\npermission_mode = "auto-edit"\n', encoding='utf-8'
+    )
+    for var in ('TEAAGENT_MODEL', 'TEAAGENT_PERMISSION_MODE'):
+        monkeypatch.delenv(var, raising=False)
+    monkeypatch.setenv('TEAAGENT_MODEL', 'claude-x')
+
+    prov = resolve_config_provenance(tmp_path)
+
+    # config-file layer
+    assert prov['provider'] == {'value': 'anthropic', 'source': 'config:config.toml'}
+    assert prov['permission_mode']['source'] == 'config:config.toml'
+    # env layer overrides default
+    assert prov['model'] == {'value': 'claude-x', 'source': 'env:TEAAGENT_MODEL'}
+    # untouched key falls through to default
+    assert prov['max_iterations']['source'] == 'default'
+
+
+def test_resolve_config_provenance_env_overrides_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Env beats config for the same key (precedence is preserved)."""
+    from teaagent.ergonomics.workspace_defaults import resolve_config_provenance
+
+    tea = tmp_path / '.teaagent'
+    tea.mkdir()
+    (tea / 'config.toml').write_text('provider = "from_config"\n', encoding='utf-8')
+    monkeypatch.setenv('TEAAGENT_PROVIDER', 'from_env')
+
+    prov = resolve_config_provenance(tmp_path)
+    assert prov['provider'] == {'value': 'from_env', 'source': 'env:TEAAGENT_PROVIDER'}
+
+
+def test_load_workspace_defaults_matches_provenance_values(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """load_workspace_defaults is derived from the resolver — they cannot drift."""
+    from teaagent.ergonomics.workspace_defaults import (
+        load_workspace_defaults,
+        resolve_config_provenance,
+    )
+
+    tea = tmp_path / '.teaagent'
+    tea.mkdir()
+    (tea / 'config.toml').write_text('provider = "p"\nmodel = "m"\n', encoding='utf-8')
+    monkeypatch.setenv('TEAAGENT_PERMISSION_MODE', 'read-only')
+
+    defaults = load_workspace_defaults(tmp_path)
+    prov = resolve_config_provenance(tmp_path)
+    assert defaults == {k: v['value'] for k, v in prov.items()}
+
+
+def test_doctor_config_command_reports_sources(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`teaagent doctor config` prints per-key provenance and redacts secrets."""
+    import argparse
+    import json
+
+    from teaagent.cli._handlers._doctor import doctor_config
+
+    tea = tmp_path / '.teaagent'
+    tea.mkdir()
+    (tea / 'config.toml').write_text('provider = "anthropic"\n', encoding='utf-8')
+    monkeypatch.setenv('TEAAGENT_MODEL', 'claude-x')
+    monkeypatch.setenv('TEAAGENT_AUTOMATION_WEBHOOK_SECRET', 'super-secret-token-value')
+
+    rc = doctor_config(argparse.Namespace(root=str(tmp_path)))
+    assert rc == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    cfg = {entry['key']: entry for entry in payload['config']}
+    assert cfg['provider']['value'] == 'anthropic'
+    assert cfg['provider']['source'] == 'config:config.toml'
+    assert cfg['model']['value'] == 'claude-x'
+    assert cfg['model']['source'] == 'env:TEAAGENT_MODEL'
+    assert cfg['max_iterations']['source'] == 'default'
+    # secret value is redacted, but its source/provenance is still shown.
+    assert cfg['automation_webhook_secret']['value'] != 'super-secret-token-value'
+    assert cfg['automation_webhook_secret']['source'] == (
+        'env:TEAAGENT_AUTOMATION_WEBHOOK_SECRET'
+    )

@@ -367,6 +367,53 @@ def doctor_env_order(args: argparse.Namespace) -> int:
     return 0 if ok else 1
 
 
+def doctor_config(args: argparse.Namespace) -> int:
+    """Print effective workspace config with per-key provenance (TASK-005).
+
+    Shows where each effective config value came from in the precedence chain:
+    ``default`` -> ``config:config.toml`` -> ``config:config.json`` ->
+    ``env:VAR``. CLI flags override all of these at run time (via the ``_UNSET``
+    sentinel in ``apply_workspace_defaults_to_namespace``), but ``doctor`` is not
+    the agent run, so the CLI layer is noted rather than resolved. Sensitive
+    values (tokens/secrets) are redacted.
+    """
+    from teaagent.ergonomics.workspace_defaults import resolve_config_provenance
+
+    root = Path(getattr(args, 'root', '.')).resolve()
+    prov = resolve_config_provenance(root)
+
+    # A list of entries (not a dict keyed by config key): the doctor JSON sink
+    # redacts dict VALUES whose KEY is sensitive, which would collapse a
+    # secret-keyed entry to a string and lose its provenance. Keying on neutral
+    # 'key'/'value'/'source' preserves the source while the value is redacted.
+    config: list[dict[str, Any]] = []
+    for key in sorted(prov):
+        entry = prov[key]
+        value = entry['value']
+        if _is_sensitive_key(key) and value not in (None, ''):
+            value = _REDACTED
+        config.append({'key': key, 'value': value, 'source': entry['source']})
+
+    payload = {
+        'ok': True,
+        'root': str(root),
+        'precedence': [
+            'cli',
+            'env',
+            'config:config.json',
+            'config:config.toml',
+            'default',
+        ],
+        'note': (
+            'CLI flags override env/config/default at run time; doctor shows the '
+            'non-CLI layers (it is not the agent run).'
+        ),
+        'config': config,
+    }
+    print_json(payload)
+    return 0
+
+
 def _doctor_aigateway_wizard(args: argparse.Namespace) -> int:  # noqa: C901
     requested_mode = getattr(args, 'mode', 'workers-ai')
     account_id = input('Cloudflare account id: ').strip()

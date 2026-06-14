@@ -361,6 +361,15 @@ Environment layering check:
 teaagent doctor env-order --root .
 ```
 
+Config provenance — show the effective value **and its source** for each config
+key (which layer won: `default`, `config:config.toml`, `config:config.json`, or
+`env:VAR`). CLI flags override these at run time but are noted, not resolved
+(doctor is not the agent run). Secrets are redacted while their source is kept:
+
+```bash
+teaagent doctor config --root .
+```
+
 If you use macOS Keychain integration, load and configure keys with:
 
 ```bash

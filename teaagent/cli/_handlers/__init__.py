@@ -81,6 +81,7 @@ from ._cost import cost_report_command
 from ._doctor import (
     doctor_aigateway,
     doctor_all,
+    doctor_config,
     doctor_config_lint_command,
     doctor_env_order,
     doctor_git_sandbox,
@@ -296,6 +297,7 @@ __all__ = [
     'doctor_migration_command',
     'doctor_git_sandbox',
     'doctor_config_lint_command',
+    'doctor_config',
     'doctor_selftest_command',
     'doctor_aigateway',
     'doctor_providers',

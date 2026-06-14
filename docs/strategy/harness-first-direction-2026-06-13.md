@@ -301,10 +301,22 @@ spine-wide.
 - Acceptance: no deprecation warnings in flagship runs; tests green.
 - Risk: medium (touches approval flow). Human review: no.
 
-### TASK-005: `teaagent doctor config` provenance view
+### TASK-005: `teaagent doctor config` provenance view — DONE (2026-06-14)
 - Goal: print effective config with per-key source (CLI/env/cwd/root/default) using the V8 sentinel knowledge.
 - Acceptance: command exists; integration test; friction-log entry closeable.
 - Risk: low. Human review: no.
+- **Status: DONE.** `teaagent doctor config [--root]` prints each effective config
+  key with its provenance source (`default` -> `config:config.toml` ->
+  `config:config.json` -> `env:VAR`; CLI overrides noted, not resolved, since
+  doctor is not the agent run). Backed by a single source of truth:
+  `resolve_config_provenance()` in `teaagent/ergonomics/workspace_defaults.py`,
+  from which `load_workspace_defaults` is now derived (cannot drift). Secrets are
+  redacted while their source is preserved. Tests in
+  `tests/test_workspace_defaults_toml.py` (resolver layering/precedence,
+  load-derivation consistency, doctor-command integration incl. secret
+  redaction). This command is the citeable closure mechanism for any
+  owner-logged config-source-confusion friction (the log's evidence entries
+  remain owner-seeded per TASK-007).
 
 ### TASK-006: RunEvent taxonomy ADR + M0 dual-write spike
 - Goal: ADR for event schema; spine emitting alongside audit on the proof scenario.

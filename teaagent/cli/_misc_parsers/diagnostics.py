@@ -20,6 +20,7 @@ def _doctor(
     git_sandbox_handler: Optional[Callable] = None,
     selftest_handler: Optional[Callable] = None,
     config_lint_handler: Optional[Callable] = None,
+    config_handler: Optional[Callable] = None,
 ) -> None:
     doctor = subparsers.add_parser('doctor', help='Run environment checks.')
     subs = doctor.add_subparsers(dest='doctor_command', required=True)
@@ -150,6 +151,18 @@ def _doctor(
         help='Workspace root to inspect for .teaagent/env. Defaults to current directory.',
     )
     env_order.set_defaults(func=env_order_handler or model_handler)
+
+    if config_handler is not None:
+        config = subs.add_parser(
+            'config',
+            help='Print effective config with the source (provenance) of each key.',
+        )
+        config.add_argument(
+            '--root',
+            default='.',
+            help='Workspace root to inspect for .teaagent/config. Defaults to cwd.',
+        )
+        config.set_defaults(func=config_handler)
 
     if config_lint_handler is not None:
         config_lint = subs.add_parser(

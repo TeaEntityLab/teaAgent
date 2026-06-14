@@ -55,6 +55,7 @@ def register(
         git_sandbox_handler=handlers.get('doctor_git_sandbox'),
         selftest_handler=handlers.get('doctor_selftest'),
         config_lint_handler=handlers.get('doctor_config_lint'),
+        config_handler=handlers.get('doctor_config'),
     )
     _selftest_top_level(subparsers, handlers.get('doctor_selftest'))
     _completion(subparsers, handlers['completion'])

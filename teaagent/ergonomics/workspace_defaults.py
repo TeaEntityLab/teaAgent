@@ -118,40 +118,72 @@ def _load_env_file(root: str | Path) -> None:
             os.environ[key] = value
 
 
-def load_workspace_defaults(root: str | Path = '.') -> dict[str, Any]:
-    """Merge ``.teaagent/config.toml`` then ``config.json`` with env overrides."""
+# Env var that overrides each config key (the env layer of precedence).
+_ENV_MAP = {
+    'provider': 'TEAAGENT_PROVIDER',
+    'model': 'TEAAGENT_MODEL',
+    'permission_mode': 'TEAAGENT_PERMISSION_MODE',
+    'context_profile': 'TEAAGENT_CONTEXT_PROFILE',
+}
+# Env-only keys with no default/config layer, plus their value coercion.
+_ENV_ONLY: dict[str, tuple[str, Any]] = {
+    'heartbeat': ('TEAAGENT_HEARTBEAT', float),
+    'daily_cost_cap_cents': ('TEAAGENT_DAILY_COST_CAP_CENTS', int),
+    'automation_webhook_url': ('TEAAGENT_AUTOMATION_WEBHOOK_URL', str),
+    'automation_webhook_secret': ('TEAAGENT_AUTOMATION_WEBHOOK_SECRET', str),
+}
+
+
+def resolve_config_provenance(root: str | Path = '.') -> dict[str, dict[str, Any]]:
+    """Resolve effective workspace config with the source of each key's value.
+
+    Walks the precedence layers in order — ``default`` -> ``config:config.toml``
+    -> ``config:config.json`` -> ``env:VAR`` — recording which layer last set
+    each key. The CLI layer sits above these (the run namespace, via the
+    ``_UNSET`` sentinel in :func:`apply_workspace_defaults_to_namespace`); it is
+    not observable here because ``doctor`` is not the agent run, so callers that
+    have a run namespace should overlay it themselves.
+
+    Returns ``{key: {'value': ..., 'source': ...}}``. This is the single source
+    of truth for the layering; :func:`load_workspace_defaults` is derived from it
+    so the two cannot drift.
+    """
     root_path = Path(root).resolve()
     tea_dir = root_path / '.teaagent'
     _load_env_file(root_path)
-    merged = dict(DEFAULT_KEYS)
-    toml_path = tea_dir / 'config.toml'
-    json_path = tea_dir / 'config.json'
-    if toml_path.is_file():
-        merged.update(_read_toml(toml_path))
-    if json_path.is_file():
-        merged.update(_read_json(json_path))
-    env_map = {
-        'provider': 'TEAAGENT_PROVIDER',
-        'model': 'TEAAGENT_MODEL',
-        'permission_mode': 'TEAAGENT_PERMISSION_MODE',
-        'context_profile': 'TEAAGENT_CONTEXT_PROFILE',
+
+    prov: dict[str, dict[str, Any]] = {
+        key: {'value': value, 'source': 'default'}
+        for key, value in DEFAULT_KEYS.items()
     }
-    for key, env_name in env_map.items():
+
+    for fname, reader in (('config.toml', _read_toml), ('config.json', _read_json)):
+        path = tea_dir / fname
+        if path.is_file():
+            for key, value in reader(path).items():
+                prov[key] = {'value': value, 'source': f'config:{fname}'}
+
+    for key, env_name in _ENV_MAP.items():
         if os.environ.get(env_name):
-            merged[key] = os.environ[env_name]
-    if os.environ.get('TEAAGENT_HEARTBEAT'):
-        merged['heartbeat'] = float(os.environ['TEAAGENT_HEARTBEAT'])
-    if os.environ.get('TEAAGENT_DAILY_COST_CAP_CENTS'):
-        merged['daily_cost_cap_cents'] = int(
-            os.environ['TEAAGENT_DAILY_COST_CAP_CENTS']
-        )
-    if os.environ.get('TEAAGENT_AUTOMATION_WEBHOOK_URL'):
-        merged['automation_webhook_url'] = os.environ['TEAAGENT_AUTOMATION_WEBHOOK_URL']
-    if os.environ.get('TEAAGENT_AUTOMATION_WEBHOOK_SECRET'):
-        merged['automation_webhook_secret'] = os.environ[
-            'TEAAGENT_AUTOMATION_WEBHOOK_SECRET'
-        ]
-    return merged
+            prov[key] = {'value': os.environ[env_name], 'source': f'env:{env_name}'}
+
+    for key, (env_name, coerce) in _ENV_ONLY.items():
+        raw = os.environ.get(env_name)
+        if raw:
+            prov[key] = {'value': coerce(raw), 'source': f'env:{env_name}'}
+
+    return prov
+
+
+def load_workspace_defaults(root: str | Path = '.') -> dict[str, Any]:
+    """Merge ``.teaagent/config.toml`` then ``config.json`` with env overrides.
+
+    Derived from :func:`resolve_config_provenance` so the layering logic has a
+    single source of truth.
+    """
+    return {
+        key: entry['value'] for key, entry in resolve_config_provenance(root).items()
+    }
 
 
 def apply_workspace_defaults_to_namespace(
