@@ -362,9 +362,11 @@ teaagent doctor env-order --root .
 ```
 
 Config provenance — show the effective value **and its source** for each config
-key (which layer won: `default`, `config:config.toml`, `config:config.json`, or
-`env:VAR`). CLI flags override these at run time but are noted, not resolved
-(doctor is not the agent run). Secrets are redacted while their source is kept:
+key (which layer won: `default`, `config:config.toml`, `config:config.json`,
+`env-file:.teaagent/env`, or `env:VAR` for the shell environment). A var set in
+both the shell and `.teaagent/env` is attributed to the shell, which wins. CLI
+flags override these at run time but are noted, not resolved (doctor is not the
+agent run). Secrets are redacted while their source is kept:
 
 ```bash
 teaagent doctor config --root .

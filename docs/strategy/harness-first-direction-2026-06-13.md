@@ -317,6 +317,14 @@ spine-wide.
   redaction). This command is the citeable closure mechanism for any
   owner-logged config-source-confusion friction (the log's evidence entries
   remain owner-seeded per TASK-007).
+- **Review fix (F-A):** provenance distinguishes the shell environment
+  (`env:VAR`) from the workspace env file (`env-file:.teaagent/env`); a var set
+  in both is attributed to the shell, which wins. (Initially both were
+  mislabeled `env:` — defeating the point for env-file values.) Residuals,
+  documented not fixed: `automation_webhook_url` is not redacted (could embed a
+  token; consistent with existing redaction policy); a malformed numeric env var
+  raises in both `resolve_config_provenance` and `load_workspace_defaults`
+  (pre-existing, unchanged behavior).
 
 ### TASK-006: RunEvent taxonomy ADR + M0 dual-write spike
 - Goal: ADR for event schema; spine emitting alongside audit on the proof scenario.

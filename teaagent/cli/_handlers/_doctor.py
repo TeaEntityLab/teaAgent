@@ -400,13 +400,16 @@ def doctor_config(args: argparse.Namespace) -> int:
         'precedence': [
             'cli',
             'env',
+            'env-file:.teaagent/env',
             'config:config.json',
             'config:config.toml',
             'default',
         ],
         'note': (
             'CLI flags override env/config/default at run time; doctor shows the '
-            'non-CLI layers (it is not the agent run).'
+            'non-CLI layers (it is not the agent run). "env" is the shell '
+            'environment; "env-file:.teaagent/env" is the workspace env file '
+            '(the shell wins when both define a var).'
         ),
         'config': config,
     }

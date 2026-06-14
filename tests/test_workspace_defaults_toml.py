@@ -273,6 +273,35 @@ def test_resolve_config_provenance_env_overrides_config(
     assert prov['provider'] == {'value': 'from_env', 'source': 'env:TEAAGENT_PROVIDER'}
 
 
+def test_resolve_config_provenance_distinguishes_env_file_from_shell(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A value from .teaagent/env is sourced to the file; a shell var wins and is
+    sourced to the shell (review F-A)."""
+    from teaagent.ergonomics.workspace_defaults import resolve_config_provenance
+
+    tea = tmp_path / '.teaagent'
+    tea.mkdir()
+    (tea / 'env').write_text(
+        'export TEAAGENT_MODEL=model-from-envfile\n'
+        'export TEAAGENT_PROVIDER=provider-from-envfile\n',
+        encoding='utf-8',
+    )
+    # model only in the env file; provider also set in the shell (shell wins).
+    monkeypatch.delenv('TEAAGENT_MODEL', raising=False)
+    monkeypatch.setenv('TEAAGENT_PROVIDER', 'provider-from-shell')
+
+    prov = resolve_config_provenance(tmp_path)
+    assert prov['model'] == {
+        'value': 'model-from-envfile',
+        'source': 'env-file:.teaagent/env',
+    }
+    assert prov['provider'] == {
+        'value': 'provider-from-shell',
+        'source': 'env:TEAAGENT_PROVIDER',
+    }
+
+
 def test_load_workspace_defaults_matches_provenance_values(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

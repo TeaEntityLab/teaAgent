@@ -89,16 +89,16 @@ def _read_json(path: Path) -> dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
-def _load_env_file(root: str | Path) -> None:
-    """Load ``.teaagent/env`` into ``os.environ`` without overwriting existing vars.
+def _parse_env_file_exports(root: str | Path) -> dict[str, str]:
+    """Parse ``.teaagent/env`` ``export KEY=value`` lines into a dict.
 
-    This makes API keys written by ``teaagent setup --write-env`` available
-    to the LLM adapter layer without requiring the user to manually
-    ``source .teaagent/env`` in their shell.
+    Pure: does not touch ``os.environ``. Used both to load the file and to
+    attribute config provenance to the env file vs. the real shell environment.
     """
     env_path = Path(root).resolve() / '.teaagent' / 'env'
     if not env_path.is_file():
-        return
+        return {}
+    exports: dict[str, str] = {}
     for raw_line in env_path.read_text(encoding='utf-8').splitlines():
         line = raw_line.strip()
         if not line.startswith('export '):
@@ -108,13 +108,26 @@ def _load_env_file(root: str | Path) -> None:
         if not sep:
             continue
         key = key.strip()
-        if not key or key in os.environ:
+        if not key:
             continue
         value = raw_value.strip()
         # shlex.quote() wraps in single quotes; unstrip them
         if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
             value = value[1:-1]
         if value:
+            exports[key] = value
+    return exports
+
+
+def _load_env_file(root: str | Path) -> None:
+    """Load ``.teaagent/env`` into ``os.environ`` without overwriting existing vars.
+
+    This makes API keys written by ``teaagent setup --write-env`` available
+    to the LLM adapter layer without requiring the user to manually
+    ``source .teaagent/env`` in their shell.
+    """
+    for key, value in _parse_env_file_exports(root).items():
+        if key not in os.environ:
             os.environ[key] = value
 
 
@@ -150,7 +163,22 @@ def resolve_config_provenance(root: str | Path = '.') -> dict[str, dict[str, Any
     """
     root_path = Path(root).resolve()
     tea_dir = root_path / '.teaagent'
+
+    # Snapshot the real shell env BEFORE loading the workspace env file, and
+    # parse the file's exports, so env-layer values can be attributed to the
+    # right source: a var already in the shell is `env:VAR`; one only the file
+    # provides is `env-file:.teaagent/env`. (The file never overwrites the shell,
+    # so shell wins when both define a key.)
+    shell_env_keys = set(os.environ)
+    env_file_exports = _parse_env_file_exports(root_path)
     _load_env_file(root_path)
+
+    def _env_source(env_name: str) -> str:
+        if env_name in shell_env_keys:
+            return f'env:{env_name}'
+        if env_name in env_file_exports:
+            return 'env-file:.teaagent/env'
+        return f'env:{env_name}'
 
     prov: dict[str, dict[str, Any]] = {
         key: {'value': value, 'source': 'default'}
@@ -165,12 +193,15 @@ def resolve_config_provenance(root: str | Path = '.') -> dict[str, dict[str, Any
 
     for key, env_name in _ENV_MAP.items():
         if os.environ.get(env_name):
-            prov[key] = {'value': os.environ[env_name], 'source': f'env:{env_name}'}
+            prov[key] = {
+                'value': os.environ[env_name],
+                'source': _env_source(env_name),
+            }
 
     for key, (env_name, coerce) in _ENV_ONLY.items():
         raw = os.environ.get(env_name)
         if raw:
-            prov[key] = {'value': coerce(raw), 'source': f'env:{env_name}'}
+            prov[key] = {'value': coerce(raw), 'source': _env_source(env_name)}
 
     return prov
 
