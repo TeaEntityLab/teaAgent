@@ -501,3 +501,55 @@ def test_m6_fold_preserves_created_at_in_command_timestamps():
         assert typed[0].created_at == '2026-06-13T13:00:01+00:00'
         folded = build_evidence_from_events(typed, root=root, run_id='r-ts')
         assert folded.commands_run[0].timestamp == '2026-06-13T13:00:01+00:00'
+
+
+# Audit event types that the evidence/proof-of-use extractors filter on. After
+# the M6 FOLD-T002 cutover, build_run_evidence_bundle routes through
+# read_run_events_from_audit, which DROPS any audit event whose type is not in
+# RunEventType. So production evidence is lossless ONLY IF every type below is
+# typed. This list is the enforced coupling: if you teach an extractor to read a
+# NEW audit event type, add it here — the test will then fail until that type is
+# also added to RunEventType (otherwise the cutover would silently drop it).
+EVIDENCE_EXTRACTOR_AUDIT_TYPES: frozenset[str] = frozenset(
+    {
+        'run_started',
+        'run_failed',
+        'tool_use',
+        'tool_call_started',
+        'tool_call_completed',
+        'tool_error',
+        'test_run',
+        'approval_requested',
+        'approval_granted',
+        'approval_denied',
+        'tool_call_approved',
+        'tool_call_denied',
+        'tool_call_pending_approval',
+        'model_route',
+        'provenance_collected',
+        'skill_activated',
+        'skill_lifecycle_transition',
+        'git_sandbox_started',
+        'git_sandbox_resolved',
+        'undo_applied',
+    }
+)
+
+
+def test_m6_every_evidence_extractor_type_is_typed() -> None:
+    """Guard the FOLD-T002 cutover: every audit type the evidence extractors read
+    must be in RunEventType, or read_run_events_from_audit would silently drop it
+    from production evidence (F2 from the post-migration review).
+    """
+    from teaagent.runner._events import _AUDIT_EVENT_TO_RUN_EVENT_TYPE
+
+    missing = sorted(
+        t
+        for t in EVIDENCE_EXTRACTOR_AUDIT_TYPES
+        if t not in _AUDIT_EVENT_TO_RUN_EVENT_TYPE
+    )
+    assert not missing, (
+        f'evidence extractors read audit types not in RunEventType: {missing}. '
+        f'The M6 cutover would silently drop them — add them to RunEventType + '
+        f'the audit mapper in teaagent/runner/_events.py.'
+    )

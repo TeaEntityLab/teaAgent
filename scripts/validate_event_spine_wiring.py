@@ -26,8 +26,15 @@ Two checks enforce this:
      (no orphaned typed event that cannot reach the audit record).
   B. No orphaned event bus — any class exposing a high-signal lifecycle-event
      delivery method must be in the curated allowlist below. A *new* competing
-     lifecycle-event bus fails the gate, forcing a conscious architecture
-     decision rather than silent drift.
+     lifecycle-event bus of a common shape fails the gate, forcing a conscious
+     architecture decision rather than silent drift.
+
+     LIMITATION (heuristic tripwire, not a proof): check B keys on specific
+     method names and deliberately excludes generic ``publish`` / ``emit`` to
+     avoid noise from skill-writer / marketplace / token-streaming. As a result
+     a bus shaped like the integration ``RunEventStream`` (``subscribe`` +
+     ``emit``) is NOT detected. The check catches the common shapes; it does not
+     guarantee detection of every conceivable event bus.
 
 Run: python3 scripts/validate_event_spine_wiring.py
 Exit code 0 when clean, 1 on any violation.

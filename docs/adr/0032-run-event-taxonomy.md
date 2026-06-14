@@ -149,6 +149,10 @@ recorded here as the durable contract (see the per-phase work-logs under
 - **M5** — **hook OBSERVABILITY** is typed onto the spine; **hook EXECUTION stays
   in the tool-dispatch layer** (`teaagent/tools.py`) because PreToolUse/PostToolUse
   mutate in-flight args/results, and the session-lifecycle hooks are unwired.
+  *Scope note (review F1): the 5 hook audit events are typed and reader-visible
+  but NOT folded into evidence — no extractor reads them and `RunEvidenceBundle`
+  has no hooks field. Surfacing hook activity in receipts is backlog (needs a
+  bundle field + extractor), not delivered by M5.*
 - **M6** — **evidence/receipts fold over the typed stream** (`build_evidence_from_events`,
   now the production path inside `build_run_evidence_bundle`). Fixed a real
   lossiness gap (typed `RunEvent` now carries `created_at`).
@@ -173,9 +177,15 @@ EventSpine.emit ──(register_audit_consumer, M1)──▶ AuditLogger.record
   consumer would see only the spine-emitted subset (a coverage regression).
 - `ContextBus` and the integration `RunEventStream` are **unwired in production**;
   they are not lifecycle buses. The guard's allowlist names every sanctioned
-  event-delivery surface, so a **new competing lifecycle-event bus fails the gate**
-  and forces a conscious decision. The taxonomy-closure check proves no
-  `RunEventType` is orphaned from the audit record.
+  event-delivery surface. The taxonomy-closure check proves no `RunEventType` is
+  orphaned from the audit record.
+- *Guard scope (review F3): the orphan-bus check is a **heuristic tripwire**, not
+  a proof. It keys on specific high-signal method names (`register_consumer`,
+  `register_interceptor`, `add_sink`, `on_event`, `publish_delta`,
+  `subscribe_deltas`) and deliberately excludes generic `publish`/`emit` to avoid
+  noise — so a bus shaped like `RunEventStream` (`subscribe`+`emit`) is not
+  detected. It catches the common shapes and forces a conscious allowlist
+  decision for them; it does not guarantee detection of every conceivable bus.*
 
 **Lesson:** the spine's realized value is the **typed read side** (evidence →
 receipts) and a single typed lifecycle path — not wholesale relocation of
