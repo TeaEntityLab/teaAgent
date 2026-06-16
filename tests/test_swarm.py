@@ -3,12 +3,17 @@
 from __future__ import annotations
 
 import tempfile
+from pathlib import Path
 
 from teaagent.consensus import (
     ConsensusConfig,
     PeerIdentity,
     PeerRegistry,
     RiskLevel,
+)
+from teaagent.context_bus import (
+    ContextBusConfig,
+    DeltaType,
 )
 from teaagent.swarm import (
     CodeReview,
@@ -378,3 +383,83 @@ def test_swarm_task_without_consensus():
 
         # Task should execute normally (may fail without git, but that's expected)
         assert report.total_subagents == 1
+
+
+def test_swarm_manager_context_bus_integration():
+    """Test ContextBus integration in SwarmManager.execute_swarm()."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = Path(tmpdir) / 'context_bus.db'
+        bus_config = ContextBusConfig(
+            db_path=db_path,
+            workflow_id='placeholder',  # Overridden at execution time
+            max_delta_age_seconds=3600,
+            enable_wal_mode=True,
+        )
+
+        manager = SwarmManager(tmpdir, max_parallel=2, context_bus_config=bus_config)
+        task = SubagentTask(
+            task_id='task-1',
+            description='Test context bus task',
+        )
+        manager.add_subagent(task)
+
+        report = manager.execute_swarm()
+
+        assert report is not None
+        assert report.total_subagents == 1
+
+        bus = manager.context_bus
+        assert bus is not None
+        delta_count = bus.get_delta_count()
+        assert delta_count > 0, f'Expected at least 1 delta, got {delta_count}'
+
+        deltas = bus.subscribe_deltas()
+        source_agents = {delta.source_agent for delta in deltas}
+        assert 'swarm-orchestrator' in source_agents, (
+            f'Expected swarm-orchestrator delta, got sources: {source_agents}'
+        )
+
+        delta_types = {delta.delta_type for delta in deltas}
+        assert DeltaType.CONTEXT_UPDATE in delta_types, (
+            f'Expected CONTEXT_UPDATE delta, got types: {delta_types}'
+        )
+
+
+def test_swarm_context_bus_uses_fresh_workflow_per_execution(monkeypatch):
+    """Each execute_swarm() run should publish deltas under its own workflow."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = Path(tmpdir) / 'context_bus.db'
+        bus_config = ContextBusConfig(
+            db_path=db_path,
+            workflow_id='placeholder',
+            max_delta_age_seconds=3600,
+            enable_wal_mode=True,
+        )
+        manager = SwarmManager(tmpdir, max_parallel=1, context_bus_config=bus_config)
+        manager.add_subagent(
+            SubagentTask(task_id='task-1', description='Test context bus task')
+        )
+
+        def fake_execute(self):
+            return SubagentResult(task_id=self._task.task_id, success=True)
+
+        monkeypatch.setattr(Subagent, 'execute', fake_execute)
+
+        manager.execute_swarm()
+        first_workflow_id = manager._parent_run_id
+        first_bus = manager.context_bus
+        assert first_bus is not None
+        assert first_bus._workflow_id == first_workflow_id
+
+        manager.execute_swarm()
+        second_workflow_id = manager._parent_run_id
+        second_bus = manager.context_bus
+        assert second_bus is not None
+        assert second_workflow_id != first_workflow_id
+        assert second_bus._workflow_id == second_workflow_id
+
+        deltas = second_bus.subscribe_deltas()
+        delta_ids = {delta.delta_id for delta in deltas}
+        assert f'{second_workflow_id}-swarm-start' in delta_ids
+        assert f'{second_workflow_id}-task-1' in delta_ids
+        assert f'{first_workflow_id}-swarm-start' not in delta_ids

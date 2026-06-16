@@ -652,11 +652,36 @@ class AgentRunner:
         plan_contract = context.get('plan_contract')
         if plan_contract is not None:
             tcr_payload['plan_contract'] = plan_contract
-        self.event_spine.emit(
-            RunEventType.TOOL_CALL_REQUESTED,
-            run_id,
-            tcr_payload,
-        )
+        try:
+            self.event_spine.emit(
+                RunEventType.TOOL_CALL_REQUESTED,
+                run_id,
+                tcr_payload,
+            )
+        except ToolPermissionError as exc:
+            spine_reason_code: DenialReasonCode | None = getattr(
+                exc, 'reason_code', None
+            )
+            reason_code_str = spine_reason_code.value if spine_reason_code else None
+            approval_request = self.approval_manager.create_approval_request(
+                call_id=decision.call_id,
+                tool_name=decision.tool_name,
+                arguments=decision.arguments,
+                reason=str(exc),
+                annotations=annotations,
+                run_id=run_id,
+            )
+            self.approval_manager.record_blocked(
+                approval_request=approval_request,
+                audit=self.audit,
+                run_id=run_id,
+                reason_code=reason_code_str,
+            )
+            raise ToolPermissionError(
+                str(exc),
+                reason_code=spine_reason_code,
+                approval_request=approval_request,
+            ) from None
 
         # Auto mode: block disallowed tools, auto-approve allowed ones
         self.auto_mode_manager.validate_tool_allowed(decision.tool_name)

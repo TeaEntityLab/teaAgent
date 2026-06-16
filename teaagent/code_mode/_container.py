@@ -212,8 +212,10 @@ def _communicate_with_output_limit(  # noqa: C901
                     return
             chunks.append(chunk)
 
-    assert process.stdout is not None
-    assert process.stderr is not None
+    if process.stdout is None or process.stderr is None:
+        raise RuntimeError(
+            'container process must be started with stdout and stderr pipes'
+        )
     stdout_thread = threading.Thread(
         target=read_stream, args=(process.stdout, stdout_chunks), daemon=True
     )

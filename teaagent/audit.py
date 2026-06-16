@@ -353,6 +353,8 @@ class AuditLogger:
             return payload
 
     def add_sink(self, sink: Callable[[AuditEvent], None]) -> None:
+        if not callable(sink):
+            raise TypeError('audit sink must be callable')
         self._sinks.append(sink)
 
     def enable_opentelemetry(

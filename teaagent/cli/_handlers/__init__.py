@@ -77,6 +77,7 @@ from ._consensus import (
     consensus_wait_command,
 )
 from ._control_plane import control_plane_serve_command
+from ._coordinator import classify_command
 from ._cost import cost_report_command
 from ._doctor import (
     doctor_aigateway,
@@ -348,6 +349,7 @@ __all__ = [
     'skill_verify_tsb_command',
     'chat_command',
     'clarify_command',
+    'classify_command',
     'completion_command',
     'configure_command',
     'init_command',

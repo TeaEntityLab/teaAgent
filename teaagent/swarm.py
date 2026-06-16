@@ -29,6 +29,12 @@ from teaagent.consensus import (
     VotingThreshold,
     task_matches_pre_approval,
 )
+from teaagent.context_bus import (
+    ContextBus,
+    ContextBusConfig,
+    DeltaCard,
+    DeltaType,
+)
 from teaagent.sandbox import GitBranchSandbox
 from teaagent.subagents._approval_queue import get_approval_queue
 
@@ -376,6 +382,7 @@ class SwarmManager:
         subagent_manager: Any = None,
         control_plane_state: Any = None,
         control_plane_tenant_id: str = 'default',
+        context_bus_config: Optional[ContextBusConfig] = None,
     ) -> None:
         self._root = Path(root).resolve()
         self._max_parallel = max_parallel
@@ -397,6 +404,8 @@ class SwarmManager:
         self._heartbeat_lock = threading.Lock()
         self._parent_run_id: Optional[str] = None
         self._subagent_results: dict[str, SubagentResult] = {}
+        self._context_bus_config = context_bus_config
+        self._context_bus: Optional[ContextBus] = None
 
         if self._subagent_manager is not None:
             self._subagent_manager._swarm_manager = self
@@ -544,11 +553,35 @@ class SwarmManager:
             )
 
         self._parent_run_id = uuid4().hex
+
+        # Initialize a run-scoped context bus when configured.
+        if self._context_bus_config is not None:
+            if self._context_bus is not None:
+                self._context_bus.close()
+            bus_config = ContextBusConfig(
+                db_path=self._context_bus_config.db_path,
+                workflow_id=self._parent_run_id,
+                max_delta_age_seconds=self._context_bus_config.max_delta_age_seconds,
+                enable_wal_mode=self._context_bus_config.enable_wal_mode,
+            )
+            self._context_bus = ContextBus(bus_config)
+
         self._publish_control_plane('starting', subagents=self._subagents)
         for index, subagent in enumerate(self._subagents):
             subagent._parent_run_id = self._parent_run_id
             subagent._batch_index = index
         get_approval_queue(self._parent_run_id, workspace_root=self._root)
+
+        # Publish swarm-start delta
+        if self._context_bus is not None:
+            self._context_bus.publish_delta(
+                DeltaCard(
+                    delta_id=f'{self._parent_run_id}-swarm-start',
+                    delta_type=DeltaType.CONTEXT_UPDATE,
+                    source_agent='swarm-orchestrator',
+                    content=f'swarm started: {len(self._subagents)} subagents',
+                )
+            )
 
         # Start heartbeat monitoring
         self._start_heartbeat_monitor()
@@ -639,6 +672,8 @@ class SwarmManager:
         finally:
             # Stop heartbeat monitoring
             self._stop_heartbeat_monitor()
+            if self._context_bus is not None:
+                self._context_bus.close()
 
     def _select_tournament_winner(
         self, results: list[SubagentResult]
@@ -697,47 +732,75 @@ class SwarmManager:
                 for future in as_completed(future_to_subagent, timeout=timeout):
                     subagent = future_to_subagent[future]
                     try:
-                        results.append(future.result())
+                        result = future.result()
+                        results.append(result)
+                        self._publish_subagent_delta(result)
                     except (
                         RuntimeError,
                         ValueError,
                         subprocess.SubprocessError,
                     ) as exc:
-                        results.append(
-                            SubagentResult(
-                                task_id=subagent._task.task_id,
-                                success=False,
-                                error=str(exc),
-                            )
+                        result = SubagentResult(
+                            task_id=subagent._task.task_id,
+                            success=False,
+                            error=str(exc),
                         )
+                        results.append(result)
+                        self._publish_subagent_delta(result)
             except FuturesTimeoutError:
                 logger.warning('Swarm execution timed out, collecting partial results')
                 # Collect results from futures that have already completed
                 for future, subagent in future_to_subagent.items():
                     if future.done():
                         try:
-                            results.append(future.result())
+                            result = future.result()
+                            results.append(result)
+                            self._publish_subagent_delta(result)
                         except (
                             RuntimeError,
                             ValueError,
                             subprocess.SubprocessError,
                         ) as exc:
-                            results.append(
-                                SubagentResult(
-                                    task_id=subagent._task.task_id,
-                                    success=False,
-                                    error=str(exc),
-                                )
-                            )
-                    else:
-                        results.append(
-                            SubagentResult(
+                            result = SubagentResult(
                                 task_id=subagent._task.task_id,
                                 success=False,
-                                error='Timed out',
+                                error=str(exc),
                             )
+                            results.append(result)
+                            self._publish_subagent_delta(result)
+                    else:
+                        result = SubagentResult(
+                            task_id=subagent._task.task_id,
+                            success=False,
+                            error='Timed out',
                         )
+                        results.append(result)
+                        self._publish_subagent_delta(result)
         return results
+
+    def _publish_subagent_delta(self, result: SubagentResult) -> None:
+        """Publish a delta card for a subagent result to the context bus."""
+        if self._context_bus is None or self._parent_run_id is None:
+            return
+        delta_type = DeltaType.SUCCESS if result.success else DeltaType.ERROR
+        content = (
+            f'Subagent {result.task_id} completed successfully'
+            if result.success
+            else f'Subagent {result.task_id} failed: {result.error or "unknown error"}'
+        )
+        self._context_bus.publish_delta(
+            DeltaCard(
+                delta_id=f'{self._parent_run_id}-{result.task_id}',
+                delta_type=delta_type,
+                source_agent=result.task_id,
+                content=content,
+                metadata={
+                    'branch_name': result.branch_name,
+                    'execution_time_ms': result.execution_time_ms,
+                    'cost_cents': result.cost_cents,
+                },
+            )
+        )
 
     def _resolve_pending_consensus(self, pending: dict[str, str]) -> dict[str, Any]:
         """Poll pending proposals and return task IDs approved during the wait."""
@@ -868,6 +931,11 @@ class SwarmManager:
         """Disable consensus mode for the swarm."""
         self._enable_consensus = False
         self._consensus_engine = None
+
+    @property
+    def context_bus(self) -> Optional[ContextBus]:
+        """Return the context bus instance for this swarm, if configured."""
+        return self._context_bus
 
     def run_code_reviews(self, report: SwarmReport) -> list[CodeReview]:
         """Run automated code reviews between subagent results."""

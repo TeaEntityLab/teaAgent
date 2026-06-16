@@ -12,6 +12,8 @@ Covers:
 from __future__ import annotations
 
 import json
+import threading
+import time
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -214,16 +216,28 @@ specialists:
   - name: s4
 """
         root = _make_team_yaml_dir(tmp_path, 'capped-team', yaml_content)
+        in_flight = 0
+        max_seen = 0
+        lock = threading.Lock()
+
+        def run_subagent(**_: object) -> dict[str, str]:
+            nonlocal in_flight, max_seen
+            with lock:
+                in_flight += 1
+                max_seen = max(max_seen, in_flight)
+            time.sleep(0.01)
+            with lock:
+                in_flight -= 1
+            return {'status': 'completed', 'results': 'ok'}
+
         mock_manager = MagicMock()
-        mock_manager.run_subagent.return_value = {
-            'status': 'completed',
-            'results': 'ok',
-        }
+        mock_manager.run_subagent = MagicMock(side_effect=run_subagent)
         orchestrator = TeamOrchestrator(root=root, subagent_manager=mock_manager)
         result = orchestrator.run_team('fix bugs', 'capped-team')
         assert result['status'] == 'ok'
-        assert result['specialist_count'] == 2
-        assert mock_manager.run_subagent.call_count == 2
+        assert result['specialist_count'] == 4
+        assert mock_manager.run_subagent.call_count == 4
+        assert max_seen <= 2
 
     # ── _merge_results ──
 

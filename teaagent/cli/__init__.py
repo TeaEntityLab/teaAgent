@@ -90,6 +90,7 @@ from teaagent.cli._handlers import (  # noqa: E402
     chat_command,
     ci_review_command,
     clarify_command,
+    classify_command,
     cloud_cancel_command,
     cloud_capabilities_command,
     cloud_list_command,
@@ -370,6 +371,7 @@ def build_parser() -> argparse.ArgumentParser:
     from teaagent.cli._cloud_parsers import register as register_cloud
     from teaagent.cli._consensus_parsers import register as register_consensus
     from teaagent.cli._control_plane_parsers import register as register_control_plane
+    from teaagent.cli._coordinator_parsers import register as register_coordinator
     from teaagent.cli._cost_parsers import register as register_cost
     from teaagent.cli._ergonomics_parsers import register as register_ergonomics
     from teaagent.cli._gateway_parsers import register as register_gateway
@@ -555,6 +557,10 @@ def build_parser() -> argparse.ArgumentParser:
             'relay_serve': consensus_relay_serve_command,
             'relay_submit': consensus_relay_submit_command,
         },
+    )
+    register_coordinator(
+        subparsers,
+        {'classify': classify_command},
     )
     register_sandbox(
         subparsers,

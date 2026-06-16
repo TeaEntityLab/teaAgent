@@ -25,6 +25,20 @@ def test_top_level_run_parser_exposes_stream_flags() -> None:
     assert run.agent_command == 'run'
 
 
+def test_classify_command_parser_and_handler_output(capsys) -> None:
+    parser = build_parser()
+    args = parser.parse_args(['classify', 'fix a bug'])
+
+    assert args.task == 'fix a bug'
+    assert args.func(args) == 0
+
+    captured = capsys.readouterr()
+    assert 'Task: fix a bug' in captured.out
+    assert 'Type: debugging' in captured.out
+    assert 'Complexity:' in captured.out
+    assert 'Estimated Steps:' in captured.out
+
+
 def test_agent_run_code_analysis_flag_enables_tools() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         output = io.StringIO()

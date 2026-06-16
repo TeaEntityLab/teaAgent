@@ -9,6 +9,13 @@ Extends the subagent system with team-level orchestration:
 from __future__ import annotations
 
 import json
+from concurrent.futures import (
+    ThreadPoolExecutor,
+    as_completed,
+)
+from concurrent.futures import (
+    TimeoutError as FuturesTimeoutError,
+)
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
@@ -188,30 +195,79 @@ class TeamOrchestrator:
         team_name: str,
         *,
         parent_run_id: str = '',
+        timeout: float = 300.0,
     ) -> dict[str, Any]:
         team = self.get_team(team_name)
         if team is None:
             return {'status': 'error', 'message': f'unknown team: {team_name}'}
 
-        specialist_results: list[dict[str, Any]] = []
-        for i, spec in enumerate(team.specialists):
-            if i >= team.max_concurrent:
-                break
-            result = self._manager.run_subagent(
-                task=task,
-                parent_run_id=parent_run_id,
-                depth=2,
-                def_name=spec.name,
-                batch_index=i,
-                isolation=spec.isolation,
-            )
-            specialist_results.append(result)
+        if not team.specialists:
+            return {
+                'status': 'ok',
+                'team': team_name,
+                'specialist_count': 0,
+                'output': '',
+            }
 
-        merged = self._merge_results(specialist_results, team.merge_strategy)
+        results_by_index: dict[int, dict[str, Any]] = {}
+        max_workers = min(team.max_concurrent, len(team.specialists))
+
+        executor = ThreadPoolExecutor(max_workers=max_workers)
+        futures: dict[Any, int] = {}
+        timed_out = False
+        try:
+            for i, spec in enumerate(team.specialists):
+                futures[
+                    executor.submit(
+                        self._manager.run_subagent,
+                        task=task,
+                        parent_run_id=parent_run_id,
+                        depth=2,
+                        def_name=spec.name,
+                        batch_index=i,
+                        isolation=spec.isolation,
+                    )
+                ] = i
+            try:
+                for future in as_completed(futures, timeout=timeout):
+                    batch_idx = futures[future]
+                    try:
+                        results_by_index[batch_idx] = future.result()
+                    except Exception as exc:
+                        results_by_index[batch_idx] = {
+                            'status': 'error',
+                            'batch_index': batch_idx,
+                            'error': str(exc),
+                        }
+            except FuturesTimeoutError:
+                timed_out = True
+                for future, batch_idx in futures.items():
+                    if batch_idx not in results_by_index:
+                        if future.done():
+                            try:
+                                results_by_index[batch_idx] = future.result()
+                            except Exception as exc:
+                                results_by_index[batch_idx] = {
+                                    'status': 'error',
+                                    'batch_index': batch_idx,
+                                    'error': str(exc),
+                                }
+                        else:
+                            results_by_index[batch_idx] = {
+                                'status': 'error',
+                                'batch_index': batch_idx,
+                                'error': 'timeout',
+                            }
+                            future.cancel()
+        finally:
+            executor.shutdown(wait=not timed_out, cancel_futures=timed_out)
+
+        ordered_results = [results_by_index[i] for i in range(len(team.specialists))]
+        merged = self._merge_results(ordered_results, team.merge_strategy)
         return {
             'status': 'ok',
             'team': team_name,
-            'specialist_count': len(specialist_results),
+            'specialist_count': len(ordered_results),
             'output': merged,
         }
 
