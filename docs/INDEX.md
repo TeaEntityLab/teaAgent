@@ -1,24 +1,35 @@
 # TeaAgent Documentation Index
-# 2026-06-06
+# 2026-06-17
 
-> **Last reviewed:** 2026-06-06
+> **Last reviewed:** 2026-06-17
 > **Review trigger:** New front-door docs, supersession links, or validation command changes.
 
 This is the curated front door for TeaAgent documentation. It is intentionally
 not an exhaustive file list. Use it to find the current source of truth, then
 follow dated evidence documents only when you need the reasoning trail.
 
+## Reading Model
+
+TeaAgent docs are organized as three shelves:
+
+| Shelf | Purpose | Reader rule |
+| --- | --- | --- |
+| **Current truth** | Stable files that describe what to trust or do now. | Read these first; update them when behavior, status, or gates change. |
+| **Active work** | Ticket indexes, plans, and ledgers that still drive execution. | Read only when choosing or verifying current work. |
+| **Historical evidence** | Dated audits, reviews, surveys, completed plans, and reasoning packages. | Do not reread by default; use [Historical Evidence Index](archive/INDEX.md) when you need provenance. |
+
+No historical file is deleted or moved by this model. The generated
+[Docs Inventory](generated/docs-inventory.md) remains the exhaustive catalog.
+
 ## Start Here
 
 | Need | Start here | Status rule |
 | --- | --- | --- |
 | What can the owner-operator trust today? | [Daily-Driver Current Status](daily-driver-current-status.md) | Current truth for owner-operated daily use; update whenever TUI, chat, agent mode, approval, cost, undo, or resume behavior changes. |
-| What is the current documentation-state assessment? | [Documentation State Review](analysis/documentation-state-review-2026-06-04.md) | Current dated evidence for corpus shape, drift risks, and consolidation priorities. |
+| Which docs should I read, skip, or treat as history? | [Historical Evidence Index](archive/INDEX.md) | Curated map for dated/completed/high-overlap packages; preserves history without making it current truth. |
 | What is the documentation operating model? | [Documentation Operating Model](governance/documentation-operating-model-2026-06-04.md) | Governance rulebook for claim types, TTL, owners, supersession, and CI guard targets. |
 | What should be done next? | [Work Direction Execution Index](plans/work-direction-execution-index-2026-06-10.md) | Sprint 1 truth pass (WDA-001, WDB-001, WDB-003, WDG-001/002) after the June 10 critical review. |
 | How should ADR 0032 M1-M6 be executed? | [ADR 0032 M1-M6 Work Plan](plans/adr-0032-m1-m6-work-plan-2026-06-13.md) | Event-spine migration plan for audit, receipts/evidence, gates, hooks, ContextBus, and webhooks. |
-| Documentation corpus optimization | [Documentation Optimization Master Plan](plans/documentation-optimization-master-plan-2026-06-04.md) | Execution plan for reducing drift and improving discoverability. |
-| What are the concrete work items? | [Documentation Optimization Work Items](work-log/documentation-optimization-work-items-2026-06-04.md) | Task ledger with priority, status, dependencies, and acceptance criteria. |
 | Exhaustive docs inventory (generated) | [Docs Inventory](generated/docs-inventory.md) | Deterministic catalog; not current truth — use this index table first. |
 | Documentation aging dashboard (generated) | [Docs Aging Dashboard](generated/docs-aging-dashboard.md) | Current-truth review freshness grouped by owner surface. |
 | Command snippet inventory (generated) | [Command Snippet Inventory](generated/command-snippet-inventory.md) | Guide command coverage vs smoke/manual registry. |
@@ -45,6 +56,7 @@ governance ledgers should prefer the canonical set above.
 
 | Question | Canonical source |
 | --- | --- |
+| Project identity and scope | [Harness-First Direction](strategy/harness-first-direction-2026-06-13.md) |
 | Current owner-operated daily behavior | [Daily-Driver Current Status](daily-driver-current-status.md) |
 | Acceptance flow inventory | [Acceptance Coverage](acceptance.md) |
 | Roadmap state | [Roadmap Status](roadmap-status.md) |
@@ -55,50 +67,20 @@ governance ledgers should prefer the canonical set above.
 | Permission and approval behavior | [Permission And Approval Playbook](permission-and-approval-playbook.md) |
 | Operator trust model | [Operator Trust Model](operator-trust-model.md) |
 | Owner friction intake | [Operator Friction Log](work-log/operator-friction-log.md) |
+| Historical evidence and completed/redundant packages | [Historical Evidence Index](archive/INDEX.md) |
 
 ## Evidence And Review
 
-| Topic | Evidence package |
-| --- | --- |
-| **June 12 reflective intent critical review** | [Intent Critical Review and Worklist 2026-06-12](analysis/intent-critical-review-and-worklist-2026-06-12.md) |
-| **June 10 system critical review package (current)** | [System Critical Review Package 2026-06-10](analysis/system-critical-review-2026-06-10-INDEX.md) |
-| June 10 engineering critique refresh | [Engineering Architecture Critique Refresh](analysis/engineering-critique-refresh-2026-06-10.md) |
-| June 10 remote multi-agent readiness refresh | [Remote Multi-Agent Readiness Refresh](analysis/remote-multi-agent-readiness-refresh-2026-06-10.md) |
-| June 10 conversation experience refresh | [General-User Conversation Experience Refresh](analysis/conversation-experience-refresh-2026-06-10.md) |
-| June 10 competitor analyses vs self consolidation | [Competitor Analyses vs Self Consolidation](analysis/competitor-analyses-vs-self-consolidation-2026-06-10.md) |
-| June 10 public reasoning ledger | [System Review Reasoning Ledger 2026-06-10](analysis/system-review-reasoning-ledger-2026-06-10.md) |
-| June 10 work direction decomposition | [Work Direction Decomposition](plans/work-direction-decomposition-2026-06-10.md) |
-| June 4 project-state fact check | [Project State Cross-Review Fact Check](analysis/project-state-cross-review-fact-check-2026-06-04.md) |
-| June 4 total review | [Total Review Index](analysis/total-review-2026-06-04-INDEX.md) |
-| June 4 documentation critique | [Documentation Critical Questioning](reviews/documentation-critical-questioning-2026-06-04.md) |
-| June 1 daily-driver review package | [Daily-Driver Review Package Index](analysis/daily-driver-review-INDEX-2026-06-01.md) |
-| Active daily-driver finding closure | [Active Findings Status Ledger](analysis/active-findings-status-ledger-2026-06-06.md) |
-| Markdown governance review | [Markdown Status Review](analysis/markdown-status-review-2026-06-02.md) |
-| Competitor signal survey | [Competitor Signal Survey](analysis/competitor-signal-survey-2026-06-06.md) (June 4 snapshot: [2026-06-04](analysis/competitor-signal-survey-2026-06-04.md)) |
-| Product principles | [TeaAgent Product Principles](strategy/teaagent-product-principles-2026-06-04.md) |
-| Dynamic skill and long-result audit | [Dynamic Skill Generation And Long Result Audit](analysis/dynamic-skill-generation-and-long-result-audit-2026-06-05.md) |
-| RSS dynamic skill failure case study | [RSS Dynamic Skill Failure Case Study](analysis/rss-failure-case-study-2026-06-05.md) |
-| Agent ecosystem core values | [Agent Ecosystem Core Values](strategy/agent-ecosystem-core-values-2026-06-05.md) |
-| Dynamic skill critical questioning | [Dynamic Skill Critical Questioning](reviews/dynamic-skill-critical-questioning-2026-06-05.md) |
-| Seven control loops competitor survey | [Seven Control Loops Competitor Survey](analysis/seven-control-loops-competitor-survey-2026-06-05.md) |
-| Seven control loops product direction | [Seven Control Loops Product Direction](strategy/seven-control-loops-product-direction-2026-06-05.md) |
-| Seven control loops critical questioning | [Seven Control Loops Critical Questioning](reviews/seven-control-loops-critical-questioning-2026-06-05.md) |
-| Community agent pain points | [Community Agent Pain Points Survey](analysis/community-agent-pain-points-survey-2026-06-05.md) |
-| June 6 system critical review package | [System Critical Review Package](analysis/system-critical-review-2026-06-06-INDEX.md) |
-| June 6 source-backed competitor self-comparison | [Competitor Self-Comparison Matrix](analysis/competitor-self-comparison-matrix-2026-06-06.md) |
-| June 6 competitive claim hygiene | [Competitive Claim Audit](analysis/competitive-claim-audit-2026-06-06.md) |
-| June 6 public reasoning ledger | [System Review Reasoning Ledger](analysis/system-review-reasoning-ledger-2026-06-06.md) |
-| June 6 critical-question map | [System Interrogation Map](analysis/system-interrogation-map-2026-06-06.md) |
-| June 6 engineering architecture critique | [Engineering Architecture Critique](analysis/engineering-architecture-critique-2026-06-06.md) |
-| June 6 multi-agent coordination critique | [Multi-Agent Coordination Critique](analysis/multi-agent-coordination-critique-2026-06-06.md) |
-| June 6 conversation UX analysis | [User Experience And Conversation Patterns](analysis/user-experience-and-conversation-patterns-2026-06-06.md) |
-| June 6 risk and trust model critique | [Risk And Trust Model Critique](analysis/risk-and-trust-model-critique-2026-06-06.md) |
-| Phase 0-to-1 outlook | [Phase 0 To Phase 1 Outlook](strategy/phase-0-to-phase-1-outlook-2026-06-04.md) |
-| Malleable governed agent harness | [Malleable Governed Agent Harness](strategy/malleable-governed-agent-harness-2026-06-03.md) |
-| Historical daily-driver roadmap rationale | [Daily-Driver Roadmap Rationale](strategy/daily-driver-roadmap-rationale-2026-06-04.md) |
-| Historical daily-driver critique and counterarguments | [Daily-Driver Critique And Counterarguments](reviews/daily-driver-critique-and-counterarguments-2026-06-04.md) |
-| Historical daily-driver docs package review | [Daily-Driver Docs Package Review](reviews/daily-driver-docs-package-review-2026-06-02.md) |
-| Historical daily-driver red-team review | [Daily-Driver Red Team Review](reviews/daily-driver-red-team-review-2026-06-02.md) |
+Evidence packages are historical unless this index names them as current truth.
+Use this short list instead of scanning every dated analysis file.
+
+| Need | Start here | Status |
+| --- | --- | --- |
+| Current direction and scope | [Harness-First Direction](strategy/harness-first-direction-2026-06-13.md) | Current direction record. |
+| Latest broad review package | [System Critical Review Package 2026-06-10](analysis/system-critical-review-2026-06-10-INDEX.md) | Current dated evidence package; not timeless truth. |
+| Reflective intent review | [Intent Critical Review And Worklist](analysis/intent-critical-review-and-worklist-2026-06-12.md) | Historical input to harness-first direction. |
+| Documentation system review | [Historical Evidence Index](archive/INDEX.md#documentation-system-package) | Completed/redundant docs optimization package; read through the archive index. |
+| Older review packages, competitor surveys, daily-driver packages, and completed plans | [Historical Evidence Index](archive/INDEX.md) | Preserved provenance; do not treat as current status. |
 
 ## Processes
 
@@ -216,7 +198,5 @@ for current status.
 After governance-sensitive documentation edits, run:
 
 ```bash
-python3 scripts/validate_docs_consistency.py
-python3 scripts/detect_stale_plans.py
-python3 -m pytest tests/test_docs_consistency.py tests/acceptance/test_docs_acceptance_count_accuracy.py -q
+python3 scripts/verify_docs.sh
 ```

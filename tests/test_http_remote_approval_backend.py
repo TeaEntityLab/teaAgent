@@ -16,9 +16,12 @@ from teaagent.subagents._approval_queue import (
     SubagentApprovalRequest,
     get_approval_queue,
 )
+from test_support import skip_if_socket_bind_is_blocked
 
 
 def test_http_remote_backend_second_client_grants() -> None:
+    skip_if_socket_bind_is_blocked()
+
     with TemporaryDirectory() as tmp:
         root = Path(tmp)
         file_backend = FileBackedApprovalBackend(root)
@@ -67,6 +70,8 @@ def test_http_remote_backend_second_client_grants() -> None:
 
 
 def test_resolve_remote_http_backend(monkeypatch) -> None:
+    skip_if_socket_bind_is_blocked()
+
     with TemporaryDirectory() as tmp:
         root = Path(tmp)
         server = ApprovalCoordinationHttpServer(

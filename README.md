@@ -1,6 +1,6 @@
 # TeaAgent
 
-> **Last reviewed:** 2026-06-13
+> **Last reviewed:** 2026-06-17
 > **Review trigger:** README feature claims, golden path, or provider count changes.
 > **Direction record:** [Harness-First Direction](docs/strategy/harness-first-direction-2026-06-13.md) (owner-operator harness-first current direction)
 
@@ -115,6 +115,7 @@ Same as the [golden path](#golden-path-first-hour) above. Prefer `--human` on `d
 
 ### 6. Docs
 
+- Documentation front door: [docs/INDEX.md](docs/INDEX.md)
 - Quick start: [docs/USAGE.md](docs/USAGE.md)
 - CLI/MCP reference: [docs/cli.md](docs/cli.md)
 - Troubleshooting: [docs/troubleshooting.md](docs/troubleshooting.md)

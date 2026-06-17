@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import importlib.util
 import subprocess
 import tempfile
 from collections.abc import Callable
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Sequence
 
 import pytest
 
@@ -14,6 +15,42 @@ from teaagent.policy import ApprovalPolicy
 from teaagent.run_store import RunStore
 from teaagent.types import AuditLogger, PermissionMode, ToolRegistry
 from test_support import can_bind_loopback, skip_if_socket_bind_is_blocked
+
+_REQUIRED_TEST_DEPENDENCIES = {
+    'hypothesis': (
+        'tests/test_cli_fuzz_parsers.py',
+        'tests/test_property_invariants.py',
+    ),
+}
+
+
+def _selected_tests_include(
+    selectors: Sequence[str], required_paths: Sequence[str]
+) -> bool:
+    if not selectors:
+        return True
+    for selector in selectors:
+        if selector.startswith('-'):
+            continue
+        selected_path = selector.split('::', 1)[0]
+        if selected_path in {'', '.', 'tests'}:
+            return True
+        normalized = selected_path.rstrip('/')
+        for required_path in required_paths:
+            if required_path == normalized or required_path.startswith(
+                f'{normalized}/'
+            ):
+                return True
+    return False
+
+
+def _missing_test_dependencies(selectors: Sequence[str] = ()) -> list[str]:
+    return [
+        module
+        for module, required_paths in _REQUIRED_TEST_DEPENDENCIES.items()
+        if _selected_tests_include(selectors, required_paths)
+        and importlib.util.find_spec(module) is None
+    ]
 
 
 @pytest.fixture
@@ -366,6 +403,16 @@ def pytest_sessionstart(session: pytest.Session) -> None:
     can trigger segfaults on Python 3.10.  Pre-importing modules here
     warms schema caches before the bulk of coverage tracking begins.
     """
+    missing = _missing_test_dependencies(session.config.args)
+    if missing:
+        pytest.exit(
+            'Missing test dependencies: '
+            + ', '.join(missing)
+            + '. Install the repository test environment with: '
+            + 'pip install -e ".[dev]"',
+            returncode=4,
+        )
+
     # Pre-import high-traffic teaagent modules so their type-evaluation
     # happens once, not under coverage pressure.
     _preimport_modules = [
@@ -387,6 +434,7 @@ def pytest_sessionstart(session: pytest.Session) -> None:
 
 __all__ = [
     'FakeAdapter',
+    '_missing_test_dependencies',
     'fake_adapter',
     'skip_if_socket_bind_is_blocked',
     'temp_workspace',

@@ -56,6 +56,16 @@ def test_validate_test_quality_report_mode_fails_on_collection_error():
         assert 'pytest collection failed' in errors[0]
 
 
+def test_verify_docs_uses_lean_docs_consistency_mode():
+    """The docs gate should not require full dev test dependencies."""
+    repo_root = Path(__file__).resolve().parents[1]
+    verify_docs = repo_root / 'scripts' / 'verify_docs.sh'
+
+    text = verify_docs.read_text(encoding='utf-8')
+
+    assert 'scripts/validate_docs_consistency.py --test-quality-mode off' in text
+
+
 def test_validate_test_quality_strict_mode_fails():
     """Test that strict mode adds errors for weak tests."""
     with tempfile.TemporaryDirectory() as tmp:
