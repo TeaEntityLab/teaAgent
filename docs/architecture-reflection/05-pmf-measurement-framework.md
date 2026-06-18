@@ -4,7 +4,7 @@
 > **Priority:** P1 — necessary before scaling user acquisition.
 > **Last reviewed:** 2026-06-09
 > **Depends on:** [01-founder-playbook-reflection.md](01-founder-playbook-reflection.md) (Learning 5)
-> **Work plan:** [Phase 04: PMF Framework](../../plans/phase-04-pmf-framework.md)
+> **Work plan:** [Phase 04: PMF Framework](../plans/phase-04-pmf-framework.md)
 
 ## Problem Statement
 

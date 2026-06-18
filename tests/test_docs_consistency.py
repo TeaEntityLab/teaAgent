@@ -283,6 +283,49 @@ def test_current_roadmap_stays_owner_operator_harness_first() -> None:
     assert 'external-facing release channels' not in roadmap
 
 
+def test_doc_cross_references_fail_for_non_historical_docs(tmp_path: Path) -> None:
+    docs = tmp_path / 'docs'
+    docs.mkdir()
+    (docs / 'guide.md').write_text('[missing](missing.md)\n', encoding='utf-8')
+
+    errors = _VALIDATE_MODULE.validate_doc_cross_references(
+        repo_root=tmp_path,
+        emit_historical_warnings=False,
+    )
+
+    assert len(errors) == 1
+    assert 'docs/guide.md' in errors[0]
+
+
+def test_doc_cross_references_keep_historical_links_non_blocking(
+    tmp_path: Path,
+) -> None:
+    plans = tmp_path / 'docs' / 'plans'
+    plans.mkdir(parents=True)
+    (plans / 'old.md').write_text('[missing](missing.md)\n', encoding='utf-8')
+
+    errors = _VALIDATE_MODULE.validate_doc_cross_references(
+        repo_root=tmp_path,
+        emit_historical_warnings=False,
+    )
+
+    assert errors == []
+
+
+def test_doc_cross_references_ignore_fenced_examples(tmp_path: Path) -> None:
+    (tmp_path / 'README.md').write_text(
+        '```markdown\n[template](missing.md)\n```\n',
+        encoding='utf-8',
+    )
+
+    errors = _VALIDATE_MODULE.validate_doc_cross_references(
+        repo_root=tmp_path,
+        emit_historical_warnings=False,
+    )
+
+    assert errors == []
+
+
 def test_current_direction_guard_detects_old_adoption_framing() -> None:
     errors = _VALIDATE_MODULE.validate_current_direction_claims(
         readme_text=(

@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, ClassVar, Optional
 
 from teaagent.asset_provenance import ProvenanceRecord
 from teaagent.proof_of_use import ProofOfUseBundle, build_proof_of_use
@@ -34,6 +34,8 @@ class CommandEvidence:
 @dataclass
 class TestEvidence:
     """Evidence of a test run during a run."""
+
+    __test__: ClassVar[bool] = False
 
     test_name: str
     test_file: str
@@ -898,19 +900,13 @@ def build_evidence_from_events(
 ) -> RunEvidenceBundle:
     """Fold a typed ``RunEvent`` stream into a :class:`RunEvidenceBundle`.
 
-    ADR 0032 M6 (FOLD-T001): the read-side counterpart to
-    :func:`build_run_evidence_bundle`. Where the legacy builder sources raw
-    audit dicts directly from :class:`RunStore`, this builder folds the **typed**
-    event stream produced by ``read_run_events_from_audit`` /
-    ``read_run_events_from_jsonl`` (M2-T001 reader). Because every evidence-
-    bearing audit event is now typed in ``RunEventType`` (M2 + M3 + M5), the
-    typed reader is lossless for evidence, so this bundle equals the legacy
-    bundle for the same run.
-
-    This is a **parallel** builder: the legacy path stays the default (no
-    fallback flag, ADR 0032 Q1); parity is asserted by test, not a runtime
-    switch. The two builders share :func:`_assemble_evidence_bundle`, so they
-    cannot drift — the only difference is the event *source*.
+    ADR 0032 M6 (FOLD-T001/T002): this is the production fold used by
+    :func:`build_run_evidence_bundle`. Persisted audit entries are first mapped
+    into the typed stream by ``read_run_events_from_audit``; every evidence-
+    bearing audit event is covered by ``RunEventType`` (M2 + M3 + M5), so the
+    conversion is lossless for evidence. The internal raw-dict assembler is an
+    implementation helper after typed conversion, not an alternate production
+    path or fallback flag.
 
     Args:
         events: Typed run events (from the M2-T001 reader over persisted audit).
@@ -943,10 +939,11 @@ def _assemble_evidence_bundle(
 ) -> RunEvidenceBundle:
     """Assemble a :class:`RunEvidenceBundle` from raw audit-event dicts.
 
-    Shared by :func:`build_run_evidence_bundle` (legacy/RunStore source) and
-    :func:`build_evidence_from_events` (typed-stream fold) so the two paths
-    cannot diverge. Pure over the supplied ``events`` plus on-disk artifacts
-    (undo journal, context health) keyed by ``root``/``run_id``.
+    Internal to the typed-stream production fold. It reconstructs the existing
+    extractor input shape after taxonomy validation, keeping extractor logic
+    shared without preserving a second raw-event production path. Pure over the
+    supplied ``events`` plus on-disk artifacts (undo journal, context health)
+    keyed by ``root``/``run_id``.
     """
     commands = extract_commands_run(events)
     tests = extract_tests(events)

@@ -56,9 +56,12 @@ class TestHybridApprovalQueuePerformance:
     """Performance and stress tests for hybrid approval queue."""
 
     def test_large_scale_queue_performance(
-        self, temp_workspace, sample_request_factory
+        self, temp_workspace, sample_request_factory, request
     ):
         """Test performance with 1000+ pending requests."""
+        if hasattr(request.config, 'workerinput'):
+            pytest.skip('wall-clock performance threshold requires a dedicated process')
+
         config = HybridApprovalQueueConfig(workspace_root=temp_workspace)
         store = HybridApprovalQueueStore(config)
 

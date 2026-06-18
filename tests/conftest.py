@@ -21,6 +21,10 @@ _REQUIRED_TEST_DEPENDENCIES = {
         'tests/test_cli_fuzz_parsers.py',
         'tests/test_property_invariants.py',
     ),
+    'redis': (
+        'tests/test_hybrid_approval_queue.py',
+        'tests/test_hybrid_approval_queue_redis_failures.py',
+    ),
 }
 
 

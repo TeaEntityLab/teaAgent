@@ -4,7 +4,7 @@
 
 **Stale threshold:** 90 days since `Last reviewed`
 **Current-truth docs scanned:** 17
-**Needs attention (working tier only):** 2
+**Needs attention (working tier only):** 4
 **Archive-tier docs (exempt from staleness):** 1
 
 Regenerate: `python3 scripts/report_docs_aging.py`
@@ -22,6 +22,18 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 | Document | Status | Last reviewed | File mtime | Notes |
 | --- | --- | --- | --- | --- |
 | `docs/cli.md` | stale_by_mtime | 2026-06-06 | 2026-06-14 | Missing owner banner; File modified after last reviewed date |
+
+### daily-driver
+
+| Document | Status | Last reviewed | File mtime | Notes |
+| --- | --- | --- | --- | --- |
+| `docs/USAGE.md` | stale_by_mtime | 2026-06-06 | 2026-06-18 | Missing owner banner; File modified after last reviewed date |
+
+### docs
+
+| Document | Status | Last reviewed | File mtime | Notes |
+| --- | --- | --- | --- | --- |
+| `docs/INDEX.md` | stale_by_mtime | 2026-06-17 | 2026-06-18 | Missing owner banner; File modified after last reviewed date |
 
 ## Archive Tier (Dated, Immutable Records — Exempt from Staleness Checks)
 

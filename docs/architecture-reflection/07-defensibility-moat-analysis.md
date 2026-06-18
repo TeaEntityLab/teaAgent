@@ -4,7 +4,7 @@
 > **Priority:** P2 — important but not blocking pre-PMF validation.
 > **Last reviewed:** 2026-06-09
 > **Depends on:** [01-founder-playbook-reflection.md](01-founder-playbook-reflection.md) (Learning 7)
-> **Work plan:** [Phase 06: Data Flywheel](../../plans/phase-06-data-flywheel.md)
+> **Work plan:** [Phase 06: Data Flywheel](../plans/phase-06-data-flywheel.md)
 
 ## Moat Framework (from Founder's Playbook)
 

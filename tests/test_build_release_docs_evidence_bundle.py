@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
@@ -101,3 +102,42 @@ def test_build_release_docs_evidence_bundle_for_repo() -> None:
     assert bundle['git']['commit']
     assert bundle['docs_freshness']['scanned'] > 0
     assert isinstance(bundle['open_risks'], list)
+
+
+def test_check_preserves_recorded_gate_results(tmp_path: Path, monkeypatch) -> None:
+    module = _load_module()
+    bundle = module.build_release_docs_evidence_bundle(
+        repo_root=Path(__file__).resolve().parents[1],
+        run_gates=False,
+    )
+    bundle['commands'] = [
+        {
+            'cmd': 'python3 scripts/validate_docs_consistency.py',
+            'exit_code': 0,
+            'stdout': 'passed',
+            'stderr': '',
+        }
+    ]
+    bundle['ok'] = True
+    markdown_path = tmp_path / 'evidence.md'
+    json_path = tmp_path / 'evidence.json'
+    markdown_path.write_text(
+        module.format_release_docs_evidence_markdown(bundle), encoding='utf-8'
+    )
+    json_path.write_text(json.dumps(bundle), encoding='utf-8')
+
+    current = {**bundle, 'commands': [], 'ok': True}
+    monkeypatch.setattr(
+        module,
+        'build_release_docs_evidence_bundle',
+        lambda **_kwargs: current,
+    )
+
+    assert (
+        module.check_release_docs_evidence_bundle(
+            repo_root=tmp_path,
+            markdown_path=markdown_path,
+            json_path=json_path,
+        )
+        == []
+    )

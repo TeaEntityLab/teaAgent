@@ -27,4 +27,4 @@ Use this skill when you want chat surfaces to trigger read-only daily briefs or 
 - Treat the bridge as **untrusted input**; keep permission mode `read-only` or `prompt` with HITL.
 - Audit every tool call; rotate tokens if the channel is compromised.
 
-See [examples/ergonomics/](../../examples/ergonomics/) for desktop launcher recipes.
+See [examples/ergonomics/](../../../examples/ergonomics/) for desktop launcher recipes.

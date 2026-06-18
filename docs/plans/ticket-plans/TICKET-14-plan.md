@@ -13,7 +13,7 @@ cost accumulation after two task executions.
 ## Root Cause Analysis
 
 `test_tui_cost_shows_session_cost` in
-[`tests/test_tui.py`](../../tests/test_tui.py) (around line 1140) directly
+[`tests/test_tui.py`](../../../tests/test_tui.py) (around line 1140) directly
 sets `tui._session_cost_cents = 123.0` and then asserts the display string
 shows `$1.23`. It verifies **formatting only** — it never calls
 `_run_agent_task`, so it stays green whether or not cost accumulation is wired.

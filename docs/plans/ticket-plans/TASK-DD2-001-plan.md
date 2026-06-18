@@ -6,13 +6,13 @@
 ## Root Cause Analysis
 
 The `chat` subparser at
-[`teaagent/cli/_agent_parsers.py:634`](../../teaagent/cli/_agent_parsers.py)
+[`teaagent/cli/_agent_parsers.py:634`](../../../teaagent/cli/_agent_parsers.py)
 calls `add_agent_run_arguments(p, include_task_positional=True)`, which adds a
 positional `task` argument (`nargs='?'`, default `None`) at
-[`_agent_parsers.py:66-70`](../../teaagent/cli/_agent_parsers.py).
+[`_agent_parsers.py:66-70`](../../../teaagent/cli/_agent_parsers.py).
 
 The handler, `chat_command` at
-[`teaagent/cli/_handlers/_chat.py:538`](../../teaagent/cli/_handlers/_chat.py),
+[`teaagent/cli/_handlers/_chat.py:538`](../../../teaagent/cli/_handlers/_chat.py),
 never reads `args.task`. It delegates immediately to `run_tui(chat=True, …)`
 without forwarding the task. `run_tui` has no `initial_task` parameter, and
 `TeaAgentTUI.run()` starts the REPL loop directly — no task injection path

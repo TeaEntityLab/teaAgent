@@ -95,6 +95,12 @@ sigstore = [
 github = [
     "PyGithub>=2.0.0",
 ]
+redis = [
+    "redis>=5.0.0",
+]
+blake3 = [
+    "blake3>=0.4.0",
+]
 dev = [
     "teaagent[graphqlite]",
     "teaagent[crypto]",
@@ -104,6 +110,8 @@ dev = [
     "sigstore>=4.3.0",
     "PyGithub>=2.0.0",
     "wasmer>=1.0.0",
+    "redis>=5.0.0",
+    "blake3>=0.4.0",
     "pre-commit>=3",
     "pytest>=7",
     "pytest-cov>=4",

@@ -7,7 +7,7 @@
 
 ### CG-14 — Redundant `audit_trail` in suspension JSON
 `suspend_to_background` at
-[`teaagent/cli/_handlers/chat_repl.py:89-93`](../../teaagent/cli/_handlers/chat_repl.py)
+[`teaagent/cli/_handlers/chat_repl.py:89-93`](../../../teaagent/cli/_handlers/chat_repl.py)
 writes a `'audit_trail'` key into the suspension JSON:
 
 ```python
@@ -28,7 +28,7 @@ perpetuating the false signal.
 
 ### CG-15-doc — Stale REPL `/undo` help text
 `print_chat_help` (or the help string) in
-[`teaagent/cli/_handlers/chat_repl.py`](../../teaagent/cli/_handlers/chat_repl.py)
+[`teaagent/cli/_handlers/chat_repl.py`](../../../teaagent/cli/_handlers/chat_repl.py)
 contains:
 
 ```

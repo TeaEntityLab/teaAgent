@@ -6,7 +6,7 @@
 ## Root Cause Analysis
 
 `ChatSessionController.execute_task` at
-[`teaagent/chat_session_controller.py:143-159`](../../teaagent/chat_session_controller.py)
+[`teaagent/chat_session_controller.py:143-159`](../../../teaagent/chat_session_controller.py)
 wraps two persistence calls in blanket `except (AttributeError, TypeError): pass`
 blocks, with comments explaining the intent as mock detection:
 

@@ -4,7 +4,7 @@
 > **Priority:** P0 — structural risk that compounds if left unaddressed.
 > **Last reviewed:** 2026-06-09
 > **Depends on:** [01-founder-playbook-reflection.md](01-founder-playbook-reflection.md) (Learning 3)
-> **Work plan:** [Phase 01: Persistent Context](../../plans/phase-01-persistent-context.md)
+> **Work plan:** [Phase 01: Persistent Context](../plans/phase-01-persistent-context.md)
 
 ## Problem Statement
 

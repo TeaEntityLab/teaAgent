@@ -287,4 +287,4 @@ print(recorder.summary())
 
 - [Cloud deployment](../cloud-deployment.md) — full Kubernetes deployment reference
 - [Run evidence and audit guide](../run-evidence-and-audit-guide.md) — audit storage options
-- [Cost tracker](../docs/analysis/) — cost aggregation reports
+- [Cost tracker](../analysis/) — cost aggregation reports

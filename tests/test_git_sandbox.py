@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import subprocess
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -1246,16 +1247,19 @@ def test_os_sandbox_execute_sandboxed(tmp_path: Path) -> None:
 
 def test_os_sandbox_set_resource_limits(tmp_path: Path) -> None:
     """Test setting resource limits."""
+    import resource
+
     from teaagent.git_sandbox import OSSandbox
 
     sandbox = OSSandbox(tmp_path)
 
-    # Should return True on Unix systems where resource module is available
-    # May return False on Windows or if permissions are insufficient
-    result = sandbox.set_resource_limits()
-    # We don't assert the result since it depends on the OS and permissions
-    # Just verify it doesn't crash
-    assert isinstance(result, bool)
+    # Never lower the pytest process hard limits: that state cannot be restored
+    # and eventually kills a random later test under xdist.
+    with patch.object(resource, 'setrlimit') as setrlimit:
+        result = sandbox.set_resource_limits()
+
+    assert result is True
+    assert setrlimit.call_count == 3
 
 
 def test_is_git_repository_with_nonexistent_path() -> None:

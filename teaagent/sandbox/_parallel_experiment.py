@@ -7,7 +7,7 @@ import time
 from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, ClassVar, Optional
 
 from teaagent.sandbox._git_branch import (
     GitBranchSandbox,
@@ -19,6 +19,8 @@ from teaagent.sandbox._git_branch import (
 @dataclass(frozen=True)
 class TestExecutionResult:
     """Result of test execution on a sandbox branch."""
+
+    __test__: ClassVar[bool] = False
 
     option: str
     branch_name: str

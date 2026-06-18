@@ -1737,8 +1737,21 @@ def _collect_markdown_link_targets(
     doc_path: Path,
     repo_root: Path,
 ) -> list[tuple[str, str, Path]]:
-    """Return (label, raw_target, resolved_path) for each internal markdown link."""
-    text = doc_path.read_text(encoding='utf-8')
+    """Return (label, raw_target, resolved_path) for each internal markdown link.
+
+    Links inside fenced code blocks are skipped: they are output templates or
+    examples (e.g. ``[Article Title](URL)``), not real cross-references.
+    """
+    raw_text = doc_path.read_text(encoding='utf-8')
+    kept: list[str] = []
+    in_fence = False
+    for line in raw_text.splitlines():
+        if line.lstrip().startswith(('```', '~~~')):
+            in_fence = not in_fence
+            continue
+        if not in_fence:
+            kept.append(line)
+    text = '\n'.join(kept)
     doc_dir = doc_path.parent
     targets: list[tuple[str, str, Path]] = []
 
@@ -1825,27 +1838,40 @@ def validate_doc_cross_references(
 ) -> list[str]:
     """Check internal markdown links.
 
-    Current-truth docs: broken `.md` links fail validation.
+    Current-truth and other non-historical docs: broken `.md` links fail validation.
     Historical evidence dirs: broken links are warnings only (printed).
     """
     errors: list[str] = []
     warnings: list[str] = []
 
-    current_truth_paths = {repo_root / rel for rel in CURRENT_TRUTH_DOC_PATHS}
+    historical_roots = tuple(
+        (repo_root / rel_dir).resolve() for rel_dir in HISTORICAL_DOC_DIRS
+    )
 
-    for doc_path in sorted(current_truth_paths):
+    def _is_historical(path: Path) -> bool:
+        resolved = path.resolve()
+        return any(root in resolved.parents for root in historical_roots)
+
+    scanned: set[Path] = set()
+
+    # Curated current-truth docs (incl. root README) always fail on broken links.
+    for rel in CURRENT_TRUTH_DOC_PATHS:
+        doc_path = repo_root / rel
         if not doc_path.is_file():
             continue
         errors.extend(_scan_doc_links(doc_path=doc_path, repo_root=repo_root))
+        scanned.add(doc_path.resolve())
 
-    for rel_dir in HISTORICAL_DOC_DIRS:
-        directory = repo_root / rel_dir
-        if not directory.is_dir():
-            continue
-        for doc_path in sorted(directory.rglob('*.md')):
-            if doc_path in current_truth_paths:
+    # Every other doc under docs/: historical evidence dirs warn; the rest fail.
+    docs_root = repo_root / 'docs'
+    if docs_root.is_dir():
+        for doc_path in sorted(docs_root.rglob('*.md')):
+            if doc_path.resolve() in scanned:
                 continue
-            warnings.extend(_scan_doc_links(doc_path=doc_path, repo_root=repo_root))
+            if _is_historical(doc_path):
+                warnings.extend(_scan_doc_links(doc_path=doc_path, repo_root=repo_root))
+            else:
+                errors.extend(_scan_doc_links(doc_path=doc_path, repo_root=repo_root))
 
     if emit_historical_warnings and warnings:
         print(

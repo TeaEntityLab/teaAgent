@@ -19,6 +19,8 @@ from teaagent.types import PermissionMode, ToolRegistry
 
 
 def _opencodezen_api_key() -> str | None:
+    if os.environ.get('TEAAGENT_RUN_LIVE_TESTS') != '1':
+        return None
     key = os.environ.get('OPENCODEZEN_API_KEY')
     if key:
         return key
@@ -190,7 +192,10 @@ def test_live_model_smoke_opencodezen_go() -> None:
     """Live smoke test using the actual opencodezen-go model if key is present in environment."""
     api_key = _opencodezen_api_key()
     if not api_key:
-        pytest.skip('OPENCODEZEN_API_KEY not found; skipping live smoke test')
+        pytest.skip(
+            'live provider test disabled; set TEAAGENT_RUN_LIVE_TESTS=1 and '
+            'OPENCODEZEN_API_KEY to enable'
+        )
 
     with patch.dict(os.environ, _env_for_opencodezen()):
         # Run model smoke command via main CLI entrypoint

@@ -33,7 +33,7 @@ This directory contains all Architecture Decision Records (ADRs) for the TeaAgen
 | 0025 | Shared ChatSessionController for Chat Surfaces | Accepted and Implemented | 2026-06-01 | 2026-06-04 13:18:00 +0800 |
 | 0029 | Consensus Validation Deferred Behind Approval Queue | Accepted | 2026-06-10 | 2026-12-10 (expiry review) |
 | 0031 | Shadow Mode Exit Criteria | Proposed | 2026-06-12 | 2026-09-12 (expiry review) |
-| 0032 | Run Event Taxonomy and Event Spine | Accepted | 2026-06-13 | - |
+| 0032 | Run Event Taxonomy and Event Spine | Accepted and Implemented | 2026-06-13 | 2026-06-17 |
 
 ## ADR Categories
 

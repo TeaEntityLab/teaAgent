@@ -10,7 +10,7 @@ Tests simulate how TeaAgent is used in automated/CI/backend contexts:
   - Approval, budget, and audit flows
   - Memory, plugin, and factory operations
 
-Uses opencodezen-go/deepseek-v4-flash for live tests (skips if key absent),
+Uses opencodezen-go/deepseek-v4-flash for explicitly opted-in live tests,
 or FakeAdapter/MagicMock for fast deterministic scenarios.
 """
 
@@ -41,7 +41,9 @@ from teaagent.types import PermissionMode, ToolAnnotations, ToolRegistry
 
 
 def _opencodezen_api_key() -> str | None:
-    """Resolve opencodezen API key from env or .teaagent/env."""
+    """Resolve the live-test key only after an explicit opt-in."""
+    if os.environ.get('TEAAGENT_RUN_LIVE_TESTS') != '1':
+        return None
     key = os.environ.get('OPENCODEZEN_API_KEY')
     if key:
         return key
@@ -59,7 +61,10 @@ def _has_api_key() -> bool:
     return _opencodezen_api_key() is not None
 
 
-SKIP_REASON = 'OPENCODEZEN_API_KEY not set; skipped'
+SKIP_REASON = (
+    'live provider test disabled; set TEAAGENT_RUN_LIVE_TESTS=1 and '
+    'OPENCODEZEN_API_KEY to enable'
+)
 
 
 def _make_tmp_root() -> Path:

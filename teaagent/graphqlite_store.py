@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import sqlite3
+import subprocess
 import sys
 from dataclasses import dataclass
 from typing import Any, Callable, Optional
@@ -140,7 +142,7 @@ def ensure_sqlite_extension_loading() -> None:
     sys.modules['sqlite3'] = pysqlite3
 
 
-def check_graphqlite_runtime(database: str = ':memory:') -> tuple[bool, str]:
+def _probe_graphqlite_runtime(database: str) -> tuple[bool, str]:
     try:
         graph = load_graphqlite_graph(database)
         graph.upsert_node('teaagent_smoke', {'name': 'TeaAgent'}, label='SmokeTest')
@@ -148,3 +150,30 @@ def check_graphqlite_runtime(database: str = ':memory:') -> tuple[bool, str]:
     except (GraphQLiteUnavailableError, GraphQLiteRuntimeError) as exc:
         return False, str(exc)
     return True, 'graphqlite runtime is available'
+
+
+def check_graphqlite_runtime(database: str = ':memory:') -> tuple[bool, str]:
+    """Probe the optional native runtime without risking the caller process."""
+    probe = (
+        'import json, sys; '
+        'from teaagent.graphqlite_store import _probe_graphqlite_runtime; '
+        'print(json.dumps(_probe_graphqlite_runtime(sys.argv[1])))'
+    )
+    try:
+        result = subprocess.run(
+            [sys.executable, '-c', probe, database],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return False, f'graphqlite runtime probe failed: {exc}'
+    if result.returncode != 0:
+        detail = result.stderr.strip() or f'exit code {result.returncode}'
+        return False, f'graphqlite runtime probe failed: {detail}'
+    try:
+        available, message = json.loads(result.stdout.strip())
+    except (json.JSONDecodeError, TypeError, ValueError) as exc:
+        return False, f'graphqlite runtime probe returned invalid output: {exc}'
+    return bool(available), str(message)

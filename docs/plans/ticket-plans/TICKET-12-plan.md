@@ -26,19 +26,19 @@
 to unify CLI and TUI execution. Its docstring at lines 3-5 and 43-45 claims it
 "unifies the execution logic between CLI and TUI surfaces." However,
 `tui/__init__.py` does not import or use it — `_run_agent_task` at
-[`tui/__init__.py:842`](../../teaagent/tui/__init__.py) calls `run_chat_agent`
+[`tui/__init__.py:842`](../../../teaagent/tui/__init__.py) calls `run_chat_agent`
 directly.
 
 ### CG-11 (symptom: cost $0.00)
 `self._session_cost_cents` is initialized to `0.0` at
-[`tui/__init__.py:186`](../../teaagent/tui/__init__.py) and **read** at lines
+[`tui/__init__.py:186`](../../../teaagent/tui/__init__.py) and **read** at lines
 744, 748, 762, 791, 805 but **never incremented**. `grep '_session_cost_cents
 +=' tui/__init__.py` → zero matches. The controller's cost accumulation at
 `chat_session_controller.py:168` (`session_state.session_cost_cents +=
 result.cost_cents`) never fires for TUI sessions.
 
 ### CG-15 (symptom: divergent undo)
-TUI `_handle_undo` at [`tui/__init__.py:812`](../../teaagent/tui/__init__.py)
+TUI `_handle_undo` at [`tui/__init__.py:812`](../../../teaagent/tui/__init__.py)
 calls `_restore_checkpoint()` — a git-stash path (`tui/__init__.py:641-707`).
 REPL `/undo` uses `UndoJournal.restore()` via the controller
 (`chat_session_controller.py:182-220`). Same command word, different recovery

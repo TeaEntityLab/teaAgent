@@ -1,5 +1,5 @@
 # Daily-Driver Current Status
-# As of 2026-06-05
+# As of 2026-06-18
 
 > **Claim class:** Current truth for daily-driver behavior (TUI, chat, agent mode,
 > approval, cost, undo, resume).
@@ -11,7 +11,7 @@
 > `docs/analysis/`.
 >
 > **Review trigger:** TUI, chat, agent mode, approval, cost, undo, or resume behavior changes.
-> **Last reviewed:** 2026-06-07 (H1 daily operator loop complete)
+> **Last reviewed:** 2026-06-18 (REPL suspend/resume truth reconciled)
 
 This page is the short daily-use entry point for TeaAgent's TUI, TUI chat, and
 agent mode. It is intentionally more practical than the audit corpus.
@@ -142,7 +142,6 @@ bug or that TeaAgent has already fixed the class.
 
 | Issue | Practical impact | Tracking |
 |-------|------------------|----------|
-| Full REPL-originated suspend→resume rehydration is still open. | Users should inspect suspended REPL sessions with `teaagent agent interactive-review <run_id>`; real CLI resume remains Phase 2 work. | AG-03 / TICKET-16 Phase 2 |
 | Dynamic generated skills are not yet proven end-to-end. | Treat generated skills as governed candidates until a run proves activation, source preservation, and output verification. Do not rely on RSS/WebSearch skill summaries as fully reliable yet. | DSK-P0-001 through DSK-P0-004 |
 | Seven-control-loop model is not implemented as a runtime contract yet. | Treat it as a planning model until SCL-P0 work adds explicit spec binding, route receipts, review artifacts, gate packets, and goal records. | SCL-P0-001 through SCL-P0-007 |
 | Community pain-point mitigations are mostly planning artifacts today. | Routing, memory, review, cost, long-task, and dynamic asset receipts need implementation and tests before they can be claimed as fixed. | CPP-P0-001 through CPP-P0-008 |
@@ -165,7 +164,7 @@ bug or that TeaAgent has already fixed the class.
 | Failure-card matching has stopword filtering and relevance threshold. | Matching requires 2+ significant words in common to avoid false positives from unrelated tasks. | TASK-DD2-012 |
 | Memory and run store corruption warnings surfaced. | `health_report()` methods track corrupt entries; preflight/daily show warnings for degraded state. | TASK-DD2-011 |
 | Headless TUI path tests hardened. | Tests now drive through actual command paths (cost, root, initial task, undo, approvals) rather than helper functions. | TASK-DD2-013 |
-| REPL `/background` suspend output made honest. | `suspend_to_background()` now prints the working `teaagent agent interactive-review <run_id>` path and no longer advertises broken `teaagent resume` or `--detach` hints. | TICKET-16 Phase 1 |
+| REPL suspend→resume round-trip restored. | `suspend_to_background()` records `run_started` before `session_suspended`, so `teaagent agent resume <run_id>` can recover the task; `test_repl_suspend_resume_roundtrip` covers the path. | TICKET-16 Phase 2 |
 | TUI `session clear` now clears persisted chat messages. | The command empties the active session's `messages` list, saves it, and reports an error when no active session exists. | TUI session UX |
 | Run evidence summaries surfaced in agent mode payload. | `run_evidence` field added to agent run output with commands, tests, approvals, gaps. | — |
 | Updated daily-driver status docs. | Removed stale known issues, added recently-fixed section. | — |

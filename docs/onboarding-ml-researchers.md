@@ -381,9 +381,9 @@ teaagent run "Train model" --use-cache preprocessed-data
 ## Resources
 
 - **Architecture**: [docs/architecture.md](architecture.md)
-- **Context Bus**: [docs/architecture.md#context-bus](architecture.md#context-bus)
+- **Context Bus**: [docs/architecture.md](architecture.md)
 - **Skills**: [docs/skill-governance.md](skill-governance.md)
-- **Research Examples**: [examples/research/](../examples/research/)
+- **Runnable Examples**: [examples/](../examples/)
 
 ## Support
 

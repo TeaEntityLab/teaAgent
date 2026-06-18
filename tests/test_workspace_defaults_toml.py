@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -10,6 +11,15 @@ from teaagent.ergonomics.workspace_defaults import (
     _parse_flat_toml,
     load_workspace_defaults,
 )
+
+
+@pytest.fixture(autouse=True)
+def _restore_process_environment() -> Iterator[None]:
+    """Keep env-file loading tests from contaminating random-order workers."""
+    original = os.environ.copy()
+    yield
+    os.environ.clear()
+    os.environ.update(original)
 
 
 def test_parse_flat_toml_skips_comments_and_blank_lines() -> None:

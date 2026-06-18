@@ -108,7 +108,7 @@ When adding new provider adapters or model support:
 
 ## Related Documentation
 
-- [Provider Adapter Implementation](../teaagent/llm.py)
+- [Provider Adapter Factory](../teaagent/llm/_config.py)
 - [Tool Registry](../teaagent/tools.py)
 - [Budget Enforcement](../teaagent/budget.py)
-- [Multi-Sig Consensus](../teaagent/consensus.py)
+- [Multi-Sig Consensus](../teaagent/consensus/consensus_validation.py)

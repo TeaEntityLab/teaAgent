@@ -102,12 +102,19 @@ class DockerSandbox:
         return None
 
     def preflight(self) -> dict[str, str]:
-        result = subprocess.run(
-            ['docker', 'info'],
-            check=False,
-            capture_output=True,
-            text=True,
-        )
+        try:
+            result = subprocess.run(
+                ['docker', 'info'],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+        except OSError as exc:
+            return {
+                'status': 'fallback',
+                'runtime': 'wasm',
+                'reason': str(exc),
+            }
         if result.returncode == 0:
             return {'status': 'ok', 'runtime': 'docker'}
         return {

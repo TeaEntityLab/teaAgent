@@ -28,8 +28,8 @@ No historical file is deleted or moved by this model. The generated
 | What can the owner-operator trust today? | [Daily-Driver Current Status](daily-driver-current-status.md) | Current truth for owner-operated daily use; update whenever TUI, chat, agent mode, approval, cost, undo, or resume behavior changes. |
 | Which docs should I read, skip, or treat as history? | [Historical Evidence Index](archive/INDEX.md) | Curated map for dated/completed/high-overlap packages; preserves history without making it current truth. |
 | What is the documentation operating model? | [Documentation Operating Model](governance/documentation-operating-model-2026-06-04.md) | Governance rulebook for claim types, TTL, owners, supersession, and CI guard targets. |
-| What should be done next? | [Work Direction Execution Index](plans/work-direction-execution-index-2026-06-10.md) | Sprint 1 truth pass (WDA-001, WDB-001, WDB-003, WDG-001/002) after the June 10 critical review. |
-| How should ADR 0032 M1-M6 be executed? | [ADR 0032 M1-M6 Work Plan](plans/adr-0032-m1-m6-work-plan-2026-06-13.md) | Event-spine migration plan for audit, receipts/evidence, gates, hooks, ContextBus, and webhooks. |
+| What should guide the next change? | [Operator Friction Log](work-log/operator-friction-log.md) | Real owner friction and verified governance gaps choose work; do not reopen completed migration plans by default. |
+| What is the event-spine contract? | [ADR 0032: Run Event Taxonomy And Event Spine](adr/0032-run-event-taxonomy.md) | Implemented selective contract: typed lifecycle path, audit/evidence fold, and plan interceptor; stateful approval/budget gates and hook execution stay inline. |
 | Exhaustive docs inventory (generated) | [Docs Inventory](generated/docs-inventory.md) | Deterministic catalog; not current truth — use this index table first. |
 | Documentation aging dashboard (generated) | [Docs Aging Dashboard](generated/docs-aging-dashboard.md) | Current-truth review freshness grouped by owner surface. |
 | Command snippet inventory (generated) | [Command Snippet Inventory](generated/command-snippet-inventory.md) | Guide command coverage vs smoke/manual registry. |
@@ -60,13 +60,12 @@ governance ledgers should prefer the canonical set above.
 | Current owner-operated daily behavior | [Daily-Driver Current Status](daily-driver-current-status.md) |
 | Acceptance flow inventory | [Acceptance Coverage](acceptance.md) |
 | Roadmap state | [Roadmap Status](roadmap-status.md) |
-| Ticket execution order for current harness work | [Ticket Execution Plans](plans/ticket-plans/index.md) |
-| Work direction Sprint 1 tickets | [Work Direction Execution Index](plans/work-direction-execution-index-2026-06-10.md) |
 | Module ownership and inspection paths | [Module Documentation Index](modules/INDEX.md) |
 | Release gates | [Release Checklist](release-checklist.md) and [Daily-Driver Release Gates](governance/daily-driver-release-gates-2026-06-02.md) |
 | Permission and approval behavior | [Permission And Approval Playbook](permission-and-approval-playbook.md) |
 | Operator trust model | [Operator Trust Model](operator-trust-model.md) |
 | Owner friction intake | [Operator Friction Log](work-log/operator-friction-log.md) |
+| Run-lifecycle event contract | [ADR 0032: Run Event Taxonomy And Event Spine](adr/0032-run-event-taxonomy.md) |
 | Historical evidence and completed/redundant packages | [Historical Evidence Index](archive/INDEX.md) |
 
 ## Evidence And Review
@@ -79,7 +78,7 @@ Use this short list instead of scanning every dated analysis file.
 | Current direction and scope | [Harness-First Direction](strategy/harness-first-direction-2026-06-13.md) | Current direction record. |
 | Latest broad review package | [System Critical Review Package 2026-06-10](analysis/system-critical-review-2026-06-10-INDEX.md) | Current dated evidence package; not timeless truth. |
 | Reflective intent review | [Intent Critical Review And Worklist](analysis/intent-critical-review-and-worklist-2026-06-12.md) | Historical input to harness-first direction. |
-| Documentation system review | [Historical Evidence Index](archive/INDEX.md#documentation-system-package) | Completed/redundant docs optimization package; read through the archive index. |
+| Documentation system review | [Historical Evidence Index](archive/INDEX.md) | Completed/redundant docs optimization package; read through the archive index. |
 | Older review packages, competitor surveys, daily-driver packages, and completed plans | [Historical Evidence Index](archive/INDEX.md) | Preserved provenance; do not treat as current status. |
 
 ## Processes
@@ -115,8 +114,6 @@ Use this short list instead of scanning every dated analysis file.
 
 | Plan | Use it for |
 | --- | --- |
-| **[Work Direction Execution Index](plans/work-direction-execution-index-2026-06-10.md)** | **Current execution order: Sprint 1 truth pass (WDA/WDB/WDG) after June 10 review.** |
-| [ADR 0032 M1-M6 Work Plan](plans/adr-0032-m1-m6-work-plan-2026-06-13.md) | Event-spine migration slices from AuditLogger consumer through ContextBus/webhook cleanup. |
 | [Work Direction Decomposition](plans/work-direction-decomposition-2026-06-10.md) | Full WD-A … WD-H backlog with acceptance gates. |
 | [Documentation Optimization Master Plan](plans/documentation-optimization-master-plan-2026-06-04.md) | Prioritizing documentation work by stability, UX, risk, and ROI. |
 | [Documentation Optimization Work Items](work-log/documentation-optimization-work-items-2026-06-04.md) | Concrete task execution ledger. |
@@ -141,6 +138,8 @@ for current status.
 
 | Plan | Historical value |
 | --- | --- |
+| [Daily-Driver Ticket Closure Index](plans/ticket-plans/index.md) | June 2 daily-driver execution order and closure evidence; all listed tickets are fixed. |
+| [Work Direction Execution Index](plans/work-direction-execution-index-2026-06-10.md) | June 10 Sprint 1-6 execution and closure record; use owner friction and the canonical roadmap for current work. |
 | [Competitive Positioning Plan](plans/competitive-positioning-plan-2026-05-31.md) | May 2026 competitive baseline; superseded by [Competitor Signal Survey](analysis/competitor-signal-survey-2026-06-04.md). |
 | [Remediation Roadmap](plans/remediation-roadmap.md) | Post-audit remediation from 2026-05-29; absorbed into Phase 0 trust repair. |
 | [Governance Hardening](plans/governance-hardening.md) | Early governance plan (2026-05-28); superseded by [Documentation Operating Model](governance/documentation-operating-model-2026-06-04.md). |

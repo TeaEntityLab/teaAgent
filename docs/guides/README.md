@@ -46,7 +46,7 @@ All examples in this directory run without API keys using deterministic or stub 
 
 - **Ask a question** → [Use Cases § Simple Chat](use-cases.md#1-simple-chat-session)
 - **Run autonomously with a cost cap** → [Use Cases § Cost-Limited Run](use-cases.md#3-cost-limited-autonomous-run)
-- **Pause and resume a long run** → [Use Cases § Suspended Session](use-cases.md#4-suspendedresumed-session)
+- **Pause and resume a long run** → [Use Cases](use-cases.md)
 - **Add a new tool** → [Tool Development](tool-development.md)
 - **Package tools as a plugin** → [Integration Guide § Plugin Development](integration-guide.md#4-plugin-development)
 - **Connect a new LLM provider** → [Integration Guide § LLM Provider](integration-guide.md#1-adding-a-new-llm-provider)

@@ -40,15 +40,16 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
+from types import ModuleType
 from typing import Optional
 
+_blake3: ModuleType | None
 try:
-    import blake3 as _blake3
-
-    _BLAKE3_AVAILABLE = True
+    import blake3
 except ImportError:
     _blake3 = None
-    _BLAKE3_AVAILABLE = False
+else:
+    _blake3 = blake3
 
 logger = logging.getLogger(__name__)
 
@@ -87,21 +88,21 @@ def set_hash_algorithm(algo: str) -> None:
     global _hash_algorithm
     if algo not in ('sha256', 'blake3'):
         raise ValueError(f'unsupported hash algorithm: {algo!r}')
-    if algo == 'blake3' and not _BLAKE3_AVAILABLE:
+    if algo == 'blake3' and _blake3 is None:
         raise ImportError('Blake3 is not installed. Install with: pip install blake3')
     _hash_algorithm = algo
 
 
 def _hash_bytes(data: bytes) -> bytes:
     """Compute the configured hash of *data*."""
-    if _hash_algorithm == 'blake3' and _BLAKE3_AVAILABLE:
+    if _hash_algorithm == 'blake3' and _blake3 is not None:
         return _blake3.blake3(data).digest()
     return hashlib.sha256(data).digest()
 
 
 def _hash_hex(data: bytes) -> str:
     """Compute the configured hash of *data*, returning a hex string."""
-    if _hash_algorithm == 'blake3' and _BLAKE3_AVAILABLE:
+    if _hash_algorithm == 'blake3' and _blake3 is not None:
         return _blake3.blake3(data).hexdigest()
     return hashlib.sha256(data).hexdigest()
 

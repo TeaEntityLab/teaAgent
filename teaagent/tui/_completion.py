@@ -108,11 +108,8 @@ def _get_cached_symbols(root: Path) -> list[str]:
         if cached is not None and (now - cached[0]) < _ONTOLOGY_CACHE_TTL:
             return cached[1]
 
-    if _index_ready.is_set():
-        # Background worker has populated at least once; return empty rather than block
-        return []
-
-    # Synchronous fallback for first call before background worker completes
+    # A global ready signal may belong to another workspace. On a per-root cache
+    # miss, build synchronously so one workspace cannot suppress another's symbols.
     try:
         symbols = _build_ontology_symbols(root)
         with _index_lock:

@@ -4,7 +4,7 @@
 > **Priority:** P1 — strategic clarity, not immediately blocking.
 > **Last reviewed:** 2026-06-09
 > **Depends on:** [01-founder-playbook-reflection.md](01-founder-playbook-reflection.md) (Learning 2)
-> **Work plan:** [Phase 03: Competitive Analysis](../../plans/phase-03-competitive-analysis.md)
+> **Work plan:** [Phase 03: Competitive Analysis](../plans/phase-03-competitive-analysis.md)
 
 ## Methodology
 

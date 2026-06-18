@@ -1,6 +1,6 @@
 # Governance Compliance
 
-> Maps [AGENTS.md](../../AGENTS.md) rules to automated verification.
+> Maps [AGENTS.md](../AGENTS.md) rules to automated verification.
 
 | Rule | Verification |
 |------|----------------|

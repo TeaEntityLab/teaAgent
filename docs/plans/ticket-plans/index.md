@@ -1,22 +1,22 @@
 # Ticket Execution Plans — Master Index
 **Date:** 2026-06-02 | **Derived from:** daily-driver review passes 1-4 (2026-06-01)
 
-> **Claim class:** Current truth for daily-driver ticket closure and execution order.
+> **Claim class:** Historical closure index for the June 2 daily-driver ticket set.
 >
-> **Owns:** Which TICKET/TASK-DD2 items are fixed and their verification evidence.
+> **Owns:** Which TICKET/TASK-DD2 items were fixed and their verification evidence.
 >
 > **Does not own:** Roadmap horizons (`roadmap-status.md`) or historical finding
 > narratives in dated analysis files. For finding status roll-up see
 > [Active Findings Status Ledger](../../analysis/active-findings-status-ledger-2026-06-06.md).
 >
 > **Review trigger:** Ticket closure status or execution order changes.
-> **Last reviewed:** 2026-06-06
+> **Last reviewed:** 2026-06-18
 
 ---
 
-## Recommended Execution Order
+## Historical Execution Order
 
-The critical path as of the June 2 re-review is:
+The critical path used by the June 2 re-review was:
 
 ```
 TASK-DD2-002 (explicit TUI root)
@@ -81,22 +81,22 @@ only the daily-driver fixes:
 
 | File | Relevant Tickets |
 |------|-----------------|
-| [`teaagent/tui/__init__.py`](../../teaagent/tui/__init__.py) | TICKET-12, TICKET-14, TASK-DD2-001, TASK-DD2-002 |
-| [`teaagent/chat_session_controller.py`](../../teaagent/chat_session_controller.py) | TICKET-12, TICKET-13 |
-| [`teaagent/cli/_handlers/chat_repl.py`](../../teaagent/cli/_handlers/chat_repl.py) | TICKET-15, TICKET-16 |
-| [`teaagent/cli/_handlers/_agent.py`](../../teaagent/cli/_handlers/_agent.py) | TICKET-15, TICKET-16 |
-| [`teaagent/run_store.py`](../../teaagent/run_store.py) | TICKET-16 |
-| [`teaagent/cli/_handlers/_chat.py`](../../teaagent/cli/_handlers/_chat.py) | TASK-DD2-001 |
-| [`teaagent/cli/_agent_parsers.py`](../../teaagent/cli/_agent_parsers.py) | TASK-DD2-001 |
-| [`tests/test_tui.py`](../../tests/test_tui.py) | TICKET-14, TICKET-12 |
-| [`teaagent/cli/_handlers/agent_helpers.py`](../../teaagent/cli/_handlers/agent_helpers.py) | TASK-DD2-004 |
-| [`teaagent/ergonomics/_approval_grants.py`](../../teaagent/ergonomics/_approval_grants.py) | TASK-DD2-004 |
-| [`teaagent/git_sandbox.py`](../../teaagent/git_sandbox.py) | TASK-DD2-005 |
-| [`teaagent/ergonomics/dry_run.py`](../../teaagent/ergonomics/dry_run.py) | TASK-DD2-008 |
-| [`teaagent/context_pack.py`](../../teaagent/context_pack.py) | TASK-DD2-009 |
-| [`teaagent/memory/pinned_file.py`](../../teaagent/memory/pinned_file.py) | TASK-DD2-010 |
-| [`teaagent/memory/catalog.py`](../../teaagent/memory/catalog.py) | TASK-DD2-011 |
-| [`teaagent/memory/failure_card.py`](../../teaagent/memory/failure_card.py) | TASK-DD2-012 |
+| [`teaagent/tui/__init__.py`](../../../teaagent/tui/__init__.py) | TICKET-12, TICKET-14, TASK-DD2-001, TASK-DD2-002 |
+| [`teaagent/chat_session_controller.py`](../../../teaagent/chat_session_controller.py) | TICKET-12, TICKET-13 |
+| [`teaagent/cli/_handlers/chat_repl.py`](../../../teaagent/cli/_handlers/chat_repl.py) | TICKET-15, TICKET-16 |
+| [`teaagent/cli/_handlers/_agent/resume.py`](../../../teaagent/cli/_handlers/_agent/resume.py) | TICKET-15, TICKET-16 |
+| [`teaagent/run_store.py`](../../../teaagent/run_store.py) | TICKET-16 |
+| [`teaagent/cli/_handlers/_chat.py`](../../../teaagent/cli/_handlers/_chat.py) | TASK-DD2-001 |
+| [`teaagent/cli/_agent_parsers.py`](../../../teaagent/cli/_agent_parsers.py) | TASK-DD2-001 |
+| [`tests/test_tui.py`](../../../tests/test_tui.py) | TICKET-14, TICKET-12 |
+| [`teaagent/cli/_handlers/agent_helpers.py`](../../../teaagent/cli/_handlers/agent_helpers.py) | TASK-DD2-004 |
+| [`teaagent/ergonomics/_approval_grants.py`](../../../teaagent/ergonomics/_approval_grants.py) | TASK-DD2-004 |
+| [`teaagent/git_sandbox.py`](../../../teaagent/git_sandbox.py) | TASK-DD2-005 |
+| [`teaagent/ergonomics/dry_run.py`](../../../teaagent/ergonomics/dry_run.py) | TASK-DD2-008 |
+| [`teaagent/context_pack.py`](../../../teaagent/context_pack.py) | TASK-DD2-009 |
+| [`teaagent/memory/pinned_file.py`](../../../teaagent/memory/pinned_file.py) | TASK-DD2-010 |
+| [`teaagent/memory/catalog.py`](../../../teaagent/memory/catalog.py) | TASK-DD2-011 |
+| [`teaagent/memory/failure_card.py`](../../../teaagent/memory/failure_card.py) | TASK-DD2-012 |
 
 ---
 

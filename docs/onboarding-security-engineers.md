@@ -276,7 +276,7 @@ teaagent skill verify-tsb critical-skill.tsb \
 
 - **Architecture**: [docs/architecture.md](architecture.md)
 - **Security Model**: [docs/threat-model.md](threat-model.md)
-- **Audit Log**: [docs/architecture.md#audit-log](architecture.md#audit-log)
+- **Audit Log**: [docs/architecture.md § Audit and Observability](architecture.md#3-audit-and-observability)
 - **Architecture Decisions**: [docs/adr/](adr/)
 
 ## Support

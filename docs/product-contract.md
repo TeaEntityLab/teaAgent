@@ -2,7 +2,7 @@
 
 > **Last reviewed:** 2026-06-13
 > **Review trigger:** Persona framing, external-adoption claims, or strategic positioning changes.
-> **Direction record:** [Harness-First Direction](../strategy/harness-first-direction-2026-06-13.md)
+> **Direction record:** [Harness-First Direction](strategy/harness-first-direction-2026-06-13.md)
 
 ## What TeaAgent Is
 

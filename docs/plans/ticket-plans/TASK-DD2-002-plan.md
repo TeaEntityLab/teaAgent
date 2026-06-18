@@ -6,7 +6,7 @@
 ## Root Cause Analysis
 
 `TeaAgentTUI._load_tui_state()` at
-[`teaagent/tui/__init__.py:1107`](../../teaagent/tui/__init__.py) unconditionally
+[`teaagent/tui/__init__.py:1107`](../../../teaagent/tui/__init__.py) unconditionally
 restores `self.root` from the saved state file:
 
 ```python

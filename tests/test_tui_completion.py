@@ -219,20 +219,25 @@ class TestGetCachedSymbols:
         root_key = str(tmp_path.resolve())
         assert root_key in _completion._ontology_cache
 
-    def test_returns_empty_when_cache_miss_and_background_ready(
+    def test_builds_when_cache_miss_and_another_root_is_ready(
         self, tmp_path: Path
     ) -> None:
-        """When no cache exists and background worker is already ready, return []."""
+        """A global ready signal must not suppress a per-root cache miss."""
         _completion._ontology_cache.clear()
+        expected = ['@local_symbol']
 
         with (
             patch.object(_completion, '_index_ready') as mock_ready,
+            patch.object(
+                _completion, '_build_ontology_symbols', return_value=expected
+            ) as mock_build,
             self._no_background(),
         ):
             mock_ready.is_set.return_value = True
             result = _completion._get_cached_symbols(tmp_path)
 
-        assert result == []
+        assert result == expected
+        mock_build.assert_called_once_with(tmp_path)
 
     def test_returns_cached_after_background_worker_populated(
         self, tmp_path: Path
@@ -246,7 +251,10 @@ class TestGetCachedSymbols:
         ):
             _completion._get_cached_symbols(tmp_path)
 
-        with patch.object(_completion, '_index_ready') as mock_ready:
+        with (
+            patch.object(_completion, '_index_ready') as mock_ready,
+            self._no_background(),
+        ):
             mock_ready.is_set.return_value = True
             result = _completion._get_cached_symbols(tmp_path)
 

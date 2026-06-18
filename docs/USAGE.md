@@ -151,7 +151,6 @@ For more recovery scenarios (read-only write block, budget exceeded, undo unavai
 - [Golden path](#golden-path)
 - [Setup model](#setup-model)
 - [Recovery recipes](#recovery-recipes)
-- [Installation](#installation)
 - [API Key Setup](#api-key-setup)
 - [Verify Your Setup](#verify-your-setup)
 - [Daily Use](#daily-use)

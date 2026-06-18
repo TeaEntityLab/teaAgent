@@ -54,11 +54,13 @@ def test_architecture_matrix_avoids_stale_acceptance_counts() -> None:
     assert 'docs/acceptance.md' in text or 'pytest-collected' in text.lower()
 
 
-def test_full_collection_depends_on_hypothesis_in_dev_dependencies() -> None:
+def test_full_collection_dependencies_are_declared_in_dev_extra() -> None:
     text = _PYPROJECT.read_text(encoding='utf-8')
     dev_block = re.search(r'(?ms)^dev = \[\n(.*?)^\]', text)
     assert dev_block, 'pyproject.toml missing project.optional-dependencies.dev'
-    assert '"hypothesis>=6.100"' in dev_block.group(1), (
-        'pyproject.toml should declare hypothesis in project.optional-dependencies.dev '
-        'so full pytest collection has the required fuzzing dependency'
-    )
+    for requirement in ('"hypothesis>=6.100"', '"redis>=5.0.0"'):
+        assert requirement in dev_block.group(1), (
+            f'pyproject.toml should declare {requirement} in '
+            'project.optional-dependencies.dev so full pytest collection has '
+            'all required test dependencies'
+        )

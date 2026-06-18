@@ -458,7 +458,7 @@ def test_validate_token_with_wrong_signing_key(resource_server) -> None:
         )
 
 
-@pytest.mark.skipunless(HAS_CRYPTOGRAPHY, 'cryptography not installed')
+@pytest.mark.skipif(not HAS_CRYPTOGRAPHY, reason='cryptography not installed')
 def test_dpop_bound_token_flow() -> None:
     from cryptography.hazmat.primitives.asymmetric import ec
 
@@ -585,7 +585,7 @@ def test_dpop_bound_token_flow() -> None:
         )
 
 
-@pytest.mark.skipunless(HAS_CRYPTOGRAPHY, 'cryptography not installed')
+@pytest.mark.skipif(not HAS_CRYPTOGRAPHY, reason='cryptography not installed')
 def test_dpop_bad_signature_rejected() -> None:
     from cryptography.hazmat.primitives.asymmetric import ec
 

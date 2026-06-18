@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted — owner-approved 2026-06-13 (unblocks M1: AuditLogger as consumer)
+Accepted and Implemented — owner-approved 2026-06-13; M0-M7 migration closed
+2026-06-14. The realized contract below supersedes the proposed M1-M6 phase
+shape where they differ.
 
 ## Date
 
@@ -115,7 +117,7 @@ New code lives inside the existing `teaagent/runner/` package (teaagent/runner/_
 5. Lifecycle tests assert the event sequence for the five-minute-proof scenario.
 6. Acceptance tier stays green.
 
-### Future Phases (M1–M6)
+### Original Proposed Phases (M1–M6)
 
 | Step | Change | Invariant |
 | --- | --- | --- |
@@ -126,12 +128,19 @@ New code lives inside the existing `teaagent/runner/` package (teaagent/runner/_
 | M5 | HookRegistry re-homed onto spine; public hook API documented | Existing hook tests pass via aliases |
 | M6 | ContextBus + webhook sinks consume spine; inline emission paths deleted | No orphaned eventing modules |
 
-### Realized architecture (M1–M7, completed 2026-06-13)
+### Realized architecture (M1–M7, completed 2026-06-14)
 
 The phases above were the *proposal*. Executed parity-first and assessed against
 the code at each step, the migration converged on a **narrower, sound** outcome —
 recorded here as the durable contract (see the per-phase work-logs under
 `docs/work-log/` and the plan `docs/plans/adr-0032-m1-m6-work-plan-2026-06-13.md`):
+
+| Original decision intent | Realized result |
+| --- | --- |
+| One typed, deterministic run-lifecycle contract | Preserved: `EventSpine` is synchronous and ordered; `RunEventType` closes over evidence-bearing audit events. |
+| Audit and evidence derive from that contract without compatibility loss | Preserved: audit is a critical-capable spine consumer; production evidence folds persisted audit through typed `RunEvent`s. |
+| Extract governance only when parity proves unchanged behavior | Narrowed deliberately: the plan gate moved; stateful approval and budget enforcement remained inline. |
+| Avoid competing lifecycle buses and unsafe side-effect relocation | Preserved: webhook/OTel remain audit sinks; ContextBus and `RunEventStream` remain distinct, unwired surfaces guarded by an allowlist. |
 
 - **M1** — done as proposed: `AuditLogger` is an `EventSpine` consumer
   (`register_audit_consumer`), byte-equivalent on the proof scenario.
@@ -224,7 +233,7 @@ belonged on the spine.
 - [Harness-First Direction §6](../strategy/harness-first-direction-2026-06-13.md#6-core-architecture-one-event-spine-gates-as-interceptors)
 - [Control-Loop Ownership Map §6.1](../architecture/control-loop-ownership-map-2026-06-11.md)
 - [ADR 0030: Root-Module Freeze](0030-root-module-freeze.md)
-- [ADR 0009: 5-Loop Governance System](0009-five-loop-governance.md)
+- [ADR 0009: 5-Loop Governance System](0009-5-loop-governance-system.md)
 
 ## Full Event Taxonomy (M0 + Planned)
 

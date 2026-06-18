@@ -4,7 +4,7 @@
 > **Priority:** P2 — important for Launch stage readiness, not blocking pre-PMF.
 > **Last reviewed:** 2026-06-09
 > **Depends on:** [01-founder-playbook-reflection.md](01-founder-playbook-reflection.md) (Learning 6)
-> **Work plan:** [Phase 05: Founder Systematization](../../plans/phase-05-founder-systematization.md)
+> **Work plan:** [Phase 05: Founder Systematization](../plans/phase-05-founder-systematization.md)
 
 ## Problem Statement
 
@@ -138,4 +138,4 @@ A practical test to validate systematization:
 - Founder's Playbook Learning 6: "Founder Transitions from Doer to System Designer"
 - GitHub CODEOWNERS pattern
 - [Architecture documentation](./README.md)
-- [CONTRIBUTING.md](../CONTRIBUTING.md) — existing contribution guidelines
+- [CONTRIBUTING.md](../../CONTRIBUTING.md) — existing contribution guidelines

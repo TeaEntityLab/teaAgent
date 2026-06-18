@@ -1,7 +1,7 @@
 # Release Documentation Evidence Bundle (Generated)
 
-**Generated:** 2026-06-17T00:51:46+00:00
-**Git commit:** `b80a00567b758816110447c3734309f0bfd88276` on `main`
+**Generated:** 2026-06-18T05:18:29+00:00
+**Git commit:** `41c51fca9cdbc2218ac1686f4c7e1bd058375c07` on `main`
 **Working tree dirty:** yes
 
 Regenerate: `python3 scripts/build_release_docs_evidence_bundle.py`
@@ -12,13 +12,20 @@ Regenerate: `python3 scripts/build_release_docs_evidence_bundle.py`
 - `python3 scripts/validate_docs_consistency.py`
 - `python3 scripts/report_docs_aging.py`
 
+## Last Gate Run
+
+- Overall gate status: **pass**
+- `/Users/teee/dev/teaagent/.venv/bin/python scripts/validate_docs_consistency.py` — **pass** (exit 0)
+- `/Users/teee/dev/teaagent/.venv/bin/python scripts/report_docs_aging.py --check` — **pass** (exit 0)
+
 ## Documentation Freshness
 
 - Current-truth docs scanned: **17**
-- Needs attention: **2** (>90 days)
+- Needs attention: **3** (>90 days)
 - Stale by owner surface:
   - `architecture`: 1
   - `cli`: 1
+  - `docs`: 1
 
 ## Roadmap Excerpt
 

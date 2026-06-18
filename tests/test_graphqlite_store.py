@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from subprocess import CompletedProcess
+from unittest.mock import patch
+
 from teaagent import (
     Document,
     GraphEdge,
@@ -73,9 +76,18 @@ def test_real_graphqlite_runtime_smoke_or_reports_environment_issue() -> None:
     assert message == 'graphqlite runtime is available'
 
 
-def test_graphqlite_fallback_to_dummy() -> None:
-    from unittest.mock import patch
+def test_graphqlite_runtime_probe_contains_native_crash() -> None:
+    with patch(
+        'teaagent.graphqlite_store.subprocess.run',
+        return_value=CompletedProcess([], -11, stdout='', stderr=''),
+    ):
+        available, message = check_graphqlite_runtime()
 
+    assert not available
+    assert 'exit code -11' in message
+
+
+def test_graphqlite_fallback_to_dummy() -> None:
     from teaagent.graphqlite_store import (
         DummyKnowledgeGraph,
         GraphQLiteRuntimeError,

@@ -327,7 +327,16 @@ def check_release_docs_evidence_bundle(
     if errors:
         return errors
 
+    try:
+        recorded = json.loads(json_path.read_text(encoding='utf-8'))
+    except (json.JSONDecodeError, OSError) as exc:
+        return [f'invalid generated JSON bundle: {exc}']
+
     expected = build_release_docs_evidence_bundle(repo_root=repo_root, run_gates=False)
+    # Gate output is historical evidence from generation time. Preserve it while
+    # recomputing fields that describe the current repository.
+    expected['commands'] = recorded.get('commands', [])
+    expected['ok'] = recorded.get('ok', False)
     expected_md = _normalize_generated_markdown(
         format_release_docs_evidence_markdown(expected)
     )

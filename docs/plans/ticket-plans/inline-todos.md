@@ -7,7 +7,7 @@
 
 | File | Line | Comment | Context | Action |
 |------|------|---------|---------|--------|
-| [`teaagent/issue_intake.py`](../../teaagent/issue_intake.py) | 195 | GitHub API integration | **Fixed (2026-06-09):** `extract_github_issue()` uses PyGithub with `GITHUB_TOKEN`; raises actionable errors when library/token missing. | None — closed. |
+| [`teaagent/issue_intake.py`](../../../teaagent/issue_intake.py) | 195 | GitHub API integration | **Fixed (2026-06-09):** `extract_github_issue()` uses PyGithub with `GITHUB_TOKEN`; raises actionable errors when library/token missing. | None — closed. |
 
 ---
 
@@ -18,8 +18,8 @@ are stubs left from scaffolding and are lower priority.
 
 | File | Lines | Comment | Context | Action |
 |------|-------|---------|---------|--------|
-| [`scripts/opencode_gap_watch.py`](../../scripts/opencode_gap_watch.py) | 21, 29 | GitHub API integration | **Fixed (2026-06-09):** release and governance-issue checks use `scripts/_github_api.py` (OpenCode repo configurable via `OPENCODE_GITHUB_REPO`). | Community platform checks remain manual (Reddit/Discord need separate credentials). |
-| [`scripts/community_presence_monitor.py`](../../scripts/community_presence_monitor.py) | 21, 37 | GitHub + HN API integration | **Fixed (2026-06-09):** GitHub stars via REST API; HN via Algolia public API. | Reddit/Dev.to still return empty lists until credentials are configured. |
+| [`scripts/opencode_gap_watch.py`](../../../scripts/opencode_gap_watch.py) | 21, 29 | GitHub API integration | **Fixed (2026-06-09):** release and governance-issue checks use `scripts/_github_api.py` (OpenCode repo configurable via `OPENCODE_GITHUB_REPO`). | Community platform checks remain manual (Reddit/Discord need separate credentials). |
+| [`scripts/community_presence_monitor.py`](../../../scripts/community_presence_monitor.py) | 21, 37 | GitHub + HN API integration | **Fixed (2026-06-09):** GitHub stars via REST API; HN via Algolia public API. | Reddit/Dev.to still return empty lists until credentials are configured. |
 
 ---
 

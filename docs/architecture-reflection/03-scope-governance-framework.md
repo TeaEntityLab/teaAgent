@@ -4,7 +4,7 @@
 > **Priority:** P0 — scope sprawl is the #1 AI-native startup failure mode per the Founder's Playbook.
 > **Last reviewed:** 2026-06-09
 > **Depends on:** [01-founder-playbook-reflection.md](01-founder-playbook-reflection.md) (Learning 4)
-> **Work plan:** [Phase 02: Scope Audit](../../plans/phase-02-scope-audit.md)
+> **Work plan:** [Phase 02: Scope Audit](../plans/phase-02-scope-audit.md)
 
 ## Problem Statement
 

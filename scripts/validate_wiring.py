@@ -48,8 +48,8 @@ class WiringReport(NamedTuple):
     unwired_watch: frozenset[str]
 
 
-def _module_name_for_path(path: Path) -> str:
-    relative = path.relative_to(_TEAAGENT_ROOT)
+def _module_name_for_path(path: Path, *, teaagent_root: Path = _TEAAGENT_ROOT) -> str:
+    relative = path.relative_to(teaagent_root)
     if relative.name == '__init__.py':
         parts = relative.parts[:-1]
     else:
@@ -57,10 +57,12 @@ def _module_name_for_path(path: Path) -> str:
     return 'teaagent.' + '.'.join(parts) if parts else 'teaagent'
 
 
-def discover_teaagent_modules() -> dict[str, Path]:
+def discover_teaagent_modules(
+    *, teaagent_root: Path = _TEAAGENT_ROOT
+) -> dict[str, Path]:
     modules: dict[str, Path] = {}
-    for path in sorted(_TEAAGENT_ROOT.rglob('*.py')):
-        name = _module_name_for_path(path)
+    for path in sorted(teaagent_root.rglob('*.py')):
+        name = _module_name_for_path(path, teaagent_root=teaagent_root)
         modules[name] = path
     return modules
 
@@ -158,12 +160,8 @@ def _has_unwired_label(path: Path) -> bool:
 
 
 def analyze_wiring(*, repo_root: Path | None = None) -> WiringReport:
-    global _REPO_ROOT, _TEAAGENT_ROOT
-    if repo_root is not None:
-        _REPO_ROOT = repo_root
-        _TEAAGENT_ROOT = _REPO_ROOT / 'teaagent'
-
-    modules = discover_teaagent_modules()
+    teaagent_root = (repo_root or _REPO_ROOT) / 'teaagent'
+    modules = discover_teaagent_modules(teaagent_root=teaagent_root)
     reachable = _reachable_modules(modules)
     unreachable = set(modules) - reachable
 

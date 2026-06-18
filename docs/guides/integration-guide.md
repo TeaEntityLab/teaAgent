@@ -411,7 +411,7 @@ The extension in `vscode/` demonstrates how to boot this server from an IDE exte
 
 Hooks intercept tool calls at 8 lifecycle points without modifying `AgentRunner` or `ChatAgent`.
 
-See [Middleware and Hooks guide](../hooks.md) for the complete reference. Key integration patterns:
+See [Middleware and Hooks guide](../modules/hooks/spec.md) for the complete reference. Key integration patterns:
 
 ### Logging every tool call
 

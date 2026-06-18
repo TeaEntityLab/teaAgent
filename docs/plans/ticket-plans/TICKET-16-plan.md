@@ -21,13 +21,13 @@ follow-up commands. Two are broken:
 ### AG-01 — `teaagent resume <id>` always fails
 
 `agent_resume_command` at
-[`teaagent/cli/_handlers/_agent.py:214`](../../teaagent/cli/_handlers/_agent.py)
-calls `store.task_for_run(args.run_id)` at `:217`. `task_for_run` at
-[`teaagent/run_store.py:143`](../../teaagent/run_store.py) scans run events for
+[`teaagent/cli/_handlers/_agent/resume.py:16`](../../../teaagent/cli/_handlers/_agent/resume.py)
+calls `store.task_for_run(args.run_id)`. `task_for_run` at
+[`teaagent/run_store.py:143`](../../../teaagent/run_store.py) scans run events for
 a `run_started` event and **raises `ValueError`** if none exists (`:149`).
 
 `suspend_to_background` at
-[`teaagent/cli/_handlers/chat_repl.py:56-136`](../../teaagent/cli/_handlers/chat_repl.py)
+[`teaagent/cli/_handlers/chat_repl.py:56-136`](../../../teaagent/cli/_handlers/chat_repl.py)
 generates a `uuid4()[:8]` run ID (`:56`) and records only a
 `session_suspended` event (`:129-136`). It never writes a `run_started` event
 to `RunStore`. So `task_for_run` always raises for REPL-originated suspensions.
