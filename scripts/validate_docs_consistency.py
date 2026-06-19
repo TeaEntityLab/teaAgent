@@ -1819,7 +1819,6 @@ CURRENT_TRUTH_DOC_PATHS = (
     'docs/tui-daily-driver-guide.md',
     'docs/permission-and-approval-playbook.md',
     'docs/governance/README.md',
-    'docs/plans/ticket-plans/index.md',
     'docs/analysis/active-findings-status-ledger-2026-06-06.md',
 )
 

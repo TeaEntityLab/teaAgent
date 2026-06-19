@@ -61,7 +61,7 @@ Users and agents should start here:
 |------|------------|
 | Daily-use truth | `docs/daily-driver-current-status.md` |
 | Daily-driver review package | `docs/analysis/daily-driver-review-INDEX-2026-06-01.md` |
-| Execution order | `docs/plans/ticket-plans/index.md` |
+| Execution order | `docs/roadmap-status.md` (historical closures: `docs/plans/ticket-plans/index.md`) |
 | Roadmap status | `docs/roadmap-status.md` |
 | Module ownership | `docs/modules/INDEX.md` |
 | Governance policy | `docs/governance/doc-maintenance-policy-2026-06-02.md` |

@@ -80,7 +80,7 @@ default. Add a supersession note or update an index.
 | --- | --- | --- |
 | What should users do today? | `docs/daily-driver-current-status.md` | Guides and troubleshooting docs. |
 | Which findings are active? | Active findings ledger or successor | Dated review packages. |
-| Which work is next? | `docs/plans/ticket-plans/index.md` and active work logs | Master plans. |
+| Which work is next? | `docs/roadmap-status.md` | Active work logs; historical closures in `docs/plans/ticket-plans/index.md`. |
 | Which roadmap horizon owns the work? | `docs/roadmap-status.md` | Roadmap rationale and work items. |
 | Which subsystem owns a local risk? | `docs/modules/<module>/risks.md` | Module index and central risk register. |
 | Which safety claim is release-blocking? | Governance release gates and security docs | Threat model, FMEA, risk register. |
