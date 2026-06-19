@@ -274,7 +274,8 @@ def build_matrix_markdown(
         f'Landscape survey reviewed: **{survey_review_date}** '
         f'([{survey_relpath}]({survey_relpath})).',
         f'Open partial/planned gaps (P1/P2): **{open_gap_count}** '
-        f'(see [{use_cases_relpath}]({use_cases_relpath}#partial--planned-gaps)).',
+        f'(see [{use_cases_relpath}]'
+        f'({use_cases_relpath}#partial--planned-gaps-docs--packaging)).',
     ]
     if repo_root is not None:
         kpi = _ergonomics_kpi_line(repo_root)

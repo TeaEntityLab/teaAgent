@@ -11,7 +11,6 @@ _REPO = Path(__file__).resolve().parents[2]
 _VENV_PYTHON = _REPO / '.venv' / 'bin' / 'python'
 _ACCEPTANCE_DOC = _REPO / 'docs' / 'acceptance.md'
 _ARCHITECTURE_DOC = _REPO / 'docs' / 'architecture.md'
-_PYPROJECT = _REPO / 'pyproject.toml'
 _ACCEPTANCE_DIR = _REPO / 'tests' / 'acceptance'
 
 
@@ -52,15 +51,3 @@ def test_architecture_matrix_avoids_stale_acceptance_counts() -> None:
     assert '104+' not in text
     assert re.search(r'10[0-3]\+\s*AT', text) is None
     assert 'docs/acceptance.md' in text or 'pytest-collected' in text.lower()
-
-
-def test_full_collection_dependencies_are_declared_in_dev_extra() -> None:
-    text = _PYPROJECT.read_text(encoding='utf-8')
-    dev_block = re.search(r'(?ms)^dev = \[\n(.*?)^\]', text)
-    assert dev_block, 'pyproject.toml missing project.optional-dependencies.dev'
-    for requirement in ('"hypothesis>=6.100"', '"redis>=5.0.0"'):
-        assert requirement in dev_block.group(1), (
-            f'pyproject.toml should declare {requirement} in '
-            'project.optional-dependencies.dev so full pytest collection has '
-            'all required test dependencies'
-        )

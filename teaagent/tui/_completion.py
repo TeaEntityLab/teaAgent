@@ -12,8 +12,6 @@ from prompt_toolkit.document import Document
 _ontology_cache: dict[str, tuple[float, list[str]]] = {}
 _ONTOLOGY_CACHE_TTL = 5.0
 _index_lock = threading.Lock()
-_index_ready = threading.Event()
-_background_indexer_started = False
 
 
 def complete_file_paths(text: str, root: Path) -> list[str]:
@@ -66,40 +64,12 @@ def _build_ontology_symbols(root: Path) -> list[str]:
     return sorted({f'@{node.name}' for node in builder.nodes})
 
 
-def _cache_refresher_worker(root: Path) -> None:
-    """Background daemon that periodically refreshes the ontology cache."""
-    first_run = True
-    while True:
-        try:
-            now = time.time()
-            symbols = _build_ontology_symbols(root)
-            root_key = str(root.resolve())
-            with _index_lock:
-                _ontology_cache[root_key] = (now, symbols)
-            if first_run:
-                _index_ready.set()
-                first_run = False
-        except Exception:
-            if first_run:
-                _index_ready.set()
-                first_run = False
-        time.sleep(_ONTOLOGY_CACHE_TTL * 2)
-
-
-def _ensure_background_indexer(root: Path) -> None:
-    """Start the background cache refresher thread if not already running."""
-    global _background_indexer_started
-    with _index_lock:
-        if _background_indexer_started:
-            return
-        _background_indexer_started = True
-    t = threading.Thread(target=_cache_refresher_worker, args=(root,), daemon=True)
-    t.start()
-
-
 def _get_cached_symbols(root: Path) -> list[str]:
-    """Return all symbol names from code ontology, cached with a TTL."""
-    _ensure_background_indexer(root)
+    """Return all symbol names from code ontology, cached per-root with a TTL.
+
+    The ontology is built lazily on a cache miss or TTL expiry. Each workspace
+    root has its own cache entry, so one workspace cannot suppress another's.
+    """
     root_key = str(root.resolve())
     now = time.time()
 
@@ -108,8 +78,6 @@ def _get_cached_symbols(root: Path) -> list[str]:
         if cached is not None and (now - cached[0]) < _ONTOLOGY_CACHE_TTL:
             return cached[1]
 
-    # A global ready signal may belong to another workspace. On a per-root cache
-    # miss, build synchronously so one workspace cannot suppress another's symbols.
     try:
         symbols = _build_ontology_symbols(root)
         with _index_lock:

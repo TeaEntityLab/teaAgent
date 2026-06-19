@@ -3,7 +3,7 @@
 Generated from `docs/acceptance.md` by `scripts/build_use_case_matrix.py`.
 
 Landscape survey reviewed: **2026-06-06** ([../scripts/refresh_agent_readme_survey.md](../scripts/refresh_agent_readme_survey.md)).
-Open partial/planned gaps (P1/P2): **3** (see [use-cases.md](use-cases.md#partial--planned-gaps)).
+Open partial/planned gaps (P1/P2): **3** (see [use-cases.md](use-cases.md#partial--planned-gaps-docs--packaging)).
 
 Time-to-first-useful-run: **0.715s** (pip install -e . → teaagent init → teaagent daily --dry-run). Refresh with `python3 scripts/measure_time_to_first_run.py --write docs/ergonomics-kpi.json`.
 

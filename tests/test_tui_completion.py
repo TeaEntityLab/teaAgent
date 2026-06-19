@@ -2,7 +2,7 @@
 
 Covers:
 - complete_file_paths: @-prefixed file path completion
-- _get_cached_symbols: ontology symbol caching with TTL and background refresher
+- _get_cached_symbols: ontology symbol caching with TTL
 - complete_symbols: @-prefixed symbol completion
 - TeaAgentCompleter: prompt_toolkit Completer subclass
 """
@@ -27,13 +27,11 @@ from teaagent.tui import _completion
 def _reset_global_state() -> None:
     """Reset module-level state between tests.
 
-    _completion uses module-level globals (_ontology_cache,
-    _background_indexer_started, and threading primitives). We must clear them
-    before each test to avoid cross-test contamination.
+    _completion caches ontology symbols in a module-level dict
+    (_ontology_cache). Clear it before each test to avoid cross-test
+    contamination.
     """
     _completion._ontology_cache.clear()
-    _completion._background_indexer_started = False
-    _completion._index_ready.clear()
     yield
 
 
@@ -183,127 +181,57 @@ class TestCompleteFilePaths:
 class TestGetCachedSymbols:
     """Tests for _get_cached_symbols(root)."""
 
-    @classmethod
-    def _no_background(cls):
-        """Patch _ensure_background_indexer to prevent daemon thread from racing."""
-        return patch.object(_completion, '_ensure_background_indexer')
-
-    def test_falls_back_to_sync_build_on_first_call(self, tmp_path: Path) -> None:
-        """First call before background worker completes uses sync fallback."""
+    def test_builds_synchronously_on_first_call(self, tmp_path: Path) -> None:
+        """First call (cache miss) builds symbols synchronously."""
         expected = ['@func_x', '@class_y']
 
-        with (
-            patch.object(
-                _completion, '_build_ontology_symbols', return_value=expected
-            ) as mock_build,
-            self._no_background(),
-        ):
+        with patch.object(
+            _completion, '_build_ontology_symbols', return_value=expected
+        ) as mock_build:
             result = _completion._get_cached_symbols(tmp_path)
 
         assert result == expected
         mock_build.assert_called_once()
 
     def test_caches_results_and_returns_cached_within_ttl(self, tmp_path: Path) -> None:
-        """Subsequent calls within TTL return cached symbols without rebuild."""
+        """Subsequent calls within TTL return cached symbols without rebuilding."""
         symbols_a = ['@func_a', '@class_b']
 
-        with (
-            patch.object(
-                _completion, '_build_ontology_symbols', return_value=symbols_a
-            ),
-            self._no_background(),
-        ):
+        with patch.object(
+            _completion, '_build_ontology_symbols', return_value=symbols_a
+        ) as mock_build:
             _completion._get_cached_symbols(tmp_path)  # Populates cache
+            _completion._get_cached_symbols(tmp_path)  # Hits cache
 
-        # Second call — cache is fresh, should return cached value
         root_key = str(tmp_path.resolve())
         assert root_key in _completion._ontology_cache
+        mock_build.assert_called_once()
 
-    def test_builds_when_cache_miss_and_another_root_is_ready(
-        self, tmp_path: Path
-    ) -> None:
-        """A global ready signal must not suppress a per-root cache miss."""
-        _completion._ontology_cache.clear()
-        expected = ['@local_symbol']
+    def test_rebuilds_after_ttl_expiry(self, tmp_path: Path) -> None:
+        """An entry older than the TTL triggers a rebuild on the next call."""
+        symbols = ['@old_func']
 
-        with (
-            patch.object(_completion, '_index_ready') as mock_ready,
-            patch.object(
-                _completion, '_build_ontology_symbols', return_value=expected
-            ) as mock_build,
-            self._no_background(),
-        ):
-            mock_ready.is_set.return_value = True
-            result = _completion._get_cached_symbols(tmp_path)
-
-        assert result == expected
-        mock_build.assert_called_once_with(tmp_path)
-
-    def test_returns_cached_after_background_worker_populated(
-        self, tmp_path: Path
-    ) -> None:
-        """Once cache is populated, subsequent calls return it regardless of ready state."""
-        cached = ['@cached_func']
-
-        with (
-            patch.object(_completion, '_build_ontology_symbols', return_value=cached),
-            self._no_background(),
-        ):
+        with patch.object(
+            _completion, '_build_ontology_symbols', return_value=symbols
+        ) as mock_build:
+            _completion._get_cached_symbols(tmp_path)
+            # Force the cached entry to look expired.
+            root_key = str(tmp_path.resolve())
+            _completion._ontology_cache[root_key] = (0.0, symbols)
             _completion._get_cached_symbols(tmp_path)
 
-        with (
-            patch.object(_completion, '_index_ready') as mock_ready,
-            self._no_background(),
-        ):
-            mock_ready.is_set.return_value = True
-            result = _completion._get_cached_symbols(tmp_path)
-
-        assert result == cached
+        assert mock_build.call_count == 2
 
     def test_handles_sync_build_exception_gracefully(self, tmp_path: Path) -> None:
-        """Returns empty list when sync build raises an exception."""
-        with (
-            patch.object(
-                _completion,
-                '_build_ontology_symbols',
-                side_effect=Exception('build error'),
-            ),
-            self._no_background(),
+        """Returns empty list when the build raises an exception."""
+        with patch.object(
+            _completion,
+            '_build_ontology_symbols',
+            side_effect=Exception('build error'),
         ):
             result = _completion._get_cached_symbols(tmp_path)
 
         assert result == []
-
-    def test_expired_cache_entry_has_old_timestamp(self, tmp_path: Path) -> None:
-        """Verify that overwriting cache with old timestamp makes entry appear expired."""
-        symbols = ['@old_func']
-
-        with (
-            patch.object(_completion, '_build_ontology_symbols', return_value=symbols),
-            self._no_background(),
-        ):
-            _completion._get_cached_symbols(tmp_path)
-
-        root_key = str(tmp_path.resolve())
-        old_time = 0.0
-        _completion._ontology_cache[root_key] = (old_time, symbols)
-
-        entry = _completion._ontology_cache[root_key]
-        assert entry[0] == 0.0
-        assert entry[1] == symbols
-
-    def test_background_indexer_not_started_twice(self, tmp_path: Path) -> None:
-        """Subsequent calls do not start another indexer thread."""
-        _completion._background_indexer_started = True
-
-        with (
-            patch.object(_completion, '_build_ontology_symbols', return_value=[]),
-            patch.object(_completion, '_ensure_background_indexer') as mock_ensure,
-        ):
-            _completion._get_cached_symbols(tmp_path)
-
-        # _ensure_background_indexer is called but should no-op since already started
-        mock_ensure.assert_called_once()
 
     def test_uses_per_root_cache_key(self, tmp_path: Path) -> None:
         """Different roots have separate cache entries."""
@@ -312,25 +240,15 @@ class TestGetCachedSymbols:
         root_a.mkdir()
         root_b.mkdir()
 
-        symbols_a = ['@from_a']
-        symbols_b = ['@from_b']
-
-        with (
-            patch.object(
-                _completion, '_build_ontology_symbols', return_value=symbols_a
-            ),
-            patch.object(_completion, '_ensure_background_indexer'),
+        with patch.object(
+            _completion, '_build_ontology_symbols', return_value=['@from_a']
         ):
             _completion._get_cached_symbols(root_a)
-        with (
-            patch.object(
-                _completion, '_build_ontology_symbols', return_value=symbols_b
-            ),
-            patch.object(_completion, '_ensure_background_indexer'),
+        with patch.object(
+            _completion, '_build_ontology_symbols', return_value=['@from_b']
         ):
             _completion._get_cached_symbols(root_b)
 
-        # Verify both cached entries exist
         assert len(_completion._ontology_cache) == 2
 
 
