@@ -1019,4 +1019,5 @@ def print_json(value: Any) -> None:
     safe_value = _strict_log_sanitize(safe_value)
     safe_value = _redact_value(safe_value)
     from teaagent.cli._output import print_json as _centralized_print_json
+
     _centralized_print_json(safe_value)

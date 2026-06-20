@@ -59,6 +59,7 @@ def _redact_sensitive(value: Any) -> Any:
 
 def _print_json(value: Any) -> None:
     from teaagent.cli._output import print_json
+
     sanitized = _redact_value(_redact_sensitive(_strip_sensitive_fields(value)))
     print_json(sanitized)
 

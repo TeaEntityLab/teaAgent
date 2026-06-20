@@ -39,7 +39,7 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 
 | Document | Status | Last reviewed | File mtime | Notes |
 | --- | --- | --- | --- | --- |
-| `docs/acceptance.md` | stale_by_mtime | 2026-06-17 | 2026-06-19 | File modified after last reviewed date |
+| `docs/acceptance.md` | stale_by_mtime | 2026-06-17 | 2026-06-20 | File modified after last reviewed date |
 
 ## Archive Tier (Dated, Immutable Records — Exempt from Staleness Checks)
 
