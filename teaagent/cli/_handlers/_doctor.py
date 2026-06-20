@@ -1005,7 +1005,7 @@ def doctor_config_lint_command(args: argparse.Namespace) -> int:
 
 def print_json(value: Any) -> None:
     """Doctor-specific JSON output with additional sanitization layers.
-    
+
     This function applies doctor-specific redaction before delegating to the
     centralized print_json function for final serialization and output.
     """
