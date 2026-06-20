@@ -96,7 +96,7 @@ def _redact_sensitive_fields(
 
 def doctor_graphqlite(args: argparse.Namespace) -> int:
     ok, message = args._check_graphqlite(args.database)
-    print(json.dumps({'ok': ok, 'message': message}, sort_keys=True))
+    print_json({'ok': ok, 'message': message})
     return 0 if ok else 1
 
 
@@ -104,11 +104,7 @@ def doctor_model(args: argparse.Namespace) -> int:
     if getattr(args, 'wizard', False):
         return _doctor_model_wizard(args)
     ok, message = args._check_llm(args.provider)
-    print(
-        json.dumps(
-            {'ok': ok, 'message': message, 'provider': args.provider}, sort_keys=True
-        )
-    )
+    print_json({'ok': ok, 'message': message, 'provider': args.provider})
     return 0 if ok else 1
 
 
@@ -1008,6 +1004,11 @@ def doctor_config_lint_command(args: argparse.Namespace) -> int:
 
 
 def print_json(value: Any) -> None:
+    """Doctor-specific JSON output with additional sanitization layers.
+    
+    This function applies doctor-specific redaction before delegating to the
+    centralized print_json function for final serialization and output.
+    """
     if isinstance(value, dict) and value.get('mode') in {'wizard', 'setup'}:
         value = redact_wizard_payload(value)
     value = _sanitize_doctor_payload(value)
@@ -1017,8 +1018,5 @@ def print_json(value: Any) -> None:
     safe_value = _ensure_log_safe(safe_value)
     safe_value = _strict_log_sanitize(safe_value)
     safe_value = _redact_value(safe_value)
-    print(
-        json.dumps(
-            safe_value, ensure_ascii=False, sort_keys=True, default=_json_default
-        )
-    )
+    from teaagent.cli._output import print_json as _centralized_print_json
+    _centralized_print_json(safe_value)

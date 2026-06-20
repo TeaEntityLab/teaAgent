@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 from typing import Any
 
 from teaagent.cli._output import _redact_value
@@ -59,16 +58,9 @@ def _redact_sensitive(value: Any) -> Any:
 
 
 def _print_json(value: Any) -> None:
+    from teaagent.cli._output import print_json
     sanitized = _redact_value(_redact_sensitive(_strip_sensitive_fields(value)))
-    print(
-        json.dumps(
-            sanitized,
-            ensure_ascii=False,
-            indent=2,
-            sort_keys=True,
-            default=lambda o: f'[{type(o).__name__}]',
-        )
-    )
+    print_json(sanitized)
 
 
 def mcp_trust_list_command(args: argparse.Namespace) -> int:
