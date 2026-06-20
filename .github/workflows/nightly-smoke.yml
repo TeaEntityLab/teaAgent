@@ -86,7 +86,7 @@ jobs:
         run: |
           python -m pytest --cov=teaagent --cov-report=term --cov-report=html:htmlcov -q 2>&1 | tail -5
       - name: Upload coverage report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: htmlcov
           path: htmlcov/
@@ -112,7 +112,7 @@ jobs:
       - name: Test quality audit
         run: python3 scripts/audit_test_quality.py --format markdown --output /tmp/test-quality-report.md
       - name: Upload quality report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-quality-report
           path: /tmp/test-quality-report.md
