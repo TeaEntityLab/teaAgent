@@ -216,6 +216,7 @@ def prepare_subagent_isolation(
     *,
     isolation: str,
     session_key: str,
+    acknowledge_no_os_isolation: bool = False,
     cpu_quota: Optional[float] = None,
     memory_limit: Optional[str] = None,
 ) -> tuple[IsolationContext | None, str]:
@@ -289,6 +290,12 @@ def prepare_subagent_isolation(
         # The subagent shares the host process namespace and can read /etc/,
         # /proc/, ~/.ssh/, and environment variables.  Use docker isolation
         # for untrusted content or production workloads.
+        if not acknowledge_no_os_isolation:
+            return (
+                None,
+                'directory-snapshot isolation does not provide OS-level isolation; '
+                'set acknowledge_no_os_isolation=True to proceed, or use docker isolation',
+            )
         logger.warning(
             'directory-snapshot isolation provides no OS-level process isolation — '
             'only a file copy of the workspace is created.  '

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import threading
 from dataclasses import dataclass, field
@@ -106,6 +107,14 @@ def stash_pop(root: str | Path, stash_ref: Optional[str] = None) -> bool:
         return False
 
 
+_SANITIZE_RE = re.compile(r'[^A-Za-z0-9._-]')
+
+
+def _sanitize_run_id(run_id: str) -> str:
+    sanitized = _SANITIZE_RE.sub('', run_id)
+    return sanitized or 'run'
+
+
 class GitBranchSandbox:
     """Git-based sandbox for safe agent rollbacks.
 
@@ -116,7 +125,7 @@ class GitBranchSandbox:
     def __init__(self, root: str | Path, run_id: str) -> None:
         self._root = Path(root).resolve()
         self._run_id = run_id
-        self._branch_name = f'teaagent-sandbox-{run_id}'
+        self._branch_name = f'teaagent-sandbox-{_sanitize_run_id(run_id)}'
         self._original_branch: Optional[str] = None
         self._is_git_repo = is_git_repository(self._root)
         self._stash_id: Optional[str] = None

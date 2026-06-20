@@ -447,6 +447,16 @@ class MultiSigQuorumManager:
             return False
 
         if not self.agent_id:
+            logger.warning(
+                'Multi-sig quorum not available: agent_id not set',
+                extra={
+                    'event': 'multisig_fallback',
+                    'reason': 'agent_id_not_set',
+                    'tool_name': tool_name,
+                    'call_id': call_id,
+                    'required_approvals': self.config.required_approvals,
+                },
+            )
             print(
                 '[Governance] Multi-Signature Quorum enabled but agent_id not set. '
                 'Falling back to standard approval.'
@@ -698,41 +708,9 @@ class ApprovalStoreManager:
             arguments=arguments,
         )
 
-    def handle_preapproved(
-        self,
-        *,
-        call_id: str,
-        preapproved_call_ids: frozenset[str],
-        tool_name: str,
-        arguments: dict[str, Any],
-    ) -> bool:
-        if (
-            call_id not in preapproved_call_ids
-            or not self.approval_store
-            or not self.approval_origin_run_id
-        ):
-            return False
-        if (
-            self.approval_store.check_scoped_approval(
-                run_id=self.approval_origin_run_id,
-                call_id=call_id,
-                tool_name=tool_name,
-                arguments=arguments,
-            )
-            is None
-        ):
-            self.approval_store.add_scoped_approval(
-                run_id=self.approval_origin_run_id,
-                call_id=call_id,
-                tool_name=tool_name,
-                arguments=arguments,
-            )
-        return self.approval_store.try_consume_scoped_approval(
-            run_id=self.approval_origin_run_id,
-            call_id=call_id,
-            tool_name=tool_name,
-            arguments=arguments,
-        )
+    # NOTE: handle_preapproved (call-id preapproval) was removed (G-P2-2).
+    # Call ids are predictable, so call-id-scoped preapproval was weaker
+    # authority than a payload digest; use handle_payload_digest_preapproved.
 
     def handle_payload_digest_preapproved(
         self,
@@ -950,31 +928,6 @@ class ApprovalManager:
         ):
             return
 
-        if self.preapproved_call_ids:
-            import os
-
-            if os.environ.get(
-                'TEAAGENT_DISABLE_PREAPPROVED_CALL_IDS', ''
-            ).strip().lower() in {
-                '1',
-                'true',
-                'yes',
-                'on',
-            }:
-                raise ToolPermissionError(
-                    'preapproved_call_ids are disabled; use scoped approvals '
-                    'with argument digests instead.',
-                    reason_code=DenialReasonCode.MISSING_STATE,
-                )
-
-        if arguments is not None and self._store_manager.handle_preapproved(
-            call_id=call_id,
-            preapproved_call_ids=self.preapproved_call_ids,
-            tool_name=tool_name,
-            arguments=arguments,
-        ):
-            return
-
         # Track whether multi-sig was attempted but failed so we can report
         # the appropriate reason code.
         multisig_attempted = (
@@ -1087,6 +1040,22 @@ class ApprovalManager:
                 return ' ' not in s
         return False
 
+    @staticmethod
+    def _has_symlink_component(root: Path, relative: str) -> bool:
+        """Return True if any component of *relative* (resolved against *root*) is a symlink."""
+        try:
+            current = root
+            for part in Path(relative).parts:
+                if part == '..':
+                    current = current.parent
+                    continue
+                current = current / part
+                if current.is_symlink():
+                    return True
+        except (ValueError, OSError):
+            return False
+        return False
+
     def _assert_paths_in_workspace(
         self,
         tool_name: str,
@@ -1111,6 +1080,13 @@ class ApprovalManager:
         for key, raw in arguments.items():
             if self._looks_like_path(raw):
                 path_str = raw if isinstance(raw, str) else str(raw)
+                # Containment is the primary boundary: check it first so paths
+                # that resolve outside the workspace report "outside workspace
+                # root" regardless of any symlink ancestor (e.g. system paths
+                # like /etc on macOS, where /etc is itself a symlink). .resolve()
+                # follows symlinks, so out-of-workspace symlink escapes are
+                # still caught here. The symlink-component check below is then
+                # defense-in-depth for paths that resolve *inside* the workspace.
                 try:
                     target = (root_path / path_str).resolve()
                     target.relative_to(root_path)
@@ -1122,12 +1098,19 @@ class ApprovalManager:
                         'over any saved state.',
                         reason_code=DenialReasonCode.WORKSPACE_WRITE_MODE,
                     ) from None
+                if self._has_symlink_component(root_path, path_str):
+                    raise ToolPermissionError(
+                        f"Tool '{tool_name}' target path '{path_str}' contains a symlink component. "
+                        'Symlinks are not allowed in tool call paths.',
+                        reason_code=DenialReasonCode.SYMLINK_BLOCKED,
+                    )
                 continue
 
             if key not in key_set:
                 continue
             if not isinstance(raw, str) or not raw.strip():
                 continue
+            # Containment first (see note above), then symlink defense-in-depth.
             try:
                 target = (root_path / raw).resolve()
                 target.relative_to(root_path)
@@ -1139,6 +1122,12 @@ class ApprovalManager:
                     'over any saved state.',
                     reason_code=DenialReasonCode.WORKSPACE_WRITE_MODE,
                 ) from None
+            if self._has_symlink_component(root_path, raw):
+                raise ToolPermissionError(
+                    f"Tool '{tool_name}' target path '{raw}' contains a symlink component. "
+                    'Symlinks are not allowed in tool call paths.',
+                    reason_code=DenialReasonCode.SYMLINK_BLOCKED,
+                )
 
     def _assert_skill_path_not_protected(
         self,

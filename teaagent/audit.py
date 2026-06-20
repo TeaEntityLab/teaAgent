@@ -56,8 +56,10 @@ def _get_tenant_dir_for_path(path: Path | None, sub_dir: str) -> Path:
                 if idx + 1 < len(parts):
                     tenant_id = parts[idx + 1]
                     return Path.home() / '.teaagent' / 'tenants' / tenant_id / sub_dir
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning(
+                'Failed to resolve tenant directory for path %s: %s', path, exc
+            )
     return Path.home() / '.teaagent' / sub_dir
 
 

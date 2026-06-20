@@ -10,7 +10,8 @@ from typing import Any
 
 from teaagent.cli._output import print_json
 
-from .run import _execute_agent_task, _resolve_auto_compact
+from .config import _resolve_auto_compact, warn_if_approve_call_id_used
+from .run import _execute_agent_task
 
 
 def agent_resume_command(args: argparse.Namespace) -> int:
@@ -19,11 +20,13 @@ def agent_resume_command(args: argparse.Namespace) -> int:
         prepare_run_resume,
     )
 
+    warn_if_approve_call_id_used(args)
     try:
         prepared = prepare_run_resume(
             args.root,
             args.run_id,
-            approve_call_ids=frozenset(args.approve_call_id),
+            # Call-id preapproval was removed (G-P2-2); flag is inert.
+            approve_call_ids=frozenset(),
             fresh_restart=args.fresh_restart,
             auto_compact=_resolve_auto_compact(args),
             checkpoint_path=getattr(args, 'checkpoint_store', None),

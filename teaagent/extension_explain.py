@@ -8,9 +8,12 @@ each.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
+
+logger = logging.getLogger(__name__)
 
 # ── Per-extension activation records ────────────────────────────────────
 
@@ -159,7 +162,7 @@ def _gather_plugins(registry: Any = None) -> list[ExtensionActivation]:
                 )
             )
     except Exception:
-        pass
+        logger.exception('plugin gather failed')
     return result
 
 
@@ -196,7 +199,7 @@ def _gather_hooks(
                 )
             )
     except Exception:
-        pass
+        logger.exception('hook gather failed')
     return result
 
 
@@ -232,7 +235,7 @@ def _gather_mcp(
                 )
             )
     except Exception:
-        pass
+        logger.exception('MCP gather failed')
     return result
 
 

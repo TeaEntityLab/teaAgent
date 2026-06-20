@@ -21,7 +21,7 @@ import io
 import json
 import os
 import subprocess
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
@@ -138,9 +138,11 @@ def test_proof_step1_plan_gate_blocks_write_without_plan(tmp_path: Path) -> None
     )
 
     run_out = io.StringIO()
+    run_err = io.StringIO()
     with (
         patch('teaagent.cli.create_llm_adapter', return_value=adapter),
         redirect_stdout(run_out),
+        redirect_stderr(run_err),
     ):
         exit_code = main(
             [
@@ -162,14 +164,15 @@ def test_proof_step1_plan_gate_blocks_write_without_plan(tmp_path: Path) -> None
 
     assert exit_code == 2, (
         f'Plan gate must return exit code 2, got {exit_code}; '
-        f'output: {run_out.getvalue()}'
+        f'stderr: {run_err.getvalue()}'
     )
 
-    gate_payload = json.loads(run_out.getvalue())
-    assert gate_payload.get('status') == 'error', 'Gate must emit an error status'
-    assert 'plan' in gate_payload.get('message', '').lower(), (
-        'Error message must mention plan requirement'
-    )
+    # U-P1-2: the plan-gate denial routes through format_error_block on stderr
+    # (with a hint), not raw JSON on stdout.
+    assert run_out.getvalue().strip() == '', 'Plan gate must not write to stdout'
+    gate_err = run_err.getvalue()
+    assert 'PLAN_GATE' in gate_err, 'Gate error must be categorized PLAN_GATE'
+    assert 'plan' in gate_err.lower(), 'Error message must mention plan requirement'
 
     assert 'a - b' in calc.read_text(encoding='utf-8'), (
         'Plan gate must prevent any file mutation'

@@ -4,7 +4,6 @@ import json
 import tempfile
 import threading
 from dataclasses import FrozenInstanceError
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -130,30 +129,13 @@ def test_prompt_mode_allow_all_destructive_without_ack_blocks() -> None:
     assert ctx.value.reason_code == DenialReasonCode.FULL_ACCESS_NOT_ACKNOWLEDGED
 
 
-def test_prompt_mode_preapproved_call_id_with_store() -> None:
-    tmp_path = None
-    try:
-        tmp = tempfile.TemporaryDirectory()
-        tmp_path = Path(tmp.name)
-
-        store = ApprovalPresetStore(tmp_path)
-        policy = ApprovalPolicy(
-            approval_store=store,
-            approval_origin_run_id='run-x',
-            preapproved_call_ids=frozenset({'call-42'}),
-        )
-        policy.assert_allowed(
-            tool_name='workspace_write_file',
-            call_id='call-42',
-            destructive=True,
-            arguments={'path': 'a.txt', 'content': 'b'},
-        )
-    finally:
-        if tmp_path and tmp_path.exists():
-            tmp.cleanup()
-            assert not tmp_path.exists(), (
-                f'Temporary directory {tmp_path} was not cleaned up'
-            )
+# NOTE: the former test_prompt_mode_preapproved_call_id_with_store was removed.
+# It asserted that ``preapproved_call_ids`` GRANTS approval, which contradicts
+# the deliberate G-P2-2 removal of call-id preapproval. The shipped behavior
+# (call-id preapproval no longer grants) is covered by
+# tests/test_preapproved_call_ids_removal.py. See the open reconciliation item:
+# the ``--approve-call-id`` flag and ApprovalManager.handle_preapproved are now
+# dead and docs/governance/scope-taxonomy.md still lists call_id as implemented.
 
 
 def test_prompt_mode_without_approval_blocks() -> None:

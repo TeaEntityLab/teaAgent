@@ -823,6 +823,21 @@ def _extract_coverage_omit_patterns(pyproject_text: str) -> set[str]:
     return set(re.findall(r'"([^"]+)"', match.group(1)))
 
 
+def _active_omit_ledger_section(ledger_text: str) -> str:
+    """Return only the active ``## Ledger`` table.
+
+    Historical sections (e.g. ``## Omissions Removed``) document patterns that
+    were *removed* from the pyproject omit list and must not be validated
+    against it, otherwise documenting a removal would itself fail the gate.
+    """
+    start = ledger_text.find('## Ledger')
+    if start == -1:
+        return ledger_text
+    body = ledger_text[start + len('## Ledger') :]
+    next_heading = re.search(r'\n##\s', body)
+    return body[: next_heading.start()] if next_heading else body
+
+
 def validate_coverage_omit_ledger(
     *, pyproject_text: str, ledger_text: str
 ) -> list[str]:
@@ -837,7 +852,7 @@ def validate_coverage_omit_ledger(
         if column not in ledger_text:
             errors.append(f'Coverage omit ledger missing column: {column!r}.')
 
-    actual = set(COVERAGE_OMIT_ROW.findall(ledger_text))
+    actual = set(COVERAGE_OMIT_ROW.findall(_active_omit_ledger_section(ledger_text)))
     missing = sorted(expected - actual)
     extra = sorted(actual - expected)
     if missing:

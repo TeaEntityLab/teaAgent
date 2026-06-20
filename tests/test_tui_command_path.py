@@ -219,20 +219,8 @@ def test_undo_journal_wording() -> None:
         assert 'journal undo completed' in output[-1]
 
 
-def test_undo_checkpoint_wording() -> None:
-    output: list[str] = []
-    tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
-
-    with (
-        patch.object(tui, '_get_chat_controller') as mock_get,
-        patch.object(tui, '_restore_checkpoint', return_value=True),
-    ):
-        controller = _make_controller_mock(undo_last_run=False)
-        mock_get.return_value = controller
-
-        tui._handle_undo()
-
-        assert 'checkpoint restore completed' in output[-1]
+# NOTE: test_undo_checkpoint_wording removed — U-P2-3 made TUI undo journal-only
+# (no checkpoint fallback). See tests/tui/test_tui_undo_scope.py.
 
 
 def test_undo_nothing_wording() -> None:
@@ -251,22 +239,8 @@ def test_undo_nothing_wording() -> None:
         assert 'nothing to undo' in output[-1]
 
 
-def test_undo_checkpoint_wording_mentions_stale_journal() -> None:
-    output: list[str] = []
-    tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
-
-    with (
-        patch.object(tui, '_get_chat_controller') as mock_get,
-        patch.object(tui, '_restore_checkpoint', return_value=True),
-    ):
-        controller = _make_controller_mock(undo_last_run=False)
-        mock_get.return_value = controller
-
-        tui._handle_undo()
-
-        joined = ' '.join(output)
-        assert 'checkpoint restore' in joined
-        assert 'stale undo journal' in joined
+# NOTE: test_undo_checkpoint_wording_mentions_stale_journal removed — U-P2-3
+# made TUI undo journal-only. See tests/tui/test_tui_undo_scope.py.
 
 
 def test_undo_without_controller_is_handled() -> None:

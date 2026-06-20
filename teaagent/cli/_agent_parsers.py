@@ -176,7 +176,8 @@ def add_agent_run_arguments(
         '--approve-call-id',
         action='append',
         default=[],
-        help='Approve one exact destructive tool call id. Can be repeated.',
+        help='DEPRECATED (removed, G-P2-2): call-id preapproval no longer grants '
+        'approval and is ignored. Use --approve-scoped TOOL:SHA256 instead.',
     )
     p.add_argument(
         '--approve-scoped',
@@ -744,7 +745,8 @@ def _resume(
         '--approve-call-id',
         action='append',
         default=[],
-        help='Approve one exact destructive tool call id. Can be repeated.',
+        help='DEPRECATED (removed, G-P2-2): call-id preapproval no longer grants '
+        'approval and is ignored. Use --approve-scoped TOOL:SHA256 instead.',
     )
     p.add_argument(
         '--hitl-approval',

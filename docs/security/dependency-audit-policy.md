@@ -11,7 +11,7 @@ TeaAgent maintains a zero forced runtime dependency posture
 (`project.dependencies = []`). However, it supports optional extras such as
 `teaagent[file-watching]`, `teaagent[tui]`, `teaagent[managed-google-adk]`,
 `teaagent[managed-vertex]`, `teaagent[playwright]`, `teaagent[telemetry]`,
-`teaagent[oauth]`, and `teaagent[wasm]`.
+`teaagent[crypto]`, and `teaagent[wasm]`.
 
 An unsegmented scan of the entire package plus all dev and optional
 dependencies can flag vulnerabilities in heavy transitive trees, such as

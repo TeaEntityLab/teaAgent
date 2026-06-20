@@ -7,10 +7,13 @@ shadowed paths.
 
 from __future__ import annotations
 
+import logging
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal, Optional
+
+logger = logging.getLogger(__name__)
 
 AssetType = Literal['skill', 'mcp_server']
 RevocationStatus = Literal['active', 'revoked', 'unknown']
@@ -133,7 +136,7 @@ def _collect_skill_records(
                 if current != 'unknown':
                     lifecycle_state = current
             except Exception:
-                pass
+                logger.exception('lifecycle state read failed')
 
         records.append(
             ProvenanceRecord(

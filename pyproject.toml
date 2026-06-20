@@ -60,12 +60,6 @@ playwright = [
 crypto = [
     "cryptography>=48.0.1",
 ]
-oauth = [
-    "teaagent[crypto]",
-]
-audit-encryption = [
-    "teaagent[crypto]",
-]
 managed-google-adk = [
     "google-adk>=2.0.0",
 ]
@@ -200,6 +194,14 @@ disable_error_code = [
 
 [[tool.mypy.overrides]]
 module = [
+    "teaagent.subagents._hybrid_store_crud",
+    "teaagent.subagents._hybrid_store_backends",
+    "teaagent.subagents._hybrid_store_migration",
+    "teaagent.subagents._hybrid_store_safety",
+    "teaagent.subagents._hybrid_store_health",
+    "teaagent.subagents._hybrid_store_governance",
+    "teaagent.subagents._hybrid_store_social",
+    "teaagent.subagents._hybrid_store_workflow",
     "teaagent.subagents._approval_queue_hybrid_store",
     "teaagent.subagents._approval_queue_redis_store",
     "teaagent.subagents._approval_queue_store",
@@ -215,7 +217,10 @@ disable_error_code = [
     "operator",
     "assignment",
     "misc",
-    "unused-ignore",
+    # Mixin split: shared lazy-init state is declared in the composed facade's
+    # __init__, so per-mixin analysis cannot resolve the attribute type. This
+    # is a resolution artifact of the god-module split, not a runtime change.
+    "has-type",
 ]
 
 [tool.bandit]
@@ -250,12 +255,9 @@ targets = ["."]
 [tool.coverage.run]
 source = ["teaagent"]
 omit = [
-    "teaagent/tui/*",
     "teaagent/tournament/*",
     "teaagent/validation/*",
     "teaagent/workflow_engine.py",
-    "teaagent/vote_relay.py",
-    "teaagent/tls_server.py",
     "teaagent/webhook_sink.py",
     "teaagent/wasm_runtime.py",
     "teaagent/wasm_skill.py",
@@ -265,7 +267,6 @@ omit = [
     "teaagent/workspace_tools/_config.py",
     "teaagent/browser_tools.py",
     "teaagent/cli/_handlers/_cost.py",
-    "teaagent/cli/_handlers/_control_plane.py",
 ]
 
 [tool.ruff]

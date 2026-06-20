@@ -685,19 +685,28 @@ class AgentRunner:
 
         # Auto mode: block disallowed tools, auto-approve allowed ones
         self.auto_mode_manager.validate_tool_allowed(decision.tool_name)
-        auto_approve_policy = self.auto_mode_manager.get_auto_approve_policy()
-        if auto_approve_policy is not None:
-            self.approval_policy = auto_approve_policy
+        auto_approval = self.auto_mode_manager.get_auto_approve_policy(
+            parent_policy=self.approval_policy,
+            tool_name=decision.tool_name,
+            arguments=decision.arguments or {},
+            destructive=tool.annotations.destructive,
+        )
+        auto_mode_approved = auto_approval is not None
+        auto_mode_digest: str | None = None
+        if auto_approval is not None:
+            scoped_policy, auto_mode_digest = auto_approval
+            # Apply the scoped (payload-digest-preapproved) policy so the
+            # nine-stage assert_allowed pipeline below can authorize this call.
+            # The tool_call_approved audit event is emitted only AFTER
+            # assert_allowed succeeds (see below), so a denial elsewhere in the
+            # pipeline never leaves a false approval in the audit trail.
+            self.approval_policy = scoped_policy
         try:
             # Get plan contract from plan validator
             plan_contract = self.plan_validator.get_plan_contract()
-            preapproved_by_call_id = (
-                tool.annotations.destructive
-                and bool(decision.call_id)
-                and decision.call_id in self.approval_policy.preapproved_call_ids
-            )
             preapproved_by_payload_digest = (
-                tool.annotations.destructive
+                not auto_mode_approved
+                and tool.annotations.destructive
                 and bool(decision.arguments)
                 and decision.arguments is not None
                 and bool(self.approval_policy.preapproved_payload_digests)
@@ -717,19 +726,19 @@ class AgentRunner:
                 description=tool.description,
                 handler=tool.handler,
             )
-            if preapproved_by_call_id:
+            if auto_mode_approved:
                 self.audit.record(
                     'tool_call_approved',
                     run_id,
                     call_id=decision.call_id,
                     tool_name=decision.tool_name,
                     arguments=decision.arguments,
-                    authority_type='preapproved_call_id',
-                    approved_by='cli --approve-call-id',
+                    authority_type='auto_mode',
+                    scope='payload_digest',
                     auto_approved=True,
-                    scope='call_id',
+                    argument_digest=auto_mode_digest,
                 )
-            elif preapproved_by_payload_digest:
+            if preapproved_by_payload_digest:
                 self.audit.record(
                     'tool_call_approved',
                     run_id,

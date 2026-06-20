@@ -162,7 +162,10 @@ def test_prepare_directory_snapshot_creates_snapshot_and_cleans_up() -> None:
         )
 
         ctx, error = prepare_subagent_isolation(
-            root, isolation='directory-snapshot', session_key='child-1'
+            root,
+            isolation='directory-snapshot',
+            session_key='child-1',
+            acknowledge_no_os_isolation=True,
         )
         assert error == ''
         assert ctx is not None
@@ -232,7 +235,10 @@ def test_deprecated_container_alias_still_works() -> None:
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter('always')
             ctx, error = prepare_subagent_isolation(
-                root, isolation='container', session_key='child-1'
+                root,
+                isolation='container',
+                session_key='child-1',
+                acknowledge_no_os_isolation=True,
             )
             # Should trigger deprecation warning
             assert len(w) > 0

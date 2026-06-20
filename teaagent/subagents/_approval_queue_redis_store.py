@@ -67,6 +67,14 @@ class RedisApprovalQueueConfig:
     max_retries: int = 3  # Maximum number of retries
     retry_delay_ms: int = 100  # Delay between retries in milliseconds
 
+    def __post_init__(self) -> None:
+        from teaagent.coordination.approval_backend import require_redis_bind_auth
+
+        try:
+            require_redis_bind_auth(self.host, self.password, self.ssl)
+        except ValueError as exc:
+            raise SecurityError(str(exc)) from exc
+
 
 class RedisApprovalQueueStore:
     """Redis-backed approval queue state for cross-process coordination."""

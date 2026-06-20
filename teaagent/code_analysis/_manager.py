@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Optional
 
 from teaagent.code_analysis._client import StdioLSPClient
 from teaagent.code_analysis._config import CodeAnalysisConfig
 from teaagent.code_analysis._types import CodeReference, LSPClient
+
+logger = logging.getLogger(__name__)
 
 _EXT_LANGUAGE = {
     '.py': 'python',
@@ -41,6 +44,7 @@ class LSPServerManager:
         try:
             client.initialize(self.root.as_uri())
         except Exception:
+            logger.exception('LSP client initialize failed')
             return None
         self._servers[lang] = client
         return client

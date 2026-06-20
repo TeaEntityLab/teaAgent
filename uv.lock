@@ -3404,9 +3404,6 @@ dependencies = [
 anthropic = [
     { name = "anthropic" },
 ]
-audit-encryption = [
-    { name = "cryptography" },
-]
 blake3 = [
     { name = "blake3" },
 ]
@@ -3467,9 +3464,6 @@ managed-google-adk = [
 ]
 managed-vertex = [
     { name = "google-cloud-aiplatform" },
-]
-oauth = [
-    { name = "cryptography" },
 ]
 playwright = [
     { name = "playwright" },
@@ -3549,9 +3543,7 @@ requires-dist = [
     { name = "sigstore", marker = "extra == 'dev'", specifier = ">=4.3.0" },
     { name = "sigstore", marker = "extra == 'sigstore'", specifier = ">=4.3.0" },
     { name = "starlette", specifier = ">=1.3.1" },
-    { name = "teaagent", extras = ["crypto"], marker = "extra == 'audit-encryption'" },
     { name = "teaagent", extras = ["crypto"], marker = "extra == 'dev'" },
-    { name = "teaagent", extras = ["crypto"], marker = "extra == 'oauth'" },
     { name = "teaagent", extras = ["graphqlite"], marker = "extra == 'dev'" },
     { name = "tomli", marker = "python_full_version < '3.11' and extra == 'config'", specifier = ">=2.0.1" },
     { name = "tomli", marker = "python_full_version < '3.11' and extra == 'dev'", specifier = ">=2.0.1" },
@@ -3565,7 +3557,7 @@ requires-dist = [
     { name = "watchdog", marker = "extra == 'dev'", specifier = ">=3.0.0" },
     { name = "watchdog", marker = "extra == 'file-watching'", specifier = ">=3.0.0" },
 ]
-provides-extras = ["config", "file-watching", "tui", "code-analysis", "graphqlite", "playwright", "crypto", "oauth", "audit-encryption", "managed-google-adk", "managed-vertex", "telemetry", "anthropic", "yaml", "wasm", "release", "security", "sigstore", "github", "redis", "blake3", "dev"]
+provides-extras = ["config", "file-watching", "tui", "code-analysis", "graphqlite", "playwright", "crypto", "managed-google-adk", "managed-vertex", "telemetry", "anthropic", "yaml", "wasm", "release", "security", "sigstore", "github", "redis", "blake3", "dev"]
 
 [[package]]
 name = "tenacity"

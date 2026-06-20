@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import os
 import zlib
 from pathlib import Path
 from typing import Any, Union
@@ -87,11 +89,67 @@ def relative_path(config: WorkspaceToolConfig, path: Path) -> str:
     return str(path.resolve().relative_to(config.root))
 
 
-def compute_line_hash(line_number: int, content: str) -> str:
+def _sha256_hex(line_number: int, content: str) -> str:
+    normalized = f'{line_number}:{content.replace(chr(13), "").rstrip()}'.encode(
+        'utf-8'
+    )
+    return hashlib.sha256(normalized).hexdigest()
+
+
+def _crc32_hex(line_number: int, content: str) -> str:
+    normalized = f'{line_number}:{content.replace(chr(13), "").rstrip()}'.encode(
+        'utf-8'
+    )
+    return f'{zlib.crc32(normalized) & 0xFFFFFFFF:08X}'
+
+
+def _legacy_crc8_hex(line_number: int, content: str) -> str:
     normalized = f'{line_number}:{content.replace(chr(13), "").rstrip()}'.encode(
         'utf-8'
     )
     return f'{zlib.crc32(normalized) & 0xFF:02X}'
+
+
+def _normalize_content(line_number: int, content: str) -> bytes:
+    return f'{line_number}:{content.replace(chr(13), "").rstrip()}'.encode('utf-8')
+
+
+class _LineHash(str):
+    """str subclass that also compares equal to the legacy 8-bit CRC anchor.
+
+    This enables migration from the old 2-char CRC8 format to SHA-256 (or
+    CRC-32) without invalidating existing anchors embedded in workspace files:
+    ``edit_at_hash`` does ``expected_hash != args['hash']``, and this class
+    makes that comparison accept the old value transparently.
+    """
+
+    __slots__ = ('_legacy',)
+
+    _legacy: str
+
+    def __new__(cls, value: str, legacy: str) -> '_LineHash':
+        obj = super().__new__(cls, value)
+        obj._legacy = legacy
+        return obj
+
+    def __eq__(self, other: object) -> bool:
+        if str.__eq__(self, other):
+            return True
+        return isinstance(other, str) and other == self._legacy
+
+    def __ne__(self, other: object) -> bool:
+        return not self.__eq__(other)
+
+    def __hash__(self) -> int:
+        return str.__hash__(self)
+
+
+def compute_line_hash(line_number: int, content: str) -> str:
+    fmt = os.environ.get('TEAAGENT_EDIT_HASH_FORMAT', 'sha256').strip().lower()
+    legacy = _legacy_crc8_hex(line_number, content)
+    if fmt == 'crc32':
+        return _LineHash(_crc32_hex(line_number, content), legacy)
+    return _LineHash(_sha256_hex(line_number, content), legacy)
 
 
 def format_hash_line(line_number: int, content: str) -> str:

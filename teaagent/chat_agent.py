@@ -421,6 +421,7 @@ def run_chat_agent(
     initial_observations: Optional[list[dict[str, Any]]] = None,
     initial_context_extra: Optional[dict[str, Any]] = None,
     run_id: Optional[str] = None,
+    no_audit: bool = False,
 ) -> RunResult: ...
 
 
@@ -437,6 +438,7 @@ def run_chat_agent(
     initial_observations: Optional[list[dict[str, Any]]] = None,
     initial_context_extra: Optional[dict[str, Any]] = None,
     run_id: Optional[str] = None,
+    no_audit: bool = False,
 ) -> RunResult: ...
 
 
@@ -480,6 +482,7 @@ def run_chat_agent(*args: Any, **kwargs: Any) -> RunResult:
     return _run_chat_agent_impl(
         config=config,
         task=task,
+        no_audit=kwargs.pop('no_audit', False),
         **kwargs,
     )
 
@@ -749,10 +752,24 @@ def _run_chat_agent_impl(
     initial_observations: Optional[list[dict[str, Any]]] = None,
     initial_context_extra: Optional[dict[str, Any]] = None,
     run_id: Optional[str] = None,
+    no_audit: bool = False,
 ) -> RunResult:
     run_id = run_id or uuid4().hex
     project_instructions = load_project_instructions(config.root)
-    audit_logger = audit or AuditLogger()
+
+    if audit is not None:
+        audit_logger = audit
+    elif no_audit:
+        import sys
+
+        sys.stderr.write(
+            'audit_disabled: --no-audit is set, audit events kept in memory only\n'
+        )
+        audit_logger = AuditLogger()
+    else:
+        from teaagent.run_store import RunStore
+
+        audit_logger = AuditLogger(path=RunStore(config.root).run_path(run_id))
 
     tool_registry, context_extra = _setup_tool_registry(
         config, adapter, registry, task, task_spec, depth, initial_context_extra

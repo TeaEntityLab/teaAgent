@@ -181,13 +181,14 @@ def _check_skill_frontmatter(text: str, lines: list[str]) -> list[SkillReviewFin
 
 
 def _check_skill_content_patterns(
-    text: str, lines: list[str], max_skill_md_lines: int
+    text: str, lines: list[str], max_skill_md_lines: int, *, installed: bool = False
 ) -> list[SkillReviewFinding]:
     findings: list[SkillReviewFinding] = []
     if len(lines) > max_skill_md_lines:
+        oversize_severity = 'error' if installed else 'warning'
         findings.append(
             SkillReviewFinding(
-                'warning',
+                oversize_severity,
                 f'SKILL.md has {len(lines)} lines; prefer Progressive Disclosure',
             )
         )
@@ -220,7 +221,7 @@ def _check_skill_content_patterns(
 
 
 def review_skill(
-    skill_path: Path, *, max_skill_md_lines: int = 80
+    skill_path: Path, *, max_skill_md_lines: int = 80, installed: bool = False
 ) -> SkillReviewResult:
     skill_file = skill_path / 'SKILL.md' if skill_path.is_dir() else skill_path
     findings: list[SkillReviewFinding] = []
@@ -233,7 +234,11 @@ def review_skill(
     text = skill_file.read_text(encoding='utf-8')
     lines = text.splitlines()
     findings.extend(_check_skill_frontmatter(text, lines))
-    findings.extend(_check_skill_content_patterns(text, lines, max_skill_md_lines))
+    findings.extend(
+        _check_skill_content_patterns(
+            text, lines, max_skill_md_lines, installed=installed
+        )
+    )
 
     if skill_path.is_dir():
         _analyze_skill_python_files(skill_path, findings)

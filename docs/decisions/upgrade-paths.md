@@ -139,7 +139,7 @@ Run JSONL and SQLite in parallel via `WriteThroughStore` adapter for one release
 **Driver to upgrade:** Multi-tenant deployment with independently verifiable tokens; regulatory requirement for asymmetric signatures.
 
 ### Path A: RS256 / ES256 JWTs with Key Distribution
-- Already optional via `pip install teaagent[oauth]` + `cryptography` dep
+- Already optional via `pip install teaagent[crypto]` + `cryptography` dep
 - Publish JWKS endpoint for third-party token verification
 - **Effort:** Low (infrastructure exists). Operator generates key pair and configures JWKS endpoint.
 

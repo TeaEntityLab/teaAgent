@@ -55,7 +55,7 @@ verification (ES256/RS256).
   improves MCP transport security without requiring TLS.
 - HS256 is the only JWT algorithm available without `cryptography`. When DPoP
   is disabled, HS256 access tokens are sufficient for the bearer token use case.
-- The optional-dependency design (`pip install teaagent[oauth]`) keeps the
+- The optional-dependency design (`pip install teaagent[crypto]`) keeps the
   P0 zero-dependency posture intact while making DPoP available on demand.
 
 ## Consequences

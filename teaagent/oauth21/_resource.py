@@ -60,7 +60,7 @@ class OAuth21ResourceServer:
             if not HAS_CRYPTOGRAPHY:
                 raise InvalidDPoPError(
                     'DPoP token validation requires the cryptography library. '
-                    'Install with: pip install teaagent[oauth]'
+                    'Install with: pip install teaagent[crypto]'
                 )
             self._validate_dpop_binding(claims, dpop_header, method, url, token)
         return OAuth21TokenClaims(

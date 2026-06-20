@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://teaagent.dev/schemas/audit-chain-entry.schema.json",
+  "title": "TeaAgent Audit Chain Entry (envelope)",
+  "description": "Strict physical envelope for a single line in a chained audit JSONL log as written by AuditLogger. Contains the logical event fields (event_id, event_type, run_id, created_at, payload) plus the hash-chain integrity fields (prev_hash, hash, chain_hmac). The optional seq and level fields are reserved for future use. additionalProperties is false so any unexpected field is rejected.",
+  "type": "object",
+  "required": [
+    "event_id",
+    "event_type",
+    "run_id",
+    "created_at",
+    "payload",
+    "prev_hash",
+    "hash",
+    "chain_hmac"
+  ],
+  "properties": {
+    "event_id": {"type": "string", "minLength": 1},
+    "event_type": {"type": "string", "minLength": 1},
+    "run_id": {"type": "string", "minLength": 1},
+    "created_at": {"type": "string", "format": "date-time"},
+    "payload": {"type": "object"},
+    "level": {
+      "type": "string",
+      "enum": ["L0", "L1", "L2", "L3"],
+      "description": "Optional audit tier level. Not always present on disk."
+    },
+    "prev_hash": {"type": "string", "minLength": 1},
+    "hash": {"type": "string", "minLength": 1},
+    "chain_hmac": {"type": "string", "minLength": 1},
+    "seq": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Optional monotonic sequence number. Reserved for future use; not currently written by AuditLogger."
+    }
+  },
+  "additionalProperties": false
+}

@@ -42,15 +42,9 @@ def test_journal_path_wording_names_journal() -> None:
     assert 'checkpoint' not in output[-1].lower()
 
 
-def test_checkpoint_path_wording_names_checkpoint() -> None:
-    output: list[str] = []
-    tui = _tui(output)
-    with (
-        patch.object(tui._get_chat_controller(), 'undo_last_run', return_value=False),
-        patch.object(tui, '_restore_checkpoint', return_value=True),
-    ):
-        tui._handle_undo()
-    assert 'checkpoint' in output[-1].lower()
+# NOTE: test_checkpoint_path_wording_names_checkpoint was removed. U-P2-3 made
+# TUI undo journal-only (no global checkpoint fallback) to match CLI scope; the
+# journal-only contract is covered by tests/tui/test_tui_undo_scope.py.
 
 
 def test_nothing_to_undo_is_explicit() -> None:

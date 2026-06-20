@@ -1,4 +1,16 @@
-"""Main chat REPL loop and session management."""
+"""
+Main chat REPL loop and session management.
+
+⚠️ DEPRECATED: This module is superseded by ``_chat.py`` (``chat_command``),
+which delegates to ``run_tui(chat=True)`` via ``ChatSessionController``.
+
+- ``run_chat_repl`` → use ``teaagent.chat`` (``chat_command``)
+- ``suspend_to_background`` → use ``teaagent.cli._handlers._agent.resume``
+- ``print_chat_help`` → inline help via TUI
+
+This file is retained for test compatibility and will be removed in a future
+release. Do not add new functionality here.
+"""
 
 from __future__ import annotations
 

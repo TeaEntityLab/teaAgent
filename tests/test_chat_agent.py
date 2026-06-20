@@ -442,9 +442,11 @@ def test_cli_agent_run_route_model_uses_routed_model(
     assert payload['final_answer'] == 'done'
 
 
-def test_cli_agent_run_approve_call_id_allows_exact_write(
+def test_cli_agent_run_approve_call_id_is_deprecated_and_does_not_grant(
     chat_agent_config: ChatAgentConfig,
 ) -> None:
+    # G-P2-2: --approve-call-id was removed; it no longer grants approval, so an
+    # otherwise-unapproved destructive write stays pending (use --approve-scoped).
     output = io.StringIO()
     adapter = FakeAdapter(
         [
@@ -471,9 +473,9 @@ def test_cli_agent_run_approve_call_id_allows_exact_write(
         )
 
     payload = json.loads(output.getvalue())
-    assert exit_code == 0
-    assert payload['status'] == 'completed'
-    assert (Path(chat_agent_config.root) / 'x.txt').read_text(encoding='utf-8') == 'x'
+    assert exit_code == 1
+    assert payload['status'] == 'pending_approval'
+    assert not (Path(chat_agent_config.root) / 'x.txt').exists()
 
 
 def test_cli_agent_run_returns_pending_approval_for_unapproved_write(

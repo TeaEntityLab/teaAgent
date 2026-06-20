@@ -365,8 +365,8 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
     if action == 'conflict':
         tui._print_json(
             {
-                'status': 'conflict_mode',
-                'message': 'Conflict resolution mode not yet implemented',
+                'status': 'not_available',
+                'message': 'Conflict resolution mode is not available',
                 'hint': 'Use git tools directly for conflict resolution',
             }
         )
@@ -383,20 +383,39 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
         }
         tui._print_json(
             {
-                'status': 'conflict_resolution',
+                'status': 'not_available',
                 'shortcut': action,
                 'action': shortcuts[action],
-                'message': 'Conflict resolution shortcuts not yet implemented',
+                'message': 'Conflict resolution shortcuts are not available',
                 'hint': 'Use git tools: git checkout --ours/theirs, git diff, etc.',
             }
         )
         return True
 
-    # Handle chat mode fallback
+    # Handle chat mode fallback: unknown command → prompt before forwarding as task
     if tui.chat:
-        return _handle_tui_command(tui, f'ask {raw_command}')
+        return _handle_unknown_chat_command(tui, raw_command)
 
     tui.output_fn(f"error: unknown command '{action}'. Type 'help'.")
+    return True
+
+
+def _handle_unknown_chat_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
+    """Prompt user before forwarding an unknown command as a task in chat mode."""
+    command = raw_command.strip()
+    prompt_text = f'unknown command "{command}"; send as task? [y/N] '
+    if tui.input_fn is None:
+        tui.output_fn(prompt_text + 'declined (non-interactive)')
+        return True
+    try:
+        answer = tui.input_fn(prompt_text)
+    except EOFError:
+        tui.output_fn(prompt_text + 'declined (EOF)')
+        return True
+    if answer.strip().lower() in ('y', 'yes'):
+        _safe_run_agent_task(tui, command)
+        return True
+    tui.output_fn(prompt_text + 'declined')
     return True
 
 

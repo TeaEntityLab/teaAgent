@@ -159,7 +159,7 @@ class OAuth21AuthorizationServer:
             if not HAS_CRYPTOGRAPHY:
                 raise InvalidDPoPError(
                     'DPoP requires the cryptography library. '
-                    'Install with: pip install teaagent[oauth]'
+                    'Install with: pip install teaagent[crypto]'
                 )
             cnf_jkt = self._validate_dpop_and_extract_jkt(dpop_proof_jwt)
 
@@ -197,7 +197,7 @@ class OAuth21AuthorizationServer:
             if not HAS_CRYPTOGRAPHY:
                 raise InvalidDPoPError(
                     'DPoP requires the cryptography library. '
-                    'Install with: pip install teaagent[oauth]'
+                    'Install with: pip install teaagent[crypto]'
                 )
             cnf_jkt = self._validate_dpop_and_extract_jkt(dpop_proof_jwt)
             if not hmac.compare_digest(cnf_jkt, record.cnf_jkt):

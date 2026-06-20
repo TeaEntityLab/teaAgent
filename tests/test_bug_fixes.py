@@ -193,10 +193,17 @@ class TestAssertionFailureFixes:
                     rel = py_file.relative_to(root)
                     bare_asserts.append(f'{rel}:{lineno}: {line.strip()}')
 
-        # There are 9 known bare assert statements across 6 non-test source files.
+        # There are 17 known bare assert statements across non-test source files.
         # If this count changes, new asserts may have been added — investigate.
-        assert len(bare_asserts) == 9, (
-            f'Expected 9 bare assert statements in source, found {len(bare_asserts)}:\n'
+        # The 8 added since the prior baseline (9) all live in
+        # teaagent/runner/_invariants.py: it is an assertion-helper module
+        # (assert_budget_invariant / assert_audit_invariant / ...) invoked only
+        # from tests/runner/test_runner_invariants.py under pytest, never under
+        # `python -O`, so bare asserts are the appropriate idiom there. The
+        # remaining entries are mypy type-narrowing guards (``assert x is not
+        # None``), not strippable state/security checks.
+        assert len(bare_asserts) == 17, (
+            f'Expected 17 bare assert statements in source, found {len(bare_asserts)}:\n'
             + '\n'.join(bare_asserts)
         )
 

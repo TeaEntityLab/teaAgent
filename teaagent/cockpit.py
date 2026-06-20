@@ -7,11 +7,14 @@ recoverable state across all surfaces.
 
 from __future__ import annotations
 
+import logging
 import subprocess
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Any, Optional
+
+logger = logging.getLogger(__name__)
 
 
 class HealthStatus(str, Enum):
@@ -321,6 +324,7 @@ class ControlCockpitState:
             'state': 'unavailable',
         }
     )
+    errors: list[str] = field(default_factory=list)
     last_updated: Optional[float] = None
 
 
@@ -379,7 +383,8 @@ def build_control_cockpit(
                 else None,
             }
     except Exception:
-        pass
+        logger.exception('goal/spec load failed')
+        cockpit.errors.append('goal/spec load failed')
 
     # ── model route ──
     cockpit.model_route = None
@@ -451,7 +456,8 @@ def build_control_cockpit(
         ch = compute_context_health(workspace_root=str(root_path))
         cockpit.skill.setdefault('context_health', ch.to_dict())
     except Exception:
-        pass
+        logger.exception('context health computation failed')
+        cockpit.errors.append('context health computation failed')
 
     # ── extension activation explain (EXT-001) ──
     try:
@@ -460,7 +466,8 @@ def build_control_cockpit(
         ext = explain_extension_activation(workspace_root=str(root_path))
         cockpit.skill.setdefault('extension_activation', ext.to_dict())
     except Exception:
-        pass
+        logger.exception('extension activation explain failed')
+        cockpit.errors.append('extension activation explain failed')
 
     return cockpit
 

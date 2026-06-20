@@ -30,6 +30,28 @@ BACKEND_FILE = 'file'
 BACKEND_REMOTE = 'remote'
 BACKEND_HYBRID = 'hybrid'
 
+_LOOPBACK_HOSTS = frozenset({'localhost', '127.0.0.1', '::1', '[::1]'})
+
+
+def require_redis_bind_auth(
+    host: str,
+    password: Optional[str],
+    ssl: bool,
+) -> None:
+    """Require authentication or TLS for non-loopback Redis connections.
+
+    Loopback hosts (localhost, 127.0.0.1, ::1, [::1]) are accepted without
+    auth for backward compatibility. Non-loopback connections must supply a
+    non-empty password or enable SSL/TLS, mirroring the
+    ``require_signature_relay_bind_auth`` posture.
+    """
+    if host in _LOOPBACK_HOSTS:
+        return
+    if not password and not ssl:
+        raise ValueError(
+            f'non-loopback Redis host {host!r} requires a password or SSL/TLS'
+        )
+
 
 @runtime_checkable
 class ApprovalCoordinationBackend(Protocol):

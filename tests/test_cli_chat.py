@@ -187,8 +187,10 @@ def test_agent_run_background_rejects_known_run_or_suspension_id(capsys):
         captured = capsys.readouterr()
 
         assert result == 2
-        assert 'looks like a suspension id' in captured.out.lower()
-        assert 'interactive-review' in captured.out
+        # U-P1-2: the background-rejection error routes through
+        # format_error_block on stderr, not stdout.
+        assert 'looks like a suspension id' in captured.err.lower()
+        assert 'interactive-review' in captured.err
 
 
 def test_run_chat_repl_empty_input(monkeypatch, chat_agent_config: ChatAgentConfig):

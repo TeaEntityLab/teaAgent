@@ -34,7 +34,7 @@ def _verify_dpop_ec(
 ) -> None:
     if not HAS_CRYPTOGRAPHY:
         raise InvalidDPoPError(
-            'DPoP requires the cryptography library. Install with: pip install teaagent[oauth]'
+            'DPoP requires the cryptography library. Install with: pip install teaagent[crypto]'
         )
     from cryptography.exceptions import InvalidSignature
     from cryptography.hazmat.primitives import hashes as _crypto_hashes
@@ -90,7 +90,7 @@ def _verify_dpop_rsa(
 ) -> None:
     if not HAS_CRYPTOGRAPHY:
         raise InvalidDPoPError(
-            'DPoP requires the cryptography library. Install with: pip install teaagent[oauth]'
+            'DPoP requires the cryptography library. Install with: pip install teaagent[crypto]'
         )
     from cryptography.exceptions import InvalidSignature
     from cryptography.hazmat.primitives import hashes as _crypto_hashes

@@ -30,7 +30,9 @@ from .automation import (
     automation_template_command,
     automation_tick_command,
 )
+from .config import _resolve_auto_compact
 from .experiment import _execute_parallel_experiment
+from .output import DEFAULT_DIFF_PREVIEW_LINES, DEFAULT_PAGINATION_LINES
 from .preflight import (
     agent_plan_command,
     agent_preflight_command,
@@ -50,15 +52,12 @@ from .resume import (
     interactive_review_mode,
 )
 from .run import (
-    DEFAULT_DIFF_PREVIEW_LINES,
-    DEFAULT_PAGINATION_LINES,
     _derive_policy_source,
     _display_recovery_guidance,
     _emit_readiness_payload,
     _execute_agent_task,
     _prepare_task,
     _require_plan_gate,
-    _resolve_auto_compact,
     _resolve_run_task,
     _resolve_selected_skills,
     _resolve_validation_profile,

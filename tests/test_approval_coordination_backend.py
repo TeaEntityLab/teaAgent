@@ -34,7 +34,10 @@ def test_resolve_returns_none_without_workspace() -> None:
     assert resolve_approval_backend(None) is None
 
 
-def test_file_backend_roundtrip_snapshot() -> None:
+def test_file_backend_roundtrip_snapshot(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Writes a raw (unsigned) legacy fixture; opt into the legacy-accept
+    # migration path since this test targets backend roundtrip, not HMAC.
+    monkeypatch.setenv('TEAAGENT_APPROVAL_HMAC_LEGACY_ACCEPT', '1')
     with TemporaryDirectory() as tmp:
         root = Path(tmp)
         backend = FileBackedApprovalBackend(root)

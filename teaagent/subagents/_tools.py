@@ -397,13 +397,21 @@ def _register_batch(
                     'description': 'List of subagent task objects. Each must have a "task" field (string). Optional: "def_name", "max_iterations", "max_tool_calls".',
                     'items': {
                         'type': 'object',
+                        'additionalProperties': False,
                         'properties': {
-                            'task': {'type': 'string'},
+                            'task': {'type': 'string', 'minLength': 1},
                             'def_name': {'type': 'string'},
                             'max_iterations': {'type': 'integer'},
                             'max_tool_calls': {'type': 'integer'},
                             'isolation': {
                                 'type': 'string',
+                                'enum': [
+                                    'shared',
+                                    'worktree',
+                                    'directory-snapshot',
+                                    'docker',
+                                    'auto',
+                                ],
                                 'description': (
                                     'Per-task isolation. Omit for worktree on git repos; '
                                     'pass isolation=shared explicitly for shared workspace.'

@@ -187,8 +187,9 @@ This needs to be fixed."""
 
 def test_parse_github_issue_placeholder(parser):
     """Test GitHub issue parsing raises ValueError when library not available."""
-    # Mock the GITHUB_AVAILABLE flag to simulate library not installed
-    import teaagent.issue_intake as issue_intake_module
+    # GITHUB_AVAILABLE is read inside teaagent.domain.issue_intake (the impl);
+    # teaagent.issue_intake only re-exports the name, so patch where it's read.
+    import teaagent.domain.issue_intake as issue_intake_module
 
     original_available = issue_intake_module.GITHUB_AVAILABLE
     try:

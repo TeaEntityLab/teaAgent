@@ -5,6 +5,8 @@ from __future__ import annotations
 import threading
 from pathlib import Path
 
+import pytest
+
 from teaagent.approval import ApprovalQueueStore
 from teaagent.subagents._approval_queue import (
     ApprovalRequestStatus,
@@ -81,7 +83,8 @@ def test_cross_process_approve_unblocks_waiter(tmp_path: Path) -> None:
 
 
 def test_prune_removes_old_resolved_queue(tmp_path: Path) -> None:
-    store = ApprovalQueueStore(tmp_path)
+    # HMAC disabled: this test targets prune-by-status, not signature handling.
+    store = ApprovalQueueStore(tmp_path, hmac_secret='')
     parent_id = 'parent-old'
     path = store.queue_path(parent_id)
     path.write_text(
@@ -102,7 +105,8 @@ def test_prune_removes_old_resolved_queue(tmp_path: Path) -> None:
 
 
 def test_prune_skips_pending_queue(tmp_path: Path) -> None:
-    store = ApprovalQueueStore(tmp_path)
+    # HMAC disabled: this test targets prune-by-status, not signature handling.
+    store = ApprovalQueueStore(tmp_path, hmac_secret='')
     parent_id = 'parent-pending'
     path = store.queue_path(parent_id)
     path.write_text(
@@ -120,6 +124,32 @@ def test_prune_skips_pending_queue(tmp_path: Path) -> None:
     report = store.prune_stale(max_age_seconds=3600)
     assert parent_id in report.skipped_pending
     assert path.is_file()
+
+
+def test_prune_preserves_unverifiable_legacy_queue(tmp_path: Path) -> None:
+    """Data-loss regression: with HMAC enforced, a legacy *unsigned* queue must
+    not be deleted by prune. Its contents are unverifiable, so treating it as
+    empty-and-prunable would silently lose pending approval requests."""
+    store = ApprovalQueueStore(tmp_path, hmac_secret='secret-key')
+    parent_id = 'parent-legacy'
+    path = store.queue_path(parent_id)
+    # Legacy file: a real PENDING request but no ``_hmac`` signature.
+    path.write_text(
+        '{"parent_run_id":"parent-legacy","requests":{"r1":{"request_id":"r1",'
+        '"subagent_id":"s","parent_run_id":"parent-legacy","subagent_name":"w",'
+        '"tool_name":"workspace_write_file","tool_arguments":{},'
+        '"permission_mode":"prompt","isolation":"worktree","status":"pending"}},'
+        '"batches":{}}\n',
+        encoding='utf-8',
+    )
+    old = path.stat().st_mtime
+    import os
+
+    os.utime(path, (old - 200000, old - 200000))
+    report = store.prune_stale(max_age_seconds=3600)
+    assert parent_id in report.skipped_unverified
+    assert parent_id not in report.removed_parent_run_ids
+    assert path.is_file()  # the pending data is preserved, not lost
 
 
 def test_reload_from_store_handles_invalid_snapshot_structure(tmp_path: Path) -> None:
@@ -140,8 +170,14 @@ def test_reload_from_store_handles_invalid_snapshot_structure(tmp_path: Path) ->
     assert len(queue._requests) == 0
 
 
-def test_reload_from_store_handles_invalid_request_data(tmp_path: Path) -> None:
-    """Test that reload_from_store handles individual invalid request data."""
+def test_reload_from_store_handles_invalid_request_data(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test that reload_from_store handles individual invalid request data.
+
+    Writes a raw (unsigned) legacy fixture, so opt into the legacy-accept
+    migration path; this test targets request-parsing robustness, not HMAC."""
+    monkeypatch.setenv('TEAAGENT_APPROVAL_HMAC_LEGACY_ACCEPT', '1')
     parent_id = 'parent-invalid-req'
     queue = get_approval_queue(parent_id, workspace_root=tmp_path)
 

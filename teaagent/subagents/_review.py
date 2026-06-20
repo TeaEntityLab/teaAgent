@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 import subprocess
 from dataclasses import asdict, dataclass
@@ -11,6 +12,8 @@ from typing import Any, Optional
 from teaagent.storage import atomic_write_text
 from teaagent.subagents._isolation import _git_subprocess_env
 from teaagent.subagents._types import SubagentLineage
+
+logger = logging.getLogger(__name__)
 
 _REVIEW_PATHSPEC = ['--', '.', ':!.teaagent']
 
@@ -165,7 +168,7 @@ def check_subagent_review(
                 )
                 result['cost_ledger'] = ledger.to_dict()
             except Exception:
-                pass
+                logger.exception('cost ledger build failed')
     return result
 
 

@@ -7,6 +7,16 @@ Import from this package during migration from scattered approval modules::
 Legacy paths (``teaagent.approval_manager``, etc.) remain supported.
 """
 
+from teaagent.approval.backend import (
+    AllowBackend,
+    ApprovalBackend,
+    ApprovalDecision,
+    DangerFullAccessBackend,
+    PromptBackend,
+    ReadOnlyBackend,
+    WorkspaceWriteBackend,
+    backend_from_mode,
+)
 from teaagent.approval.core import (
     ApprovalHandler,
     ApprovalRequest,
@@ -29,12 +39,16 @@ from teaagent.approval.server import JITApprovalServer
 from teaagent.approval.ui import DiffApprovalHandler
 
 __all__ = [
+    'AllowBackend',
+    'ApprovalBackend',
+    'ApprovalDecision',
     'ApprovalHandler',
     'ApprovalManager',
     'ApprovalQueueStore',
-    'CentralizedApprovalQueue',
     'ApprovalRequest',
     'ApprovalStoreManager',
+    'CentralizedApprovalQueue',
+    'DangerFullAccessBackend',
     'DiffApprovalHandler',
     'JITApprovalManager',
     'JITApprovalServer',
@@ -44,6 +58,10 @@ __all__ = [
     'PeerSignature',
     'PermissionMode',
     'PermissionModeEnforcer',
+    'PromptBackend',
+    'ReadOnlyBackend',
+    'WorkspaceWriteBackend',
+    'backend_from_mode',
     'format_denial_message',
     'parse_permission_mode',
 ]

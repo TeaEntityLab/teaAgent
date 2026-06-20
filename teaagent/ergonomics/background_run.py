@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import subprocess
 import sys
@@ -11,6 +12,8 @@ from typing import Any, Optional
 from uuid import uuid4
 
 from teaagent.storage import atomic_write_text
+
+logger = logging.getLogger(__name__)
 
 
 def _utc_now() -> str:
@@ -37,7 +40,7 @@ def _get_tenant_id_from_path(path: Path) -> str:
             if idx + 1 < len(parts):
                 return parts[idx + 1]
     except Exception:
-        pass
+        logger.exception('tenant id extraction failed')
     return 'default'
 
 

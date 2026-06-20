@@ -61,15 +61,9 @@ HELP_TEXT = """Commands:
   use <database>            Switch database path. Use :memory: for in-memory.
   smoke                     Create a SmokeTest node and query it.
   query <cypher>            Execute a Cypher query.
-  parallel <optA> <optB>... Start parallel experiment branches for comparison.
-  select <option>           Merge selected parallel experiment branch.
-  cancel                    Cancel and cleanup all parallel experiment branches.
-  conflict                  Enter conflict resolution mode for merge conflicts.
-  o                         Accept Our version (current branch) in conflict mode.
-  t                         Accept Their version (incoming branch) in conflict mode.
-  n                         Next conflicted file in conflict mode.
-  p                         Previous conflicted file in conflict mode.
-  a                         Abort merge in conflict mode.
+  parallel <optA> <optB>... Store option strings for comparison.
+  select <option>           Mark an option selected from stored parallel options.
+  cancel                    Clear stored parallel options.
   pin <path>                Pin a file for live context sync (watches for changes).
   unpin <path>              Unpin a file from live context sync.
   pinned                    List all pinned files.
@@ -78,7 +72,6 @@ HELP_TEXT = """Commands:
   effort <low|normal|high|unlimited>  Set effort throttling level.
   budget                    Show budget and effort status.
   checkpoint                Create manual git checkpoint.
-  undo [run_id]              Undo last agent edit (journal-first, checkpoint fallback).
   background                Create a suspension checkpoint (not background execution); use interactive-review/resume on the run id.
   handoff                   Alias for suspension checkpoint (same as background command).
   skill-diagnostics         Show comprehensive skill diagnostics: loaded, shadowed,

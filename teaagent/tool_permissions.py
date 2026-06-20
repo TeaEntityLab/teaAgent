@@ -10,6 +10,7 @@ This module implements safety controls for tool access:
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable, Optional
@@ -224,8 +225,15 @@ class ToolPermissionManager:
                 if not r.allowed:
                     return r.reason
         except Exception as exc:
-            logger.warning('Scope budget check failed: %s', exc)
-            return None  # fail open if enforcer raises
+            if os.environ.get('TEAAGENT_SCOPE_FAIL_OPEN') == '1':
+                logger.warning(
+                    'Scope budget check failed (fail-open): enforcer raised %s', exc
+                )
+                return None
+            logger.error(
+                'Scope budget check failed (fail-closed): enforcer raised %s', exc
+            )
+            return 'scope budget check failed'
         return None
 
     def check_tool_access(

@@ -1,401 +1,49 @@
 from __future__ import annotations
 
 import argparse
-import json
+import atexit
 import logging
+import os as _os
 import signal
-import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Literal, Optional
+from typing import Any, Optional
 from uuid import uuid4
 
 from teaagent.approval import parse_permission_mode
 from teaagent.chat_agent import run_chat_agent
+from teaagent.cli._formatting import format_error_block
 from teaagent.cli._output import print_json
 from teaagent.cli.execution import AgentExecutionFactory
 from teaagent.code_analysis import CodeAnalysisConfig
 from teaagent.intent import build_task_spec, clarify_task
 from teaagent.model_routing import route_model
-from teaagent.run_store import RunStore, safe_run_id, summarize_audit_events
-from teaagent.runner import RunResult
+from teaagent.run_store import safe_run_id, summarize_audit_events
 from teaagent.types import PermissionMode
 
+from .config import (
+    _derive_policy_source,
+    _parse_approve_scoped,
+    _require_plan_gate,
+    _resolve_selected_skills,
+    _resolve_validation_profile,
+    _run_post_validation,
+    _save_git_sandbox_consent,
+    warn_if_approve_call_id_used,
+)
+from .output import (
+    _display_recovery_guidance,
+    _emit_readiness_payload,
+    _emit_run_completion_output,
+    show_interactive_diff,
+)
 from .sandbox_resolution import (
     record_git_sandbox_started,
     resolve_git_sandbox_after_run,
 )
+from .task import _prepare_task, _resolve_run_task
 
 logger = logging.getLogger(__name__)
-
-# Constants for pagination and display limits
-DEFAULT_DIFF_PREVIEW_LINES = 30
-DEFAULT_PAGINATION_LINES = 50
-
-
-def _derive_policy_source(routing_reason: str) -> str:
-    """Derive the policy source from a routing reason string."""
-    lower = routing_reason.lower()
-    if 'explicit' in lower:
-        return 'explicit_override'
-    if 'complexity' in lower:
-        return 'complexity'
-    return 'category'
-
-
-def _parse_approve_scoped(scoped_approvals: list[str]) -> frozenset[str]:
-    """Parse --approve-scoped arguments into a frozenset of digests.
-
-    Each argument is expected in the format TOOL:SHA256, where SHA256 is
-    a 64-character lowercase hex string.
-
-    Args:
-        scoped_approvals: List of 'TOOL:SHA256' strings from --approve-scoped.
-
-    Returns:
-        frozenset of digest strings.
-
-    Raises:
-        SystemExit: If format is invalid.
-    """
-    digests = []
-    for arg in scoped_approvals:
-        if ':' not in arg:
-            sys.exit(f'--approve-scoped expects TOOL:SHA256 format, got: {arg}')
-        parts = arg.split(':', 1)
-        if len(parts) != 2:
-            sys.exit(f'--approve-scoped expects TOOL:SHA256 format, got: {arg}')
-        _tool_name, digest = parts
-        if len(digest) != 64 or not all(c in '0123456789abcdef' for c in digest):
-            sys.exit(f'--approve-scoped expects TOOL:SHA256 (64 hex chars), got: {arg}')
-        digests.append(digest)
-    return frozenset(digests)
-
-
-def _display_recovery_guidance(
-    result: RunResult,
-    args: argparse.Namespace,
-    store: RunStore,
-) -> None:
-    """Display recovery guidance for failed or partial success runs.
-
-    Args:
-        result: RunResult from the failed run
-        args: CLI arguments
-        store: RunStore for accessing audit logs
-    """
-    from teaagent.guided_recovery import (
-        FailureAnalyzer,
-        RecoveryAdviceFormatter,
-        RecoverySelector,
-    )
-
-    # Load audit log if available
-    audit_path = store.run_path(result.run_id)
-    audit = (
-        AgentExecutionFactory.create_audit_logger_from_path(audit_path)
-        if audit_path.is_file()
-        else None
-    )
-
-    # Load undo journal if available
-    undo_journal = None
-    undo_path = store.undo_path(result.run_id)
-    if undo_path.is_file():
-        factory = AgentExecutionFactory(args.root)
-        undo_journal = factory.create_undo_journal(path=undo_path)
-
-    # Analyze failure
-    analyzer = FailureAnalyzer(audit_logger=audit)
-    failure = analyzer.classify(result)
-
-    # Select recovery strategy
-    selector = RecoverySelector(undo_journal=undo_journal)
-    advice = selector.select(failure)
-
-    # Format and display advice
-    formatter = RecoveryAdviceFormatter()
-    formatted_advice = formatter.format(advice, run_id=result.run_id)
-
-    print('\n' + formatted_advice, file=sys.stderr)
-
-
-def _resolve_selected_skills(args: argparse.Namespace) -> Optional[frozenset[str]]:
-    """Resolve selected skills from args, returning frozenset or None.
-
-    Returns:
-        - Empty frozenset if no_auto_skills is set
-        - Frozenset of skill names if provided
-        - None otherwise (to trigger auto-selection)
-    """
-    if getattr(args, 'no_auto_skills', False):
-        return frozenset()
-    names = [
-        str(item).strip()
-        for item in (getattr(args, 'skill', None) or [])
-        if str(item).strip()
-    ]
-    if names:
-        return frozenset(names)
-    return None
-
-
-def _emit_readiness_payload(args: argparse.Namespace, payload: dict[str, Any]) -> None:
-    if getattr(args, 'human', False):
-        from teaagent.ergonomics.human_output import format_readiness_summary
-
-        print(format_readiness_summary(payload, root=args.root))
-        return
-    print_json(payload)
-
-
-def _emit_run_completion_output(
-    args: argparse.Namespace,
-    *,
-    store: RunStore,
-    run_id: str,
-    payload: dict[str, Any],
-) -> None:
-    """Print JSON run payload and/or a human-readable receipt (WS1-001)."""
-    if getattr(args, 'json_stream', False):
-        from teaagent.streaming.events import StreamEvent, emit_stream_event
-
-        emit_stream_event(StreamEvent('run_result', payload))
-        return
-
-    if getattr(args, 'human', False):
-        from teaagent.run_receipt import build_run_receipt
-
-        print(build_run_receipt(store, run_id, args.root))
-        return
-
-    print_json(payload)
-    if sys.stderr.isatty():
-        from teaagent.run_receipt import build_run_receipt
-
-        receipt = build_run_receipt(store, run_id, args.root)
-        print(f'\n{receipt}', file=sys.stderr)
-
-
-def _resolve_run_task(
-    args: argparse.Namespace,
-) -> tuple[str, Optional[Any]]:
-    from teaagent.plan import load_plan_contract
-
-    plan_contract = None
-    if getattr(args, 'from_plan', None):
-        plan_contract = load_plan_contract(
-            args.from_plan,
-            root=args.root,
-            allow_external_plan=getattr(args, 'allow_external_plan', False),
-        )
-    if plan_contract is not None:
-        raw_task = plan_contract.task
-    elif getattr(args, 'task', None):
-        raw_task = args.task
-    else:
-        raise ValueError('task or --from-plan is required')
-    return _prepare_task(args, raw_task), plan_contract
-
-
-def _prepare_task(args: argparse.Namespace, task: str) -> str:
-    from teaagent.ergonomics.context_inject import expand_at_references
-    from teaagent.ergonomics.daily_cost import check_daily_cost_cap
-    from teaagent.ergonomics.workspace_defaults import load_workspace_defaults
-
-    expanded, _refs = expand_at_references(task, root=args.root)
-    defaults = load_workspace_defaults(args.root)
-    cap = int(defaults.get('daily_cost_cap_cents') or 0)
-    check_daily_cost_cap(args.root, cap)
-    return expanded
-
-
-def _resolve_auto_compact(args: argparse.Namespace) -> bool:
-    if getattr(args, 'auto_compact', None) is not None:
-        return bool(args.auto_compact)
-    from teaagent.ergonomics.workspace_defaults import load_workspace_defaults
-
-    defaults = load_workspace_defaults(getattr(args, 'root', '.'))
-    return bool(defaults.get('auto_compact_on_resume', True))
-
-
-def _save_git_sandbox_consent(root: str | Path, value: str) -> None:
-    root_path = Path(root).resolve()
-    tea_dir = root_path / '.teaagent'
-    tea_dir.mkdir(parents=True, exist_ok=True)
-    json_path = tea_dir / 'config.json'
-    config = {}
-    if json_path.is_file():
-        try:
-            config = json.loads(json_path.read_text(encoding='utf-8'))
-        except (json.JSONDecodeError, ValueError, OSError) as exc:
-            print(f'Warning: Failed to read configuration: {exc}', file=sys.stderr)
-            config = {}
-    else:
-        config = {}
-    config['git_sandbox_consent'] = value
-    try:
-        json_path.write_text(
-            json.dumps(config, sort_keys=True, indent=2), encoding='utf-8'
-        )
-    except Exception as exc:
-        print(f'Warning: Failed to save configuration: {exc}', file=sys.stderr)
-
-
-def _resolve_validation_profile(args: argparse.Namespace) -> Optional[str]:
-    if getattr(args, 'no_validate', False):
-        return None
-    if getattr(args, 'validate', False):
-        return getattr(args, 'validation_profile', None) or 'standard'
-    return None
-
-
-def _require_plan_gate(
-    args: argparse.Namespace, plan_contract: Optional[Any]
-) -> Optional[int]:
-    # Strict plan-before-write enforcement for workspace-write mode (user-approved)
-    mode = parse_permission_mode(args.permission_mode)
-    if mode == PermissionMode.READ_ONLY:
-        return None
-
-    # Check if strict plan enforcement is enabled (default for workspace-write)
-    require_plan = getattr(args, 'require_plan', False)
-    skip_plan_check = getattr(args, 'skip_plan_check', False)
-
-    # If user explicitly skips plan check, allow it (with warning logged elsewhere)
-    if skip_plan_check:
-        return None
-
-    # For workspace-write mode, enforce plan requirement by default
-    if mode == PermissionMode.WORKSPACE_WRITE and not require_plan:
-        # Auto-enable require_plan for workspace-write mode unless explicitly skipped
-        require_plan = True
-
-    if not require_plan:
-        return None
-
-    if plan_contract is not None:
-        return None
-    print_json(
-        {
-            'status': 'error',
-            'message': (
-                'Plan-before-write enforcement requires a bound plan. Run `teaagent plan` then '
-                '`teaagent run --from-plan .teaagent/plans/<file>.md --require-plan`. '
-                'Use --skip-plan-check to override (not recommended).'
-            ),
-        }
-    )
-    return 2
-
-
-def _run_post_validation(
-    args: argparse.Namespace,
-    *,
-    result: RunResult,
-    store: RunStore,
-    profile: str,
-) -> int:
-    from typing import cast
-
-    from teaagent.validation.profiles import run_profile_validation
-
-    report = run_profile_validation(
-        str(args.root),
-        cast(Literal['fast', 'standard', 'strict'], profile),
-    )
-    path = store.run_path(result.run_id)
-    if path.is_file():
-        audit = AgentExecutionFactory.create_audit_logger_from_path(path)
-        audit.record('validation_started', result.run_id, profile=profile)
-        audit.record(
-            'validation_finished',
-            result.run_id,
-            passed=report.passed,
-            report=report.to_dict(),
-        )
-    payload = {'validation': report.to_dict(), 'run_id': result.run_id}
-    print_json(payload)
-    return 0 if report.passed else 1
-
-
-def show_interactive_diff(root: str | Path, sandbox_branch: str) -> bool:
-    """Show interactive diff before merge prompt.
-
-    Args:
-        root: The workspace root directory
-        sandbox_branch: The sandbox branch name
-
-    Returns:
-        True if user wants to proceed, False to cancel
-    """
-    from pathlib import Path
-
-    root_path = Path(root).resolve()
-
-    print('\n=== Sandbox Merge Preview ===')
-    print(f'Branch: {sandbox_branch}')
-    print()
-
-    # Get diff summary
-    try:
-        # Get list of changed files
-        result = subprocess.run(
-            ['git', 'diff', '--stat', f'{sandbox_branch}'],
-            cwd=root_path,
-            capture_output=True,
-            text=True,
-        )
-
-        if result.returncode == 0 and result.stdout.strip():
-            print('Changed files:')
-            print(result.stdout)
-        else:
-            print('No changes detected in sandbox branch.')
-            return True
-
-        # Ask if user wants to see detailed diff
-        print('\nView detailed diff? [Y/n]: ', end='')
-        choice = input().strip().lower()
-
-        if choice in ('n', 'no'):
-            return True
-
-        # Show detailed diff with color
-        print('\n=== Detailed Changes ===')
-        result = subprocess.run(
-            ['git', 'diff', '--color=always', f'{sandbox_branch}'],
-            cwd=root_path,
-            capture_output=True,
-            text=True,
-        )
-
-        if result.stdout:
-            # Paginate output if it's long
-            lines = result.stdout.split('\n')
-            if len(lines) > DEFAULT_PAGINATION_LINES:
-                # Show first N lines
-                print('\n'.join(lines[:DEFAULT_DIFF_PREVIEW_LINES]))
-                print(f'\n... ({len(lines) - DEFAULT_DIFF_PREVIEW_LINES} more lines)')
-                print('Press Enter to see more, or q to quit: ', end='')
-                more = input().strip().lower()
-                if more != 'q':
-                    print('\n'.join(lines[30:]))
-            else:
-                print(result.stdout)
-        else:
-            print('No detailed changes available.')
-
-        print('\n=== End of Diff ===')
-
-    except FileNotFoundError:
-        print('[TeaAgent] Git not found in PATH')
-        return True
-    except Exception as exc:
-        print(f'[TeaAgent] Error getting diff: {exc}')
-        return True
-
-    return True
 
 
 def _start_background_run(args: argparse.Namespace) -> int:
@@ -424,29 +72,29 @@ def _start_background_run(args: argparse.Namespace) -> int:
             root_path / '.teaagent' / f'suspension-{safe_run_id(candidate)}.json'
         )
         if run_path.is_file():
-            print_json(
-                {
-                    'status': 'error',
-                    'message': (
-                        f"'{candidate}' looks like an existing run id. "
-                        f'Use `teaagent agent resume {candidate}` or '
-                        f'`teaagent agent interactive-review {candidate}` instead. '
-                        '--background launches a new detached task; it is not for resuming.'
-                    ),
-                }
+            print(
+                format_error_block(
+                    'Error',
+                    f"'{candidate}' looks like an existing run id. "
+                    f'Use `teaagent agent resume {candidate}` or '
+                    f'`teaagent agent interactive-review {candidate}` instead. '
+                    '--background launches a new detached task; it is not for resuming.',
+                    category='BACKGROUND',
+                ),
+                file=sys.stderr,
             )
             return 2
         if suspension_path.is_file():
-            print_json(
-                {
-                    'status': 'error',
-                    'message': (
-                        f"'{candidate}' looks like a suspension id. "
-                        f'Use `teaagent agent interactive-review {candidate}` '
-                        'to inspect it; true resume is not yet available for REPL '
-                        'suspensions.'
-                    ),
-                }
+            print(
+                format_error_block(
+                    'Error',
+                    f"'{candidate}' looks like a suspension id. "
+                    f'Use `teaagent agent interactive-review {candidate}` '
+                    'to inspect it; true resume is not yet available for REPL '
+                    'suspensions.',
+                    category='BACKGROUND',
+                ),
+                file=sys.stderr,
             )
             return 2
 
@@ -469,7 +117,14 @@ def agent_run_task(args: argparse.Namespace) -> int:
     try:
         task, plan_contract = _resolve_run_task(args)
     except (FileNotFoundError, ValueError) as exc:
-        print_json({'status': 'error', 'message': str(exc)})
+        print(
+            format_error_block(
+                'Error',
+                str(exc),
+                hint='provider comes first: `teaagent agent run PROVIDER [task]`',
+            ),
+            file=sys.stderr,
+        )
         return 1
     if getattr(args, 'dry_run', False):
         from teaagent.ergonomics.dry_run import build_dry_run_payload
@@ -500,8 +155,6 @@ def _execute_agent_task(  # noqa: C901
     plan_contract: Optional[Any] = None,
 ) -> int:
     # First-run orientation (shown once per workspace)
-    import os as _os
-
     from teaagent.cli._handlers._misc import handle_first_run
 
     # Suppress welcome message in test environment
@@ -536,13 +189,20 @@ def _execute_agent_task(  # noqa: C901
     if args.clarify:
         clarification = clarify_task(task)
         if clarification.needs_clarification:
-            print_json(
-                {
-                    'status': 'needs_clarification',
-                    'clarification': clarification.to_dict(),
-                }
-            )
-            return 2
+            clarify_json = getattr(args, 'clarify_json', False)
+            if clarify_json or not sys.stdin.isatty():
+                print_json(
+                    {
+                        'status': 'needs_clarification',
+                        'clarification': clarification.to_dict(),
+                    }
+                )
+                return 2
+            if clarification.question:
+                print(clarification.question)
+            answer = input('> ')
+            if answer.strip():
+                task = answer.strip()
         task_spec = build_task_spec(task, clarification)
 
     routing = (
@@ -608,12 +268,9 @@ def _execute_agent_task(  # noqa: C901
             )
             _sp_state['written'] = True
         except (OSError, IOError) as exc:
-            # Log but don't crash - scratchpad write is best-effort
             import logging
 
             logging.getLogger(__name__).warning('Scratchpad write error: %s', exc)
-
-    import atexit
 
     atexit.register(_write_scratchpad_on_exit)
 
@@ -836,6 +493,7 @@ def _execute_agent_task(  # noqa: C901
     approved_payload_digests = _parse_approve_scoped(
         getattr(args, 'approve_scoped', [])
     )
+    warn_if_approve_call_id_used(args)
     config = factory.create_chat_agent_config(
         max_iterations=args.max_iterations,
         max_tool_calls=args.max_tool_calls,
@@ -843,7 +501,9 @@ def _execute_agent_task(  # noqa: C901
         allow_destructive=args.allow_destructive,
         model=selected_model,
         permission_mode=resolved_permission_mode,
-        approved_call_ids=frozenset(args.approve_call_id),
+        # Call-id preapproval was removed (G-P2-2); the flag is inert and only
+        # surfaces a deprecation notice pointing to --approve-scoped.
+        approved_call_ids=frozenset(),
         approved_payload_digests=approved_payload_digests,
         enable_subagent=args.subagent,
         max_subagent_depth=args.max_subagent_depth,

@@ -49,7 +49,9 @@ def test_dev_hash_allowed_when_explicit() -> None:
     )
 
 
-def test_preapproved_call_id_creates_scoped_approval() -> None:
+def test_preapproved_call_id_no_longer_grants_or_creates_scoped_approval() -> None:
+    # G-P2-2: call-id preapproval was removed. A call_id in preapproved_call_ids
+    # must NOT grant approval and must NOT persist a scoped approval.
     with tempfile.TemporaryDirectory() as tmpdir:
         store = ApprovalPresetStore(tmpdir)
         policy = ApprovalPolicy(
@@ -57,12 +59,13 @@ def test_preapproved_call_id_creates_scoped_approval() -> None:
             approval_origin_run_id='run-1',
             preapproved_call_ids=frozenset({'call-42'}),
         )
-        policy.assert_allowed(
-            tool_name='workspace_write_file',
-            call_id='call-42',
-            destructive=True,
-            arguments={'path': 'x.txt', 'content': 'hi'},
-        )
+        with pytest.raises(ToolPermissionError):
+            policy.assert_allowed(
+                tool_name='workspace_write_file',
+                call_id='call-42',
+                destructive=True,
+                arguments={'path': 'x.txt', 'content': 'hi'},
+            )
         assert (
             store.check_scoped_approval(
                 'run-1',
@@ -196,7 +199,9 @@ def test_strict_validation_triggers_journal_restore() -> None:
         with (
             mock.patch.object(engine, '_execute_step', return_value=failed),
             mock.patch(
-                'teaagent.workflow_engine.UndoJournal.restore',
+                # UndoJournal now lives in teaagent.run_undo; patch the class
+                # method at its definition so all importers are covered.
+                'teaagent.run_undo.UndoJournal.restore',
                 return_value=UndoResult(restored=[], deleted=[], errors=[]),
             ) as restore_mock,
         ):

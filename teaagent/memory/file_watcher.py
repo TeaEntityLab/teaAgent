@@ -9,11 +9,14 @@ This module provides:
 
 from __future__ import annotations
 
+import logging
 import threading
 import time
 from contextlib import suppress
 from pathlib import Path
 from typing import Callable, Optional, Set
+
+logger = logging.getLogger(__name__)
 
 
 def _import_watchdog() -> tuple[bool, object, object, object, object, object, object]:
@@ -96,6 +99,7 @@ class FileChangeHandler(FileSystemEventHandler):  # type: ignore[valid-type,misc
             # This will be resolved in the watcher setup
             file_path = str(src_path)
         except Exception:
+            logger.exception('modified event parse failed')
             return
 
         # Check if this is a watched file
@@ -127,6 +131,7 @@ class FileChangeHandler(FileSystemEventHandler):  # type: ignore[valid-type,misc
             src_path = Path(src_path_str)
             file_path = str(src_path)
         except Exception:
+            logger.exception('deleted event parse failed')
             return
 
         # Check if this is a watched file

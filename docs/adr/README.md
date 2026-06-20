@@ -34,6 +34,7 @@ This directory contains all Architecture Decision Records (ADRs) for the TeaAgen
 | 0029 | Consensus Validation Deferred Behind Approval Queue | Accepted | 2026-06-10 | 2026-12-10 (expiry review) |
 | 0031 | Shadow Mode Exit Criteria | Proposed | 2026-06-12 | 2026-09-12 (expiry review) |
 | 0032 | Run Event Taxonomy and Event Spine | Accepted and Implemented | 2026-06-13 | 2026-06-17 |
+| 0040 | Reconcile the Second Execution Framework with the Primary Runner | Accepted | 2026-06-20 | - |
 
 ## ADR Categories
 

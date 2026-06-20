@@ -248,7 +248,7 @@ Requires Python >= 3.10. Optional dependency groups enable non-core integrations
 ```bash
 pip install -e ".[graphqlite]"
 pip install -e ".[tui]"
-pip install -e ".[oauth]"
+pip install -e ".[crypto]"
 pip install -e ".[telemetry]"
 pip install -e ".[dev]"
 pip install -e ".[release]"

@@ -54,7 +54,11 @@ class BudgetMonitor:
     on_prompt: Optional[Callable[[dict[str, Any]], bool]] = None
 
     _emitted_levels: set[int] = field(default_factory=set)
+    _emitted_iteration_levels: set[int] = field(default_factory=set)
+    _emitted_tool_call_levels: set[int] = field(default_factory=set)
     _prompted: bool = False
+    _prompted_iterations: bool = False
+    _prompted_tool_calls: bool = False
 
     @classmethod
     def from_env(cls, budget: RunBudget) -> 'BudgetMonitor':
@@ -128,10 +132,150 @@ class BudgetMonitor:
             )
         return BudgetAction.NONE
 
+    def check_iterations(self, *, run_id: str, iterations: int) -> BudgetAction:
+        """Check iteration consumption and return the highest-priority action.
+
+        Returns ``BudgetAction.NONE`` when no new threshold was crossed.
+        Each threshold fires at most once per dimension (idempotent).
+        """
+        max_iters = self.budget.max_iterations
+        if max_iters is None or max_iters == 0:
+            return BudgetAction.NONE
+        return self._check_dimension(
+            current=iterations,
+            max_value=float(max_iters),
+            emitted_set=self._emitted_iteration_levels,
+            prompted_flag=(
+                self._prompted_iterations,
+                lambda v: setattr(self, '_prompted_iterations', v),
+            ),
+            dimension='iterations',
+            run_id=run_id,
+        )
+
+    def check_tool_calls(self, *, run_id: str, tool_calls: int) -> BudgetAction:
+        """Check tool-call consumption and return the highest-priority action.
+
+        Returns ``BudgetAction.NONE`` when no new threshold was crossed.
+        Each threshold fires at most once per dimension (idempotent).
+        """
+        max_calls = self.budget.max_tool_calls
+        if max_calls is None or max_calls == 0:
+            return BudgetAction.NONE
+        return self._check_dimension(
+            current=tool_calls,
+            max_value=float(max_calls),
+            emitted_set=self._emitted_tool_call_levels,
+            prompted_flag=(
+                self._prompted_tool_calls,
+                lambda v: setattr(self, '_prompted_tool_calls', v),
+            ),
+            dimension='tool_calls',
+            run_id=run_id,
+        )
+
+    def _check_dimension(
+        self,
+        *,
+        current: int,
+        max_value: float,
+        emitted_set: set[int],
+        prompted_flag: tuple[bool, Callable[[bool], None]],
+        dimension: str,
+        run_id: str,
+    ) -> BudgetAction:
+        """Generic threshold check for any numeric dimension."""
+        percent = (current / max_value) * 100.0
+        highest_action = BudgetAction.NONE
+
+        for level in sorted(self.thresholds):
+            if percent < level or int(level) in emitted_set:
+                continue
+
+            emitted_set.add(int(level))
+            action = self._handle_dimension_threshold(
+                level=int(level),
+                percent=percent,
+                current=current,
+                max_value=max_value,
+                dimension=dimension,
+                run_id=run_id,
+                prompted_flag=prompted_flag,
+            )
+            if _action_priority(action) > _action_priority(highest_action):
+                highest_action = action
+
+        return highest_action
+
+    def _handle_dimension_threshold(
+        self,
+        *,
+        level: int,
+        percent: float,
+        current: int,
+        max_value: float,
+        dimension: str,
+        run_id: str,
+        prompted_flag: tuple[bool, Callable[[bool], None]],
+    ) -> BudgetAction:
+        """Handle a single threshold crossing for a dimension."""
+        logger.warning(
+            '%s at %.0f%%: %d / %.0f (run_id=%s)',
+            dimension,
+            percent,
+            current,
+            max_value,
+            run_id,
+        )
+
+        if self.on_status:
+            self.on_status(f'{dimension}: {percent:.0f}% ({current}/{max_value:.0f})')
+
+        if level in (50, 80):
+            return BudgetAction.WARN
+
+        if level == 90:
+            prompted_value, prompted_setter = prompted_flag
+            if not self.interactive:
+                logger.warning(
+                    '%s at 90%% -- auto-continuing (non-interactive mode)',
+                    dimension,
+                )
+                return BudgetAction.WARN
+            if self.on_prompt and not prompted_value:
+                prompted_setter(True)
+                approved = self.on_prompt(
+                    {
+                        'run_id': run_id,
+                        'percent': percent,
+                        'dimension': dimension,
+                        'current': current,
+                        'max_value': max_value,
+                    }
+                )
+                if not approved:
+                    return BudgetAction.PROMPT_CONFIRM
+            return BudgetAction.WARN
+
+        if level >= 100:
+            logger.warning(
+                '%s exhausted (%.0f%%). '
+                'Consider switching to read-only mode for the remaining session.',
+                dimension,
+                percent,
+            )
+            return BudgetAction.SUGGEST_READ_ONLY
+
+        return BudgetAction.NONE
+
     def reset(self) -> None:
         """Reset emitted tracking for a new run re-using the monitor."""
         self._emitted_levels.clear()
         self._prompted = False
+        self._emitted_iteration_levels.clear()
+        self._emitted_tool_call_levels.clear()
+        self._prompted_iterations = False
+        self._prompted_tool_calls = False
 
     def _handle_threshold(
         self,

@@ -1061,22 +1061,21 @@ class TeaAgentTUI:
         self._create_checkpoint()
 
     def _handle_undo(self) -> None:
-        """Undo using ChatSessionController undo journal first, fall back to git checkpoint."""
+        """Undo via the ChatSessionController journal only (U-P2-3).
+
+        Journal-first with NO global git-stash checkpoint fallback: the fallback
+        restored files outside the journal scope and diverged from the CLI
+        ``agent undo``. ``_restore_checkpoint`` is retained for explicit recovery
+        paths but is intentionally not invoked here (guarded by
+        tests/tui/test_tui_undo_scope.py).
+        """
         controller = self._get_chat_controller()
         if controller.undo_last_run():
             self.output_fn('undo: journal undo completed (file-level restore)')
             return
-        # Fallback to git-stash checkpoint (TUI legacy undo)
-        if self._restore_checkpoint():
-            self.output_fn(
-                'undo: checkpoint restore completed (git-level restore — '
-                'stale undo journal may exist for non-checkpoint runs)'
-            )
-        else:
-            self.output_fn(
-                'undo: nothing to undo — no undo journal or checkpoint found. '
-                'Try running a task first.'
-            )
+        self.output_fn(
+            'undo: nothing to undo — no undo journal found. Try running a task first.'
+        )
 
     def _handle_background(self) -> None:
         self.output_fn(

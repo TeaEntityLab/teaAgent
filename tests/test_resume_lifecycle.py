@@ -166,8 +166,8 @@ def test_background_rejects_existing_run_id_in_task_position(capsys):
         captured = capsys.readouterr()
 
         assert result == 2
-        assert 'existing run id' in captured.out.lower()
-        assert 'agent resume' in captured.out
+        assert 'existing run id' in captured.err.lower()
+        assert 'agent resume' in captured.err
 
 
 def test_background_rejects_existing_run_id_in_provider_position(capsys):
@@ -192,7 +192,7 @@ def test_background_rejects_existing_run_id_in_provider_position(capsys):
         captured = capsys.readouterr()
 
         assert result == 2
-        assert 'existing run id' in captured.out.lower()
+        assert 'existing run id' in captured.err.lower()
 
 
 def test_background_rejects_suspension_id_in_task_position(capsys):
@@ -206,8 +206,8 @@ def test_background_rejects_suspension_id_in_task_position(capsys):
         captured = capsys.readouterr()
 
         assert result == 2
-        assert 'suspension id' in captured.out.lower()
-        assert 'interactive-review' in captured.out
+        assert 'suspension id' in captured.err.lower()
+        assert 'interactive-review' in captured.err
 
 
 def test_background_rejects_suspension_id_in_provider_position(capsys):
@@ -222,7 +222,7 @@ def test_background_rejects_suspension_id_in_provider_position(capsys):
         captured = capsys.readouterr()
 
         assert result == 2
-        assert 'suspension id' in captured.out.lower()
+        assert 'suspension id' in captured.err.lower()
 
 
 def test_background_allows_legitimate_task(capsys):
@@ -445,8 +445,8 @@ def test_full_lifecycle_suspend_review_refuse_background(capsys):
         captured = capsys.readouterr()
         assert result == 2
         assert (
-            'suspension id' in captured.out.lower()
-            or 'existing run id' in captured.out.lower()
+            'suspension id' in captured.err.lower()
+            or 'existing run id' in captured.err.lower()
         )
 
 

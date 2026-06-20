@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -12,6 +13,8 @@ from teaagent.daily import (
 )
 from teaagent.memory import MemoryCatalog, MemoryEntry
 from teaagent.run_store import RunStore
+
+logger = logging.getLogger(__name__)
 
 _LARGE_FILE_THRESHOLD_BYTES = 100_000
 _MAX_ARTIFACTS_TO_REPORT = 5
@@ -129,14 +132,14 @@ def compute_context_pressure(
         pinned_storage = PinnedFileStorage(root)
         files_pinned = len(pinned_storage.list_all())
     except Exception:
-        pass
+        logger.exception('pinned files query failed')
 
     recent_runs = 0
     try:
         store = RunStore(root, readonly=True)
         recent_runs = len(store.list_runs(limit=50))
     except Exception:
-        pass
+        logger.exception('recent runs query failed')
 
     large_artifacts = _detect_large_artifacts(root)
 

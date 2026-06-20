@@ -57,4 +57,7 @@ def test_build_use_case_matrix_includes_canonical_markers(tmp_path: Path) -> Non
         '([../scripts/refresh_agent_readme_survey.md](../scripts/refresh_agent_readme_survey.md)).'
         in text
     )
-    assert '(see [use-cases.md](use-cases.md#partial--planned-gaps)).' in text
+    assert (
+        '(see [use-cases.md](use-cases.md#partial--planned-gaps-docs--packaging)).'
+        in text
+    )

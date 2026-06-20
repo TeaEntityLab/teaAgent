@@ -10,7 +10,6 @@ import hashlib
 import json
 import logging
 import time
-import warnings
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Iterator
@@ -112,14 +111,6 @@ class ApprovalPolicy:
         description: str = '',
         handler: Any | None = None,
     ) -> None:
-        if self.preapproved_call_ids:
-            warnings.warn(
-                'preapproved_call_ids is deprecated; use full payload digest '
-                'verification via scoped approvals instead.',
-                DeprecationWarning,
-                stacklevel=2,
-            )
-
         # Sync external JIT state with manager's state
         if jit_state:
             manager_state = self._approval_manager.get_jit_state()

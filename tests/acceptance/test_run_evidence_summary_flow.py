@@ -22,6 +22,7 @@ from conftest import FakeAdapter
 
 from teaagent.cli import main
 from teaagent.plan import load_plan_contract
+from teaagent.policy import compute_scoped_payload_digest
 from teaagent.run_evidence import (
     build_run_evidence_bundle,
 )
@@ -317,6 +318,13 @@ def test_real_run_receipt_completeness_from_plan(tmp_path: Path) -> None:
         ]
     )
 
+    # G-P2-2: pre-approve the write via payload digest (--approve-scoped), the
+    # secure replacement for the removed --approve-call-id.
+    write_digest = compute_scoped_payload_digest(
+        'workspace_write_file',
+        {'path': 'calc.py', 'content': 'def add(a, b):\n    return a + b\n'},
+    )
+
     run_out = io.StringIO()
     with (
         patch('teaagent.cli.create_llm_adapter', return_value=adapter),
@@ -334,8 +342,8 @@ def test_real_run_receipt_completeness_from_plan(tmp_path: Path) -> None:
                 'prompt',
                 '--allow-external-plan',
                 '--require-plan',
-                '--approve-call-id',
-                'write-calc',
+                '--approve-scoped',
+                f'workspace_write_file:{write_digest}',
                 '--max-iterations',
                 '8',
                 '--max-tool-calls',

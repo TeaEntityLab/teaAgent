@@ -320,8 +320,8 @@ def test_doctor_model_ok_when_key_set() -> None:
 def test_doctor_model_wizard_uses_keychain_when_prompt_empty() -> None:
     output = io.StringIO()
     with (
-        patch('teaagent.cli._handlers._doctor.getpass.getpass', return_value=''),
-        patch('teaagent.cli._handlers._doctor.input', return_value=''),
+        patch('teaagent.cli._handlers._doctor.model.getpass.getpass', return_value=''),
+        patch('teaagent.cli._handlers._doctor.model.input', return_value=''),
         patch('teaagent.wizard.subprocess.run') as security_run,
         patch.dict(os.environ, {}, clear=True),
         redirect_stdout(output),
@@ -429,11 +429,11 @@ def test_doctor_aigateway_wizard_writes_env() -> None:
         output = io.StringIO()
         with (
             patch(
-                'teaagent.cli._handlers._doctor.input',
+                'teaagent.cli._handlers._doctor.model.input',
                 side_effect=['acct123', 'gw123', 'y'],
             ),
             patch(
-                'teaagent.cli._handlers._doctor.getpass.getpass',
+                'teaagent.cli._handlers._doctor.model.getpass.getpass',
                 side_effect=['cf-token', 'gw-token'],
             ),
             patch.dict(os.environ, {}, clear=True),
@@ -464,11 +464,11 @@ def test_doctor_aigateway_wizard_writes_compat_base_url() -> None:
         output = io.StringIO()
         with (
             patch(
-                'teaagent.cli._handlers._doctor.input',
+                'teaagent.cli._handlers._doctor.model.input',
                 side_effect=['acct123', 'gw123', 'n'],
             ),
             patch(
-                'teaagent.cli._handlers._doctor.getpass.getpass',
+                'teaagent.cli._handlers._doctor.model.getpass.getpass',
                 side_effect=['cf-token'],
             ),
             patch.dict(os.environ, {}, clear=True),
@@ -501,11 +501,11 @@ def test_doctor_aigateway_wizard_reads_keychain_token_when_input_empty() -> None
     output = io.StringIO()
     with (
         patch(
-            'teaagent.cli._handlers._doctor.input',
+            'teaagent.cli._handlers._doctor.model.input',
             side_effect=['acct123', 'gw123', 'n'],
         ),
         patch(
-            'teaagent.cli._handlers._doctor.getpass.getpass',
+            'teaagent.cli._handlers._doctor.model.getpass.getpass',
             return_value='',
         ),
         patch('teaagent.wizard.subprocess.run') as security_run,

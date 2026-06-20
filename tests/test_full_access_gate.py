@@ -19,9 +19,7 @@ from dataclasses import FrozenInstanceError
 import pytest
 
 from teaagent.approval import ApprovalManager, PermissionModeEnforcer
-from teaagent.auto_mode import AutoModeConfig
 from teaagent.policy import ApprovalPolicy
-from teaagent.runner._auto_mode_manager import AutoModeManager
 from teaagent.types import DenialReasonCode, PermissionMode, ToolPermissionError
 
 _DESTRUCTIVE_TOOL = 'workspace_write_file'
@@ -187,24 +185,9 @@ class TestPolicyGate:
 # Layer 3: AutoModeManager opts in explicitly
 # --------------------------------------------------------------------------
 
-
-class TestAutoModeGate:
-    def test_auto_mode_policy_acknowledges_full_access(self) -> None:
-        manager = AutoModeManager(auto_mode_config=AutoModeConfig(enabled=True))
-        policy = manager.get_auto_approve_policy()
-        assert policy is not None
-        assert policy.permission_mode is PermissionMode.DANGER_FULL_ACCESS
-        assert policy.allow_all_destructive is True
-        assert policy.full_access_acknowledged is True
-
-    def test_auto_mode_policy_allows_destructive(self) -> None:
-        manager = AutoModeManager(auto_mode_config=AutoModeConfig(enabled=True))
-        policy = manager.get_auto_approve_policy()
-        assert policy is not None
-        policy.assert_allowed(
-            tool_name=_DESTRUCTIVE_TOOL, call_id='c1', destructive=True
-        )
-
-    def test_disabled_auto_mode_returns_no_policy(self) -> None:
-        manager = AutoModeManager(auto_mode_config=None)
-        assert manager.get_auto_approve_policy() is None
+# NOTE: the former TestAutoModeGate class was removed. It asserted the OLD
+# auto-mode behavior of silently escalating to DANGER_FULL_ACCESS
+# (allow_all_destructive / full_access_acknowledged), which S-P0-1 / ADR-0033
+# deliberately replaced with payload-digest-scoped preapproval. The shipped
+# (non-escalating) behavior and the new get_auto_approve_policy() signature are
+# covered by tests/test_auto_mode_authority_audit.py.

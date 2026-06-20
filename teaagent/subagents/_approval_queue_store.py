@@ -7,12 +7,14 @@ import hmac
 import json
 import logging
 import os
+import secrets
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterator, Optional
 
+from teaagent.errors import ConfigError
 from teaagent.subagents._approval_queue import (
     ApprovalBatch,
     ApprovalRequestStatus,
@@ -34,6 +36,10 @@ class ApprovalQueuePruneReport:
     removed_parent_run_ids: list[str] = field(default_factory=list)
     skipped_pending: list[str] = field(default_factory=list)
     skipped_recent: list[str] = field(default_factory=list)
+    # Files whose HMAC could not be verified (legacy-unsigned or tampered).
+    # Never pruned — their contents are unknown, so deleting them could lose
+    # pending approval requests. Resolve via an explicit migration.
+    skipped_unverified: list[str] = field(default_factory=list)
 
     @property
     def removed_count(self) -> int:
@@ -51,7 +57,10 @@ class ApprovalQueueStore:
         self.workspace_root = Path(workspace_root).resolve()
         self.queue_dir = self.workspace_root / '.teaagent' / 'approval_queues'
         self.queue_dir.mkdir(parents=True, exist_ok=True)
-        self.hmac_secret = hmac_secret
+        if hmac_secret is not None:
+            self.hmac_secret = hmac_secret
+        else:
+            self.hmac_secret = _load_or_generate_hmac_key(self.workspace_root)
         self._snapshot_cache: dict[str, tuple[float, QueueDiskSnapshot]] = {}
 
     def queue_path(self, parent_run_id: str) -> Path:
@@ -102,15 +111,15 @@ class ApprovalQueueStore:
     def _verify_hmac(self, raw: dict) -> bool:
         """Verify the ``_hmac`` field on *raw* matches the computed HMAC.
 
-        Returns ``False`` when HMAC is absent or the digest doesn't match.
-        Returns ``True`` when ``hmac_secret`` is unset (no verification
-        required, backward compatibility).
+        Returns ``False`` when the digest doesn't match.  When ``_hmac`` is
+        absent and ``TEAAGENT_APPROVAL_HMAC_LEGACY_ACCEPT`` is set to a truthy
+        value the record is accepted as-is (backward compatibility).
         """
         if not self.hmac_secret:
             return True
         stored = raw.get('_hmac')
         if not stored:
-            return False
+            return bool(os.environ.get('TEAAGENT_APPROVAL_HMAC_LEGACY_ACCEPT'))
         expected = hmac.new(
             self.hmac_secret.encode('utf-8'),
             json.dumps(
@@ -260,6 +269,25 @@ class ApprovalQueueStore:
             self._save_unlocked(parent_run_id, snapshot)
         return True
 
+    def _verify_file_unlocked(self, parent_run_id: str) -> bool:
+        """Return whether the on-disk queue file passes HMAC verification.
+
+        Unlike :meth:`_load_unlocked`, a verification failure is reported as
+        ``False`` rather than masked as an empty snapshot, so callers (e.g.
+        ``prune_stale``) can avoid deleting data they cannot verify. A missing
+        or structurally-invalid file is treated as verified (nothing to lose).
+        """
+        path = self.queue_path(parent_run_id)
+        if not path.is_file():
+            return True
+        try:
+            raw = json.loads(path.read_text(encoding='utf-8'))
+        except (OSError, json.JSONDecodeError):
+            return False
+        if not isinstance(raw, dict):
+            return True
+        return self._verify_hmac(raw)
+
     def _load_unlocked(self, parent_run_id: str) -> QueueDiskSnapshot:
         path = self.queue_path(parent_run_id)
         if not path.is_file():
@@ -310,6 +338,7 @@ class ApprovalQueueStore:
         removed: list[str] = []
         skipped_pending: list[str] = []
         skipped_recent: list[str] = []
+        skipped_unverified: list[str] = []
         for path in sorted(self.queue_dir.glob('*.json')):
             parent_run_id = path.stem
             try:
@@ -321,6 +350,23 @@ class ApprovalQueueStore:
                 continue
             # Acquire exclusive lock to prevent concurrent read/write races
             with self.lock(parent_run_id):
+                # Fail closed: if HMAC is enforced and the on-disk file cannot
+                # be verified (legacy-unsigned or tampered), its contents are
+                # unknown. A failed verification surfaces as an empty snapshot,
+                # which would otherwise be deleted as "no pending requests" —
+                # silently losing real pending approvals. Preserve it instead
+                # and let an explicit migration resolve it.
+                if self.hmac_secret and not self._verify_file_unlocked(parent_run_id):
+                    import logging
+
+                    logging.getLogger(__name__).warning(
+                        'approval queue %s failed HMAC verification — preserving '
+                        '(not pruning); migrate or set '
+                        'TEAAGENT_APPROVAL_HMAC_LEGACY_ACCEPT to re-sign legacy data',
+                        parent_run_id,
+                    )
+                    skipped_unverified.append(parent_run_id)
+                    continue
                 snapshot = self._load_unlocked(parent_run_id)
                 has_pending = any(
                     raw.get('status') == ApprovalRequestStatus.PENDING.value
@@ -335,14 +381,51 @@ class ApprovalQueueStore:
             removed_parent_run_ids=removed,
             skipped_pending=skipped_pending,
             skipped_recent=skipped_recent,
+            skipped_unverified=skipped_unverified,
         )
+
+
+def _key_path(workspace_root: Path) -> Path:
+    return workspace_root / '.teaagent' / 'approval_queue.key'
+
+
+def _load_or_generate_hmac_key(workspace_root: Path) -> str:
+    """Load or generate the HMAC key for approval queue integrity.
+
+    Priority:
+    1. ``TEAAGENT_APPROVAL_HMAC_KEY`` env var (no file written).
+    2. Existing ``.teaagent/approval_queue.key`` with mode 0o600.
+    3. Generate a fresh 32-byte hex key and persist it with mode 0o600.
+
+    Raises ``ConfigError`` when the key file exists but is world-readable
+    (mode != 0o600).
+    """
+    env_key = os.environ.get('TEAAGENT_APPROVAL_HMAC_KEY')
+    if env_key:
+        return env_key
+
+    kp = _key_path(workspace_root)
+    if kp.is_file():
+        mode = kp.stat().st_mode & 0o777
+        if mode != 0o600:
+            raise ConfigError(
+                f'Approval queue HMAC key {kp} has mode {oct(mode)}; '
+                f'expected 0o600. Fix with: chmod 0o600 {kp}'
+            )
+        return kp.read_text(encoding='utf-8').strip()
+
+    raw = secrets.token_hex(32)  # 32 bytes → 64 hex chars
+    kp.parent.mkdir(parents=True, exist_ok=True)
+    kp.write_text(raw, encoding='utf-8')
+    kp.chmod(0o600)
+    return raw
 
 
 def default_hmac_secret() -> Optional[str]:
     """Read the HMAC key from ``TEAAGENT_APPROVAL_HMAC_KEY`` env var.
 
     Returns ``None`` when the variable is unset or empty so that callers
-    fall back to backward-compatible unauthenticated mode.
+    fall back to automatic key generation through ``_load_or_generate_hmac_key``.
     """
     return os.environ.get('TEAAGENT_APPROVAL_HMAC_KEY') or None
 

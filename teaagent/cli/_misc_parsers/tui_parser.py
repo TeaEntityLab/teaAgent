@@ -22,9 +22,9 @@ def _tui(
     )
     p.add_argument(
         '--provider',
-        default='gpt',
+        default=None,
         choices=available_providers(),
-        help='Default model provider for ask commands.',
+        help='Default model provider for ask commands. Resolved from config when omitted.',
     )
     p.add_argument(
         '--model', default=None, help='Default model override for ask commands.'
@@ -56,5 +56,23 @@ def _tui(
         '--write-env',
         action='store_true',
         help='With --setup, also write .teaagent/env for the provider API key.',
+    )
+    p.add_argument(
+        '--max-iterations',
+        type=int,
+        default=10,
+        help='Maximum agent iterations per task.',
+    )
+    p.add_argument(
+        '--max-estimated-cost-cents',
+        type=int,
+        default=500,
+        help='Maximum estimated cost in cents before confirmation.',
+    )
+    p.add_argument(
+        '--memory-limit',
+        type=int,
+        default=5,
+        help='Memory catalog limit (most recent N entries).',
     )
     p.set_defaults(func=handler)

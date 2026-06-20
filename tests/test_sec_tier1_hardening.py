@@ -101,7 +101,11 @@ def test_multisig_rejects_stale_peer_signature(monkeypatch: pytest.MonkeyPatch) 
 def test_preapproved_call_ids_blocked_when_disabled(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """SEC-14: legacy preapproved_call_ids can be hard-disabled for production."""
+    """SEC-14 / G-P2-2: call-id preapproval no longer grants approval.
+
+    The legacy hard-disable env is now moot: ``preapproved_call_ids`` is ignored
+    unconditionally, so the call falls through to the (unmet) JIT approval path.
+    """
     monkeypatch.setenv('TEAAGENT_DISABLE_PREAPPROVED_CALL_IDS', '1')
     manager = ApprovalManager(preapproved_call_ids=frozenset({'legacy-call'}))
     with pytest.raises(ToolPermissionError) as exc:
@@ -111,4 +115,4 @@ def test_preapproved_call_ids_blocked_when_disabled(
             destructive=True,
             arguments={'path': 'x.txt', 'content': 'hi'},
         )
-    assert exc.value.reason_code == DenialReasonCode.MISSING_STATE
+    assert exc.value.reason_code == DenialReasonCode.JIT_NO_APPROVAL

@@ -8,12 +8,15 @@ it works correctly across different codebase structures and sizes.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Any
 
 from teaagent.eval_suite import EvalCategory, EvalTest
+
+logger = logging.getLogger(__name__)
 
 
 class BenchmarkMetric(str, Enum):
@@ -273,6 +276,7 @@ class RepoMapBenchmarkRunner:
                 if any(keyword in content for keyword in keywords):
                     matching_files.add(str(file_path.relative_to(root)))
             except Exception:
+                logger.exception('repo-map query failed')
                 continue
 
         return matching_files
@@ -299,6 +303,7 @@ class RepoMapBenchmarkRunner:
                 func_matches = re.findall(r'def\s+(\w+)\s*\(', content)
                 functions.update(func_matches)
             except Exception:
+                logger.exception('functions extraction failed')
                 continue
 
         return functions
@@ -325,6 +330,7 @@ class RepoMapBenchmarkRunner:
                 class_matches = re.findall(r'class\s+(\w+)\s*[:\(]', content)
                 classes.update(class_matches)
             except Exception:
+                logger.exception('classes extraction failed')
                 continue
 
         return classes

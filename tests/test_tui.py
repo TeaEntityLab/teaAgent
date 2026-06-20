@@ -219,7 +219,11 @@ class TUITests(unittest.TestCase):
         self.assertEqual(output[2], 'unapproved: write-1')
         self.assertEqual(json.loads(output[3]), [])
 
-    def test_tui_approved_call_id_allows_exact_write(self) -> None:
+    def test_tui_approve_call_id_tracks_but_does_not_grant(self) -> None:
+        # The TUI `approve <call_id>` command still tracks the id (session
+        # bookkeeping), but call-id preapproval no longer GRANTS at the policy
+        # level (G-P2-2), so the destructive write stays pending. The secure
+        # replacement is scoped (payload-digest) approval.
         with tempfile.TemporaryDirectory() as tmp:
             output = []
             adapter = FakeAdapter(
@@ -236,11 +240,12 @@ class TUITests(unittest.TestCase):
             )
 
             self.assertTrue(tui.handle_command('approve write-1'))
-            self.assertTrue(tui.handle_command('ask write file'))
+            self.assertEqual(output[-1], 'approved: write-1')
 
+            self.assertTrue(tui.handle_command('ask write file'))
             payload = json.loads(output[-1])
-            self.assertEqual(payload['status'], 'completed')
-            self.assertEqual((Path(tmp) / 'x.txt').read_text(encoding='utf-8'), 'x')
+            self.assertNotEqual(payload['status'], 'completed')
+            self.assertFalse((Path(tmp) / 'x.txt').exists())
 
     def test_tui_hitl_approval_prompt_allows_write(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1155,7 +1160,11 @@ class TUITests(unittest.TestCase):
             self.assertIsNone(tui._parallel_options)
 
     def test_tui_conflict_command_provides_hint(self) -> None:
-        """Test TUI conflict command provides helpful hint."""
+        """Test TUI conflict command provides a helpful git hint.
+
+        In-TUI conflict-resolution mode was retired in favour of using git
+        directly; the command now reports ``not_available`` but still points
+        the user at git (the command's enduring intent: a helpful hint)."""
         with tempfile.TemporaryDirectory() as tmp:
             output = []
             tui = TeaAgentTUI(
@@ -1166,7 +1175,7 @@ class TUITests(unittest.TestCase):
 
             self.assertTrue(tui.handle_command('conflict'))
             result = json.loads(output[-1])
-            self.assertEqual(result['status'], 'conflict_mode')
+            self.assertEqual(result['status'], 'not_available')
             self.assertIn('hint', result)
             self.assertIn('git', result['hint'].lower())
 
@@ -1507,7 +1516,8 @@ class TUITests(unittest.TestCase):
         output: list[str] = []
         tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
         tui._handle_undo()
-        self.assertIn('no checkpoint', ' '.join(output))
+        # Without a chat controller journal, undo emits a "nothing to undo" message
+        self.assertIn('nothing to undo', ' '.join(output))
 
     def test_tui_handle_undo_calls_controller_first(self) -> None:
         """_handle_undo must call ChatSessionController.undo_last_run() before checkpoint fallback."""

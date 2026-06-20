@@ -1,30 +1,46 @@
 from __future__ import annotations
 
 import argparse
-import subprocess
+import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
-from teaagent.approval import parse_permission_mode
-from teaagent.cli._handlers._misc import print_json
+from teaagent.approval_selectors import (
+    collect_pending_approval_views,
+    format_pending_approvals,
+    resolve_selector,
+)
 from teaagent.cli.execution import AgentExecutionFactory
-from teaagent.daily import build_daily_brief
 from teaagent.ergonomics.approval_store import ApprovalPresetStore
-from teaagent.ergonomics.daily_journal import write_daily_journal
-from teaagent.ergonomics.guidance import collect_workspace_guidance
-from teaagent.ergonomics.run_history import list_recall_runs, list_yesterday_runs
-from teaagent.ergonomics.status_short import build_status_short
 from teaagent.ergonomics.workspace_defaults import load_workspace_defaults
-from teaagent.recipes.registry import list_recipes, run_recipe
+from teaagent.integration.approval_parity import (
+    build_approval_granted_payload,
+    build_pending_approvals_snapshot,
+    grant_pending_approval,
+)
 from teaagent.types import PermissionMode
 
 
-def _truncate_string(s: str, max_len: int = 40, suffix: str = '...') -> str:
-    """Truncate a string to max_len, adding suffix if truncated."""
-    if len(s) <= max_len:
-        return s
-    return s[: max_len - len(suffix)] + suffix
+class _PrintJsonProxy:
+    """Print JSON via the parent package to support test patching of
+    ``teaagent.cli._handlers._ergonomics.print_json``.
+    """
+
+    def __call__(self, value: Any) -> None:
+        import sys as _sys
+
+        mod = _sys.modules.get('teaagent.cli._handlers._ergonomics')
+        if mod is not None and hasattr(mod, 'print_json'):
+            mod.print_json(value)
+            return
+        from teaagent.cli._handlers._misc import print_json as _fallback
+
+        _fallback(value)
+
+
+print_json = _PrintJsonProxy()
 
 
 def _wrap_approval_store_errors(func: Callable[[], int]) -> int:
@@ -46,233 +62,6 @@ def _wrap_approval_store_errors(func: Callable[[], int]) -> int:
         return 1
 
 
-def yesterday_command(args: argparse.Namespace) -> int:
-    runs = list_yesterday_runs(args.root, limit=args.limit)
-    if sys.stdout.isatty():
-        from teaagent.ergonomics.human_output import format_ascii_table
-
-        headers = ['Run ID', 'Task', 'Status', 'Created At']
-        keys = ['run_id', 'task', 'status', 'created_at']
-        truncated = []
-        for r in runs:
-            tr = dict(r)
-            task = tr.get('task', '')
-            tr['task'] = _truncate_string(task, max_len=40)
-            truncated.append(tr)
-        print(format_ascii_table(headers, truncated, keys))
-    else:
-        print_json(runs)
-    return 0
-
-
-def recall_command(args: argparse.Namespace) -> int:
-    runs = list_recall_runs(args.root, limit=args.limit)
-    if sys.stdout.isatty():
-        from teaagent.ergonomics.human_output import format_ascii_table
-
-        headers = ['Run ID', 'Task', 'Status', 'Created At']
-        keys = ['run_id', 'task', 'status', 'created_at']
-        truncated = []
-        for r in runs:
-            tr = dict(r)
-            task = tr.get('task', '')
-            tr['task'] = _truncate_string(task, max_len=40)
-            truncated.append(tr)
-        print(format_ascii_table(headers, truncated, keys))
-    else:
-        print_json(runs)
-    return 0
-
-
-def status_short_command(args: argparse.Namespace) -> int:
-    defaults = load_workspace_defaults(args.root)
-    provider = args.provider or defaults.get('provider')
-    if not provider:
-        print('teaagent:? provider unset (run teaagent setup)', file=sys.stderr)
-        return 1
-    line = build_status_short(
-        root=args.root,
-        provider=provider,
-        run_id=args.run_id,
-        model=args.model or defaults.get('model'),
-        permission_mode=parse_permission_mode(
-            args.permission_mode or defaults.get('permission_mode', 'prompt')
-        ),
-    )
-    print(line)
-    return 0
-
-
-def background_list_command(args: argparse.Namespace) -> int:
-    runs = (
-        AgentExecutionFactory(args.root)
-        .create_background_run_store(readonly=True)
-        .list()
-    )
-    if sys.stdout.isatty():
-        from teaagent.ergonomics.human_output import format_ascii_table
-
-        headers = ['Background ID', 'PID', 'Label', 'Alive', 'Started At']
-        keys = ['background_id', 'pid', 'label', 'alive', 'started_at']
-        truncated = []
-        for r in runs:
-            tr = dict(r)
-            tr['background_id'] = tr.get('background_id', '')[:10]
-            truncated.append(tr)
-        print(format_ascii_table(headers, truncated, keys))
-    else:
-        print_json(runs)
-    return 0
-
-
-def background_show_command(args: argparse.Namespace) -> int:
-    try:
-        print_json(
-            AgentExecutionFactory(args.root)
-            .create_background_run_store(readonly=True)
-            .get(args.background_id)
-        )
-    except FileNotFoundError as exc:
-        print_json({'status': 'error', 'message': str(exc)})
-        return 1
-    return 0
-
-
-def session_list_command(args: argparse.Namespace) -> int:
-    store = AgentExecutionFactory(args.root).create_run_store(readonly=True)
-    rows = []
-    for summary in store.list_runs(limit=args.limit):
-        row = summary.to_dict()
-        row['heartbeat'] = store.heartbeat_for_run(summary.run_id)
-        row['pending_approval'] = store.pending_approval_for_run(summary.run_id)
-        rows.append(row)
-    from teaagent.scratchpad import Scratchpad
-
-    scratchpad = Scratchpad(Path(args.root))
-    if scratchpad.exists():
-        content = scratchpad.read()
-        if content and content.get('last_goal'):
-            rows.append({'scratchpad_last_goal': content['last_goal']})
-    print_json(rows)
-    return 0
-
-
-def session_show_command(args: argparse.Namespace) -> int:
-    store = AgentExecutionFactory(args.root).create_run_store(readonly=True)
-    try:
-        events = store.show_run(args.run_id)
-    except FileNotFoundError as exc:
-        print_json({'status': 'error', 'message': str(exc)})
-        return 1
-    print_json(
-        {
-            'run_id': args.run_id,
-            'heartbeat': store.heartbeat_for_run(args.run_id),
-            'pending_approval': store.pending_approval_for_run(args.run_id),
-            'events': events,
-        }
-    )
-    return 0
-
-
-def session_resume_command(args: argparse.Namespace) -> int:
-    from teaagent.cli._handlers._agent import agent_resume_command
-
-    ns = argparse.Namespace(
-        run_id=args.run_id,
-        root=args.root,
-        provider=args.provider,
-        model=args.model,
-        fresh_restart=args.fresh_restart,
-        approve_call_id=[],
-        clarify=False,
-        route_model=False,
-        max_iterations=10,
-        max_tool_calls=10,
-        allow_destructive=False,
-        hitl_approval=False,
-        permission_mode=args.permission_mode,
-        subagent=False,
-        max_subagent_depth=1,
-        heartbeat=0.0,
-        code_analysis=False,
-        telemetry_otlp_endpoint=None,
-        telemetry_service_name='teaagent',
-        telemetry_console=False,
-        checkpoint_store=None,
-        auto_compact=None,
-        _adapter_factory=getattr(args, '_adapter_factory', None),
-    )
-    defaults = load_workspace_defaults(args.root)
-    if not ns.provider:
-        ns.provider = defaults.get('provider')
-    if not ns.provider:
-        print_json({'status': 'error', 'message': 'provider required for resume'})
-        return 1
-    return agent_resume_command(ns)
-
-
-def recipes_list_command(args: argparse.Namespace) -> int:
-    print_json(list_recipes())
-    return 0
-
-
-def recipes_run_command(args: argparse.Namespace) -> int:
-    payload = run_recipe(args.name, extra=args.extra or '')
-    print_json(payload)
-    if args.print_only:
-        return 0
-    if not args.provider:
-        defaults = load_workspace_defaults(args.root)
-        args.provider = defaults.get('provider')
-    if not args.provider:
-        print_json(
-            {'status': 'error', 'message': 'provider required to execute recipe'}
-        )
-        return 1
-    from teaagent.cli._handlers._agent import agent_run_task
-
-    run_args = argparse.Namespace(
-        provider=args.provider,
-        task=payload['task'],
-        root=args.root,
-        model=args.model,
-        route_model=False,
-        max_iterations=10,
-        max_tool_calls=10,
-        clarify=False,
-        allow_destructive=False,
-        approve_call_id=[],
-        hitl_approval=False,
-        permission_mode=payload['permission_mode'],
-        subagent=False,
-        max_subagent_depth=1,
-        heartbeat=0.0,
-        code_analysis=False,
-        telemetry_otlp_endpoint=None,
-        telemetry_service_name='teaagent',
-        telemetry_console=False,
-        checkpoint_store=None,
-        context_profile=payload['context_profile'],
-        _adapter_factory=getattr(args, '_adapter_factory', None),
-    )
-    return agent_run_task(run_args)
-
-
-def approval_list_command(args: argparse.Namespace) -> int:
-    def _list() -> int:
-        store = ApprovalPresetStore(args.root, readonly=True)
-        if getattr(args, 'scoped', False):
-            print_json(store.list_all_scoped_approvals())
-        elif getattr(args, 'grants_only', False):
-            print_json([grant.to_dict() for grant in store.list_grants()])
-        else:
-            print_json(store.list_policy())
-        return 0
-
-    return _wrap_approval_store_errors(_list)
-
-
 def _parse_approval_arguments(args: argparse.Namespace) -> dict[str, Any] | None:
     """Parse approval arguments from --arguments-json or --arg key=value pairs.
 
@@ -282,8 +71,6 @@ def _parse_approval_arguments(args: argparse.Namespace) -> dict[str, Any] | None
     Raises:
         ValueError: If argument parsing fails (error message included).
     """
-    import json
-
     arguments: dict[str, Any] = {}
 
     # Parse --arguments-json if provided (highest priority)
@@ -311,6 +98,61 @@ def _parse_approval_arguments(args: argparse.Namespace) -> dict[str, Any] | None
             arguments['command'] = args.command
 
     return arguments or None
+
+
+def _build_explanation_summary(check_result: dict[str, Any]) -> str:
+    """Build human-readable explanation of why a tool call was allowed/denied."""
+    decision = check_result['decision']
+    evaluated = check_result['evaluated_grants']
+    matched = check_result['matched_grant']
+
+    if decision == 'deny':
+        if matched:
+            return f'Denied by matching deny grant {matched["grant_id"]}'
+        return 'Denied by permission mode or no matching allow grant'
+    if decision == 'allow':
+        if matched:
+            return f'Allowed by matching {matched["scope"]} grant {matched["grant_id"]}'
+        return 'Allowed by permission mode'
+    if decision == 'prompt':
+        # Find reasons why grants didn't match
+        reasons = []
+        for grant in evaluated:
+            if not grant['matched'] and grant.get('reason'):
+                reasons.append(
+                    f'Grant {grant["grant_id"]} ({grant["scope"]}): {grant["reason"]}'
+                )
+        if reasons:
+            return f'Prompt required. No matching grant. Reasons: {"; ".join(reasons)}'
+        return 'Prompt required. No matching grant found'
+    return f'Unknown decision: {decision}'
+
+
+_DENIAL_REASON_DESCRIPTIONS: dict[str, str] = {
+    'read_only_mode': 'Blocked by read-only permission mode — all destructive tools are disabled.',
+    'workspace_write_mode': 'Blocked by workspace-write permission mode — shell mutation tools require prompt/allow mode.',
+    'file_policy_denied': 'Blocked by file policy rules in policy.yaml.',
+    'plan_contract_denied': 'Blocked by plan-before-write enforcement — target is not in the approved plan.',
+    'jit_user_denied': 'Denied by user via the JIT approval prompt.',
+    'jit_no_approval': 'No explicit approval received — tool call requires approval.',
+    'multisig_no_quorum': 'Blocked by multi-signature quorum — not enough peer approvals.',
+    'auto_mode_blocked': 'Blocked by auto-mode tool restrictions.',
+    'missing_state': 'Blocked — no matching approval state found.',
+}
+
+
+def approval_list_command(args: argparse.Namespace) -> int:
+    def _list() -> int:
+        store = ApprovalPresetStore(args.root, readonly=True)
+        if getattr(args, 'scoped', False):
+            print_json(store.list_all_scoped_approvals())
+        elif getattr(args, 'grants_only', False):
+            print_json([grant.to_dict() for grant in store.list_grants()])
+        else:
+            print_json(store.list_policy())
+        return 0
+
+    return _wrap_approval_store_errors(_list)
 
 
 def approval_check_command(args: argparse.Namespace) -> int:
@@ -378,47 +220,6 @@ def approval_explain_command(args: argparse.Namespace) -> int:
     return _wrap_approval_store_errors(_explain)
 
 
-def _build_explanation_summary(check_result: dict[str, Any]) -> str:
-    """Build human-readable explanation of why a tool call was allowed/denied."""
-    decision = check_result['decision']
-    evaluated = check_result['evaluated_grants']
-    matched = check_result['matched_grant']
-
-    if decision == 'deny':
-        if matched:
-            return f'Denied by matching deny grant {matched["grant_id"]}'
-        return 'Denied by permission mode or no matching allow grant'
-    if decision == 'allow':
-        if matched:
-            return f'Allowed by matching {matched["scope"]} grant {matched["grant_id"]}'
-        return 'Allowed by permission mode'
-    if decision == 'prompt':
-        # Find reasons why grants didn't match
-        reasons = []
-        for grant in evaluated:
-            if not grant['matched'] and grant.get('reason'):
-                reasons.append(
-                    f'Grant {grant["grant_id"]} ({grant["scope"]}): {grant["reason"]}'
-                )
-        if reasons:
-            return f'Prompt required. No matching grant. Reasons: {"; ".join(reasons)}'
-        return 'Prompt required. No matching grant found'
-    return f'Unknown decision: {decision}'
-
-
-_DENIAL_REASON_DESCRIPTIONS: dict[str, str] = {
-    'read_only_mode': 'Blocked by read-only permission mode — all destructive tools are disabled.',
-    'workspace_write_mode': 'Blocked by workspace-write permission mode — shell mutation tools require prompt/allow mode.',
-    'file_policy_denied': 'Blocked by file policy rules in policy.yaml.',
-    'plan_contract_denied': 'Blocked by plan-before-write enforcement — target is not in the approved plan.',
-    'jit_user_denied': 'Denied by user via the JIT approval prompt.',
-    'jit_no_approval': 'No explicit approval received — tool call requires approval.',
-    'multisig_no_quorum': 'Blocked by multi-signature quorum — not enough peer approvals.',
-    'auto_mode_blocked': 'Blocked by auto-mode tool restrictions.',
-    'missing_state': 'Blocked — no matching approval state found.',
-}
-
-
 def approval_why_denied_command(args: argparse.Namespace) -> int:
     """Explain why tool calls were denied for a given run."""
     store = AgentExecutionFactory(Path(args.root)).create_run_store(readonly=True)
@@ -470,8 +271,6 @@ def approval_why_denied_command(args: argparse.Namespace) -> int:
         )
 
         if args.verbose:
-            import json
-
             print(f'  Full payload:\n    {json.dumps(payload, indent=4)}')
         print()
 
@@ -562,12 +361,6 @@ def approval_audit_command(args: argparse.Namespace) -> int:
 
 
 def approval_pending_command(args: argparse.Namespace) -> int:
-    from teaagent.approval_selectors import (
-        collect_pending_approval_views,
-        format_pending_approvals,
-    )
-    from teaagent.integration.approval_parity import build_pending_approvals_snapshot
-
     store = AgentExecutionFactory(args.root).create_run_store(readonly=True)
     if getattr(args, 'human', False):
         views = collect_pending_approval_views(store, limit=args.limit)
@@ -579,11 +372,6 @@ def approval_pending_command(args: argparse.Namespace) -> int:
 
 def approval_approve_command(args: argparse.Namespace) -> int:  # noqa: C901
     def _approve() -> int:  # noqa: C901
-        from teaagent.approval_selectors import (
-            collect_pending_approval_views,
-            resolve_selector,
-        )
-
         store = AgentExecutionFactory(args.root).create_run_store()
         call_id = args.call_id
         if getattr(args, 'selector', None) is not None:
@@ -607,11 +395,6 @@ def approval_approve_command(args: argparse.Namespace) -> int:  # noqa: C901
                 }
             )
             return 1
-
-        from teaagent.integration.approval_parity import (
-            build_approval_granted_payload,
-            grant_pending_approval,
-        )
 
         grant = grant_pending_approval(args.root, call_id, limit=100)
         if grant is None:
@@ -668,8 +451,6 @@ def approval_approve_command(args: argparse.Namespace) -> int:  # noqa: C901
                 auto_compact=None,
                 _adapter_factory=getattr(args, '_adapter_factory', None),
             )
-            from teaagent.ergonomics.workspace_defaults import load_workspace_defaults
-
             defaults = load_workspace_defaults(args.root)
             if not ns.provider:
                 ns.provider = defaults.get('provider')
@@ -849,8 +630,6 @@ def approval_preset_command(args: argparse.Namespace) -> int:
 
 
 def approval_doctor_command(args: argparse.Namespace) -> int:  # noqa: C901
-    from datetime import datetime, timezone
-
     readonly = not (
         getattr(args, 'repair_store', False)
         or getattr(args, 'force_reset_store', False)
@@ -1144,12 +923,6 @@ def approval_doctor_command(args: argparse.Namespace) -> int:  # noqa: C901
 
 def approval_next_command(args: argparse.Namespace) -> int:
     def _next() -> int:
-        from teaagent.approval_selectors import (
-            collect_pending_approval_views,
-            format_pending_approvals,
-        )
-        from teaagent.ergonomics.approval_store import ApprovalPresetStore
-
         store = AgentExecutionFactory(args.root).create_run_store(readonly=True)
         views = collect_pending_approval_views(store, limit=20)
 
@@ -1182,8 +955,6 @@ def approval_next_command(args: argparse.Namespace) -> int:
             arguments = {}
 
         # Explain why it's pending (lazy-create approval store only when needed)
-        from teaagent.types import PermissionMode
-
         permission_mode = PermissionMode.PROMPT.value
         approval_store = ApprovalPresetStore(args.root, readonly=True)
         check_result = approval_store.check(
@@ -1241,167 +1012,3 @@ def approval_next_command(args: argparse.Namespace) -> int:
         return 0
 
     return _wrap_approval_store_errors(_next)
-
-
-def guidance_command(args: argparse.Namespace) -> int:
-    print_json(collect_workspace_guidance(args.root))
-    return 0
-
-
-# ── Permission Mode Decision Guide ────────────────────────────────────────
-
-_PERMISSION_MODE_GUIDE: dict[str, dict[str, str]] = {
-    'read-only': {
-        'summary': 'Blocks all destructive tools. Safe for exploration and analysis.',
-        'when_to_use': 'Code reviews, architecture questions, preflight checks, daily briefs, exploring unfamiliar code.',
-        'allows': 'File reads, shell inspect (read-only commands like ls, git log).',
-        'blocks': 'File writes (write_file, apply_patch, hash-edit), shell mutation (install, rm, git push).',
-        'risk': 'low',
-        'rollback': 'not needed (no mutations)',
-        'tip': 'Start here for any task that does not require editing files.',
-    },
-    'workspace-write': {
-        'summary': 'Allows file writes but blocks shell mutation. Safe for editing tasks.',
-        'when_to_use': 'Patching files, writing docs, updating tests — any task that only needs file I/O.',
-        'allows': 'File reads, file writes (write_file, apply_patch, hash-edit), shell inspect.',
-        'blocks': 'Shell mutation (install, rm, git push, docker).',
-        'risk': 'medium',
-        'rollback': 'yes (UndoJournal.restore())',
-        'tip': 'Use for editing tasks that do not need to run shell commands with side effects.',
-    },
-    'prompt': {
-        'summary': 'Destructive tools pause for human-in-the-loop approval or require an approval token.',
-        'when_to_use': 'Day-to-day autonomous work where you want to approve each destructive action.',
-        'allows': 'File reads, file writes (after approval), shell inspect, shell mutate (after approval).',
-        'blocks': 'Nothing permanently — every destructive tool can proceed after approval.',
-        'risk': 'medium',
-        'rollback': 'with approval (UndoJournal.restore())',
-        'tip': 'The default mode. Best balance of safety and autonomy for daily use.',
-    },
-    'allow': {
-        'summary': 'Allows all destructive tools for the session. No per-call approval required.',
-        'when_to_use': 'Trusted automation, CI/CD pipelines, batch scripts where you have validated the task.',
-        'allows': 'File reads, file writes, shell inspect, shell mutate (all without approval).',
-        'blocks': 'Nothing.',
-        'risk': 'high',
-        'rollback': 'yes (UndoJournal.restore())',
-        'tip': 'Only use in automated environments where you fully trust the input task.',
-    },
-    'danger-full-access': {
-        'summary': 'Full access with no restrictions. Reserve for trusted automation only.',
-        'when_to_use': 'Emergency recovery scripts, fully isolated automation, internal tooling with validated inputs.',
-        'allows': 'Everything — file reads/writes, shell inspect/mutate, no approval gates.',
-        'blocks': 'Nothing.',
-        'risk': 'high',
-        'rollback': 'yes (UndoJournal.restore())',
-        'tip': 'Identical to "allow" in capability but signals extreme caution. Audit events are tagged for monitoring.',
-    },
-}
-
-
-def permission_explain_command(args: argparse.Namespace) -> int:
-    """Print the permission mode decision guide."""
-    mode_names = [m.value for m in PermissionMode]
-    selected = args.mode
-
-    if selected:
-        if selected not in mode_names:
-            print_json(
-                {
-                    'error': f"Unknown mode '{selected}'. Choose from: {', '.join(mode_names)}"
-                }
-            )
-            return 1
-        modes_to_show = [selected]
-    else:
-        modes_to_show = mode_names
-
-    result: dict[str, Any] = {'permission_modes': {}}
-    for name in modes_to_show:
-        result['permission_modes'][name] = _PERMISSION_MODE_GUIDE[name]
-
-    print_json(result)
-    return 0
-
-
-def ci_review_command(args: argparse.Namespace) -> int:
-    payload = run_recipe('review-staged')
-    if args.diff_only:
-        proc = subprocess.run(
-            ['git', 'diff', '--staged'],
-            cwd=args.root,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        payload['staged_diff'] = proc.stdout[: args.max_bytes]
-    print_json(payload)
-    if args.print_only:
-        return 0
-    if not args.provider:
-        defaults = load_workspace_defaults(args.root)
-        args.provider = defaults.get('provider')
-    if not args.provider:
-        print_json({'status': 'error', 'message': 'provider required'})
-        return 1
-    from teaagent.cli._handlers._agent import agent_run_task
-
-    task = payload['task']
-    if payload.get('staged_diff'):
-        task = f'{task}\n\n```diff\n{payload["staged_diff"]}\n```'
-    return agent_run_task(
-        argparse.Namespace(
-            provider=args.provider,
-            task=task,
-            root=args.root,
-            model=args.model,
-            route_model=False,
-            max_iterations=8,
-            max_tool_calls=8,
-            clarify=False,
-            allow_destructive=False,
-            approve_call_id=[],
-            hitl_approval=False,
-            permission_mode='read-only',
-            subagent=False,
-            max_subagent_depth=1,
-            heartbeat=0.0,
-            code_analysis=False,
-            telemetry_otlp_endpoint=None,
-            telemetry_service_name='teaagent',
-            telemetry_console=False,
-            checkpoint_store=None,
-            _adapter_factory=getattr(args, '_adapter_factory', None),
-        )
-    )
-
-
-def watch_command(args: argparse.Namespace) -> int:
-    import time
-
-    interval = max(1.0, float(args.interval))
-    while True:
-        defaults = load_workspace_defaults(args.root)
-        provider = args.provider or defaults.get('provider')
-        if provider:
-            print(build_status_short(root=args.root, provider=provider), flush=True)
-        time.sleep(interval)
-
-
-def daily_journal_command(args: argparse.Namespace) -> int:
-    defaults = load_workspace_defaults(args.root)
-    provider = args.provider or defaults.get('provider')
-    if not provider:
-        print_json({'status': 'error', 'message': 'provider required'})
-        return 1
-    brief = build_daily_brief(
-        task=args.task,
-        root=args.root,
-        provider=provider,
-        model=args.model,
-        permission_mode=parse_permission_mode(args.permission_mode),
-        context_profile=args.context_profile,
-    )
-    path = write_daily_journal(brief, root=args.root)
-    print_json({'ok': True, 'path': str(path)})
-    return 0
