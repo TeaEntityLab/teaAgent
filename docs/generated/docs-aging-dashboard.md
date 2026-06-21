@@ -27,7 +27,6 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 
 | Document | Status | Last reviewed | File mtime | Notes |
 | --- | --- | --- | --- | --- |
-| `docs/tui-daily-driver-guide.md` | stale_by_mtime | 2026-06-06 | 2026-06-20 | File modified after last reviewed date |
 | `docs/USAGE.md` | stale_by_mtime | 2026-06-06 | 2026-06-21 | Missing owner banner; File modified after last reviewed date |
 
 ### docs
@@ -41,6 +40,7 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 | Document | Status | Last reviewed | File mtime | Notes |
 | --- | --- | --- | --- | --- |
 | `docs/governance/README.md` | stale_by_mtime | 2026-06-06 | 2026-06-21 | Missing owner banner; File modified after last reviewed date |
+| `docs/terminology.md` | stale_by_mtime | 2026-06-10 | 2026-06-21 | Missing owner banner; File modified after last reviewed date |
 
 ### project
 

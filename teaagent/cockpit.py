@@ -14,6 +14,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Optional
 
+from teaagent.errors import ErrorCategory
+
 logger = logging.getLogger(__name__)
 
 
@@ -513,7 +515,17 @@ def assess_stale_workspace(root: str | Path) -> StaleWorkspaceReport:
                     report.commits_behind > 0 or report.commits_ahead > 0
                 )
             except (ValueError, TypeError):
-                pass
+                logger.warning(
+                    'git divergence output parse failed; using zero-count defaults',
+                    extra={
+                        'error_category': ErrorCategory.SYSTEM.value,
+                        'error_severity': 'low',
+                        'recovery_hint': (
+                            'Run git rev-list --left-right --count manually to inspect '
+                            'the repository state.'
+                        ),
+                    },
+                )
 
     # -- pending approvals (quarantine entries) --
     report.pending_approvals = _count_quarantine_lines(root_path)

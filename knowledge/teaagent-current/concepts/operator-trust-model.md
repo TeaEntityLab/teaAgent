@@ -6,7 +6,7 @@ resource: "urn:teaagent:doc:docs/operator-trust-model.md"
 tags: ["teaagent", "trust", "operator", "contract"]
 teaagent:
   source_path: "docs/operator-trust-model.md"
-  source_sha256: "42e7dd7445e5818b6b209c8c4b67342e6a192fbcc187b6b4dd42c74f4dbc76e0"
+  source_sha256: "2077a669d958c6f87def85f1a8033ad9d7b3b3c67daabb964cd55f8a2506ac10"
   docs_tier: "working"
   authority: "canonical"
   lifecycle: "current"

@@ -26,15 +26,15 @@ of core agent behavior.
 ## Contracts
 
 - Explicit root wins over saved state.
-- TUI chat should converge on controller-backed semantics.
+- TUI and REPL chat share controller-backed task, result, cost, and undo semantics.
 - Cost is real or unknown.
 - Undo mechanism is visible.
 - Every run-producing command should expose a run id.
 
-## Open risks
+## Residual risks
 
-- Saved state root overwrite.
-- Partial controller migration.
-- Cost stop-gap not yet full parity.
-- TUI undo scope drift.
-- Tests can bypass the active TUI path.
+- Provider adapters can omit usage data, leaving session cost incomplete.
+- Explicit-root precedence, controller routing, journal-only undo, and approval scope can
+  regress if new commands bypass their shared helpers.
+- Helper-only tests can miss active command-path failures; headless TUI path tests remain
+  required for release evidence.

@@ -1,8 +1,8 @@
-# approval_manager — Inspection: Purpose, Dependencies, Exports, Call Graph
+# Approval Package — Inspection: Purpose, Dependencies, Exports, Call Graph
 
 ## Purpose
 
-The approval_manager module provides a unified, multi-layered system for deciding whether an agent tool call is permitted to execute. It coordinates:
+The `teaagent.approval` package provides a unified, multi-layered system for deciding whether an agent tool call is permitted to execute. It coordinates:
 
 - **Permission mode enforcement** — enforces global modes (read-only, workspace-write, prompt, allow, danger-full-access)
 - **JIT (just-in-time) approval** — interactive TTY prompting for one-time or session-wide approvals
@@ -17,8 +17,8 @@ The approval_manager module provides a unified, multi-layered system for decidin
 
 | File | Role |
 |------|------|
-| `teaagent/approval_manager.py` | `ApprovalManager` (unified), `PermissionModeEnforcer`, `JITApprovalManager`, `MultiSigQuorumManager`, `ApprovalStoreManager`, `JITApprovalState`, `PermissionMode` enum |
-| `teaagent/approval_ui.py` | `DiffApprovalHandler` — interactive approval UI with unified diff preview |
+| `teaagent/approval/manager.py` | `ApprovalManager` (unified), `PermissionModeEnforcer`, `JITApprovalManager`, `MultiSigQuorumManager`, `ApprovalStoreManager`, `JITApprovalState`, `PermissionMode` enum |
+| `teaagent/approval/ui.py` | `DiffApprovalHandler` — interactive approval UI with unified diff preview |
 | `teaagent/ergonomics/_approval_grants.py` | `ApprovalGrant`, `ScopedApprovalRecord`, grant helpers, digest computation |
 | `teaagent/ergonomics/_approval_persistence.py` | `ApprovalPersistence` — JSON file I/O, file permission enforcement, security health checks |
 | `teaagent/ergonomics/_approval_state.py` | `ApprovalPresetStore` — the main store API (delegates persistence to `ApprovalPersistence`) |
@@ -28,7 +28,7 @@ The approval_manager module provides a unified, multi-layered system for decidin
 
 ## Exported Symbols
 
-### `teaagent/approval_manager.py`
+### `teaagent/approval/manager.py`
 
 ```python
 __all__ = [
@@ -69,7 +69,7 @@ __all__ = [
 
 ## External Dependencies
 
-### `approval_manager.py`
+### `approval/manager.py`
 
 | Module | Symbols |
 |--------|---------|
@@ -82,7 +82,7 @@ __all__ = [
 | `teaagent.ssh_signatures` | `is_ssh_signature_blob`, `verify_message_ssh` (lazy import) |
 | `teaagent.async_bridge` | `run_coroutine_sync` (lazy import) |
 
-### `approval_ui.py`
+### `approval/ui.py`
 
 | Module | Symbols |
 |--------|---------|
@@ -109,7 +109,7 @@ __all__ = [
 ## Class Relationships
 
 ```
-ApprovalManager (approval_manager.py)
+ApprovalManager (approval/manager.py)
 ├── has-a PermissionModeEnforcer
 │         └── permission_mode: PermissionMode
 │         └── allow_all_destructive: bool
@@ -130,7 +130,7 @@ ApprovalPresetStore (ergonomics/_approval_state.py)
           └── path: Path (.teaagent/approvals.json)
           └── readonly: bool
 
-DiffApprovalHandler (approval_ui.py)
+DiffApprovalHandler (approval/ui.py)
 └── implements ApprovalHandler protocol
 └── workspace_root: Path
 ```

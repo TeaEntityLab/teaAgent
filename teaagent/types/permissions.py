@@ -1,6 +1,6 @@
 """Permission and approval domain types (canonical import path)."""
 
-from teaagent.approval_manager import (
+from teaagent.approval.manager import (
     JITApprovalState,
     PermissionMode,
 )

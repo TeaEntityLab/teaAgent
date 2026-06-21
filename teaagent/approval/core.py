@@ -1,6 +1,6 @@
 """Core approval data types (canonical import path)."""
 
-from teaagent.approval_manager import (
+from teaagent.approval.manager import (
     JITApprovalState,
     MultiSigQuorumConfig,
     PeerSignature,

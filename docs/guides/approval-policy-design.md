@@ -32,7 +32,7 @@ An approval policy answers one question for every tool call:
 | `DANGER_FULL_ACCESS` | No restrictions at all | Emergency recovery only |
 
 ```python
-from teaagent.approval_manager import PermissionMode
+from teaagent.approval import PermissionMode
 from teaagent.policy import ApprovalPolicy
 
 # Safe default for any new repository
@@ -63,7 +63,7 @@ In `PROMPT` mode the operator approves each destructive call at runtime.
 `JITApprovalState` tracks what has been approved so far in the session:
 
 ```python
-from teaagent.approval_manager import JITApprovalState
+from teaagent.approval import JITApprovalState
 
 state = JITApprovalState()
 
@@ -163,7 +163,7 @@ Configure in `.teaagent/config.json`:
 Load at runtime:
 
 ```python
-from teaagent.approval_manager import MultiSigQuorumConfig
+from teaagent.approval import MultiSigQuorumConfig
 from teaagent.policy import ApprovalPolicy, PermissionMode
 from pathlib import Path
 
@@ -279,7 +279,7 @@ Before shipping a policy configuration:
 > Items marked ✅ are enforced in code. Unchecked boxes remain **operator review gates**.
 
 - [x] `permission_mode` matches the minimum required for the task
-      ✅ `PermissionModeEnforcer` (approval_manager.py:146-219) enforces all 5 modes.
+      ✅ `PermissionModeEnforcer` in `approval/manager.py` enforces all 5 modes.
       Default is `PROMPT` (policy.py:51). Workspace config uses `"prompt"`.
 - [x] `path_glob` grants are as narrow as possible (file or directory, not root)
       ✅ `_path_matches()` enforces glob matching. TUI grants use single-file scopes.

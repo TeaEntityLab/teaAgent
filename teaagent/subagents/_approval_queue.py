@@ -12,7 +12,7 @@ Key design decisions:
 
 Note: This queue is a coordination layer for subagent approvals. The actual
 approval logic (permission modes, JIT, grants, scoped approvals) is handled
-by the unified ApprovalManager in teaagent.approval_manager, which is used
+by the unified ApprovalManager in teaagent.approval.manager, which is used
 by ApprovalPolicy in the main runner.
 """
 

@@ -621,7 +621,7 @@ def _cmd_approve(tui: 'TeaAgentTUI', args: list[str]) -> bool:
             tui.output_fn(f'error: selector must be an integer, got {args[1]!r}')
             return True
         store = RunStore(tui.root)
-        from teaagent.approval_selectors import (
+        from teaagent.approval.selectors import (
             collect_pending_approval_views,
             resolve_selector,
         )

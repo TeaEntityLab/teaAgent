@@ -7,7 +7,7 @@
 ## Key Types
 
 - `ApprovalPolicy` (frozen dataclass): compatibility approval gate surface for runner/tool dispatch.
-- `PermissionMode` (re-export from `approval_manager`): `read-only`, `workspace-write`, `prompt`, `allow`, `danger-full-access`.
+- `PermissionMode` (re-export from `teaagent.approval.manager`): `read-only`, `workspace-write`, `prompt`, `allow`, `danger-full-access`.
 - `JITApprovalState`, `MultiSigQuorumConfig`, `PeerSignature`: JIT state and quorum-related types.
 - `parse_permission_mode(value: str) -> PermissionMode`: strict parser with explicit allowed-value error.
 

@@ -1,5 +1,5 @@
 # TUI Daily-Driver Guide
-# As of 2026-06-06
+# As of 2026-06-21
 
 > **Claim class:** User guide — operational steps for the TUI daily loop.
 >
@@ -9,7 +9,7 @@
 > steps (`plans/ticket-plans/index.md`), or historical review prose in dated analysis files.
 >
 > **Review trigger:** TUI operator loop or recovery pointers change.
-> **Last reviewed:** 2026-06-06
+> **Last reviewed:** 2026-06-21
 
 Use this guide when `teaagent tui` is your daily operator cockpit.
 
@@ -51,7 +51,8 @@ The TUI should be treated as an operator surface:
 
 - Prefer prompt-mode approvals for unfamiliar repositories.
 - Prefer path-scoped approvals over broad grants.
-- Prefer `teaagent chat` for accurate live chat cost until TICKET-12 lands.
+- Use `/cost` and `/budget` for controller-backed session figures; confirm the
+  provider exposes usage data before treating either value as a billing total.
 - Prefer `teaagent agent interactive-review <run_id>` when a suspended run needs careful inspection.
 - Treat `/background` in the REPL or TUI as a suspension checkpoint, not proof that work
   continues in the background.
@@ -60,18 +61,19 @@ The TUI should be treated as an operator surface:
 
 See [Recovery And Continuity Guide](recovery-and-continuity-guide.md) for undo, resume, and failure recovery paths.
 
-## Known gaps
+## Operational limits
 
-| Gap | User-facing symptom | Safer action |
-|-----|---------------------|--------------|
-| TUI cost not accumulated | `/cost` can remain `$0.00` | Check run summary or provider dashboard. |
-| TUI undo differs from REPL undo | `/undo` may restore checkpoint/stash scope instead of journal scope | Create `/checkpoint` before risky work. |
-| Saved state can override explicit root | TUI can reopen against stale root | Verify visible root after launch. |
-| Controller parity incomplete | REPL and TUI chat behavior can drift | Use REPL for work requiring cost/undo precision. |
+| Limit | Current behavior | Operator action |
+|-----|------------------|-----------------|
+| Provider omits usage data | Controller cost can remain unavailable or incomplete | Check the run summary and provider dashboard before making billing claims. |
+| Journal has no eligible run | `/undo` reports `nothing to undo` and does not fall back to a global checkpoint | Select an explicit run id or recover through normal git review. |
+| Background command vocabulary | `/background` suspends and records a checkpoint; it does not promise detached execution | Use the returned run id with show, resume, or interactive review. |
+| Explicit root required for operator certainty | `--root` takes precedence over saved state | Keep passing `--root .` and verify the visible root before writes. |
 
 ## When to switch to CLI
 
-Switch to `teaagent chat` when the task is conversational and trust-sensitive cost or undo matters.
+Switch to `teaagent chat` when a line-oriented conversational workflow is more useful
+than the cockpit panels.
 
 Switch to `teaagent agent run` when the task is non-interactive, reviewable, and should produce an audit trail.
 

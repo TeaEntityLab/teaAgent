@@ -11,11 +11,15 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from teaagent.audit_chain import verify_audit_chain
+from teaagent.errors import ErrorCategory
+
+logger = logging.getLogger(__name__)
 
 
 def _get_tenant_dir_for_path(path: Path | None, sub_dir: str) -> Path:
@@ -29,7 +33,17 @@ def _get_tenant_dir_for_path(path: Path | None, sub_dir: str) -> Path:
                     tenant_id = parts[idx + 1]
                     return Path.home() / '.teaagent' / 'tenants' / tenant_id / sub_dir
         except Exception:
-            pass
+            logger.warning(
+                'audit export tenant directory resolution failed; using default directory',
+                extra={
+                    'error_category': ErrorCategory.SYSTEM.value,
+                    'error_severity': 'medium',
+                    'recovery_hint': (
+                        'Verify tenant path permissions before exporting tenant-scoped '
+                        'audit evidence.'
+                    ),
+                },
+            )
     return Path.home() / '.teaagent' / sub_dir
 
 
@@ -82,7 +96,17 @@ def export_compliance_bundle(
                 if len(key) == 32:
                     secret_key = key
             except OSError:
-                pass
+                logger.error(
+                    'audit chain key read failed; continuing without HMAC verification',
+                    extra={
+                        'error_category': ErrorCategory.SYSTEM.value,
+                        'error_severity': 'high',
+                        'recovery_hint': (
+                            'Restore read access to the run key before treating the '
+                            'export as HMAC-verified.'
+                        ),
+                    },
+                )
         chain_result = verify_audit_chain(log_path, secret_key=secret_key)
         chain_verification = {
             'valid': chain_result.valid,

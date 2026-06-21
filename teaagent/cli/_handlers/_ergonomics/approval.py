@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
-from teaagent.approval_selectors import (
+from teaagent.approval.selectors import (
     collect_pending_approval_views,
     format_pending_approvals,
     resolve_selector,

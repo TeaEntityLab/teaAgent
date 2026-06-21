@@ -31,7 +31,7 @@ exclude = [
 "tests/**" = ["T201"]
 # Source modules that use print() for CLI output, server startup, or stderr warnings
 "teaagent/acp_adapter.py" = ["T201"]
-"teaagent/approval_manager.py" = ["T201"]
+"teaagent/approval/manager.py" = ["T201"]
 "teaagent/audit.py" = ["T201"]
 "teaagent/cli/**" = ["T201"]
 "teaagent/__init__.py" = ["F401"]
@@ -48,6 +48,14 @@ exclude = [
 "teaagent/ultrawork.py" = ["T201"]
 "teaagent/validation/validators.py" = ["T201"]
 "teaagent/vote_relay.py" = ["T201"]
+
+[lint.isort]
+known-first-party = [
+    "teaagent.approval_backend",
+    "teaagent.approval_manager",
+    "teaagent.approval_selectors",
+    "teaagent.approval_ui",
+]
 
 [format]
 quote-style = "single"

@@ -118,7 +118,7 @@ See the [Backwards Compatibility](integration-guide.md#backwards-compatibility) 
 | Tool registry | `teaagent/tools.py` |
 | MCP server | `teaagent/mcp_server.py` |
 | Audit logger | `teaagent/audit.py` |
-| Approval / policy | `teaagent/approval_manager.py`, `teaagent/policy.py` |
+| Approval / policy | `teaagent/approval/manager.py`, `teaagent/policy.py` |
 | Session store | `teaagent/session.py` |
 | LLM adapters | `teaagent/llm/` |
 | Cost tracker | `teaagent/cost_tracker.py` |

@@ -4,61 +4,61 @@
 
 ## Hot-path modules (most outbound imports)
 
-- `teaagent` → 62 teaagent imports
-- `teaagent.tui.core` → 33 teaagent imports
-- `teaagent.cli._handlers._agent.run` → 28 teaagent imports
-- `teaagent.cli` → 27 teaagent imports
-- `teaagent.chat_agent` → 23 teaagent imports
-- `teaagent.cli._handlers._agent.runs` → 19 teaagent imports
+- `teaagent` → 63 teaagent imports
+- `teaagent.tui.core` → 32 teaagent imports
+- `teaagent.cli` → 29 teaagent imports
+- `teaagent.chat_agent` → 27 teaagent imports
+- `teaagent.cli._handlers._agent.run` → 22 teaagent imports
+- `teaagent.cli._handlers._agent.runs` → 21 teaagent imports
+- `teaagent.tui._commands` → 20 teaagent imports
 - `teaagent.runner._core` → 19 teaagent imports
-- `teaagent.tui._commands` → 17 teaagent imports
-- `teaagent.cli._handlers._ergonomics` → 15 teaagent imports
 - `teaagent.cli._handlers.agent_misc` → 15 teaagent imports
+- `teaagent.subagents._approval_queue_hybrid_store` → 15 teaagent imports
+- `teaagent.subagents._manager` → 14 teaagent imports
 - `teaagent.cli._handlers._agent.automation` → 13 teaagent imports
 - `teaagent.cli._handlers._misc` → 13 teaagent imports
-- `teaagent.subagents._manager` → 12 teaagent imports
-- `teaagent.preflight` → 11 teaagent imports
+- `teaagent.preflight` → 12 teaagent imports
+- `teaagent.approval.manager` → 11 teaagent imports
+- `teaagent.context_pack` → 10 teaagent imports
 - `teaagent.workspace_tools._files` → 10 teaagent imports
 - `teaagent.acp_adapter` → 9 teaagent imports
-- `teaagent.approval_manager` → 9 teaagent imports
-- `teaagent.cli._handlers._doctor` → 9 teaagent imports
+- `teaagent.cli._handlers._agent.config` → 9 teaagent imports
+- `teaagent.cli._handlers._ergonomics.recipes` → 9 teaagent imports
+- `teaagent.cli._handlers._ergonomics.session` → 9 teaagent imports
 - `teaagent.cli._handlers.agent_automation` → 9 teaagent imports
 - `teaagent.cli._handlers.chat_repl` → 9 teaagent imports
-- `teaagent.cli.execution` → 9 teaagent imports
-- `teaagent.context_pack` → 9 teaagent imports
 - `teaagent.daily` → 9 teaagent imports
 - `teaagent.skill_candidates` → 9 teaagent imports
-- `teaagent.anp_adapter` → 8 teaagent imports
 
 ## Sample dependency edges
 
 ### `teaagent`
-`teaagent.a2a_trace`, `teaagent.agentcard`, `teaagent.aibom`, `teaagent.anp_adapter`, `teaagent.approval_ui`, `teaagent.audit`, `teaagent.audit_chain`, `teaagent.auto_mode`
+`teaagent._compat_modules`, `teaagent._lazy_exports`, `teaagent.a2a_trace`, `teaagent.agentcard`, `teaagent.aibom`, `teaagent.anp_adapter`, `teaagent.approval.ui`, `teaagent.audit`
 
 ### `teaagent.tui.core`
-`teaagent.audit`, `teaagent.chat_agent`, `teaagent.chat_session_controller`, `teaagent.cockpit`, `teaagent.context`, `teaagent.context_health`, `teaagent.context_pressure`, `teaagent.ergonomics.approval_store`
-
-### `teaagent.cli._handlers._agent.run`
-`teaagent.chat_agent`, `teaagent.checkpoint`, `teaagent.cli._handlers._misc`, `teaagent.cli._output`, `teaagent.cli.execution`, `teaagent.code_analysis`, `teaagent.ergonomics.background_run`, `teaagent.ergonomics.context_inject`
+`teaagent.approval`, `teaagent.chat_agent`, `teaagent.chat_session_controller`, `teaagent.cockpit`, `teaagent.context`, `teaagent.context_health`, `teaagent.context_pressure`, `teaagent.ergonomics.approval_store`
 
 ### `teaagent.cli`
-`teaagent.cli._agent_parsers`, `teaagent.cli._artifact_parsers`, `teaagent.cli._cloud_parsers`, `teaagent.cli._consensus_parsers`, `teaagent.cli._control_plane_parsers`, `teaagent.cli._cost_parsers`, `teaagent.cli._ergonomics_parsers`, `teaagent.cli._gateway_parsers`
+`teaagent.cli._agent_parsers`, `teaagent.cli._artifact_parsers`, `teaagent.cli._cloud_parsers`, `teaagent.cli._consensus_parsers`, `teaagent.cli._control_plane_parsers`, `teaagent.cli._coordinator_parsers`, `teaagent.cli._cost_parsers`, `teaagent.cli._ergonomics_parsers`
 
 ### `teaagent.chat_agent`
-`teaagent.audit`, `teaagent.auto_mode`, `teaagent.browser_tools`, `teaagent.budget`, `teaagent.code_analysis`, `teaagent.config_loader`, `teaagent.context`, `teaagent.errors`
+`teaagent.audit`, `teaagent.auto_mode`, `teaagent.browser_tools`, `teaagent.budget`, `teaagent.code_analysis`, `teaagent.config_loader`, `teaagent.context`, `teaagent.ergonomics.run_liveness`
+
+### `teaagent.cli._handlers._agent.run`
+`teaagent.approval`, `teaagent.chat_agent`, `teaagent.checkpoint`, `teaagent.cli._formatting`, `teaagent.cli._handlers._misc`, `teaagent.cli._output`, `teaagent.cli.execution`, `teaagent.code_analysis`
 
 ### `teaagent.cli._handlers._agent.runs`
-`teaagent.agentcard`, `teaagent.cli._output`, `teaagent.cli.execution`, `teaagent.daily`, `teaagent.ergonomics.daily_journal`, `teaagent.ergonomics.dry_run`, `teaagent.ergonomics.human_output`, `teaagent.ergonomics.notify`
+`teaagent.agentcard`, `teaagent.approval`, `teaagent.cli._output`, `teaagent.cli.execution`, `teaagent.daily`, `teaagent.ergonomics.daily_journal`, `teaagent.ergonomics.dry_run`, `teaagent.ergonomics.human_output`
+
+### `teaagent.tui._commands`
+`teaagent.approval`, `teaagent.approval.selectors`, `teaagent.context_pressure`, `teaagent.daily`, `teaagent.ergonomics.approval_store`, `teaagent.ergonomics.workspace_defaults`, `teaagent.graphqlite_store`, `teaagent.integration.approval_parity`
 
 ### `teaagent.runner._core`
 `teaagent.audit`, `teaagent.auto_mode`, `teaagent.budget`, `teaagent.budget_monitor`, `teaagent.context`, `teaagent.ergonomics.run_summary`, `teaagent.errors`, `teaagent.file_policy`
 
-### `teaagent.tui._commands`
-`teaagent.approval_selectors`, `teaagent.context_pressure`, `teaagent.daily`, `teaagent.ergonomics.approval_store`, `teaagent.graphqlite_store`, `teaagent.intent`, `teaagent.llm`, `teaagent.long_result_envelope`
-
-### `teaagent.cli._handlers._ergonomics`
-`teaagent.approval_selectors`, `teaagent.cli._handlers._agent`, `teaagent.cli._handlers._misc`, `teaagent.cli.execution`, `teaagent.daily`, `teaagent.ergonomics.approval_store`, `teaagent.ergonomics.daily_journal`, `teaagent.ergonomics.guidance`
-
 ### `teaagent.cli._handlers.agent_misc`
 `teaagent.agentcard`, `teaagent.cli`, `teaagent.cli._output`, `teaagent.cli.execution`, `teaagent.cockpit`, `teaagent.daily`, `teaagent.ergonomics.dry_run`, `teaagent.ergonomics.human_output`
+
+### `teaagent.subagents._approval_queue_hybrid_store`
+`teaagent.subagents._approval_queue`, `teaagent.subagents._approval_queue_metrics`, `teaagent.subagents._approval_queue_redis_store`, `teaagent.subagents._approval_queue_store`, `teaagent.subagents._circuit_breaker`, `teaagent.subagents._feature_flags`, `teaagent.subagents._hybrid_store_backends`, `teaagent.subagents._hybrid_store_crud`
 

@@ -6,9 +6,14 @@ cost, tokens, and tool usage to each child subagent.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+from teaagent.errors import ErrorCategory
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -112,8 +117,29 @@ def build_child_cost_ledger(
                 )
                 entry.tool_calls = tool_call_count
             except (FileNotFoundError, OSError):
-                pass
-        except (FileNotFoundError, OSError, Exception):
+                logger.warning(
+                    'child run event count unavailable; retaining summary cost data',
+                    extra={
+                        'error_category': ErrorCategory.SYSTEM.value,
+                        'error_severity': 'medium',
+                        'recovery_hint': (
+                            'Inspect the child run event log before trusting tool-call '
+                            'attribution.'
+                        ),
+                    },
+                )
+        except Exception:
+            logger.error(
+                'child run summary unavailable; recording a not_found ledger entry',
+                extra={
+                    'error_category': ErrorCategory.SYSTEM.value,
+                    'error_severity': 'medium',
+                    'recovery_hint': (
+                        'Verify the child run id and run-store health before trusting '
+                        'cost attribution.'
+                    ),
+                },
+            )
             entry = ChildCostEntry(
                 child_run_id=child_run_id,
                 child_name=child_name,

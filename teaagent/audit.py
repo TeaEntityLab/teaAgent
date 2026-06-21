@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any, Literal, Optional
 from uuid import uuid4
 
-from teaagent.errors import AuditDurabilityError
+from teaagent.errors import AuditDurabilityError, ErrorCategory
 from teaagent.storage import file_lock
 
 try:
@@ -208,7 +208,17 @@ class AuditLogger:
                             except json.JSONDecodeError:
                                 continue
                 except (OSError, json.JSONDecodeError):
-                    pass
+                    logger.error(
+                        'audit chain state recovery failed; continuing with fresh state',
+                        extra={
+                            'error_category': ErrorCategory.SYSTEM.value,
+                            'error_severity': 'high',
+                            'recovery_hint': (
+                                'Inspect the audit file and verify the chain before '
+                                'trusting newly appended events.'
+                            ),
+                        },
+                    )
 
     @property
     def disk_error(self) -> Optional[OSError]:

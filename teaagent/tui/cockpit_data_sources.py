@@ -6,9 +6,11 @@ cockpit screens, integrating with existing TeaAgent data stores.
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any, Optional
 
+from teaagent.errors import ErrorCategory
 from teaagent.run_store import RunStore, RunSummary
 
 from .cockpit_screens import (
@@ -18,6 +20,8 @@ from .cockpit_screens import (
     MemoryRow,
     WorkflowRow,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class WorkflowDataSource:
@@ -443,8 +447,17 @@ class ApprovalDataSource:
                         break
 
         except Exception:
-            # If memory catalog fails, continue with other sources
-            pass
+            logger.error(
+                'cockpit memory approval source failed; continuing without memory rows',
+                extra={
+                    'error_category': ErrorCategory.SYSTEM.value,
+                    'error_severity': 'medium',
+                    'recovery_hint': (
+                        'Inspect the memory catalog before trusting cockpit approval '
+                        'counts.'
+                    ),
+                },
+            )
 
         # Get quarantine line count (from cockpit.py logic)
         try:
@@ -466,7 +479,17 @@ class ApprovalDataSource:
                     )
                     approvals.append(approval)
         except Exception:
-            pass
+            logger.error(
+                'cockpit quarantine approval source failed; continuing without quarantine rows',
+                extra={
+                    'error_category': ErrorCategory.SYSTEM.value,
+                    'error_severity': 'medium',
+                    'recovery_hint': (
+                        'Inspect memory-quarantine.jsonl before trusting cockpit '
+                        'approval counts.'
+                    ),
+                },
+            )
 
         return approvals
 
@@ -500,6 +523,17 @@ class ApprovalDataSource:
             return quarantine_lines + pending_memory
 
         except Exception:
+            logger.error(
+                'cockpit approval count source failed; returning zero as a fallback',
+                extra={
+                    'error_category': ErrorCategory.SYSTEM.value,
+                    'error_severity': 'medium',
+                    'recovery_hint': (
+                        'Inspect the memory catalog and quarantine file before trusting '
+                        'the displayed count.'
+                    ),
+                },
+            )
             return 0
 
 

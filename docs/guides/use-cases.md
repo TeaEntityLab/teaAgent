@@ -316,7 +316,7 @@ teaagent run gpt "update changelog" \
 Load via:
 
 ```python
-from teaagent.approval_manager import MultiSigQuorumConfig
+from teaagent.approval import MultiSigQuorumConfig
 from pathlib import Path
 
 config = MultiSigQuorumConfig.from_workspace_config(Path("."))

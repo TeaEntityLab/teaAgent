@@ -30,7 +30,7 @@ _SECOND_FRAMEWORK_FILES: tuple[str, ...] = (
 # parallel approval path.
 _APPROVAL_IMPORT_OPTIONS: frozenset[str] = frozenset(
     {
-        'teaagent.approval_manager',
+        'teaagent.approval.manager',
         'teaagent.subagents._approval_queue',
     }
 )

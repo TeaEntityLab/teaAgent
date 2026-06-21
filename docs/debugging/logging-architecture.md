@@ -35,7 +35,7 @@ Logger names follow the Python package hierarchy:
 | Logger name | Module |
 |-------------|--------|
 | `teaagent.tui` | `teaagent/tui/__init__.py` |
-| `teaagent.approval_manager` | `teaagent/approval_manager.py` |
+| `teaagent.approval_manager` | `teaagent/approval/manager.py` (legacy logger name retained for compatibility) |
 | `teaagent.budget_monitor` | `teaagent/budget_monitor.py` |
 | `teaagent.context_bus` | `teaagent/context_bus.py` |
 | `teaagent.coordinator` | `teaagent/coordinator.py` |
@@ -92,9 +92,9 @@ Narrative reference: [`docs/audit-events.md`](../audit-events.md).
 | `run_failed` | `error`, `cost_cents` | `coordinator.py` |
 | `tool_call_started` | `call_id`, `tool_name`, `annotations`, `args_digest` | `tools.py` |
 | `tool_call_completed` | `call_id`, `tool_name`, `duration_ms`, `status` | `tools.py` |
-| `approval_requested` | `call_id`, `tool_name`, `path_scope`, `permission_mode` | `approval_manager.py` |
-| `approval_granted` | `call_id`, `scope`, `rule_id` | `approval_manager.py` |
-| `approval_denied` | `call_id`, `reason` | `approval_manager.py` |
+| `approval_requested` | `call_id`, `tool_name`, `path_scope`, `permission_mode` | `approval/manager.py` |
+| `approval_granted` | `call_id`, `scope`, `rule_id` | `approval/manager.py` |
+| `approval_denied` | `call_id`, `reason` | `approval/manager.py` |
 | `session_suspended` | `run_id`, `observations_count`, `suspension_file` | `chat_repl.py` |
 | `budget_warning` | `threshold_pct`, `current_cents`, `max_cents` | `budget_monitor.py` |
 

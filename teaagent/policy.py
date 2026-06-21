@@ -14,7 +14,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Iterator
 
-from teaagent.approval_manager import (
+from teaagent.approval.manager import (
     ApprovalManager,
     ApprovalRequest,
     JITApprovalState,

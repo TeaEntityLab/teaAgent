@@ -6,10 +6,78 @@ Asserts that importing from the legacy root-level paths and the new
 
 from __future__ import annotations
 
+import ast
 import importlib
 import typing
+from pathlib import Path
 
 import pytest
+
+from teaagent._compat_modules import _DEPRECATED_ALIASES
+
+_LEGACY_APPROVAL_MODULES = {
+    'teaagent.approval_manager': 'teaagent.approval.manager',
+    'teaagent.approval_backend': 'teaagent.approval.backend',
+    'teaagent.approval_selectors': 'teaagent.approval.selectors',
+    'teaagent.approval_ui': 'teaagent.approval.ui',
+}
+
+
+def test_canonical_modules_own_approval_implementations() -> None:
+    """Canonical classes must be defined by the approval package modules."""
+    from teaagent.approval.backend import ApprovalBackend
+    from teaagent.approval.manager import ApprovalManager
+    from teaagent.approval.selectors import PendingApprovalView
+    from teaagent.approval.ui import DiffApprovalHandler
+
+    assert ApprovalManager.__module__ == 'teaagent.approval.manager'
+    assert ApprovalBackend.__module__ == 'teaagent.approval.backend'
+    assert PendingApprovalView.__module__ == 'teaagent.approval.selectors'
+    assert DiffApprovalHandler.__module__ == 'teaagent.approval.ui'
+
+
+def test_legacy_approval_modules_use_deprecated_aliases() -> None:
+    """All physical-file-free legacy paths must target canonical modules."""
+    for legacy, canonical in _LEGACY_APPROVAL_MODULES.items():
+        assert _DEPRECATED_ALIASES.get(legacy) == canonical
+        assert importlib.import_module(legacy) is importlib.import_module(canonical)
+
+
+def test_legacy_approval_module_files_are_absent() -> None:
+    """Root approval implementations must not return after the migration."""
+    package_root = Path(__file__).resolve().parents[2] / 'teaagent'
+    for legacy in _LEGACY_APPROVAL_MODULES:
+        module_name = legacy.rsplit('.', 1)[1]
+        assert not (package_root / f'{module_name}.py').exists()
+
+
+def test_production_source_imports_canonical_approval_modules() -> None:
+    """Production code must not depend on the deprecated import aliases."""
+    package_root = Path(__file__).resolve().parents[2] / 'teaagent'
+    offenders: list[str] = []
+
+    for path in package_root.rglob('*.py'):
+        if path.name == '_compat_modules.py':
+            continue
+        tree = ast.parse(path.read_text(encoding='utf-8'), filename=str(path))
+        imported_modules = {
+            node.module
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom) and node.module
+        }
+        imported_modules.update(
+            alias.name
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Import)
+            for alias in node.names
+        )
+        legacy_imports = sorted(imported_modules & _LEGACY_APPROVAL_MODULES.keys())
+        if legacy_imports:
+            relative = path.relative_to(package_root.parent)
+            offenders.append(f'{relative}: {", ".join(legacy_imports)}')
+
+    assert not offenders, 'Legacy approval imports remain:\n' + '\n'.join(offenders)
+
 
 # ---------------------------------------------------------------------------
 # manager

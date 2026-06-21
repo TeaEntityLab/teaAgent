@@ -82,7 +82,7 @@ Always use "Phase X" format (capitalized, no hyphen):
 ### File Names (snake_case)
 - `agent_runner.py`
 - `tool_registry.py`
-- `approval_manager.py`
+- `approval/manager.py`
 
 ### Documentation Reference
 When writing documentation, use PascalCase for class names and snake_case for module/file names.

@@ -43,6 +43,8 @@ from pathlib import Path
 from types import ModuleType
 from typing import Optional
 
+from teaagent.errors import ErrorCategory
+
 _blake3: ModuleType | None
 try:
     import blake3
@@ -67,7 +69,17 @@ def _get_tenant_dir_for_path(path: Path | None, sub_dir: str) -> Path:
                     tenant_id = parts[idx + 1]
                     return Path.home() / '.teaagent' / 'tenants' / tenant_id / sub_dir
         except Exception:
-            pass
+            logger.warning(
+                'audit tenant directory resolution failed; using default directory',
+                extra={
+                    'error_category': ErrorCategory.SYSTEM.value,
+                    'error_severity': 'medium',
+                    'recovery_hint': (
+                        'Verify tenant path permissions before relying on tenant-scoped '
+                        'audit keys.'
+                    ),
+                },
+            )
     return Path.home() / '.teaagent' / sub_dir
 
 

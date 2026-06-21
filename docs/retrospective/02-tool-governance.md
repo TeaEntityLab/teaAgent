@@ -15,15 +15,15 @@
 | Plugin system (entry points + manifests) | `teaagent/plugin_system.py:1-475` | Stable | RSK-10 source audit; governance rollback |
 | Plugin tool governance | `teaagent/integration/plugin_governance.py:42-93` | Stable | Blocks missing schema/description or destructive+read_only |
 | Tool lint (AST handler checks) | `teaagent/governance/tool_lint.py:200-323` | Stable | Flags mislabeled write/shell tools and tier mismatches |
-| ApprovalBackend + 5 backends | `teaagent/approval_backend.py:63-228` | Stable | RO/WW/Prompt/Allow/Danger |
-| ApprovalManager (composition) | `teaagent/approval_manager.py:775-1187` | Stable | Nine-stage resolution |
-| JIT approval (TTY + timeout) | `teaagent/approval_manager.py:287-399` | Stable | 60-second default; o/s/d/e |
-| Multi-sig quorum (SSH signatures) | `teaagent/approval_manager.py:401-657` | Beta | FederatedSync broadcast; dev-hash fallback requires environment configuration |
-| Preapproved call_id / payload digest | `teaagent/approval_manager.py:701-772` | Stable | call_id is deprecated; payload_digest preferred |
+| ApprovalBackend + 5 backends | `teaagent/approval/backend.py` | Stable | RO/WW/Prompt/Allow/Danger |
+| ApprovalManager (composition) | `teaagent/approval/manager.py` | Stable | Nine-stage resolution |
+| JIT approval (TTY + timeout) | `teaagent/approval/manager.py` | Stable | 60-second default; o/s/d/e |
+| Multi-sig quorum (SSH signatures) | `teaagent/approval/manager.py` | Beta | FederatedSync broadcast; dev-hash fallback requires environment configuration |
+| Preapproved call_id / payload digest | `teaagent/approval/manager.py` | Stable | call_id is deprecated; payload_digest preferred |
 | Centralized subagent approval queue | `teaagent/subagents/_approval_queue.py:122-896` | Stable | Async+sync; batch approve/deny; cross-process |
 | Redis approval queue backend | `teaagent/subagents/_approval_queue_redis_store.py:1-956` | Beta | Sentinel/ACL/SSL/network allowlist |
 | JIT SSE approval server | `teaagent/jit_approval_server.py:49-445` | Beta | Loopback without authentication; 180 seconds; Bearer |
-| Permission modes (5) | `teaagent/approval_manager.py:95-100` | Stable | read-only/workspace-write/prompt/allow/danger |
+| Permission modes (5) | `teaagent/approval/manager.py` | Stable | read-only/workspace-write/prompt/allow/danger |
 | Error categories (5) + DenialReasonCode (11) | `teaagent/errors.py:9-37` | Stable | TRANSIENT/MODEL_LOGIC/PERMISSION/SYSTEM/CONFIG |
 | RunBudget (iterations/tool calls/cost) | `teaagent/budget.py:34-108` | Stable | `validate()` enforces >=1/>=0; phase budgets |
 | BudgetMonitor (50/80/90/100%) | `teaagent/budget_monitor.py:35-189` | Stable | Monitors cost only, not iterations/tool calls |

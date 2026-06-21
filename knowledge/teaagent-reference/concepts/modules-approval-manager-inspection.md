@@ -1,18 +1,18 @@
 ---
 type: "Reference"
-title: "approval_manager \u2014 Inspection: Purpose, Dependencies, Exports, Call Graph"
+title: "Approval Package \u2014 Inspection: Purpose, Dependencies, Exports, Call Graph"
 description: "Module inspection for approval manager covering purpose, dependencies, exports, and call graph."
 resource: "urn:teaagent:doc:docs/modules/approval_manager/inspection.md"
 tags: ["teaagent", "approval", "module", "inspection", "reference"]
 teaagent:
   source_path: "docs/modules/approval_manager/inspection.md"
-  source_sha256: "eab11c05a47379e53086e3becaeb0b3ae53142d6b5c11c793ce4613b775932c4"
+  source_sha256: "0f1010b826eac34cc61aad293e9df3a5a616127e5512a02e734faaf42bfa18b7"
   docs_tier: "working"
   authority: "canonical"
   lifecycle: "current"
 ---
 
-# approval_manager — Inspection: Purpose, Dependencies, Exports, Call Graph
+# Approval Package — Inspection: Purpose, Dependencies, Exports, Call Graph
 
 Module inspection for approval manager covering purpose, dependencies, exports, and call graph.
 

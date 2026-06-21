@@ -1,5 +1,5 @@
 # Operator Trust Model
-# As of 2026-06-02
+# As of 2026-06-21
 
 TeaAgent should earn trust by making important facts consistent across surfaces. A
 daily user should not need to know which internal controller path produced a result.
@@ -75,11 +75,16 @@ An evidence bundle should distinguish:
 - Verified: what tests, smoke checks, or human review proved.
 - Not tested: what still relies on assumption.
 
-## Known trust gaps
+## Current safeguards and residual limits
 
-- TUI cost can display false zero.
-- TUI undo and REPL undo can differ.
-- Some lifecycle wording advertises resume/background behavior ahead of implementation.
-- Some tests verify helper behavior rather than the active user path.
-
-These are not just bugs; they are trust bugs.
+- TUI and REPL chat share `ChatSessionController` for task results, session cost, and
+  journal-backed undo.
+- TUI undo never falls back to a global checkpoint or stash restore.
+- Explicit `--root` wins over saved state, and positional chat tasks execute before the
+  TUI prompt loop.
+- `/background` is a suspension checkpoint with a durable run id, not a promise of
+  detached execution.
+- Provider adapters can omit usage data. In that case, cost evidence is incomplete and
+  the provider billing statement remains authoritative.
+- Active-path tests are required for trust-sensitive behavior; helper-only assertions do
+  not prove the operator path.

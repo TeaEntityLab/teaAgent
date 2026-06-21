@@ -68,7 +68,7 @@ class HookRegistry:
 
 ## 5. Chain of Responsibility
 
-**Where:** `teaagent/audit.py` (hash chain), `teaagent/approval_manager.py` (approval pipeline)  
+**Where:** `teaagent/audit.py` (hash chain), `teaagent/approval/manager.py` (approval pipeline)
 **What:** Each handler in a chain processes a request and passes it to the next handler (or halts). For audit events, each event is processed → redacted → hashed → appended. For approvals, each check (budget, permission mode, JIT, multi-sig) may approve or halt.  
 **Why:** Allows adding, removing, or reordering validation steps without changing the core execution path. The audit chain and approval chain are both open for extension.
 

@@ -45,7 +45,7 @@ The systemic gaps exposed in Phase A are not isolated bugs; they are governance 
 | Approver | Reviewer for low-risk changes / lead maintainer for high-risk changes | Use two-person approval; high-risk changes require a second reviewer |
 | Auditor | Weekly rotation | Run `audit_health`, sample `audit_tail`, and investigate CI anomalies |
 
-**Key constraint**: Reviewer != Author (four-eyes principle). High-risk changes involving destructive tools, permission modes, the audit chain, or the sandbox require a **second reviewer**. Small teams may reuse TeaAgent's multi-signature quorum (`approval_manager.py:401-657`) as an SSH-signature ceremony for external reviewer sign-off.
+**Key constraint**: Reviewer != Author (four-eyes principle). High-risk changes involving destructive tools, permission modes, the audit chain, or the sandbox require a **second reviewer**. Small teams may reuse TeaAgent's multi-signature quorum (`approval/manager.py`) as an SSH-signature ceremony for external reviewer sign-off.
 
 ### Size C - Formal RBAC
 
@@ -58,9 +58,9 @@ The systemic gaps exposed in Phase A are not isolated bugs; they are governance 
 | Auditor | Read audit + run audit tools | Perform independent audits, periodic chain health checks, and compliance-bundle exports |
 | Release Officer | Tag + publish | Enforce the release gate and sign release evidence |
 
-**Key constraint**: the Security Officer is **independent of the Approver**. Any PR that touches `approval_*`, `audit*`, `sandbox/`, `tool_permissions.py`, `policy.py`, `mcp_trust.py`, or the budget/approval sections of `runner/_core.py` requires Security Officer sign-off as a mandatory second review. The Auditor may not simultaneously be the Author or Approver, preserving separation of duties.
+**Key constraint**: the Security Officer is **independent of the Approver**. Any PR that touches `approval_*`, `approval/`, `audit*`, `sandbox/`, `tool_permissions.py`, `policy.py`, `mcp_trust.py`, or the budget/approval sections of `runner/_core.py` requires Security Officer sign-off as a mandatory second review. The Auditor may not simultaneously be the Author or Approver, preserving separation of duties.
 
-> TeaAgent already provides a multi-signature quorum through `governance/rbac.py`, `governance/policy_engine.py`, and `approval_manager.py`. Size C can reuse it directly without building another RBAC system.
+> TeaAgent already provides a multi-signature quorum through `governance/rbac.py`, `governance/policy_engine.py`, and `approval/manager.py`. Size C can reuse it directly without building another RBAC system.
 
 ## 4. Review Criteria
 

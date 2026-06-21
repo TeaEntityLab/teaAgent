@@ -391,7 +391,7 @@ result = registry.invoke(
 
 ### 3. Managing Approvals
 ```python
-from teaagent.approval_manager import ApprovalManager
+from teaagent.approval import ApprovalManager
 from teaagent.policy import ApprovalStore, PermissionMode
 
 store = ApprovalStore('/path/to/workspace')

@@ -15,14 +15,6 @@ Severity: **P0** (correctness/safety), **P1** (material UX/reliability), **P2** 
 **Resolution condition:** TUI migration spec at `daily-driver-tui-controller-migration-spec-2026-06-01.md`. Resolve when TUI test coverage makes migration safe.  
 **Tracking:** CG-11, CG-12, CG-15 in daily-driver-known-issues-2026-06-01.md
 
-### TD-02: Two ApprovalManager classes (circular dependency)
-**Severity:** P2  
-**Origin:** The approval manager grew from a simple class to a complex coordinator, then a second implementation was added in a different module for a specific use case.  
-**Impact:** Import order sensitivity. Tests must mock two different import paths. Coupling between `approval_manager.py` and `policy.py` means changes to either require touching both.  
-**Introduced:** Pre-ADR-0010 (exact date unclear, flagged 2026-05-14)  
-**Resolution condition:** ADR-0010 accepted and implemented. Blocked on ADR-0011 (SRP split) being designed first.  
-**Tracking:** ADR-0010, ADR-0011
-
 ### TD-03: ChatAgentConfig directly instantiates concrete collaborators
 **Severity:** P2  
 **Origin:** Fast initial implementation — constructing all collaborators in one place was expedient.  
@@ -107,6 +99,7 @@ Severity: **P0** (correctness/safety), **P1** (material UX/reliability), **P2** 
 | TD-R04 | Swarm subagents had no approval lineage | 2026-05-29 | `CentralizedApprovalQueue` with `parent_run_id` tracking (ADR-0022) |
 | TD-R05 | No automated memory invalidation | 2026-05-29 | `AutoInvalidationRule` system with file-signature tracking (ADR-0024) |
 | TD-R06 | jaraco.context CVE-2026-23949 | 2026-05-29 | Pinned `jaraco-context>=6.1.0` in `constraint-dependencies` |
+| TD-R07 | Duplicate approval-manager ownership and import-order sensitivity | 2026-06-21 | Runner helper was renamed, canonical implementations moved to `teaagent.approval`, and a lazy facade plus alias identity tests preserve legacy imports |
 
 ---
 

@@ -1,8 +1,9 @@
 # TUI Chat Reference
-# As of 2026-06-02
+# As of 2026-06-21
 
 This is a focused reference for chat-like workflows inside the TUI. It is written from
-the user's point of view and records current divergence from `teaagent chat`.
+the user's point of view and records the shared `ChatSessionController` contract used
+by the TUI and `teaagent chat`.
 
 ## Chat mode
 
@@ -33,13 +34,10 @@ The target contract is simple:
 3. Failure labels must describe real failure, not missing display plumbing.
 4. Cost and undo should have the same meaning in TUI and REPL chat.
 
-Current warning: the TUI path is not fully migrated to `ChatSessionController`, so it
-should not yet be treated as the canonical chat semantics.
-
-2026-06-02 code fact: the working tree now forwards `args.task` from
-`chat_command()` into `run_tui(initial_task=...)`, and the TUI attempts to run that task
-before entering the prompt loop. Keep this as a verify/close item until tests cover the
-parser, handler, failure display, and prompt-loop behavior.
+Current contract: task execution delegates to `ChatSessionController`; positional chat
+tasks are forwarded into `run_tui(initial_task=...)` and run before the prompt loop.
+Parser, handler, result display, cost, and active command-path behavior have regression
+coverage.
 
 ## Cost and budget display
 
@@ -51,11 +49,11 @@ Target behavior:
 
 Current behavior:
 
-- The working tree includes a stop-gap that adds `result.cost_cents` to
-  `_session_cost_cents`.
-- Full parity is still incomplete because the TUI still calls `run_chat_agent` directly
-  instead of using `ChatSessionController` as the single ledger owner.
-- The budget cap can still enforce while visible session display parity is being proven.
+- `ChatSessionController` owns session cost for both TUI and REPL chat.
+- `/cost`, `/budget`, and cockpit budget display read the controller-backed session
+  ledger, with a compatibility fallback for older callers.
+- A displayed session value is only as complete as the provider usage data; it is not a
+  substitute for the provider billing statement.
 
 ## Undo and recovery
 
@@ -67,8 +65,10 @@ Target behavior:
 
 Current behavior:
 
-- `teaagent chat` already has the safer journal-backed behavior.
-- TUI undo can still follow checkpoint/stash semantics.
+- TUI and REPL undo use `ChatSessionController.undo_last_run()` and the run undo journal.
+- TUI undo does not fall back to a global checkpoint or stash restore.
+- When no journal is available, the command reports `nothing to undo` without changing
+  the workspace.
 
 ## Output formats
 
@@ -81,6 +81,6 @@ Keep output boring and inspectable:
 
 ## Maintainer note
 
-After TICKET-12 lands, this reference should be changed from a caveat page into a
-parity page. The acceptance condition is that a user can switch between TUI chat and
-REPL chat without relearning cost, undo, result, or failure semantics.
+Preserve the shared controller contract when either surface changes. A user should be
+able to switch between TUI chat and REPL chat without relearning cost, undo, result, or
+failure semantics; active-path parity tests are the release guard.

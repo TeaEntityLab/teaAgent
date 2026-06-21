@@ -9,6 +9,10 @@ import sys
 from types import ModuleType
 
 _DEPRECATED_ALIASES: dict[str, str] = {
+    'teaagent.approval_backend': 'teaagent.approval.backend',
+    'teaagent.approval_manager': 'teaagent.approval.manager',
+    'teaagent.approval_selectors': 'teaagent.approval.selectors',
+    'teaagent.approval_ui': 'teaagent.approval.ui',
     'teaagent.policy_engine': 'teaagent.governance.policy_engine',
     'teaagent.rbac': 'teaagent.governance.rbac',
     'teaagent.policy_routing': 'teaagent.governance.policy_routing',

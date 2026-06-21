@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
-from teaagent.approval_manager import PermissionMode
+from teaagent.approval.manager import PermissionMode
 from teaagent.llm import LLMAdapter
 from teaagent.run_store import RunStore
 from teaagent.subagent_run_context import (

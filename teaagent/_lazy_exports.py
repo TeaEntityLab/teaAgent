@@ -74,7 +74,7 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     'DailyRecommendation': ('teaagent.daily', 'DailyRecommendation'),
     'Decision': ('teaagent.runner', 'Decision'),
     'DenyRule': ('teaagent.file_policy', 'DenyRule'),
-    'DiffApprovalHandler': ('teaagent.approval_ui', 'DiffApprovalHandler'),
+    'DiffApprovalHandler': ('teaagent.approval.ui', 'DiffApprovalHandler'),
     'Document': ('teaagent.rag', 'Document'),
     'EvalCase': ('teaagent.eval', 'EvalCase'),
     'EvalReport': ('teaagent.eval', 'EvalReport'),

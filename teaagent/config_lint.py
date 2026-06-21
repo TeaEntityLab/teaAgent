@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from teaagent.approval_manager import PermissionMode
+from teaagent.approval.manager import PermissionMode
 from teaagent.security_env import allow_dev_signatures
 
 

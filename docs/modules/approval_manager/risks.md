@@ -1,27 +1,27 @@
-# approval_manager — Risk Vectors & Known Issues
+# Approval Package — Risk Vectors & Known Issues
 
 ### APR-R-001: `once`-scoped grants consumed before tool executes
-**File**: `ergonomics/_approval_state.py`, `approval_manager.py`
+**File**: `ergonomics/_approval_state.py`, `approval/manager.py`
 **Risk**: `once` grants are removed from the store when `is_allowed()` returns `True`. If the tool then fails (exception, hook error), the grant is already consumed. The user must re-approve for any retry.
 **Failure mode**: Unexpected re-prompt on retry of a legitimately approved operation.
 **Upstream:** [risk-register-and-threat-model-2026-06-02.md](../../security/risk-register-and-threat-model-2026-06-02.md) (SEC-01 audit integrity; approval state durability)
 
 ### APR-R-002: `deny` decisions not persisted
-**File**: `approval_manager.py`
+**File**: `approval/manager.py`
 **Risk**: JIT denials (user says "no" at the TTY prompt) are in-memory only via `JITApprovalState`. On process restart or agent resume, the denial is gone and the agent will re-prompt.
 **Failure mode**: Previously denied tools get re-prompted after restart.
 **Upstream:** [risk-register-and-threat-model-2026-06-02.md](../../security/risk-register-and-threat-model-2026-06-02.md) (access control durability; SEC-06 related)
 
 ### APR-R-003: `DANGER_FULL_ACCESS` bypasses all approval
 **Severity**: Critical (per [severity-calibration-rubric.md](../../security/severity-calibration-rubric.md))
-**File**: `approval_manager.py:32-36` (PermissionMode enum)
+**File**: `approval/manager.py` (PermissionMode enum)
 **Risk**: `DANGER_FULL_ACCESS` skips every check. A user enabling it for convenience may forget it's active.
 **Failure mode**: Unintended destructive writes with no approval gate.
 
 > **See also:** [governance/risks.md](../governance/risks.md) — DANGER_FULL_ACCESS bypasses plan gate
 
 ### APR-R-004: Multi-sig quorum uses in-memory peer registry
-**File**: `approval_manager.py:73-80` (`MultiSigQuorumConfig`)
+**File**: `approval/manager.py` (`MultiSigQuorumConfig`)
 **Risk**: Peer agent IDs and public keys are configured at startup. If a peer is decommissioned without updating the config, the quorum can never be satisfied (requires N of M peers, all M slots must be valid).
 **Failure mode**: All high-risk operations permanently blocked.
 
@@ -31,7 +31,7 @@
 **Failure mode**: Race condition allows a single grant to be consumed by two different runs.
 
 ### APR-R-006: Approval UI shows diff in terminal — may expose secrets
-**File**: `approval_ui.py`
+**File**: `approval/ui.py`
 **Risk**: When prompting for write approval, the UI shows file content diff. If the diff contains secrets (env vars, API keys), they are printed to the terminal.
 **Mitigation**: Redaction before display is not implemented; rely on the user not having secrets in workspace files.
 

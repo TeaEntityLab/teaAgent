@@ -79,8 +79,10 @@ Separate three layers:
 
 - Some existing docs are historical and may describe fixed or shifted findings.
 - Some tests verify helper state instead of active user paths.
-- TUI cost display can contradict actual provider spend.
-- Suspend/resume evidence is incomplete for some paths.
+- Provider adapters that omit usage data can leave cost evidence incomplete; use the
+  run summary and provider billing statement for billing claims.
+- External side effects still require tool receipts or service-side confirmation; a
+  local success result alone is not sufficient evidence.
 
 ## Daily acceptance rule
 

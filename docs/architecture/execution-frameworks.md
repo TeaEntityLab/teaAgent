@@ -66,7 +66,7 @@ The second framework must not introduce a parallel authority path.
 
 - **Contract**: `teaagent/runner/_invariants.py` → `assert_approval_invariant`
 - **Test**: `tests/runner/test_runner_invariants.py` → `TestApprovalInvariant`
-- **CI gate**: import-path check ensures both frameworks use `teaagent.approval_manager`
+- **CI gate**: import-path check ensures both frameworks use `teaagent.approval.manager`
 
 ## Architecture diagram
 

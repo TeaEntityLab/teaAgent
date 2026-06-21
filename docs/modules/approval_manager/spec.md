@@ -1,8 +1,8 @@
-# approval_manager — Behavior Specification
+# Approval Package — Behavior Specification
 
 ## Overview
 
-The approval_manager module provides all approval-related concerns: permission mode enforcement, JIT (just-in-time) interactive prompting, multi-signature quorum for high-risk operations, preset grant management, scoped (run-resumable) approval records, and the interactive diff-showing HITL UI. It spans two layers: the runtime `ApprovalManager` in `approval_manager.py` and the persistent `ApprovalPresetStore` backed by `approvals.json`.
+The `teaagent.approval` package provides all approval-related concerns: permission mode enforcement, JIT (just-in-time) interactive prompting, multi-signature quorum for high-risk operations, preset grant management, scoped (run-resumable) approval records, and the interactive diff-showing HITL UI. It spans two layers: the runtime `ApprovalManager` in `approval/manager.py` and the persistent `ApprovalPresetStore` backed by `approvals.json`.
 
 ---
 

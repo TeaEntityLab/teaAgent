@@ -50,7 +50,7 @@ if TYPE_CHECKING:
         ANPOutboundClient,
         ANPRoutingResult,
     )
-    from teaagent.approval_ui import DiffApprovalHandler
+    from teaagent.approval.ui import DiffApprovalHandler
     from teaagent.audit import AuditEvent, AuditLogger
     from teaagent.audit_chain import (
         ChainVerificationResult,

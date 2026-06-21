@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import logging
 import socket
 import urllib.parse
 from dataclasses import dataclass, field
@@ -14,12 +15,15 @@ from teaagent.daily import (
     build_token_budget_report,
     resolve_context_profile,
 )
+from teaagent.errors import ErrorCategory
 from teaagent.intent import ClarificationResult, clarify_task
 from teaagent.llm._config import PROVIDER_CONFIGS, is_local_provider
 from teaagent.memory import MemoryCatalog, MemoryEntry
 from teaagent.model_routing import ModelRoute, route_model
 from teaagent.policy import PermissionMode
 from teaagent.workspace_tools import build_workspace_tool_registry
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -226,7 +230,17 @@ def preflight(
                         )
                         health['healthy'] = False
     except Exception:
-        pass  # non-fatal — audit health check should not block preflight
+        logger.error(
+            'preflight audit health check failed; continuing without audit health data',
+            extra={
+                'error_category': ErrorCategory.SYSTEM.value,
+                'error_severity': 'high',
+                'recovery_hint': (
+                    'Run teaagent audit verify for the latest run before trusting '
+                    'preflight audit health.'
+                ),
+            },
+        )
 
     token_budget = build_token_budget_report(
         task=task,

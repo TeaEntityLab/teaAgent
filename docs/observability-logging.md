@@ -57,7 +57,7 @@ The following modules emit structured log events with standard keys:
 |--------|--------|
 | `teaagent/runner/_core.py` | `tool_executed` (with `duration_ms`) |
 | `teaagent/audit.py` | `audit_sink_failed`, `audit_disk_write_failed` |
-| `teaagent/approval_manager.py` | `tool_permission_denied` (with `error_code`) |
+| `teaagent/approval/manager.py` | `tool_permission_denied` (with `error_code`) |
 | `teaagent/tools.py` | `tool_executed` (with `duration_ms`) |
 | `teaagent/llm/_adapters.py` | `rate_limit_exceeded` (with `error_code`) |
 

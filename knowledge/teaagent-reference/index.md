@@ -8,10 +8,10 @@ okf_version: "0.1"
 * [Python API Specification](concepts/api-python-api.md) - Python API specification and module surface for programmatic TeaAgent usage.
 * [TeaAgent API Reference](concepts/api-readme.md) - TeaAgent API reference index linking to CLI, Python, MCP, TUI, and REPL API docs.
 * [Getting Started — Solo CLI User](concepts/guides-getting-started-solo-cli.md) - Onboarding guide for solo CLI users covering setup, first run, and daily use.
-* [approval_manager — Public API Reference](concepts/modules-approval-manager-api.md) - Public API reference for the approval manager module.
-* [approval_manager — Inspection: Purpose, Dependencies, Exports, Call Graph](concepts/modules-approval-manager-inspection.md) - Module inspection for approval manager covering purpose, dependencies, exports, and call graph.
-* [approval_manager — Risk Vectors & Known Issues](concepts/modules-approval-manager-risks.md) - Risk vectors and known issues for the approval manager module.
-* [approval_manager — Behavior Specification](concepts/modules-approval-manager-spec.md) - Behavior specification for the approval manager module governing destructive tool gates.
+* [Approval Package — Public API Reference](concepts/modules-approval-manager-api.md) - Public API reference for the approval manager module.
+* [Approval Package — Inspection: Purpose, Dependencies, Exports, Call Graph](concepts/modules-approval-manager-inspection.md) - Module inspection for approval manager covering purpose, dependencies, exports, and call graph.
+* [Approval Package — Risk Vectors & Known Issues](concepts/modules-approval-manager-risks.md) - Risk vectors and known issues for the approval manager module.
+* [Approval Package — Behavior Specification](concepts/modules-approval-manager-spec.md) - Behavior specification for the approval manager module governing destructive tool gates.
 * [audit — Public API Reference](concepts/modules-audit-api.md) - Public API reference for the audit module.
 * [audit — Module Inspection](concepts/modules-audit-inspection.md) - Module inspection for audit covering purpose, dependencies, exports, and call graph.
 * [audit — Risk Vectors & Known Issues](concepts/modules-audit-risks.md) - Risk vectors and known issues for the audit module.

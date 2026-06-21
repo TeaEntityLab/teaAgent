@@ -91,7 +91,7 @@ except (AttributeError, TypeError) as exc:
 
 ```
 OSError: [Errno 13] Permission denied: '/path/to/file'
-  File "teaagent/approval_ui.py", line ...
+  File "teaagent/approval/ui.py", line ...
 ```
 
 Check file permissions and whether the target path is inside the workspace.
@@ -100,7 +100,7 @@ Check file permissions and whether the target path is inside the workspace.
 
 ```
 RuntimeError: approval_manager is not running
-  File "teaagent/approval_manager.py", line ...
+  File "teaagent/approval/manager.py", line ...
 ```
 
 Means `approval_manager` was not started before a tool call needed it. Typically a startup ordering issue in tests or CLI handlers.
@@ -194,7 +194,7 @@ git stash show -p stash@{0} > /tmp/recovered.patch
 | `...tui/__init__.py` → `_run_agent_task` | TUI execution path (bypasses controller) |
 | `...chat_session_controller.py` → `execute_task` | REPL/controller execution path |
 | `...run_store.py` → `task_for_run` → `ValueError` | resume/agent-show used on a REPL suspension run_id |
-| `...approval_manager.py` → `EOFError` | Approval prompt without a terminal (piped input) |
+| `...approval/manager.py` → `EOFError` | Approval prompt without a terminal (piped input) |
 | `...context_bus.py` → `sqlite3.OperationalError` | Database locked or corrupt |
 | `...workflow_engine.py` → `ValidationError` | Skill/workflow schema mismatch |
 | `...anp_adapter.py` → fallback warning | ANP routing unavailable; degraded mode |

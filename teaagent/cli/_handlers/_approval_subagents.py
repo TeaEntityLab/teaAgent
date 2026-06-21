@@ -6,7 +6,7 @@ import argparse
 from pathlib import Path
 from typing import Any
 
-from teaagent.approval_selectors import _parse_event_timestamp
+from teaagent.approval.selectors import _parse_event_timestamp
 from teaagent.cli._handlers._misc import print_json
 from teaagent.coordination.approval_backend import approval_backend_for_workspace
 from teaagent.subagents._approval_queue import (

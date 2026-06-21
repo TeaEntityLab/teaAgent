@@ -6,7 +6,7 @@ resource: "urn:teaagent:doc:docs/terminology.md"
 tags: ["teaagent", "terminology", "vocabulary", "constitution"]
 teaagent:
   source_path: "docs/terminology.md"
-  source_sha256: "a0381d2bbd5ad970a3fe885d1dc4ee4bf68d48386d6599bedb6039103f15a20b"
+  source_sha256: "47fc7263a02c7f3d24d322c2eff527484e0eb9466c03e8eda8c821642785681a"
   docs_tier: "constitution"
   authority: "canonical"
   lifecycle: "current"

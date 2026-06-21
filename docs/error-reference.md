@@ -72,7 +72,7 @@ The `main()` function in `teaagent/cli/__init__.py` catches:
 |--------|--------------|---------------|
 | `runner/_core.py` | `AgentHarnessError`, `ToolPermissionError`, `InvalidToolDecision` | High — all carry hints |
 | `audit.py` | `AuditDurabilityError` | High — names the failed path and suggested recovery |
-| `approval_manager.py` | `ToolPermissionError` with `DenialReasonCode` | High — reason code maps to specific UX guidance |
+| `approval/manager.py` | `ToolPermissionError` with `DenialReasonCode` | High — reason code maps to specific UX guidance |
 | `tools.py` | `ToolValidationError` | Medium — describes which argument failed |
 | `tool_permissions.py` | `ToolPermissionError` | Medium — names the rule that blocked |
 | `llm/_types.py` | `LLMAdapterError`, `LLMConfigurationError`, `LLMProviderError`, `LLMHTTPError`, `LLMResponseFormatError` | Medium — adapter-specific, some carry provider response |

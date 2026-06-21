@@ -39,9 +39,10 @@ class NotifyConfig:
         HTTP(S) endpoint that receives a POST with a JSON body containing
         ``worker_id``, ``event``, ``pid``, ``started_at``, and ``command``.
     shell_command:
-        Shell string executed via ``subprocess.run(shell=True)`` on completion.
-        The worker ID is available as the environment variable
-        ``TEAAGENT_WORKER_ID``.
+        Command string parsed with ``shlex.split()`` and executed via
+        ``subprocess.run(shell=False)`` on completion (no shell interpretation,
+        to prevent injection). The worker ID is available as the environment
+        variable ``TEAAGENT_WORKER_ID``.
     slack_webhook_url:
         Slack Incoming Webhook URL for posting formatted notifications.
     discord_webhook_url:

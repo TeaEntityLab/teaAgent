@@ -14,7 +14,7 @@ def parse_violations() -> list[tuple[str, int]]:
 
     content = VIOLATIONS_FILE.read_text(encoding='utf-8')
     violations = []
-    # Match lines like "   --> teaagent/approval_manager.py:764:9" or "  --> teaagent/approval_manager.py:764:9"
+    # Match locations such as "teaagent/approval/manager.py:764:9".
     matches = re.finditer(r'-->\s*([^\s:]+):(\d+)(?::\d+)?', content)
     for m in matches:
         file_path = m.group(1)

@@ -122,16 +122,16 @@ can verify the claim directly.
 
 | TeaAgent control | NIST concept | Code path |
 |---|---|---|
-| Permission modes (read-only, workspace-write, prompt, allow, danger-full-access) | `Identity / agent persona` — the agent assumes a declared role with bounded capabilities. | `teaagent/policy.py` → `ApprovalPolicy` & `PermissionMode` enum; `teaagent/approval_manager.py` → `PermissionModeEnforcer.check()` |
+| Permission modes (read-only, workspace-write, prompt, allow, danger-full-access) | `Identity / agent persona` — the agent assumes a declared role with bounded capabilities. | `teaagent/policy.py` → `ApprovalPolicy` & `PermissionMode` enum; `teaagent/approval/manager.py` → `PermissionModeEnforcer.check()` |
 | Provider key configuration per workspace | `Identity / principal credential` — each workspace binds a provider identity. | `teaagent/cli/_misc_parsers.py` → `_add_workspace_bootstrap_args()`; `.teaagent/config.json` / `.teaagent/env` |
 
 ### Authorization — What is the agent allowed to do?
 
 | TeaAgent control | NIST concept | Code path |
 |---|---|---|
-| `ApprovalPolicy.assert_allowed()` — unified gate before every destructive tool call | `Authorization / policy enforcement point` — single decision point for all tool-gated writes. | `teaagent/approval_manager.py` → `ApprovalManager.assert_allowed()` |
-| Multi-sig quorum for high-risk operations | `Authorization / multi-party consent` — requires N-of-M peer signatures for sensitive tools. | `teaagent/approval_manager.py` → `MultiSigQuorumManager.check_quorum()`; `teaagent/policy.py` → `_check_multi_sig_quorum()` |
-| Scoped approval (consume-once call-ID tokens) | `Authorization / just-in-time access` — temporary, single-use grant tied to exact tool+arguments. | `teaagent/approval_manager.py` → `ApprovalStoreManager.check_scoped()`; `teaagent/ergonomics/approval_store.py` |
+| `ApprovalPolicy.assert_allowed()` — unified gate before every destructive tool call | `Authorization / policy enforcement point` — single decision point for all tool-gated writes. | `teaagent/approval/manager.py` → `ApprovalManager.assert_allowed()` |
+| Multi-sig quorum for high-risk operations | `Authorization / multi-party consent` — requires N-of-M peer signatures for sensitive tools. | `teaagent/approval/manager.py` → `MultiSigQuorumManager.check_quorum()`; `teaagent/policy.py` → `_check_multi_sig_quorum()` |
+| Scoped approval (consume-once call-ID tokens) | `Authorization / just-in-time access` — temporary, single-use grant tied to exact tool+arguments. | `teaagent/approval/manager.py` → `ApprovalStoreManager.check_scoped()`; `teaagent/ergonomics/approval_store.py` |
 | File policy (path allow/deny rules) | `Authorization / resource-level policy` — fine-grained path-level access control. | `teaagent/file_policy.py` → `FilePolicy.assert_allowed()` |
 | Plan-before-write enforcement | `Authorization / intent attestation` — writes require a prior plan artifact. | `teaagent/runner/_plan_validator.py` → `PlanValidator.validate_write_allowed()` |
 
@@ -153,9 +153,9 @@ can verify the claim directly.
 | TeaAgent control | NIST concept | Code path |
 |---|---|---|
 | Audit export (compliance bundle) | `Governance / evidentiary package` — signed, verifiable export of a run's audit trail. | `teaagent/audit_export.py` → `export_compliance_bundle()` |
-| Multi-sig quorum auditing | `Governance / consensus verification` — peer signatures are recorded and verifiable. | `teaagent/approval_manager.py` → `MultiSigQuorumManager._collect_peer_signatures()` |
+| Multi-sig quorum auditing | `Governance / consensus verification` — peer signatures are recorded and verifiable. | `teaagent/approval/manager.py` → `MultiSigQuorumManager._collect_peer_signatures()` |
 | SSH/GPG attestation of audit chain | `Governance / cryptographic attestation` — audit logs can be externally signed. | `teaagent/cli/_handlers/_audit.py` → `audit_verify_command()` |
-| Permission explain mode | `Governance / transparency` — every denial produces a structured explanation with remediation paths. | `teaagent/approval_manager.py` → `ToolPermissionError` with `reason_code`; `teaagent/cli/_handlers/_approval.py` → `approval_explain_command()` |
+| Permission explain mode | `Governance / transparency` — every denial produces a structured explanation with remediation paths. | `teaagent/approval/manager.py` → `ToolPermissionError` with `reason_code`; `teaagent/cli/_handlers/_approval.py` → `approval_explain_command()` |
 
 ### Operational Recommendations (NIST-aligned)
 
@@ -170,4 +170,3 @@ can verify the claim directly.
   plan-before-write for any workflow that can mutate the workspace.
 - **Multi-sig for high-risk**: Enable multi-signature quorum for production
   deployments, database migrations, and credential rotations.
-

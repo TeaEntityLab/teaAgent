@@ -2,6 +2,11 @@
 
 > Dimension priority: **Third** | Method: cx overview / cx references + Read/Grep + direct execution of `mypy`, `check_root_module_count`, and `check_complexity`
 
+> **Current-state update (2026-06-21):** G-MED-3 and recommendation 6 are
+> resolved. The four approval implementations now live under
+> `teaagent/approval/`; legacy module paths are alias-only compatibility
+> surfaces. The size debt remains in `approval/manager.py`.
+
 ## Module Map (Selected Highlights)
 
 | Module | Responsibility | H/D | Coupling Notes |
@@ -12,7 +17,7 @@
 | `audit.py` (922) | AuditEvent, AuditLogger, redaction | Harness | Audit backbone |
 | `errors.py` (219) | AgentHarnessError + 10 subclasses, ErrorCategory, DenialReasonCode | Harness | Shared by runner/CLI/approval |
 | `policy.py` | ApprovalPolicy, PermissionMode, multisig | Harness | ADR-0010/0011 |
-| `approval_manager.py` (1378) | ApprovalManager, JIT, MultiSigQuorumManager | Harness (large) | Root-level god module; ADR-0011 |
+| `approval/manager.py` (1397) | ApprovalManager, JIT, MultiSigQuorumManager | Harness (large) | Canonical approval policy core; ADR-0011 |
 | `sandbox/_git_branch.py` (1065) | GitBranchSandbox, worktree isolation | Harness | ADR-0020/0028 |
 | `cli/` (80 files, 518 symbols) | CLI entry point, subparsers, handlers | Harness (thin) | `add_agent_run_arguments` reused 3x |
 | `tui/core.py` (1509) | TUI event loop, prompt-toolkit | Harness (UI) | Coverage omitted; ADR-0025 |
@@ -143,9 +148,9 @@
 | G-HIGH-2 | High | A second agent framework runs parallel to `runner/`: `subagents/_manager.py:205-538`, `swarm.py:370-1010`. ADRs exist (literal compliance), but the thin-harness principle is violated because two execution frameworks double the correctness surface for budget/audit/approval. | `teaagent/subagents/_manager.py:205-538`; `teaagent/swarm.py:370-1010` |
 | G-HIGH-3 | High | **2,199 lines contain `Any`** (2,379 raw occurrences) - heavy use of `Any` as an escape hatch weakens strict mypy. Top files by matching-line count: `_approval_queue_hybrid_store.py:71`, `external_backends.py:44`, `context_pack.py:30`, `run_evidence.py:28`, `hooks.py:28`. | `rg -n "\bAny\b" teaagent -g '*.py'` |
 | G-HIGH-4 | High | Roughly 20 exceptions are silently swallowed in observability/governance-adjacent paths: `audit.py:59` (the audit logger itself), `cockpit.py:381/453/462` (health surface), `context_pressure.py:131/138`, `extension_explain.py:161/198/234`, `ergonomics/background_run.py:39`, `subagents/_review.py:167`, `subagents/_approval_queue_hybrid_store.py:1318`, `governance/repo_map_benchmark.py:275/301/327`. | As listed |
-| G-MED-1 | Medium | Several large root modules remain: `approval_manager.py:1-1378`, `run_evidence.py:1-1104`, `chat_agent.py:1-911`, `federated_sync.py:1-763`, `workflow_engine.py:1-748`, `plan_storage.py:1-748`, `release_evidence.py:1-745`. The freeze prevents growth but does not reduce the existing 177 modules. | As listed |
+| G-MED-1 | Medium | Several large modules remain, including `approval/manager.py`, `run_evidence.py`, `chat_agent.py`, `federated_sync.py`, `workflow_engine.py`, `plan_storage.py`, and `release_evidence.py`. The root freeze prevents growth but does not address package-level size debt. | As listed |
 | G-MED-2 | Medium | CLI handler god modules: `cli/_handlers/_ergonomics.py:1-1407`, `_doctor.py:1-1022`, `_agent/run.py:1-999`, `chat_repl.py:1-894`. | As listed |
-| G-MED-3 | Medium | `approval/` (7 files) coexists with root-level `approval_manager.py`, `approval_backend.py`, `approval_selectors.py`, and `approval_ui.py`, indicating a partial migration. ADR-0011 targets consolidation but root-level modules remain (including deprecated aliases in `_compat_modules.py` per ADR-0030). | `teaagent/approval/`; `teaagent/approval_*.py` |
+| G-MED-3 | Resolved 2026-06-21 | `teaagent/approval/` owns all four implementations. Root files are absent, and `_compat_modules.py` preserves legacy import identity without physical shims. | `teaagent/approval/`; `tests/approval/test_migration_compatibility.py` |
 | G-MED-4 | Medium | The 16 coverage omissions include high-risk `tls_server.py` (Risk: High at ledger:42) and medium-risk `vote_relay.py`, `wasm_runtime.py`, `wasm_skill.py`, `tsb_format.py`, `workflow_engine.py`, `tournament/*`, `browser_tools.py`, and `cli/_handlers/_control_plane.py`. Return milestones are Phase 0/1/2 with no date commitment. | `pyproject.toml:250-269`; `docs/governance/coverage-omit-ledger.md` |
 | G-MED-5 | Medium | Optional extras are over-fragmented: `crypto`/`oauth`/`audit-encryption` are three aliases for the same `teaagent[crypto]` extra. Nineteen extra groups are excessive for alpha 0.1.0. | `pyproject.toml:60-68` |
 | G-MED-6 | Medium | Hypothesis use is minimal (one test file versus a `.hypothesis/` cache directory); property-based testing is underused on governance, permission, and safety-critical surfaces. | `tests/` |
@@ -181,7 +186,9 @@
 3. **Move domain reasoning out of the harness**: relocate `coordinator.py` (`_classify_task_with_llm`, `_generate_workflow_plan`), `agent_factory.py` (`_generate_evolution_prompt`, `_llm_evolve_prompt`), `workflow_engine.py` (`_generate_self_correction_prompt`), `issue_intake.py`, and `intent.py` to skills or a `teaagent.domain/` subpackage. Keep only the orchestration/governance shell in the harness, per `AGENTS.md:5`.
 4. **Reduce `Any` in the worst offenders**: target `_approval_queue_hybrid_store.py` (71), `external_backends.py` (44), `context_pack.py` (30), `run_evidence.py` (28), `hooks.py` (28), and `acp_adapter.py` (26). Introduce typed `Protocol` classes for backend/hook/adapter boundaries.
 5. **Unify the second framework with the primary runner**: either (a) fold `SubagentManager.run_subagent` into `runner/` to create one execution path, or (b) write an ADR that explicitly justifies the dual-framework architecture and the shared invariants across both (budget/audit/approval correctness). ADR-0022 covers the approval queue but no ADR reconciles the two execution loops.
-6. **Complete the `approval/` migration**: ADR-0011 is "Implemented," but `approval_manager.py:1-1378`, `approval_backend.py`, `approval_selectors.py`, and `approval_ui.py` remain at the root. Move them into `teaagent/approval/` and update aliases in `_compat_modules.py`.
+6. **Complete the `approval/` migration**: completed 2026-06-21. The four
+   implementations are canonical under `teaagent/approval/`, the root files are
+   absent, and `_compat_modules.py` carries the legacy aliases.
 7. **Add line coverage to high-risk omitted surfaces**: move `tls_server.py` (High risk per ledger), `vote_relay.py`, and `cli/_handlers/_control_plane.py` (Medium risk, long-lived server) out of the omit list. Convert the ledger's smoke-test candidates into covered tests.
 
 ### P2 (Medium/Low)

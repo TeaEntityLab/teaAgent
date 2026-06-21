@@ -34,7 +34,8 @@ teaagent doctor git_sandbox
 
 ### Symptom
 
-`teaagent cost cost_report` shows $0 or an unrealistically low number despite running many tasks. The TUI cost counter doesn't update.
+`teaagent cost cost_report` or TUI `/cost` shows $0 or an unrealistically low number
+despite billable model work.
 
 ### Diagnosis
 
@@ -61,18 +62,21 @@ teaagent model capabilities --provider <provider>
 
 If `token_counting` shows `false`, cost tracking is not available for this provider.
 
-**Cause: Cost accumulation regression (CG-03)**
+**Cause: Cost accumulation regression**
 
-A known issue where mock cost data from test paths leaks into production sessions. This was addressed in TICKET-14.
+TUI and REPL chat should both use `ChatSessionController` as the session ledger. A
+difference between `/cost`, `/budget`, and the run summary is a regression, not an
+expected TUI limitation.
 
-Verify you're on a fixed version:
+Capture evidence before restarting:
 
 ```bash
-teaagent --version
-# Should be >= the version containing the CG-03 fix
+teaagent agent show <run_id>
+teaagent model capabilities --provider <provider>
 ```
 
-Workaround: restart the TUI session — cost resets to 0 on each new session start and accumulates correctly within a session.
+Session cost resets when a new session starts. The provider billing statement remains
+authoritative when usage data is absent or disputed.
 
 **Cause: `TEAAGENT_NO_SUMMARY=1` hiding cost output**
 

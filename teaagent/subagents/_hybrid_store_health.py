@@ -7,6 +7,7 @@ import logging
 import time
 from typing import Any
 
+from teaagent.errors import ErrorCategory
 from teaagent.subagents._approval_queue import (
     ApprovalRequestStatus,
     SubagentApprovalRequest,
@@ -383,6 +384,7 @@ class HybridStoreHealthMixin(HybridStoreBase):
             'save_operation': False,
             'load_operation': False,
             'list_operation': False,
+            'cleanup_operation': False,
             'overall': False,
         }
 
@@ -417,14 +419,42 @@ class HybridStoreHealthMixin(HybridStoreBase):
                 test_queue_path = self._file_store.queue_path(test_parent_run_id)
                 if test_queue_path.exists():
                     test_queue_path.unlink()
+                validation['cleanup_operation'] = True
             except Exception:
-                pass
+                logger.error(
+                    'rollback validation cleanup failed; test data may remain',
+                    extra={
+                        'error_category': ErrorCategory.SYSTEM.value,
+                        'error_severity': 'medium',
+                        'recovery_hint': (
+                            'Inspect and remove the test-rollback-validation queue '
+                            'before retrying rollback validation.'
+                        ),
+                    },
+                )
 
-            validation['overall'] = all(validation.values())
+            validation['overall'] = all(
+                validation[key]
+                for key in (
+                    'save_operation',
+                    'load_operation',
+                    'list_operation',
+                    'cleanup_operation',
+                )
+            )
 
-        except Exception as e:
-            logger.error(f'Rollback validation failed: {e}')
-            validation['error'] = str(e)
+        except Exception:
+            logger.error(
+                'rollback validation failed',
+                extra={
+                    'error_category': ErrorCategory.SYSTEM.value,
+                    'error_severity': 'high',
+                    'recovery_hint': (
+                        'Inspect the file approval store and retry rollback validation.'
+                    ),
+                },
+            )
+            validation['error'] = 'rollback validation failed'
 
         return validation
 

@@ -37,7 +37,7 @@ The TUI is meant to expose project state (root, provider, model, permission mode
 | `teaagent.chat_session_controller` | Shared session state, cost accumulation, budget enforcement from TUI |
 | `teaagent.context` | Context pack assembly and compaction for model calls |
 | `teaagent.budget` / `teaagent.budget_monitor` | Hard cost cap enforcement displayed in CostBar |
-| `teaagent.approval_manager` | Permission enforcement and JIT approval prompts rendered in ApprovalPanel |
+| `teaagent.approval.manager` | Permission enforcement and JIT approval prompts rendered in ApprovalPanel |
 | `teaagent.audit.AuditLogger` | Per-run audit event recording |
 | `teaagent.cli._handlers._chat` | `chat_command` — the CLI entry point that launches TUI (or falls back to REPL) |
 

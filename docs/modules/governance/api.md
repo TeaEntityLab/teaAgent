@@ -1,7 +1,7 @@
 # governance — Public API Reference
 
 ## `PermissionMode` (Enum)
-Defined in `approval_manager.py:31`. See [approval_manager/api.md](../approval_manager/api.md) for the canonical definition.
+Defined in `approval/manager.py`. See [approval_manager/api.md](../approval_manager/api.md) for the canonical definition.
 
 | Mode | Allows writes? | Plan required? | Approval prompts? |
 |------|---------------|---------------|------------------|

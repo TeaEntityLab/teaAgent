@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from teaagent.approval_selectors import (
+from teaagent.approval.selectors import (
     collect_pending_approval_views,
     pending_approvals_payload,
 )

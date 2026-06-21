@@ -1,7 +1,7 @@
-# approval_manager — Public API Reference
+# Approval Package — Public API Reference
 
 ## `PermissionMode` (Enum)
-**Location**: `approval_manager.py:32`
+**Location**: `approval/manager.py`
 
 ```python
 class PermissionMode(str, Enum):
@@ -17,7 +17,7 @@ This is the canonical definition. See also [governance/api.md](../governance/api
 ---
 
 ## `JITApprovalState` (dataclass)
-**Location**: `approval_manager.py:39`
+**Location**: `approval/manager.py`
 
 In-memory per-session approval state.
 
@@ -36,7 +36,7 @@ class JITApprovalState:
 ---
 
 ## `MultiSigQuorumConfig` (frozen dataclass)
-**Location**: `approval_manager.py:73`
+**Location**: `approval/manager.py`
 
 ```python
 @dataclass(frozen=True)
@@ -50,7 +50,7 @@ class MultiSigQuorumConfig:
 ---
 
 ## `ApprovalManager`
-**Location**: `approval_manager.py`
+**Location**: `approval/manager.py`
 
 Primary approval coordination class.
 
