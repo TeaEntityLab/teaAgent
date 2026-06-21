@@ -21,6 +21,7 @@ from teaagent.approval_manager import (
     PermissionMode,
     ToolPermissionError,
 )
+from teaagent.audit import AuditLogger
 
 
 def _manager_without_agent_id() -> ApprovalManager:
@@ -103,9 +104,14 @@ def test_multisig_fallback_then_denied(
     caplog: pytest.LogCaptureFixture,
     tmp_path: Path,
 ) -> None:
-    """End-to-end: a misconfigured session is denied and audited."""
+    """End-to-end: a misconfigured session is denied and audited.
+
+    G-P1-3: the ``multisig_fallback`` must be detectable after the fact via the
+    audit chain (not only in process logs), so an injected AuditLogger records it.
+    """
     from teaagent.policy import ApprovalPolicy
 
+    audit = AuditLogger()
     policy = ApprovalPolicy(
         permission_mode=PermissionMode.PROMPT,
         multi_sig_config=MultiSigQuorumConfig(
@@ -115,6 +121,7 @@ def test_multisig_fallback_then_denied(
         ),
         agent_id='',
         workspace_root=str(tmp_path),
+        audit=audit,
     )
     with (
         caplog.at_level(logging.WARNING, logger='teaagent.approval_manager'),
@@ -128,3 +135,10 @@ def test_multisig_fallback_then_denied(
         )
 
     assert [r for r in caplog.records if r.__dict__.get('event') == 'multisig_fallback']
+    # The fallback is now also on the audit chain (G-P1-3).
+    audit_events = [e for e in audit.events if e.event_type == 'multisig_fallback']
+    assert len(audit_events) == 1, (
+        'multisig_fallback must be recorded in the audit chain'
+    )
+    assert audit_events[0].payload.get('reason') == 'agent_id_not_set'
+    assert audit_events[0].payload.get('tool_name') == 'workspace_write_file'

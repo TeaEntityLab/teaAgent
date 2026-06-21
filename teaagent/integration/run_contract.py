@@ -69,6 +69,7 @@ def build_approval_policy(
     request: RunSetupRequest,
     *,
     approval_origin_run_id: str | None = None,
+    audit: Any | None = None,
 ) -> ApprovalPolicy:
     approval_store = None
     if request.use_approval_store:
@@ -92,6 +93,7 @@ def build_approval_policy(
         multi_sig_config=MultiSigQuorumConfig.from_workspace_config(request.root),
         workspace_root=str(Path(request.root).resolve()),
         tenant_id=request.tenant_id,
+        audit=audit,
     )
 
 

@@ -63,6 +63,9 @@ class ApprovalPolicy:
     workspace_root: str = '.'  # Workspace root for sync operations
     extra_path_keys: set[str] | None = None
     tenant_id: str = 'default'
+    # Optional duck-typed AuditLogger; when set, governance fallbacks
+    # (e.g. multisig_fallback) are written to the audit chain (G-P1-3).
+    audit: Any | None = None
     _signature_executor: concurrent.futures.ThreadPoolExecutor = field(
         init=False, repr=False
     )
@@ -95,6 +98,7 @@ class ApprovalPolicy:
                 preapproved_payload_digests=self.preapproved_payload_digests,
                 extra_path_keys=self.extra_path_keys,
                 tenant_id=self.tenant_id,
+                audit=self.audit,
             ),
         )
 

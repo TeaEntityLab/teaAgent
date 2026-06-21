@@ -662,6 +662,7 @@ def _create_runner_and_engine(
             tenant_id=config.tenant_id,
         ),
         approval_origin_run_id=context_extra.get('resumed_from') or run_id,
+        audit=audit_logger,
     )
 
     runner = AgentRunner(

@@ -405,12 +405,28 @@ class MultiSigQuorumManager:
         self,
         config: MultiSigQuorumConfig | None = None,
         agent_id: str = '',
+        *,
+        audit: Any | None = None,
+        origin_run_id: str = '',
     ) -> None:
         self.config = config or MultiSigQuorumConfig()
         self.agent_id = agent_id
+        # Optional audit sink (duck-typed AuditLogger). When present, governance
+        # fallbacks are written to the audit chain (G-P1-3) in addition to logs.
+        self._audit = audit
+        self._origin_run_id = origin_run_id
         self._executor = concurrent.futures.ThreadPoolExecutor(
             max_workers=2, thread_name_prefix='sig-collect'
         )
+
+    def _audit_event(self, event_type: str, **payload: Any) -> None:
+        """Best-effort emit to the audit chain; never affects the gate decision."""
+        if self._audit is None:
+            return
+        try:
+            self._audit.record(event_type, self._origin_run_id or '', **payload)
+        except Exception:  # pragma: no cover - audit must never break approval
+            logger.warning('Failed to record %s audit event', event_type)
 
     def is_high_risk(self, tool_name: str, arguments: dict[str, Any] | None) -> bool:
         if not self.config.high_risk_patterns:
@@ -456,6 +472,15 @@ class MultiSigQuorumManager:
                     'call_id': call_id,
                     'required_approvals': self.config.required_approvals,
                 },
+            )
+            # G-P1-3: also record to the audit chain so the misconfiguration is
+            # detectable after the fact, not only in process logs.
+            self._audit_event(
+                'multisig_fallback',
+                reason='agent_id_not_set',
+                tool_name=tool_name,
+                call_id=call_id,
+                required_approvals=self.config.required_approvals,
             )
             print(
                 '[Governance] Multi-Signature Quorum enabled but agent_id not set. '
@@ -775,6 +800,7 @@ class ApprovalManager:
         extra_path_keys: set[str] | None = None,
         approval_backend: _ApprovalBackend | None = None,
         tenant_id: str = 'default',
+        audit: Any | None = None,
     ) -> None:
         self.permission_mode = permission_mode
         self.tenant_id = tenant_id
@@ -804,7 +830,10 @@ class ApprovalManager:
             self._approval_backend = backend_from_mode(permission_mode)
         self._jit_manager = JITApprovalManager(enable_jit_prompt=enable_jit_prompt)
         self._multisig_manager = MultiSigQuorumManager(
-            config=self.multi_sig_config, agent_id=agent_id
+            config=self.multi_sig_config,
+            agent_id=agent_id,
+            audit=audit,
+            origin_run_id=approval_origin_run_id or '',
         )
         self._store_manager = ApprovalStoreManager(
             approval_store=approval_store,
