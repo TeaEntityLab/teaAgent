@@ -16,7 +16,7 @@
 1. `ApprovalPolicy.assert_allowed(...)` is the execution-time gate and delegates to `ApprovalManager.assert_allowed(...)`.
 2. External `jit_state` is synchronized into manager state before evaluation and synchronized back afterward.
 3. Approval-store operations are guarded by `_flock_store()` for race-safe updates.
-4. Deprecated `preapproved_call_ids` remains supported with warning for compatibility.
+4. `preapproved_call_ids` / `--approve-call-id` no longer grant approval (removed, G-P2-2): call ids are predictable, so they are weaker authority than a payload digest. The flag is accepted but inert (emits a deprecation notice); use `--approve-scoped TOOL:SHA256` (payload-digest preapproval) instead.
 5. Invalid permission mode text raises `ValueError` with complete allowed-mode list.
 
 ## Invariants

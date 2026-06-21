@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, Iterator, Optional
 
 from teaagent.errors import ConfigError
+from teaagent.security_env import _env_truthy
 from teaagent.subagents._approval_queue import (
     ApprovalBatch,
     ApprovalRequestStatus,
@@ -95,18 +96,26 @@ class ApprovalQueueStore:
     def exists(self, parent_run_id: str) -> bool:
         return self.queue_path(parent_run_id).is_file()
 
-    def _compute_hmac(self, payload: dict) -> str:
-        """Return HMAC-SHA256 hex digest of *payload* (deterministic JSON key order)."""
+    def _serialize_signed(self, payload: dict) -> str:
+        """Serialize *payload* to JSON once and embed the HMAC.
+
+        Rewriting the whole queue on every update is dominated by JSON
+        serialization, so avoid serializing twice (once to sign, once to
+        write). The canonical (sort_keys) serialization is signed and the
+        ``_hmac`` field is string-spliced in, so the signed bytes are exactly
+        what :meth:`_verify_hmac` recomputes (canonical, ``_hmac`` excluded).
+        *payload* must not already contain an ``_hmac`` key.
+        """
+        body = json.dumps(payload, sort_keys=True, ensure_ascii=False)
         if not self.hmac_secret:
-            return ''
-        # Exclude existing _hmac key to avoid self-referential signing
-        clean = {k: v for k, v in payload.items() if k != '_hmac'}
-        body = json.dumps(clean, sort_keys=True, ensure_ascii=False)
-        return hmac.new(
+            return body
+        digest = hmac.new(
             self.hmac_secret.encode('utf-8'),
             body.encode('utf-8'),
             hashlib.sha256,
         ).hexdigest()
+        prefix = '{"_hmac": ' + json.dumps(digest)
+        return prefix + '}' if body == '{}' else prefix + ', ' + body[1:]
 
     def _verify_hmac(self, raw: dict) -> bool:
         """Verify the ``_hmac`` field on *raw* matches the computed HMAC.
@@ -119,7 +128,9 @@ class ApprovalQueueStore:
             return True
         stored = raw.get('_hmac')
         if not stored:
-            return bool(os.environ.get('TEAAGENT_APPROVAL_HMAC_LEGACY_ACCEPT'))
+            # Proper truthy parsing: "0"/"false" must NOT enable legacy accept
+            # (bool('0') is True in Python). Centralized in security_env.
+            return _env_truthy('TEAAGENT_APPROVAL_HMAC_LEGACY_ACCEPT')
         expected = hmac.new(
             self.hmac_secret.encode('utf-8'),
             json.dumps(
@@ -198,11 +209,9 @@ class ApprovalQueueStore:
                 'requests': {rid: req.to_dict() for rid, req in requests.items()},
                 'batches': {bid: batch.to_dict() for bid, batch in batches.items()},
             }
-            if self.hmac_secret:
-                payload['_hmac'] = self._compute_hmac(payload)
             temp = path.with_suffix('.json.tmp')
             temp.write_text(
-                json.dumps(payload, ensure_ascii=False, indent=2) + '\n',
+                self._serialize_signed(payload) + '\n',
                 encoding='utf-8',
             )
             os.replace(temp, path)
@@ -318,11 +327,9 @@ class ApprovalQueueStore:
             'requests': snapshot.requests,
             'batches': snapshot.batches,
         }
-        if self.hmac_secret:
-            payload['_hmac'] = self._compute_hmac(payload)
         temp = path.with_suffix('.json.tmp')
         temp.write_text(
-            json.dumps(payload, ensure_ascii=False, indent=2) + '\n',
+            self._serialize_signed(payload) + '\n',
             encoding='utf-8',
         )
         os.replace(temp, path)

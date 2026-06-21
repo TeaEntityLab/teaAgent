@@ -82,8 +82,13 @@ teaagent agent run gpt 'Fix the bug in calc.py'  \
   --from-plan .teaagent/plans/fix-calc.md         \
   --require-plan                                  \
   --git-sandbox-auto-stash                        \
-  --approve-call-id fix-write
+  --approve-scoped workspace_write_file:<sha256-of-tool+args>
 ```
+
+> `--approve-call-id` was removed (G-P2-2): call ids are predictable, so they were
+> weaker authority than a payload digest. Pre-approve the exact payload with
+> `--approve-scoped TOOL:SHA256` — the digest covers the tool name + arguments and
+> is shown in the pending-approval payload.
 
 The plan file declares:
 ```markdown
@@ -108,9 +113,9 @@ The agent issues:
  "call_id": "fix-write"}
 ```
 
-Because `fix-write` was pre-authorised via `--approve-call-id`, the approval gate
-records `approval_granted`. The file is written. The undo journal captures the
-original content.
+Because this exact payload (tool name + arguments) was pre-authorised via
+`--approve-scoped` (payload digest), the approval gate records `approval_granted`.
+The file is written. The undo journal captures the original content.
 
 After this step:
 ```python

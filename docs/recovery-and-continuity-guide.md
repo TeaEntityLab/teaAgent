@@ -89,8 +89,9 @@ If a run is stuck with `status: "pending_approval"`:
 **Option 1 — Resume with approval token (recommended):**
 
 ```bash
-# The paused run shows a call_id in the approval payload
-teaagent agent resume opencodezen-go <run_id> --approve-call-id <call_id>
+# The paused run shows the tool + arguments in the approval payload; pre-approve
+# by payload digest. (--approve-call-id was removed in G-P2-2 and is now inert.)
+teaagent agent resume opencodezen-go <run_id> --approve-scoped <tool>:<sha256>
 ```
 
 **Option 2 — Re-run with broader permission:**

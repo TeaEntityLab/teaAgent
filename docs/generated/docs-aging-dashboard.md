@@ -21,14 +21,14 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 
 | Document | Status | Last reviewed | File mtime | Notes |
 | --- | --- | --- | --- | --- |
-| `docs/cli.md` | stale_by_mtime | 2026-06-06 | 2026-06-14 | Missing owner banner; File modified after last reviewed date |
+| `docs/cli.md` | stale_by_mtime | 2026-06-06 | 2026-06-21 | Missing owner banner; File modified after last reviewed date |
 
 ### daily-driver
 
 | Document | Status | Last reviewed | File mtime | Notes |
 | --- | --- | --- | --- | --- |
 | `docs/tui-daily-driver-guide.md` | stale_by_mtime | 2026-06-06 | 2026-06-20 | File modified after last reviewed date |
-| `docs/USAGE.md` | stale_by_mtime | 2026-06-06 | 2026-06-20 | Missing owner banner; File modified after last reviewed date |
+| `docs/USAGE.md` | stale_by_mtime | 2026-06-06 | 2026-06-21 | Missing owner banner; File modified after last reviewed date |
 
 ### docs
 

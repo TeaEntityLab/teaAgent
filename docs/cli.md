@@ -767,14 +767,19 @@ By default, destructive tools are blocked. To allow file writes, patching, or sh
 teaagent agent run gpt "Create a TODO.md summary" --allow-destructive
 ```
 
-Approve one exact destructive tool call id (Legacy Escape Hatch / Deprecated):
+Pre-approve one exact destructive tool call by payload digest:
 
 ```bash
-teaagent agent run gpt "Create a TODO.md summary" --approve-call-id write-todo-1
+teaagent agent run gpt "Create a TODO.md summary" \
+  --approve-scoped workspace_write_file:<sha256-of-tool+args>
 ```
 
 > [!WARNING]
-> `--approve-call-id` is a deprecated legacy escape hatch. Using bare call IDs bypasses exact argument cryptographic validation and is highly discouraged. For standard workflows, use interactive HITL or exact-match `agent resume`.
+> `--approve-call-id` was **removed** (G-P2-2): call ids are model-controlled and
+> predictable, so call-id preapproval was weaker authority than a payload digest.
+> The flag is still accepted but is **inert** (it emits a deprecation notice and
+> grants nothing). Use `--approve-scoped TOOL:SHA256` (payload-digest preapproval)
+> or interactive HITL instead.
 
 For interactive HITL approval during a CLI run, use:
 

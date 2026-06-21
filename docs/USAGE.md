@@ -648,7 +648,7 @@ extra blocks.
 |------|:----------:|:-----------:|:-------------:|:------------:|:---------:|:-----:|:--------:|
 | `read-only` | yes | no | yes | no | not needed (blocked) | per-run JSONL | `UndoJournal.restore()` when journal attached |
 | `workspace-write` | yes | yes (write/patch/hash-edit) | yes | no | not needed for allowed writes | per-run JSONL | `UndoJournal.restore()` when journal attached |
-| `prompt` *(default)* | yes | yes after approval/token | yes | yes after approval/token | HITL or `--approve-call-id` / `--allow-destructive` | per-run JSONL | `UndoJournal.restore()` when journal attached |
+| `prompt` *(default)* | yes | yes after approval/token | yes | yes after approval/token | HITL or `--approve-scoped TOOL:SHA256` / `--allow-destructive` | per-run JSONL | `UndoJournal.restore()` when journal attached |
 | `allow` | yes | yes | yes | yes | session-wide allow destructive | per-run JSONL | `UndoJournal.restore()` when journal attached |
 | `danger-full-access` | yes | yes | yes | yes | same as `allow`; trusted automation only | per-run JSONL | `UndoJournal.restore()` when journal attached |
 
@@ -780,8 +780,9 @@ When the agent wants to do something destructive (write a file, run a shell comm
 ### Option 1: Resume with Approval (Recommended)
 
 ```bash
-# The paused run shows a call_id in the approval payload
-teaagent agent resume opencodezen-go <run_id> --approve-call-id 1
+# The paused run shows the tool + arguments in the approval payload; pre-approve
+# by payload digest (--approve-call-id was removed, G-P2-2 — see below).
+teaagent agent resume opencodezen-go <run_id> --approve-scoped workspace_write_file:<sha256>
 ```
 
 ### Option 2: Allow All Destructive Tools
@@ -798,12 +799,15 @@ teaagent tui
 # In prompt permission mode, the TUI prompts y/N before destructive operations.
 ```
 
-### Option 4: Pre-approve Specific Call IDs
+### Option 4: Pre-approve a Specific Payload (scoped)
 
-If you know the call ID the model will use:
+Pre-approve one exact tool call by the SHA-256 digest of its tool name + arguments.
+(`--approve-call-id` was removed in G-P2-2: call ids are predictable, so they were
+weaker authority than a payload digest. The flag is now inert.)
 
 ```bash
-teaagent agent run gpt "create download_file.py" --approve-call-id 1
+teaagent agent run gpt "create download_file.py" \
+  --approve-scoped workspace_write_file:<sha256-of-tool+args>
 ```
 
 ## Choosing a Model
@@ -899,7 +903,7 @@ teaagent agent run --model deepseek-v4-flash opencodezen-go "your task"
 
 The agent paused because it wants to use a destructive tool (file write, shell command) in `prompt` mode. Either:
 
-1. Resume with `--approve-call-id`: `teaagent agent resume <provider> <run_id> --approve-call-id <call_id>`
+1. Resume with payload-digest preapproval: `teaagent agent resume <provider> <run_id> --approve-scoped <tool>:<sha256>` (`--approve-call-id` was removed, G-P2-2)
 2. Re-run with `--allow-destructive`
 3. Re-run with `--permission-mode workspace-write` (allows file writes but not shell mutation)
 
