@@ -1285,12 +1285,15 @@ class TeaAgentTUI:
                 return False
             return True
         elif answer == 't':
-            # Use explicit current-directory pattern to prevent implicit global grants
+            # Use an explicit non-empty path_globs rather than an implicitly
+            # unscoped grant. NOTE: '*' is an fnmatch wildcard that matches ALL
+            # paths (not just the current directory) — the grant is limited by
+            # its session + tool scope, not by the path pattern.
             store.grant(
                 request.tool_name,
                 scope='session',
                 permission_mode=self.permission_mode.value,
-                path_globs=['*'],  # Explicit current directory
+                path_globs=['*'],  # wildcard: matches all paths (session/tool-scoped)
                 ttl_hours=8.0,
             )
             self.output_fn(

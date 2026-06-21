@@ -105,7 +105,7 @@ def make_cli_approval_handler(  # noqa: C901
                 request.tool_name,
                 scope='session',
                 permission_mode=permission_mode,
-                path_globs=['*'],  # Explicit current directory
+                path_globs=['*'],  # wildcard: matches all paths (session/tool-scoped)
                 ttl_hours=8.0,
             )
             print(

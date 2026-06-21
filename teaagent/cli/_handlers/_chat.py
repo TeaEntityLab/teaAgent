@@ -1,6 +1,6 @@
 """Interactive chat REPL handler for teaagent.
 
-This module provides the chat command which delegates to TUI with --chat-mode.
+This module provides the chat command which delegates to the TUI (``run_tui``).
 The legacy REPL implementation has been moved to chat_repl.py (TASK-DD2-007).
 """
 
@@ -12,7 +12,7 @@ from teaagent.approval import parse_permission_mode
 
 
 def chat_command(args: argparse.Namespace) -> int:
-    """Run the interactive chat REPL (delegates to TUI with --chat-mode)."""
+    """Run the interactive chat REPL (delegates to the TUI via ``run_tui``)."""
     from teaagent.tui import run_tui
 
     provider: str | None = getattr(args, 'provider', None) or None
