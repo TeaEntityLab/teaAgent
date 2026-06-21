@@ -472,7 +472,7 @@ def handle_first_run(root: Path, quiet: bool = False) -> bool:
         '  • Budget cap: cost limits with real-time tracking\n'
         '\n'
         'Get started: teaagent run "your task here"\n'
-        'Docs: https://github.com/yourusername/teaagent\n',
+        'Docs: https://github.com/TeaEntityLab/teaagent\n',
         file=sys.stderr,
     )
     return True

@@ -15,7 +15,7 @@
 
 ## Questions
 
-For usage questions, open a [GitHub Discussion](https://github.com/anomalyco/teaagent/discussions).
+For usage questions, open a [GitHub Discussion](https://github.com/TeaEntityLab/teaagent/discussions).
 
 ## Bugs and Feature Requests
 
