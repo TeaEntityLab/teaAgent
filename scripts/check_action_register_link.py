@@ -34,17 +34,34 @@ RELEVANT_PATTERNS: list[str] = [
 ]
 
 
-def _get_staged_files() -> list[str]:
-    result = subprocess.run(
-        ['git', 'diff', '--cached', '--name-only'],
-        capture_output=True,
-        text=True,
-        timeout=30,
-    )
+def _get_changed_files(base: str | None = None) -> list[str]:
+    if base:
+        result = subprocess.run(
+            ['git', 'diff', '--name-only', f'{base}..HEAD'],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    else:
+        result = subprocess.run(
+            ['git', 'diff', '--cached', '--name-only'],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
     if result.returncode != 0:
-        print(f'Error listing staged files: {result.stderr}', file=sys.stderr)
+        print(f'Error listing changed files: {result.stderr}', file=sys.stderr)
         sys.exit(1)
     return [f for f in result.stdout.splitlines() if f]
+
+
+def _get_diff_content(base: str | None = None) -> str:
+    if base:
+        cmd = ['git', 'diff', f'{base}..HEAD']
+    else:
+        cmd = ['git', 'diff', '--cached']
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+    return result.stdout
 
 
 def _is_relevant(file_path: str) -> bool:
@@ -64,25 +81,23 @@ def _read_commit_msg(path: str | None) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument('--commit-msg', help='Path to commit message file')
+    parser.add_argument(
+        '--base',
+        help='Base git SHA for CI mode (diffs base..HEAD instead of staged)',
+    )
     args = parser.parse_args()
 
     commit_msg = _read_commit_msg(args.commit_msg)
     if _has_action_id(commit_msg):
         return 0
 
-    staged = _get_staged_files()
-    relevant_changed = [f for f in staged if _is_relevant(f)]
+    changed = _get_changed_files(base=args.base)
+    relevant_changed = [f for f in changed if _is_relevant(f)]
     if not relevant_changed:
         return 0
 
-    # Check if staged diff content contains an action ID.
-    result = subprocess.run(
-        ['git', 'diff', '--cached'],
-        capture_output=True,
-        text=True,
-        timeout=30,
-    )
-    if _has_action_id(result.stdout):
+    diff_content = _get_diff_content(base=args.base)
+    if _has_action_id(diff_content):
         return 0
 
     print(

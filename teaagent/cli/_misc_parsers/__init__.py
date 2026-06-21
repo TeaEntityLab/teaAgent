@@ -54,6 +54,7 @@ def register(
         migration_handler=handlers.get('doctor_migration'),
         git_sandbox_handler=handlers.get('doctor_git_sandbox'),
         selftest_handler=handlers.get('doctor_selftest'),
+        review_institution_handler=handlers.get('doctor_review_institution'),
         config_lint_handler=handlers.get('doctor_config_lint'),
         config_handler=handlers.get('doctor_config'),
     )

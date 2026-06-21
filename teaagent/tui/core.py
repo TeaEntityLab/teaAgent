@@ -30,9 +30,6 @@ from teaagent.memory import MemoryCatalog
 from teaagent.model_routing import route_model
 from teaagent.run_store import RunStore, summarize_audit_events
 from teaagent.runner import ApprovalRequest, RunResult
-from teaagent.sandbox import (
-    ParallelExperimentStack,
-)
 from teaagent.session import ChatMessage, ChatSession, SessionStore
 from teaagent.skill_loader import (
     SkillActivationExplain,
@@ -106,11 +103,7 @@ class TeaAgentTUI:
         self._store: Optional[GraphQLiteGraphStore] = None
         self._session_store: Optional[SessionStore] = None
         self._session: Optional['PromptSession'] = None
-        self._parallel_stack: Optional[ParallelExperimentStack] = None
         self._parallel_options: Optional[list[str]] = []
-        self._conflict_mode: bool = False
-        self._conflicted_files: list[str] = []
-        self._current_conflict_index: int = 0
 
         # File watcher for live context sync
         self._file_watcher: Optional[FileWatcher] = None
@@ -221,21 +214,6 @@ class TeaAgentTUI:
         print('=' * columns)
         print(f'TeaAgent TUI {__version__} - State Panel')
         print('=' * columns)
-
-        # Conflict resolution mode
-        if self._conflict_mode and self._conflicted_files:
-            print('\n[Conflict Resolution Mode]')
-            print(
-                f'File {self._current_conflict_index + 1}/{len(self._conflicted_files)}: {self._conflicted_files[self._current_conflict_index]}'
-            )
-            print('\n[Commands]')
-            print('  [o] Accept Our version (current branch)')
-            print('  [t] Accept Their version (incoming branch)')
-            print('  [n] Next conflicted file')
-            print('  [p] Previous conflicted file')
-            print('  [a] Abort merge')
-            print('=' * columns)
-            return
 
         # Left panel: Chat area placeholder
         print('\n[Chat Area - Enter commands below]')
@@ -403,19 +381,6 @@ class TeaAgentTUI:
                 top_recs = pressure.recommendations[:3]
                 for rec in top_recs:
                     print(f'  → {rec}')
-
-        # Parallel experiments panel
-        if self._parallel_stack and self._parallel_options:
-            print('\n[Parallel Experiments]')
-            comparisons = self._parallel_stack.compare_branches()
-            for option in self._parallel_options:
-                if option in comparisons:
-                    stats = comparisons[option]
-                    print(
-                        f'  {option}: +{stats["insertions"]} -{stats["deletions"]} ({stats["files_changed"]} files)'
-                    )
-            print('  [Enter] to merge selected branch')
-            print('  [q] to cancel experiments')
 
         # Recent runs
         try:

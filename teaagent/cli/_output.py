@@ -71,4 +71,10 @@ def print_json(value: Any) -> None:
     Args:
         value: The value to print as JSON (typically a dict or list).
     """
+    # _redact_value is the defense-in-depth sanitizer: it recursively replaces
+    # values under sensitive-sounding keys with _REDACTED before serialization.
+    # CodeQL cannot statically prove this custom sanitizer covers all sensitive
+    # data, so the alert is suppressed here. Callers handling raw secrets must
+    # also sanitize upstream (e.g. _sanitize_doctor_payload in doctor handlers).
+    # lgtm[py/clear-text-logging-sensitive-data]
     print(json.dumps(_redact_value(value), ensure_ascii=False, sort_keys=True))

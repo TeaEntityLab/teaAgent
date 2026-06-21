@@ -19,6 +19,7 @@ def _doctor(
     migration_handler: Optional[Callable] = None,
     git_sandbox_handler: Optional[Callable] = None,
     selftest_handler: Optional[Callable] = None,
+    review_institution_handler: Optional[Callable] = None,
     config_lint_handler: Optional[Callable] = None,
     config_handler: Optional[Callable] = None,
 ) -> None:
@@ -256,6 +257,17 @@ def _doctor(
         help='Workspace root. Defaults to current directory.',
     )
     selftest.set_defaults(func=selftest_handler or model_handler)
+
+    review_institution = subs.add_parser(
+        'review-institution',
+        help='Report review institution mode, pending actions, and audit health.',
+    )
+    review_institution.add_argument(
+        '--root',
+        default='.',
+        help='Workspace root. Defaults to current directory.',
+    )
+    review_institution.set_defaults(func=review_institution_handler or model_handler)
 
 
 def _selftest_top_level(

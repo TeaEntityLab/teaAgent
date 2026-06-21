@@ -92,6 +92,7 @@ from ._doctor import (
     doctor_model,
     doctor_project,
     doctor_providers,
+    doctor_review_institution,
     doctor_selftest_command,
 )
 from ._env import (
@@ -300,6 +301,7 @@ __all__ = [
     'doctor_config_lint_command',
     'doctor_config',
     'doctor_selftest_command',
+    'doctor_review_institution',
     'doctor_aigateway',
     'doctor_providers',
     'doctor_project',

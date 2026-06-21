@@ -16,8 +16,8 @@ Legend: ✅ Done (committed) · 🟡 In progress · ⬜ Not started · 🔵 Alre
 | A-P0-1 | Architecture | Decompose `subagents/_approval_queue_hybrid_store.py` (4,884 lines) into focused modules: storage backend / voting / comments / SLA-quota / templates / compliance-validation / conflict / analytics / notifications / archival. | `teaagent/subagents/_approval_queue_hybrid_store.py:113-4884`; `pyproject.toml:201-219` | Every resulting file is under 800 lines; the 11-error-code mypy override is removed; all tests pass. | ⬜ | — |
 | A-P0-2 | Architecture | Remove silent `except: pass` handling from audit/observability paths, at minimum `audit.py:59`, `cockpit.py:381/453/462`, `subagents/_review.py:167`, and `subagents/_approval_queue_hybrid_store.py:1318`. | As listed | Replace with logged and classified handling per ADR-0014; no `except Exception: pass` remains in observability paths. | ⬜ | — |
 | U-P0-1 | UX | Replace the placeholder URL in the first-run welcome and standardize all four GitHub URLs to one canonical URL. | `teaagent/cli/_handlers/_misc.py:475`; `SUPPORT.md:18`; `teaagent/cli/__init__.py:359`; `docs/ops/deployment-guide.md:68` | The entire repository uses one GitHub URL; `rg "yourusername\|anomalyco"` has no matches in documentation or CLI code. | ✅ | `4022016` — unified to `TeaEntityLab/teaagent` |
-| U-P0-2 | UX | Align advertised TUI commands with actual behavior: implement or remove `conflict` and `o/t/n/p/a` from HELP_TEXT (`rendering.py:64-72`) and the state panel (`core.py:226-238`); also implement branch-start/merge/cancel semantics for `parallel`/`select`/`cancel`, or narrow the help text to their current option-store/select/clear behavior. | `teaagent/tui/_commands.py:365-393,307-361` | No advertised command returns a "not yet implemented" response; HELP_TEXT accurately describes implemented semantics. | ⬜ | — |
-| G-P0-1 | Governance | Update `docs/audit-event.schema.json` to add `prev_hash`/`hash`/`chain_hmac` as optional properties, or split it into a "logical event schema" and a "persisted chain-entry schema." | `docs/audit-event.schema.json:5-13`; `teaagent/audit.py:473-477` | Every chained event written by AuditLogger passes schema validation; add a schema-conformance test. | ⬜ | — |
+| U-P0-2 | UX | Align advertised TUI commands with actual behavior: implement or remove `conflict` and `o/t/n/p/a` from HELP_TEXT (`rendering.py:64-72`) and the state panel (`core.py:226-238`); also implement branch-start/merge/cancel semantics for `parallel`/`select`/`cancel`, or narrow the help text to their current option-store/select/clear behavior. | `teaagent/tui/_commands.py:365-393,307-361` | No advertised command returns a "not yet implemented" response; HELP_TEXT accurately describes implemented semantics. | ✅ | Narrowed: removed dead Conflict Resolution Mode panel + dead Parallel Experiments panel + dead fields/import from `core.py`; HELP_TEXT already aligned; conflict handlers remain as hidden commands returning `not_available` |
+| G-P0-1 | Governance | Update `docs/audit-event.schema.json` to add `prev_hash`/`hash`/`chain_hmac` as optional properties, or split it into a "logical event schema" and a "persisted chain-entry schema." | `docs/audit-event.schema.json:5-13`; `teaagent/audit.py:473-477` | Every chained event written by AuditLogger passes schema validation; add a schema-conformance test. | ✅ | Split: `docs/audit-chain-entry.schema.json` (strict envelope with `prev_hash`/`hash`/`chain_hmac`); `tests/test_audit_schema_conformance.py` validates both schemas; `scripts/check_audit_schema_conformance.py` CI script |
 
 ## P1 - Fix Soon (Usability/Correctness/Contract Consistency)
 
@@ -79,9 +79,9 @@ Legend: ✅ Done (committed) · 🟡 In progress · ⬜ Not started · 🔵 Alre
 
 | Status | Count | Items |
 | --- | --- | --- |
-| ✅ Done (this branch) | 8 | U-P0-1, G-P1-3, G-P2-2, U-P1-5, S-P2-1, S-P2-4 |
+| ✅ Done (this branch) | 10 | U-P0-1, U-P0-2, G-P0-1, G-P1-3, G-P2-2, U-P1-5, S-P2-1, S-P2-4 |
 | 🔵 Already existed | 4 | S-P2-2, S-P2-3, G-P2-4, A-P2-4 |
-| ⬜ Not started | 33 | Remaining |
+| ⬜ Not started | 31 | Remaining |
 
 ### Phase B Infrastructure (New, not in original register)
 
@@ -93,9 +93,9 @@ Legend: ✅ Done (committed) · 🟡 In progress · ⬜ Not started · 🔵 Alre
 | `check-god-modules.py` | ✅ | `scripts/check_god_modules.py` created; registered in `.pre-commit-config.yaml` |
 | `high_risk_paths.yaml` centralized config | ✅ | `scripts/high_risk_paths.yaml` created |
 | `check-high-risk-paths.py` pre-commit hook | ⬜ | Design in automation-plan.md; YAML config ready |
-| `audit-schema-conformance` CI job | ⬜ | Design exists; needs G-P0-1 fixed first |
-| CI `review-institution-gate` job | ⬜ | Design exists |
-| `doctor review-institution` subcommand | ⬜ | Design exists in review-system.md |
+| `audit-schema-conformance` CI job | ✅ | `scripts/check_audit_schema_conformance.py` created; CI job in `review-institution` workflow |
+| CI `review-institution-gate` job | ✅ | `scripts/check_review_institution_gate.py` created; CI job in `review-institution` workflow |
+| `doctor review-institution` subcommand | ✅ | `teaagent doctor review-institution --root .` reports mode, pending actions, audit health |
 
 ## Recommended Execution Order
 

@@ -40,6 +40,7 @@ from .system import (
     doctor_all,
     doctor_git_sandbox,
     doctor_migration_command,
+    doctor_review_institution,
     doctor_selftest_command,
 )
 
@@ -60,6 +61,7 @@ __all__ = [
     'doctor_selftest_command',
     'doctor_migration_command',
     'doctor_git_sandbox',
+    'doctor_review_institution',
     'doctor_config_lint_command',
     'print_json',
     # Private utilities (used by tests)

@@ -145,6 +145,58 @@ def doctor_migration_command(args: argparse.Namespace) -> int:
         return 1
 
 
+def doctor_review_institution(args: argparse.Namespace) -> int:
+    """Review institution health: mode, pending actions, audit-chain status.
+
+    Per review-system.md §11: reports current mode (A/B/C), pending action
+    register items, and audit-chain health summary.
+    """
+    root = Path(getattr(args, 'root', '.')).resolve()
+    action_register = root / 'docs' / 'retrospective' / '06-action-register.md'
+
+    pending_actions: list[dict[str, str]] = []
+    if action_register.is_file():
+        import re
+
+        content = action_register.read_text(encoding='utf-8')
+        for match in re.finditer(
+            r'\| ([SGUA]-P[0-2]-[0-9]) \|[^|]*\|[^|]*\|[^|]*\|[^|]*\| (⬜|🟡) \|',
+            content,
+        ):
+            pending_actions.append({'id': match.group(1), 'status': match.group(2)})
+
+    mode = os.environ.get('TEAAGENT_REVIEW_INSTITUTION', 'solo')
+
+    audit_health: dict[str, Any] = {'available': False}
+    try:
+        from teaagent.audit_chain import verify_audit_chain
+
+        audit_dir = root / '.teaagent' / 'audit'
+        if audit_dir.is_dir():
+            logs = sorted(audit_dir.glob('*.jsonl'))
+            if logs:
+                result = verify_audit_chain(logs[-1])
+                audit_health = {
+                    'available': True,
+                    'ok': result.valid,
+                    'total_events': result.event_count,
+                    'total_hash_mismatches': result.total_hash_mismatches,
+                    'total_prev_hash_mismatches': result.total_prev_hash_mismatches,
+                }
+    except Exception as exc:
+        audit_health = {'available': False, 'error': str(exc)}
+
+    payload = {
+        'ok': True,
+        'mode': mode,
+        'pending_action_count': len(pending_actions),
+        'pending_actions': pending_actions[:20],
+        'audit_health': audit_health,
+    }
+    print_json(payload)
+    return 0
+
+
 def doctor_git_sandbox(args: argparse.Namespace) -> int:
     """Check for orphaned git sandbox branches."""
     from teaagent.sandbox import (

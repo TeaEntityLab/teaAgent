@@ -14,7 +14,7 @@ TYPE_MAP: dict[str, Union[type[Any], tuple[type[Any], ...]]] = {
     'string': str,
 }
 
-_EMAIL_PATTERN = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+_EMAIL_PATTERN = re.compile(r'^[^@\s]{1,64}@[^@\s]{1,63}\.[^@\s]{1,63}$')
 
 
 def validate_object_schema(schema: dict[str, Any], value: Any, *, label: str) -> None:
