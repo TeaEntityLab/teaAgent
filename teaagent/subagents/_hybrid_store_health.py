@@ -12,11 +12,12 @@ from teaagent.subagents._approval_queue import (
     SubagentApprovalRequest,
 )
 from teaagent.subagents._approval_queue_store import request_from_dict
+from teaagent.subagents._hybrid_store_base import HybridStoreBase
 
 logger = logging.getLogger(__name__)
 
 
-class HybridStoreHealthMixin:
+class HybridStoreHealthMixin(HybridStoreBase):
     """Mixin providing health operations for HybridApprovalQueueStore."""
 
     def health_check(self) -> dict[str, Any]:
@@ -138,7 +139,7 @@ class HybridStoreHealthMixin:
 
     def _check_file_store_health(self) -> dict[str, Any]:
         """Check file store health."""
-        status = {
+        status: dict[str, Any] = {
             'status': 'healthy',
             'error': None,
             'details': {},
@@ -168,7 +169,9 @@ class HybridStoreHealthMixin:
             )
 
             # Cleanup
-            self._file_store.delete(test_parent_run_id)
+            test_queue_path = self._file_store.queue_path(test_parent_run_id)
+            if test_queue_path.exists():
+                test_queue_path.unlink()
             status['details']['cleanup_success'] = True
 
         except Exception as e:
@@ -179,13 +182,17 @@ class HybridStoreHealthMixin:
 
     def _check_redis_store_health(self) -> dict[str, Any]:
         """Check Redis store health."""
-        status = {
+        status: dict[str, Any] = {
             'status': 'healthy',
             'error': None,
             'details': {},
         }
 
         try:
+            if not self._redis_store:
+                status['status'] = 'unavailable'
+                return status
+
             # Test connection
             self._redis_store.redis_client.ping()
             status['details']['ping_success'] = True
@@ -212,7 +219,7 @@ class HybridStoreHealthMixin:
             status['details']['read_success'] = loaded is not None
 
             # Cleanup
-            self._redis_store.delete(test_parent_run_id)
+            self._redis_store.delete_parent_run(test_parent_run_id)
             status['details']['cleanup_success'] = True
 
         except Exception as e:
@@ -372,7 +379,7 @@ class HybridStoreHealthMixin:
         Returns:
             Dictionary with validation results
         """
-        validation = {
+        validation: dict[str, Any] = {
             'save_operation': False,
             'load_operation': False,
             'list_operation': False,
@@ -634,7 +641,7 @@ class HybridStoreHealthMixin:
         self._ensure_sla_deadlines()
         self._ensure_escalations()
 
-        results = {
+        results: dict[str, Any] = {
             'enabled': True,
             'escalated_count': 0,
             'skipped_count': 0,
@@ -684,7 +691,7 @@ class HybridStoreHealthMixin:
         if not self.config.auto_timeout_pending_requests:
             return {'timed_out': 0, 'skipped': 'Auto-timeout disabled'}
 
-        results = {
+        results: dict[str, Any] = {
             'timed_out': 0,
             'failed': 0,
             'errors': [],

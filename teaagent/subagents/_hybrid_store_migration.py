@@ -6,18 +6,19 @@ import contextlib
 import json
 import logging
 import time
-from typing import Any
+from typing import Any, Optional
 
 from teaagent.subagents._approval_queue import (
     ApprovalRequestStatus,
     SubagentApprovalRequest,
 )
 from teaagent.subagents._approval_queue_store import request_from_dict
+from teaagent.subagents._hybrid_store_base import HybridStoreBase
 
 logger = logging.getLogger(__name__)
 
 
-class HybridStoreMigrationMixin:
+class HybridStoreMigrationMixin(HybridStoreBase):
     """Mixin providing migration operations for HybridApprovalQueueStore."""
 
     def pre_migration_validation(self) -> dict[str, Any]:
@@ -32,7 +33,7 @@ class HybridStoreMigrationMixin:
             'overall_status': False,
         }
 
-        checks = []
+        checks: list[Any] = []
 
         # Check file store operations
         try:
@@ -70,18 +71,18 @@ class HybridStoreMigrationMixin:
         if self._redis_store:
             try:
                 self._redis_store.save_request(test_parent_run_id, test_request)
-                loaded = self._redis_store.get_request(
+                redis_loaded = self._redis_store.get_request(
                     test_parent_run_id, test_request.request_id
                 )
-                checks.append(('Redis save operation', loaded is not None))
+                checks.append(('Redis save operation', redis_loaded is not None))
             except Exception as e:
                 checks.append(('Redis save operation', False, str(e)))
 
             try:
-                loaded = self._redis_store.get_request(
+                redis_read = self._redis_store.get_request(
                     test_parent_run_id, test_request.request_id
                 )
-                checks.append(('Redis read operation', loaded is not None))
+                checks.append(('Redis read operation', redis_read is not None))
             except Exception as e:
                 checks.append(('Redis read operation', False, str(e)))
 
@@ -97,9 +98,11 @@ class HybridStoreMigrationMixin:
 
         # Cleanup test data
         try:
-            self._file_store.delete(test_parent_run_id)
+            test_queue_path = self._file_store.queue_path(test_parent_run_id)
+            if test_queue_path.exists():
+                test_queue_path.unlink()
             if self._redis_store:
-                self._redis_store.delete(test_parent_run_id)
+                self._redis_store.delete_parent_run(test_parent_run_id)
         except Exception as e:
             logger.warning(f'Cleanup failed: {e}')
 
@@ -120,7 +123,7 @@ class HybridStoreMigrationMixin:
             'overall_status': False,
         }
 
-        checks = []
+        checks: list[Any] = []
 
         # Check submit operation
         try:
@@ -196,19 +199,23 @@ class HybridStoreMigrationMixin:
             'overall_status': False,
         }
 
-        checks = []
+        checks: list[Any] = []
 
         # Get counts from both backends
         try:
             if source == 'file':
                 source_count = len(self._file_store.get_all_requests())
-            else:
+            elif self._redis_store is not None:
                 source_count = len(self._redis_store.get_all_requests())
+            else:
+                source_count = 0
 
             if destination == 'file':
                 dest_count = len(self._file_store.get_all_requests())
-            else:
+            elif self._redis_store is not None:
                 dest_count = len(self._redis_store.get_all_requests())
+            else:
+                dest_count = 0
 
             checks.append(
                 (
@@ -299,11 +306,11 @@ class HybridStoreMigrationMixin:
                 # Group requests by parent_run_id
                 requests_by_parent: dict[str, list[dict[str, Any]]] = {}
                 for request_dict in redis_requests:
-                    parent_run_id = request_dict.get('parent_run_id')
-                    if parent_run_id and isinstance(parent_run_id, str):
-                        if parent_run_id not in requests_by_parent:
-                            requests_by_parent[parent_run_id] = []
-                        requests_by_parent[parent_run_id].append(request_dict)
+                    pid: Optional[str] = request_dict.get('parent_run_id')
+                    if pid and isinstance(pid, str):
+                        if pid not in requests_by_parent:
+                            requests_by_parent[pid] = []
+                        requests_by_parent[pid].append(request_dict)
 
                 # Migrate each parent run's requests
                 for parent_run_id, request_dicts in requests_by_parent.items():
@@ -439,11 +446,13 @@ class HybridStoreMigrationMixin:
 
                             for request_id in batch:
                                 try:
-                                    request = self._redis_store.get_request(
-                                        parent_run_id, request_id
+                                    migrated_req: Optional[Any] = (
+                                        self._redis_store.get_request(
+                                            parent_run_id, request_id
+                                        )
                                     )
-                                    if request is not None:
-                                        requests[request_id] = request.to_dict()
+                                    if migrated_req is not None:
+                                        requests[request_id] = migrated_req.to_dict()
                                         total_migrated += 1
                                 except Exception as e:
                                     logger.error(

@@ -13,11 +13,12 @@ from teaagent.subagents._approval_queue import (
     ApprovalRequestStatus,
     SubagentApprovalRequest,
 )
+from teaagent.subagents._hybrid_store_base import HybridStoreBase
 
 logger = logging.getLogger(__name__)
 
 
-class HybridStoreSafetyMixin:
+class HybridStoreSafetyMixin(HybridStoreBase):
     """Mixin providing safety operations for HybridApprovalQueueStore."""
 
     def _compress_data(self, data: str) -> tuple[str, bool]:

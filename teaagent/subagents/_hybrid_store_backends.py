@@ -14,11 +14,12 @@ from teaagent.subagents._approval_queue_metrics import (
     MetricsContext,
     OperationType,
 )
+from teaagent.subagents._hybrid_store_base import HybridStoreBase
 
 logger = logging.getLogger(__name__)
 
 
-class HybridStoreBackendsMixin:
+class HybridStoreBackendsMixin(HybridStoreBase):
     """Mixin providing backends operations for HybridApprovalQueueStore."""
 
     def _check_redis_available(self) -> bool:

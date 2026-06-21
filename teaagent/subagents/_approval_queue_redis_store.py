@@ -137,7 +137,7 @@ class RedisApprovalQueueStore:
             )
 
         # Build connection parameters
-        connection_params = {
+        connection_params: dict[str, Any] = {
             'host': self.config.host,
             'port': self.config.port,
             'db': self.config.db,
@@ -187,7 +187,7 @@ class RedisApprovalQueueStore:
                 )
 
             # Build connection parameters
-            connection_params = {
+            connection_params: dict[str, Any] = {
                 'socket_timeout': self.config.socket_timeout,
                 'socket_connect_timeout': self.config.socket_connect_timeout,
                 'decode_responses': True,
@@ -207,11 +207,11 @@ class RedisApprovalQueueStore:
 
             # Create cluster client
             self._redis_client = RedisCluster(
-                self.config.cluster_nodes,
+                self.config.cluster_nodes or [],
                 **connection_params,
             )
             logger.info(
-                f'Connected to Redis Cluster with {len(self.config.cluster_nodes)} nodes'
+                f'Connected to Redis Cluster with {len(self.config.cluster_nodes or [])} nodes'
             )
 
             self._key_prefix = self.config.key_prefix
@@ -249,7 +249,7 @@ class RedisApprovalQueueStore:
                 )
 
             # Build connection parameters
-            connection_params = {
+            connection_params: dict[str, Any] = {
                 'socket_timeout': self.config.socket_timeout,
                 'socket_connect_timeout': self.config.socket_connect_timeout,
                 'decode_responses': True,
@@ -440,7 +440,7 @@ class RedisApprovalQueueStore:
         if not self.config.enable_retry:
             return operation(*args, **kwargs)
 
-        last_error = None
+        last_error: Optional[Exception] = None
         for attempt in range(self.config.max_retries):
             try:
                 self._connection_stats['total_operations'] += 1
@@ -454,7 +454,11 @@ class RedisApprovalQueueStore:
                 if attempt < self.config.max_retries - 1:
                     time.sleep(self.config.retry_delay_ms / 1000)
 
-        raise last_error
+        if last_error is not None:
+            raise last_error
+        raise RuntimeError(
+            f'{operation_name} failed: max_retries={self.config.max_retries} is zero'
+        )
 
     def configure_memory_management(self) -> bool:
         """Configure Redis memory management settings.

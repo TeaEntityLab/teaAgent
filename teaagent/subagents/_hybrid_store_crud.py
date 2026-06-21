@@ -16,11 +16,12 @@ from teaagent.subagents._approval_queue_metrics import (
     MetricsContext,
     OperationType,
 )
+from teaagent.subagents._hybrid_store_base import HybridStoreBase
 
 logger = logging.getLogger(__name__)
 
 
-class HybridStoreCrudMixin:
+class HybridStoreCrudMixin(HybridStoreBase):
     """Mixin providing crud operations for HybridApprovalQueueStore."""
 
     def bulk_approve_requests(
@@ -39,7 +40,7 @@ class HybridStoreCrudMixin:
         Returns:
             Dictionary with approval results
         """
-        results = {
+        results: dict[str, Any] = {
             'approved': 0,
             'failed': 0,
             'errors': [],
@@ -82,7 +83,7 @@ class HybridStoreCrudMixin:
         Returns:
             Dictionary with denial results
         """
-        results = {
+        results: dict[str, Any] = {
             'denied': 0,
             'failed': 0,
             'errors': [],

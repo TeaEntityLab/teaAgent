@@ -9,11 +9,12 @@ from typing import Any, Optional
 from teaagent.subagents._approval_queue import (
     ApprovalRequestStatus,
 )
+from teaagent.subagents._hybrid_store_base import HybridStoreBase
 
 logger = logging.getLogger(__name__)
 
 
-class HybridStoreSocialMixin:
+class HybridStoreSocialMixin(HybridStoreBase):
     """Mixin providing social operations for HybridApprovalQueueStore."""
 
     def _create_notification(

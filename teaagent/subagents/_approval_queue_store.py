@@ -17,7 +17,6 @@ from typing import Any, Iterator, Optional
 from teaagent.errors import ConfigError
 from teaagent.security_env import _env_truthy
 from teaagent.subagents._approval_queue import (
-    ApprovalBatch,
     ApprovalRequestStatus,
     SubagentApprovalRequest,
 )
@@ -199,8 +198,8 @@ class ApprovalQueueStore:
     def save(
         self,
         parent_run_id: str,
-        requests: dict[str, SubagentApprovalRequest],
-        batches: dict[str, ApprovalBatch],
+        requests: dict[str, Any],
+        batches: dict[str, Any],
     ) -> None:
         path = self.queue_path(parent_run_id)
         with self.lock(parent_run_id):

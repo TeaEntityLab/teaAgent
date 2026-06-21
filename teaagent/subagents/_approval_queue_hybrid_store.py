@@ -201,10 +201,10 @@ class HybridApprovalQueueStore(
         self._lock = self._state_lock
 
         # Request analytics (lazy init)
-        self._analytics: Optional[dict[str, Any]] = None
+        self._analytics: dict[str, Any] = {}
 
         # Notification system (lazy init)
-        self._notifications: Optional[list[dict[str, Any]]] = None
+        self._notifications: list[dict[str, Any]] = []
 
         # Approval policies (always init, these are config-driven)
         self._approval_policies: dict[
@@ -215,16 +215,16 @@ class HybridApprovalQueueStore(
         }
 
         # Delegation system (lazy init)
-        self._delegations: Optional[dict[str, dict[str, Any]]] = None
+        self._delegations: dict[str, dict[str, Any]] = {}
 
         # Escalation system (lazy init)
-        self._escalations: Optional[dict[str, dict[str, Any]]] = None
+        self._escalations: dict[str, dict[str, Any]] = {}
 
         # Comments system (lazy init)
-        self._comments: Optional[dict[str, list[dict[str, Any]]]] = None
+        self._comments: dict[str, list[dict[str, Any]]] = {}
 
         # Approval history (lazy init)
-        self._approval_history: Optional[dict[str, list[dict[str, Any]]]] = None
+        self._approval_history: dict[str, list[dict[str, Any]]] = {}
 
         # Quota management (always init, needed for quota checks)
         self._approval_quotas: dict[str, int] = {}
@@ -234,22 +234,22 @@ class HybridApprovalQueueStore(
         self._workflow_chains: dict[str, list[str]] = {}
 
         # Reviewer assignment (lazy init)
-        self._reviewer_assignments: Optional[dict[str, str]] = None
+        self._reviewer_assignments: dict[str, str] = {}
 
         # Approval templates (always init, config-driven)
         self._approval_templates: dict[str, dict[str, Any]] = {}
 
         # Request tags (lazy init)
-        self._request_tags: Optional[dict[str, set[str]]] = None
+        self._request_tags: dict[str, set[str]] = {}
 
         # Voting system (lazy init)
-        self._votes: Optional[dict[str, dict[str, bool]]] = None
+        self._votes: dict[str, dict[str, bool]] = {}
 
         # Reminder system (lazy init)
-        self._reminders: Optional[dict[str, list[float]]] = None
+        self._reminders: dict[str, list[float]] = {}
 
         # SLA tracking (lazy init)
-        self._sla_deadlines: Optional[dict[str, float]] = None
+        self._sla_deadlines: dict[str, float] = {}
 
         # Approval conditions (always init, config-driven)
         self._approval_conditions: dict[
@@ -257,7 +257,7 @@ class HybridApprovalQueueStore(
         ] = {}
 
         # Request dependencies (lazy init)
-        self._dependencies: Optional[dict[str, list[str]]] = None
+        self._dependencies: dict[str, list[str]] = {}
 
         # Priority escalation (always init, config-driven)
         self._priority_escalation_rules: dict[str, int] = {}
@@ -268,16 +268,16 @@ class HybridApprovalQueueStore(
         ] = {}
 
         # Signatures (lazy init)
-        self._signatures: Optional[dict[str, dict[str, Any]]] = None
+        self._signatures: dict[str, dict[str, Any]] = {}
 
         # Versioning (lazy init)
-        self._versions: Optional[dict[str, list[dict[str, Any]]]] = None
+        self._versions: dict[str, list[dict[str, Any]]] = {}
 
         # Conflict resolution (lazy init)
-        self._conflicts: Optional[dict[str, dict[str, Any]]] = None
+        self._conflicts: dict[str, dict[str, Any]] = {}
 
         # Performance metrics (lazy init)
-        self._performance_metrics: Optional[dict[str, dict[str, float]]] = None
+        self._performance_metrics: dict[str, dict[str, float]] = {}
 
         # Compliance checks (always init, config-driven)
         self._compliance_rules: dict[

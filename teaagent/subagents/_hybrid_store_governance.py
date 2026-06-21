@@ -10,11 +10,12 @@ from teaagent.subagents._approval_queue import (
     ApprovalRequestStatus,
     SubagentApprovalRequest,
 )
+from teaagent.subagents._hybrid_store_base import HybridStoreBase
 
 logger = logging.getLogger(__name__)
 
 
-class HybridStoreGovernanceMixin:
+class HybridStoreGovernanceMixin(HybridStoreBase):
     """Mixin providing governance operations for HybridApprovalQueueStore."""
 
     def _policy_auto_approve_safe_operations(
@@ -198,7 +199,7 @@ class HybridStoreGovernanceMixin:
         if not self.config.enable_validation_rules:
             return {'enabled': False}
 
-        results = {
+        results: dict[str, Any] = {
             'enabled': True,
             'is_valid': True,
             'errors': [],
@@ -243,7 +244,7 @@ class HybridStoreGovernanceMixin:
         if not self.config.enable_compliance_checks:
             return {'enabled': False}
 
-        results = {
+        results: dict[str, Any] = {
             'enabled': True,
             'is_compliant': True,
             'violations': [],

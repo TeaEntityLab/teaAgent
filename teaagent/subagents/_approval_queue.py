@@ -67,6 +67,7 @@ class SubagentApprovalRequest:
     denied_at: Optional[str] = None
     denial_reason: Optional[str] = None
     timeout_seconds: int = 180  # 3 minutes default
+    priority: Optional[str] = None  # Priority level for escalation
 
     def to_dict(self) -> dict[str, Any]:
         payload = {

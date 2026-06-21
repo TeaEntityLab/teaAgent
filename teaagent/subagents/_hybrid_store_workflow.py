@@ -11,11 +11,12 @@ from teaagent.subagents._approval_queue import (
     ApprovalRequestStatus,
     SubagentApprovalRequest,
 )
+from teaagent.subagents._hybrid_store_base import HybridStoreBase
 
 logger = logging.getLogger(__name__)
 
 
-class HybridStoreWorkflowMixin:
+class HybridStoreWorkflowMixin(HybridStoreBase):
     """Mixin providing workflow operations for HybridApprovalQueueStore."""
 
     def create_workflow_chain(self, name: str, required_approvers: list[str]) -> bool:
@@ -251,7 +252,7 @@ class HybridStoreWorkflowMixin:
         if not self.config.enable_priority_escalation:
             return None
 
-        return self._priority_escalation_rules.get(request.priority)
+        return self._priority_escalation_rules.get(request.priority or '')
 
     def sign_request(self, request_id: str, signer: str, signature: str) -> bool:
         """Sign a request with approval signature.
