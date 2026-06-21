@@ -157,21 +157,48 @@ def test_generation_is_deterministic_and_stale_check_names_source(
 
 
 @pytest.mark.parametrize(
-    ('concept_type', 'docs_tier', 'lifecycle', 'message'),
+    ('concept_type', 'docs_tier', 'lifecycle', 'bundle', 'message'),
     [
-        ('Unknown', 'constitution', 'current', 'type is not registered'),
-        ('Evidence', 'archive', 'historical', 'cannot enter teaagent-current'),
+        (
+            'Unknown',
+            'constitution',
+            'current',
+            'teaagent-current',
+            'type is not registered',
+        ),
+        (
+            'Evidence',
+            'archive',
+            'historical',
+            'teaagent-current',
+            'cannot enter teaagent-current',
+        ),
+        (
+            'Contract',
+            'working',
+            'current',
+            'teaagent-history',
+            'requires archive tier and historical lifecycle',
+        ),
+        (
+            'Evidence',
+            'archive',
+            'current',
+            'teaagent-history',
+            'requires archive tier and historical lifecycle',
+        ),
     ],
 )
-def test_invalid_or_historical_current_entry_fails_closed(
+def test_bundle_tier_constraints_enforced(
     tmp_path: Path,
     concept_type: str,
     docs_tier: str,
     lifecycle: str,
+    bundle: str,
     message: str,
 ) -> None:
     generator = _load_script(
-        f'generate_okf_docs_bundle_invalid_{concept_type}',
+        f'generate_okf_docs_bundle_constraint_{bundle}_{concept_type}',
         'generate_okf_docs_bundle.py',
     )
     _write_source(tmp_path)
@@ -180,6 +207,7 @@ def test_invalid_or_historical_current_entry_fails_closed(
         concept_type=concept_type,
         docs_tier=docs_tier,
         lifecycle=lifecycle,
+        bundle=bundle,
     )
 
     with pytest.raises(ValueError, match=message):
@@ -296,3 +324,31 @@ def test_repository_reference_bundle_deterministic() -> None:
 
     assert catalog1.entries == catalog2.entries
     assert len(catalog1.entries) == 27
+
+
+def test_repository_history_catalog_is_archive_only() -> None:
+    generator = _load_script(
+        'generate_okf_docs_bundle_history', 'generate_okf_docs_bundle.py'
+    )
+    root = Path(__file__).resolve().parents[1]
+    output = root / 'knowledge' / 'teaagent-history'
+
+    errors = generator.check_bundle(
+        repo_root=root,
+        manifest_path=root / 'docs' / 'okf-catalog-history.yaml',
+        output_path=output,
+    )
+    bundle = validate_okf_bundle(root, 'knowledge/teaagent-history')
+
+    assert errors == []
+    assert bundle.conformant is True
+    assert len(bundle.concepts) == 15
+    assert all(
+        concept.metadata['teaagent']['docs_tier'] == 'archive'
+        for concept in bundle.concepts
+    )
+    assert all(
+        concept.metadata['teaagent']['lifecycle'] == 'historical'
+        for concept in bundle.concepts
+    )
+    assert all(concept.metadata['type'] == 'Evidence' for concept in bundle.concepts)

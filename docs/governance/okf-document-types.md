@@ -53,9 +53,11 @@ inventory.
 The current bundle contains the eight constitution documents plus seven
 working-tier current-truth documents named by `docs/INDEX.md`. The reference
 bundle contains curated module documentation, API references, guides, and
-runbooks. Archive-tier documents are excluded from both current and reference
-bundles. Root protocol files such as `README.md`, `SECURITY.md`, `SUPPORT.md`,
-`CHANGELOG.md`, and `AGENTS.md` are out of scope.
+runbooks. The history bundle contains dated analyses, reviews, research, and
+retrospectives labeled as archive-tier historical evidence; it is opt-in only
+and never mixed into current or reference context. Root protocol files such as
+`README.md`, `SECURITY.md`, `SUPPORT.md`, `CHANGELOG.md`, and `AGENTS.md` are
+out of scope.
 
 ## Generated Metadata
 

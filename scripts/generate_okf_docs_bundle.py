@@ -157,6 +157,12 @@ def load_catalog(*, repo_root: Path, manifest_path: Path) -> Catalog:
             raise ValueError(
                 f'archive document cannot enter teaagent-current: {source}'
             )
+        if bundle == 'teaagent-history' and (
+            docs_tier != 'archive' or lifecycle != 'historical'
+        ):
+            raise ValueError(
+                f'history bundle requires archive tier and historical lifecycle: {source}'
+            )
         raw_tags = raw.get('tags')
         if (
             not isinstance(raw_tags, list)

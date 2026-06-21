@@ -42,7 +42,7 @@ acceptance flow writes the user TUI state file. In sandboxed environments, run
 them with permission to bind localhost ports and write the TeaAgent state
 directory.
 
-**Current acceptance test count: `657 passed`** (pytest-collected guard target)
+**Current acceptance test count: `661 passed`** (pytest-collected guard target)
 
 Keep historical acceptance-count snapshots in dated analysis or roadmap docs.
 This file only owns the live guard target.
@@ -86,6 +86,8 @@ Product claim-to-test traceability: [`docs/architecture/claim-to-test-traceabili
 | `test_mtime_read_before_write_flow.py` | mtime concurrent modification guard | `workspace_read_file` returns mtime; `workspace_write_file` with `expected_mtime` rejects overwrites when file was modified since read; writes without mtime are backward compatible |
 | `test_model_smoke_gating_flow.py` | Hosted-provider smoke gating | Live smoke calls are skipped unless CI explicitly sets the gate |
 | `test_okf_docs_retrieval.py` | OKF documentation retrieval | Generated current-truth bundle preserves source digests, retrieves constitution and current-truth documents in the top three results, excludes archive material, and labels context as untrusted data |
+| `test_okf_history_retrieval.py` | OKF history bundle opt-in isolation | History bundle is archive-only and conformant; history queries return archive-labeled results; current bundle never returns historical evidence; history is opt-in only |
+| `test_okf_reference_retrieval.py` | OKF reference bundle retrieval | Reference bundle classifies module files to correct OKF types, retrieves module/API/runbook docs in top three, excludes archive material, and labels context as untrusted data |
 | `test_p0_slo_flow.py` | P0 operational SLO guardrails | Local run/pending-approval/resume latency stays within budget and heartbeat status exposes liveness ticks |
 | `test_plan_mode_read_only_flow.py` | Read-only planning mode | Read-only runs complete with planning metadata for inspect tasks and block file writes/shell mutation |
 | `test_plugin_install_security_flow.py` | Plugin/skill install security | Candidate artifact contract, provenance validation, offline eval/review gates before install |
