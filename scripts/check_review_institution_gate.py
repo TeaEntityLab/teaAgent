@@ -22,30 +22,15 @@ import subprocess
 import sys
 from pathlib import Path
 
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from scripts.check_high_risk_paths import high_risk_files, load_patterns  # noqa: E402
+
 ACTION_ID_PATTERN = re.compile(r'\b[SGUA]-P[0-2]-[0-9]\b')
 RISK_CLASS_PATTERN = re.compile(r'(?i)risk\s*class[:\s]*(low|medium|high)')
 CHECKLIST_PATTERN = re.compile(r'(?i)self.review.checklist|checklist')
-
-HIGH_RISK_PATHS: list[str] = [
-    'teaagent/approval_',
-    'teaagent/approval/',
-    'teaagent/policy.py',
-    'teaagent/audit',
-    'teaagent/audit_chain.py',
-    'teaagent/sandbox/',
-    'teaagent/docker_sandbox.py',
-    'teaagent/git_sandbox.py',
-    'teaagent/tool_permissions.py',
-    'teaagent/workspace_tools/_shell.py',
-    'teaagent/mcp_trust.py',
-    'teaagent/provenance_gate.py',
-    'teaagent/prompt_gate.py',
-    'teaagent/runner/_core.py',
-    'teaagent/budget.py',
-    'teaagent/budget_monitor.py',
-    'teaagent/scope_budget.py',
-    'docs/audit-event.schema.json',
-]
 
 
 def _check_action_id(pr_body: str) -> bool:
@@ -73,8 +58,13 @@ def _get_pr_diff(base: str, head: str) -> list[str]:
     return [f for f in result.stdout.splitlines() if f]
 
 
-def _is_high_risk_path(path: str) -> bool:
-    return any(path.startswith(p) for p in HIGH_RISK_PATHS)
+def _touches_high_risk_paths(
+    changed_files: list[str], *, config_path: Path | None = None
+) -> bool:
+    patterns = (
+        load_patterns(config_path) if config_path is not None else load_patterns()
+    )
+    return bool(high_risk_files(changed_files, patterns))
 
 
 def _has_risk_report(pr_number: str) -> bool:
@@ -109,7 +99,7 @@ def main() -> int:
         )
 
     changed_files = _get_pr_diff(base, head) if base else []
-    touches_high_risk = any(_is_high_risk_path(f) for f in changed_files)
+    touches_high_risk = _touches_high_risk_paths(changed_files)
     declared_high = risk_class == 'high'
 
     if (declared_high or touches_high_risk) and not _has_risk_report(pr_number):
