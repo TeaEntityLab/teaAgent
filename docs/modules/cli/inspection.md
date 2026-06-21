@@ -29,8 +29,8 @@
 
 ### `chat_command(args) -> int`
 **Location**: `cli/_handlers/_chat.py`
-- Launches TUI when stdout is a TTY and `--no-tui` not set.
-- Falls back to `chat_repl.py` for non-TTY or `--no-tui`.
+- Launches TUI when stdout is a TTY.
+- Falls back to `chat_repl.py` for non-TTY.
 - Passes `args.task` as initial task to TUI/REPL.
 
 ### `agent_run_task(args) -> int`

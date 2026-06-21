@@ -71,3 +71,22 @@ repos:
         entry: bash -c 'python3 scripts/generate_okf_docs_bundle.py --check && python3 scripts/generate_okf_docs_bundle.py --manifest docs/okf-catalog-reference.yaml --output knowledge/teaagent-reference --check && python3 scripts/generate_okf_docs_bundle.py --manifest docs/okf-catalog-history.yaml --output knowledge/teaagent-history --check'
         language: system
         pass_filenames: false
+      - id: check-action-register-link
+        name: check-action-register-link
+        # Phase B G9 gate: require action ID in commit message or staged diff.
+        entry: python3 scripts/check_action_register_link.py --commit-msg .git/COMMIT_EDITMSG
+        language: system
+        pass_filenames: false
+        stages: [commit-msg]
+      - id: check-github-url-consistency
+        name: check-github-url-consistency
+        # Enforce one canonical GitHub URL (U-P0-1).
+        entry: python3 scripts/check_github_url_consistency.py
+        language: system
+        pass_filenames: false
+      - id: check-god-modules
+        name: check-god-modules
+        # Thin-harness rule: no module > 800 lines without ADR exemption.
+        entry: python3 scripts/check_god_modules.py
+        language: system
+        pass_filenames: false

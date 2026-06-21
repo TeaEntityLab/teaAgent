@@ -1,0 +1,23 @@
+# Centralized high-risk path patterns for review-system.md §4.2.
+# Shared by pre-commit check-high-risk-paths and CI review-institution-gate.
+# See docs/retrospective/review-system.md for trigger conditions.
+
+patterns:
+  - "teaagent/approval_*.py"
+  - "teaagent/approval/"
+  - "teaagent/policy.py"
+  - "teaagent/audit*.py"
+  - "teaagent/audit_chain.py"
+  - "teaagent/sandbox/"
+  - "teaagent/docker_sandbox.py"
+  - "teaagent/git_sandbox.py"
+  - "teaagent/tool_permissions.py"
+  - "teaagent/workspace_tools/_shell.py"
+  - "teaagent/mcp_trust.py"
+  - "teaagent/provenance_gate.py"
+  - "teaagent/prompt_gate.py"
+  - "teaagent/runner/_core.py"
+  - "teaagent/budget.py"
+  - "teaagent/budget_monitor.py"
+  - "teaagent/scope_budget.py"
+  - "docs/audit-event.schema.json"

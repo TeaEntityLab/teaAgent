@@ -98,7 +98,7 @@ Per-component analysis of the primary design tensions in TeaAgent. Each section 
 
 ### Rich Interactivity vs. Headless Compatibility
 **Tension:** `prompt-toolkit` features (completion, split-pane, async output) require a real TTY. CI, scripted pipelines, and log-capture environments have no TTY.  
-**Resolution:** All non-interactive usage goes through `teaagent run` (CLI, no TUI). TUI is `teaagent chat` only. `--no-tui` flag degrades to basic `input()` for scripted use.  
+**Resolution:** All non-interactive usage goes through `teaagent run` (CLI, no TUI). TUI is `teaagent chat` only. (The `--no-tui` flag was documented but never implemented and has been removed from documentation.)  
 **Break-even:** Not applicable — the split is intentional and correct. Monitor if users route interactive work through `run` to avoid TUI friction (signals UX issue in chat).
 
 ### Streaming Output vs. Clean Transcript

@@ -442,6 +442,12 @@ def _load_run_key(log_path: Path) -> bytes | None:
     key_dir = _get_tenant_dir_for_path(log_path, 'run-keys')
     key_path = key_dir / f'{safe_id}.key'
     if not key_path.is_file():
+        logger.warning(
+            'HMAC chain key not found at %s — '
+            'chain integrity verification is unavailable for run %s',
+            key_path,
+            run_id,
+        )
         return None
     try:
         key = key_path.read_bytes()

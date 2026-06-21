@@ -133,7 +133,7 @@ def print_success(message: str) -> None
 | `--audit-level` | `str` | `L0`\|`L1`\|`L2`\|`L3` |
 | `--require-plan` | `bool` | Enforce plan binding for writes |
 | `--skip-plan-check` | `bool` | Override plan gate |
-| `--no-tui` | `bool` | Disable TUI, use REPL |
+| _(removed)_ | _—_ | `--no-tui` was documented but never implemented; use `teeagent run` for non-interactive CLI mode |
 | `--model` | `str` | Override LLM model |
 | `--provider` | `str` | Override LLM provider |
 | `--budget-cents` | `float` | Cost budget for the run |

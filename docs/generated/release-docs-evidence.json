@@ -1,10 +1,10 @@
 {
   "ok": true,
-  "created_at": "2026-06-21T04:17:42+00:00",
+  "created_at": "2026-06-21T04:33:22+00:00",
   "repo_root": "/Users/teee/dev/teaagent",
   "git": {
     "branch": "docs/retrospective-and-fact-check-2026-06-20",
-    "commit": "81227dcb9e19182b68ecf6c40639cff4e352579e",
+    "commit": "979e4a4bf0c13bb9012256e623e359f664d9fa96",
     "dirty": true
   },
   "commands": [],

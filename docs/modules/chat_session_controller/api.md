@@ -70,7 +70,7 @@ def chat_command(args: argparse.Namespace) -> int
 
 Dispatcher:
 - `args.task` — initial task string (may be empty)
-- `--no-tui` flag → `run_chat_repl(args)`
+- _(removed)_ — `--no-tui` was documented but never implemented
 - TTY detected → `TUIApp(initial_task=args.task).run()`
 - No TTY → `run_chat_completion(args)` (single shot)
 

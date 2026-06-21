@@ -45,7 +45,7 @@ The TUI is meant to expose project state (root, provider, model, permission mode
 
 | Caller | How invoked |
 |--------|------------|
-| `teaagent.cli.__init__.main()` | `chat_command(args)` → `TUIApp(...).run()` when stdout is a TTY and `--no-tui` is not set |
+| `teaagent.cli.__init__.main()` | `chat_command(args)` → `TUIApp(...).run()` when stdout is a TTY |
 | `teaagent.cli._handlers._chat.chat_command()` | Constructs `TUIApp` with workspace root, provider, model, permission mode, budget, and initial task from CLI args |
 | Internal slash commands | `/quit`, `/reset`, `/history`, `/help`, `/skill <name>`, `/approval list`, `/model <name>`, `/budget` |
 
@@ -54,7 +54,7 @@ The TUI is meant to expose project state (root, provider, model, permission mode
 ```
 CLI main()
   └── chat_command(args)
-        ├── [stdout is TTY && !--no-tui]
+        ├── [stdout is TTY]
         │     TUIApp(initial_task=..., provider=..., model=..., ...)
         │     setup_tui(app)
         │       ├── InputField     (user text input with history)
@@ -75,6 +75,7 @@ CLI main()
         │       │         ├── BudgetMonitor check → CostBar update
         │       │         └── AuditLogger.record() for each event
         │       └── [on /quit or Ctrl-C] stop event loop
-        └── [non-TTY or --no-tui]
+        └── [non-TTY]
+<!-- --no-tui was documented but never implemented; use `teaagent run` for non-interactive mode -->
               chat_repl loop (fallback REPL mode)
 ```
