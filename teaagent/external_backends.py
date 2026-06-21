@@ -12,6 +12,10 @@ from typing import Any, Optional, Protocol
 from teaagent.backend_registry import get_default_backend_registry as _get_registry
 from teaagent.hybrid_search import get_hybrid_backend
 from teaagent.mcp_client import MCPHTTPClient
+from teaagent.okf import OKF_VERSION, get_okf_concept, validate_okf_bundle
+from teaagent.path_safety import resolve_contained_path
+from teaagent.rag import tokenize
+from teaagent.storage import atomic_write_text
 
 
 @dataclass
@@ -153,6 +157,8 @@ class BackendAdapterFactory:
     ) -> KnowledgeSearchBackend:
         if backend_type == 'local':
             return LocalKnowledgeAdapter(config=config)
+        if backend_type == 'okf':
+            return OkfKnowledgeAdapter(config=config)
         raise ValueError(f"Unknown knowledge backend type: '{backend_type}'")
 
     @staticmethod
@@ -343,9 +349,192 @@ class LocalKnowledgeAdapter(BackendAdapter):
         return result
 
     def get(self, *, root: Path, args: dict[str, Any]) -> dict[str, Any]:
-        path = root / str(args['path'])
+        path = resolve_contained_path(
+            root, str(args['path']), must_exist=True, require_file=True
+        )
         content = path.read_text(encoding='utf-8')
         return {'backend': 'local', 'path': str(args['path']), 'content': content}
+
+
+@dataclass
+class OkfKnowledgeAdapter(BackendAdapter):
+    """OKF v0.1 validation and retrieval over the local hybrid index."""
+
+    config: BackendConfig
+    hybrid_backend_name: str = 'local'
+    default_bundle: str = 'knowledge'
+    default_collection: str = 'knowledge'
+
+    def __post_init__(self) -> None:
+        BackendAdapter.__init__(self, self.config)
+
+    def initialize(self) -> None:
+        self._initialized = True
+
+    def shutdown(self) -> None:
+        self._initialized = False
+
+    def check_health(self) -> tuple[bool, str]:
+        report = self.health(root=self.config.root)
+        if not report.get('available', False):
+            return (True, 'OKF backend is ready; no default bundle is present')
+        return (bool(report.get('ok')), str(report))
+
+    def health(self, *, root: Path) -> dict[str, Any]:
+        try:
+            bundle_path = resolve_contained_path(root, self.default_bundle)
+        except ValueError as exc:
+            return {
+                'backend': 'okf',
+                'ok': False,
+                'available': False,
+                'version': OKF_VERSION,
+                'error': str(exc),
+            }
+        if not bundle_path.is_dir():
+            return {
+                'backend': 'okf',
+                'ok': True,
+                'available': False,
+                'version': OKF_VERSION,
+            }
+        bundle = validate_okf_bundle(root, self.default_bundle)
+        return {
+            'backend': 'okf',
+            'ok': bundle.conformant,
+            'available': True,
+            'version': OKF_VERSION,
+            'validation': bundle.to_dict(),
+        }
+
+    def index(self, *, root: Path, args: dict[str, Any]) -> dict[str, Any]:
+        bundle_arg = str(args.get('bundle') or self.default_bundle)
+        collection = str(args.get('collection') or self.default_collection)
+        bundle = validate_okf_bundle(root, bundle_arg)
+        if not bundle.conformant:
+            raise BackendExecutionError(
+                'OKF bundle is not conformant and was not indexed',
+                backend_name='okf',
+                details={'validation': bundle.to_dict()},
+            )
+
+        workspace_root = root.resolve()
+        relative_bundle = bundle.root.relative_to(workspace_root).as_posix()
+        include = f'{relative_bundle}/**' if relative_bundle != '.' else '**/*.md'
+        payload = dict(args)
+        payload.update({'include': include, 'collection': collection})
+        result = get_hybrid_backend(self.hybrid_backend_name).index(
+            root=workspace_root, args=payload
+        )
+        marker = workspace_root / '.teaagent' / 'knowledge'
+        atomic_write_text(
+            marker,
+            json.dumps(
+                {
+                    'backend': 'okf',
+                    'bundle': relative_bundle,
+                    'collection': collection,
+                    'okf_version': bundle.version or OKF_VERSION,
+                },
+                sort_keys=True,
+            )
+            + '\n',
+        )
+        return {
+            'backend': 'okf',
+            'bundle': relative_bundle,
+            'collection': collection,
+            'validation': bundle.to_dict(),
+            'index': result,
+        }
+
+    def search(self, *, root: Path, args: dict[str, Any]) -> dict[str, Any]:
+        payload = dict(args)
+        original_query = str(args['query'])
+        payload['query'] = ' '.join(tokenize(original_query)) or original_query
+        payload['collection'] = str(args.get('collection') or self.default_collection)
+        result = get_hybrid_backend(self.hybrid_backend_name).search(
+            root=root.resolve(), args=payload
+        )
+        bundle_arg = self._indexed_bundle(root=root, args=args)
+        if bundle_arg is not None:
+            bundle = validate_okf_bundle(root, bundle_arg)
+            if not bundle.conformant:
+                raise BackendExecutionError(
+                    'indexed OKF bundle is no longer conformant',
+                    backend_name='okf',
+                    details={'validation': bundle.to_dict()},
+                )
+            relative_bundle = bundle.root.relative_to(root.resolve())
+            concepts = {concept.path: concept for concept in bundle.concepts}
+            enriched_hits: list[dict[str, Any]] = []
+            for raw_hit in result.get('hits', []):
+                if not isinstance(raw_hit, dict):
+                    continue
+                hit = dict(raw_hit)
+                try:
+                    concept_path = (
+                        Path(str(hit.get('path', '')))
+                        .relative_to(relative_bundle)
+                        .as_posix()
+                    )
+                except ValueError:
+                    enriched_hits.append(hit)
+                    continue
+                concept = concepts.get(concept_path)
+                if concept is None:
+                    continue
+                metadata = dict(concept.metadata)
+                extension = metadata.get('teaagent')
+                source_path = (
+                    extension.get('source_path')
+                    if isinstance(extension, dict)
+                    else None
+                )
+                hit.update(
+                    {
+                        'concept_id': concept.concept_id,
+                        'concept_path': str(raw_hit.get('path', '')),
+                        'format': 'okf',
+                        'metadata': metadata,
+                    }
+                )
+                if isinstance(source_path, str) and source_path.strip():
+                    hit['path'] = source_path.strip()
+                enriched_hits.append(hit)
+            result['hits'] = enriched_hits
+            result['bundle'] = relative_bundle.as_posix()
+        result['backend'] = 'okf'
+        result['query'] = original_query
+        return result
+
+    def get(self, *, root: Path, args: dict[str, Any]) -> dict[str, Any]:
+        bundle_arg = self._indexed_bundle(root=root, args=args) or self.default_bundle
+        concept_id = str(args.get('concept_id') or args.get('path') or '')
+        bundle, concept = get_okf_concept(root, bundle_arg, concept_id)
+        return {
+            'backend': 'okf',
+            'bundle': bundle.root.relative_to(root.resolve()).as_posix(),
+            'version': bundle.version,
+            'concept': concept.to_dict(),
+            'findings': [finding.to_dict() for finding in bundle.findings],
+        }
+
+    def _indexed_bundle(self, *, root: Path, args: dict[str, Any]) -> str | None:
+        requested = args.get('bundle')
+        if isinstance(requested, str) and requested.strip():
+            return requested.strip()
+        marker = root.resolve() / '.teaagent' / 'knowledge'
+        if not marker.is_file():
+            return None
+        try:
+            payload = json.loads(marker.read_text(encoding='utf-8'))
+        except (OSError, json.JSONDecodeError):
+            return None
+        if not isinstance(payload, dict) or payload.get('backend') != 'okf':
+            return None
+        bundle = payload.get('bundle')
+        return bundle.strip() if isinstance(bundle, str) and bundle.strip() else None
 
 
 @dataclass
@@ -630,7 +819,10 @@ class CodegraphMcpAdapter:
 
 # Default registrations
 _default_local = LocalKnowledgeAdapter(config=BackendConfig(root=Path()))
+_default_okf = OkfKnowledgeAdapter(config=BackendConfig(root=Path()))
 register_knowledge_backend('local', _default_local)
+register_knowledge_backend('okf', _default_okf)
 register_code_parse_backend('cx_cli', CxCliAdapter())
 _default_registry.register_knowledge_backend('local', _default_local)
+_default_registry.register_knowledge_backend('okf', _default_okf)
 _default_registry.register_code_parse_backend('cx_cli', CxCliAdapter())

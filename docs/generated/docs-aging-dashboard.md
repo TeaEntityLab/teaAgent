@@ -34,19 +34,19 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 
 | Document | Status | Last reviewed | File mtime | Notes |
 | --- | --- | --- | --- | --- |
-| `docs/INDEX.md` | stale_by_mtime | 2026-06-17 | 2026-06-18 | Missing owner banner; File modified after last reviewed date |
+| `docs/INDEX.md` | stale_by_mtime | 2026-06-17 | 2026-06-21 | Missing owner banner; File modified after last reviewed date |
+
+### governance
+
+| Document | Status | Last reviewed | File mtime | Notes |
+| --- | --- | --- | --- | --- |
+| `docs/governance/README.md` | stale_by_mtime | 2026-06-06 | 2026-06-21 | Missing owner banner; File modified after last reviewed date |
 
 ### project
 
 | Document | Status | Last reviewed | File mtime | Notes |
 | --- | --- | --- | --- | --- |
 | `README.md` | stale_by_mtime | 2026-06-17 | 2026-06-20 | Missing owner banner; File modified after last reviewed date |
-
-### verification
-
-| Document | Status | Last reviewed | File mtime | Notes |
-| --- | --- | --- | --- | --- |
-| `docs/acceptance.md` | stale_by_mtime | 2026-06-17 | 2026-06-20 | File modified after last reviewed date |
 
 ## Archive Tier (Dated, Immutable Records — Exempt from Staleness Checks)
 

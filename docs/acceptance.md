@@ -7,7 +7,7 @@
 > **Does not own:** Full-suite CI results (see dated evidence) or roadmap priorities.
 >
 > **Review trigger:** Acceptance test inventory or count changes.
-> **Last reviewed:** 2026-06-17
+> **Last reviewed:** 2026-06-21
 
 ## Suite Tiers (WDG-002)
 
@@ -42,7 +42,7 @@ acceptance flow writes the user TUI state file. In sandboxed environments, run
 them with permission to bind localhost ports and write the TeaAgent state
 directory.
 
-**Current acceptance test count: `653 passed`** (pytest-collected guard target)
+**Current acceptance test count: `654 passed`** (pytest-collected guard target)
 
 Keep historical acceptance-count snapshots in dated analysis or roadmap docs.
 This file only owns the live guard target.
@@ -85,6 +85,7 @@ Product claim-to-test traceability: [`docs/architecture/claim-to-test-traceabili
 | `test_memory_auto_curation_flow.py` | Memory auto-curation | Completed runs append curated memory with task/outcome/last-tool context, deduplicate identical summaries, and skip pending-approval runs |
 | `test_mtime_read_before_write_flow.py` | mtime concurrent modification guard | `workspace_read_file` returns mtime; `workspace_write_file` with `expected_mtime` rejects overwrites when file was modified since read; writes without mtime are backward compatible |
 | `test_model_smoke_gating_flow.py` | Hosted-provider smoke gating | Live smoke calls are skipped unless CI explicitly sets the gate |
+| `test_okf_docs_retrieval.py` | OKF documentation retrieval | Generated current-truth bundle preserves source digests, retrieves every constitution document in the top three results, excludes archive material, and labels context as untrusted data |
 | `test_p0_slo_flow.py` | P0 operational SLO guardrails | Local run/pending-approval/resume latency stays within budget and heartbeat status exposes liveness ticks |
 | `test_plan_mode_read_only_flow.py` | Read-only planning mode | Read-only runs complete with planning metadata for inspect tasks and block file writes/shell mutation |
 | `test_plugin_install_security_flow.py` | Plugin/skill install security | Candidate artifact contract, provenance validation, offline eval/review gates before install |
@@ -193,7 +194,7 @@ Use these tiers to control regression scope and release risk:
 
 | Tier | Purpose | Representative acceptance flows |
 |---|---|---|
-| P0 | Safe first-run, policy boundaries, and core coding loop | `test_first_run_experience_flow.py`, `test_first_hour_e2e_flow.py`, `test_error_recovery_common_misuse_flow.py`, `test_docs_acceptance_count_accuracy.py`, `test_daily_cli.py`, `test_p0_slo_flow.py`, `test_plan_mode_read_only_flow.py`, `test_workspace_edit_flow.py`, `test_agent_fix_test_review_flow.py`, `test_policy_as_code_flow.py` |
+| P0 | Safe first-run, policy boundaries, and core coding loop | `test_first_run_experience_flow.py`, `test_first_hour_e2e_flow.py`, `test_error_recovery_common_misuse_flow.py`, `test_docs_acceptance_count_accuracy.py`, `test_okf_docs_retrieval.py`, `test_daily_cli.py`, `test_p0_slo_flow.py`, `test_plan_mode_read_only_flow.py`, `test_workspace_edit_flow.py`, `test_agent_fix_test_review_flow.py`, `test_policy_as_code_flow.py` |
 | P1 | Recovery, continuity, and IDE/runtime surface reliability | `test_run_undo_acceptance_flow.py`, `test_session_resume_continuity_flow.py`, `test_background_attach_resume_notify_flow.py`, `test_automation_foreground_parity_flow.py`, `test_subagent_parallel_worktree_merge_flow.py`, `test_cli_tui_surface_parity_flow.py`, `test_vscode_mcp_runtime_smoke_flow.py`, `test_mcp_client_flow.py`, `test_anp_adapter_flow.py` |
 | P2 | Ecosystem compatibility and extended operations | `test_backend_adapter_flow.py`, `test_desktop_client_server_session_flow.py`, `test_external_tool_manifest_compatibility_flow.py`, `test_managed_runtime_cloud_task_flow.py`, `test_plugin_install_security_flow.py`, `test_remote_mcp_consumption_flow.py`, `test_repo_map_quality_large_repo_flow.py`, `test_ultrawork_flow.py`, `test_webhook_audit_flow.py` |
 

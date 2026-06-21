@@ -269,6 +269,7 @@ def register_workspace_tools(registry: ToolRegistry, factory: Any) -> None:
         input_schema=object_schema(
             {
                 'backend': 'string',
+                'bundle': 'string',
                 'include': 'string',
                 'collection': 'string',
                 'clear': 'boolean',

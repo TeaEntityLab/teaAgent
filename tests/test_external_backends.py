@@ -6,12 +6,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from teaagent.context_pack import build_context_pack
 from teaagent.external_backends import (
     BackendConfig,
     BackendExecutionError,
     CxCliAdapter,
     FallbackKnowledgeBackend,
     LocalKnowledgeAdapter,
+    OkfKnowledgeAdapter,
     QmdCliAdapter,
     get_code_parse_backend,
     get_knowledge_backend,
@@ -155,6 +157,72 @@ def test_local_knowledge_adapter_reads_file(tmp_path: Path) -> None:
     payload = adapter.get(root=tmp_path, args={'path': 'note.txt'})
     assert payload['content'] == 'local knowledge'
     assert adapter.health(root=tmp_path)['ok'] is True
+
+
+def test_local_knowledge_adapter_blocks_path_escape(tmp_path: Path) -> None:
+    adapter = LocalKnowledgeAdapter(config=BackendConfig(root=tmp_path))
+
+    with pytest.raises(ValueError, match='path escapes root'):
+        adapter.get(root=tmp_path, args={'path': '../outside.txt'})
+
+
+def test_okf_backend_indexes_searches_and_gets_concepts(tmp_path: Path) -> None:
+    bundle = tmp_path / 'knowledge'
+    bundle.mkdir()
+    source = tmp_path / 'docs' / 'recovery.md'
+    source.parent.mkdir()
+    source.write_text('# Recovery Runbook\n', encoding='utf-8')
+    (bundle / 'index.md').write_text(
+        '---\nokf_version: "0.1"\n---\n'
+        '# Knowledge\n\n* [Runbook](runbook.md) - Recovery steps.\n',
+        encoding='utf-8',
+    )
+    (bundle / 'runbook.md').write_text(
+        '---\ntype: Playbook\ntitle: Recovery\ncustom: kept\n'
+        'teaagent:\n  source_path: docs/recovery.md\n---\n'
+        'Use the zephyr recovery procedure.\n',
+        encoding='utf-8',
+    )
+    adapter = OkfKnowledgeAdapter(config=BackendConfig(root=tmp_path))
+
+    indexed = adapter.index(root=tmp_path, args={})
+    searched = adapter.search(root=tmp_path, args={'query': 'zephyr', 'limit': 5})
+    fetched = adapter.get(root=tmp_path, args={'concept_id': 'runbook'})
+
+    assert indexed['validation']['conformant'] is True
+    assert indexed['index']['indexed'] == 2
+    assert searched['backend'] == 'okf'
+    assert searched['hits'][0]['path'] == 'docs/recovery.md'
+    assert searched['hits'][0]['concept_path'] == 'knowledge/runbook.md'
+    assert searched['hits'][0]['metadata']['teaagent']['source_path'] == (
+        'docs/recovery.md'
+    )
+    assert fetched['concept']['metadata']['custom'] == 'kept'
+    assert (tmp_path / '.teaagent' / 'knowledge').is_file()
+    context_pack = build_context_pack('zephyr', root=tmp_path, readonly=True)
+    knowledge = context_pack.graph_rag['sources']['knowledge']
+    assert knowledge['format'] == 'okf'
+    assert knowledge['content_role'] == 'data'
+    assert knowledge['trust_level'] == 'untrusted'
+    assert knowledge['hits'][0]['trust_level'] == 'untrusted'
+    assert knowledge['hits'][0]['path'] == 'docs/recovery.md'
+    assert any(
+        candidate['path'] == 'docs/recovery.md'
+        for candidate in context_pack.candidate_files
+    )
+
+
+def test_okf_backend_does_not_index_invalid_bundle(tmp_path: Path) -> None:
+    bundle = tmp_path / 'knowledge'
+    bundle.mkdir()
+    (bundle / 'invalid.md').write_text('No frontmatter.\n', encoding='utf-8')
+    adapter = OkfKnowledgeAdapter(config=BackendConfig(root=tmp_path))
+
+    with pytest.raises(BackendExecutionError) as exc_info:
+        adapter.index(root=tmp_path, args={})
+
+    assert exc_info.value.details['validation']['conformant'] is False
+    assert not (tmp_path / '.teaagent' / 'knowledge').exists()
 
 
 def test_cx_cli_adapter_timeout_raises_backend_execution_error(

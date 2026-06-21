@@ -21,6 +21,7 @@ This directory contains the authoritative standards and process documentation fo
 | [document-state-model.md](document-state-model.md) | Canonical states for findings, risks, issues, roadmap items, and archived docs |
 | [risk-issue-roadmap-workflow.md](risk-issue-roadmap-workflow.md) | Pipeline from finding capture to ticketing, roadmap, verification, and supersession |
 | [doc-taxonomy-and-ownership.md](doc-taxonomy-and-ownership.md) | Document types, source-of-truth rules, and default owner surfaces |
+| [okf-document-types.md](okf-document-types.md) | OKF type registry, bundle boundaries, generated metadata, and validation rules |
 | [doc-maintenance-policy-2026-06-02.md](doc-maintenance-policy-2026-06-02.md) | Short entry point for keeping the daily-driver doc corpus useful |
 | [evidence-to-principle-policy.md](evidence-to-principle-policy.md) | How to turn repository evidence into durable principles and roadmap rationale |
 | [documentation-operating-model-2026-06-04.md](documentation-operating-model-2026-06-04.md) | Claim classes, evidence hierarchy, freshness windows, guarded claims, and documentation definition of done |

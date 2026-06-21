@@ -10,6 +10,7 @@ TIERS: dict[str, tuple[str, ...]] = {
         'test_first_hour_e2e_flow.py',
         'test_error_recovery_common_misuse_flow.py',
         'test_docs_acceptance_count_accuracy.py',
+        'test_okf_docs_retrieval.py',
         'test_daily_cli.py',
         'test_p0_slo_flow.py',
         'test_plan_mode_read_only_flow.py',

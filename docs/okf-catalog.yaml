@@ -1,0 +1,62 @@
+catalog_version: 1
+okf_version: "0.1"
+bundle: teaagent-current
+change_date: "2026-06-21"
+change_summary: Generated the constitution-tier documentation catalog pilot.
+documents:
+  - source: docs/product-contract.md
+    type: Contract
+    description: Defines TeaAgent's product identity, scope, and trust boundaries.
+    tags: [teaagent, product, governance, constitution]
+    docs_tier: constitution
+    authority: canonical
+    lifecycle: current
+  - source: docs/architecture.md
+    type: Architecture
+    description: Describes TeaAgent's governance-first architecture and module boundaries.
+    tags: [teaagent, architecture, boundaries, constitution]
+    docs_tier: constitution
+    authority: canonical
+    lifecycle: current
+  - source: docs/terminology.md
+    type: Reference
+    description: Defines the canonical vocabulary used across TeaAgent documentation.
+    tags: [teaagent, terminology, vocabulary, constitution]
+    docs_tier: constitution
+    authority: canonical
+    lifecycle: current
+  - source: docs/acceptance.md
+    type: Contract
+    description: Defines TeaAgent's acceptance tiers, workflows, and verification expectations.
+    tags: [teaagent, acceptance, testing, constitution]
+    docs_tier: constitution
+    authority: canonical
+    lifecycle: current
+  - source: docs/roadmap-status.md
+    type: Plan
+    description: Tracks canonical roadmap horizons, milestones, next gates, and exit evidence.
+    tags: [teaagent, roadmap, status, constitution]
+    docs_tier: constitution
+    authority: canonical
+    lifecycle: current
+  - source: docs/agent-contribution-contract.md
+    type: Contract
+    description: Defines the gates automated agents must pass before contributing changes.
+    tags: [teaagent, agents, contribution, constitution]
+    docs_tier: constitution
+    authority: canonical
+    lifecycle: current
+  - source: docs/strategy/harness-first-direction-2026-06-13.md
+    type: Contract
+    description: Records the harness-first product direction and scope constraints.
+    tags: [teaagent, strategy, harness, constitution]
+    docs_tier: constitution
+    authority: canonical
+    lifecycle: current
+  - source: docs/governance-compliance.md
+    type: Contract
+    description: Maps repository governance rules to their automated verification gates.
+    tags: [teaagent, governance, compliance, constitution]
+    docs_tier: constitution
+    authority: canonical
+    lifecycle: current

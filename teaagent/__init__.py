@@ -117,6 +117,7 @@ if TYPE_CHECKING:
         CxCliAdapter,
         KnowledgeSearchBackend,
         LocalKnowledgeAdapter,
+        OkfKnowledgeAdapter,
         QmdCliAdapter,
         QmdMcpAdapter,
         get_code_parse_backend,

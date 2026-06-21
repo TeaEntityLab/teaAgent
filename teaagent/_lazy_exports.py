@@ -131,6 +131,7 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     'LLMResponseFormatError': ('teaagent.llm', 'LLMResponseFormatError'),
     'LSPServerConfig': ('teaagent.code_analysis', 'LSPServerConfig'),
     'LocalKnowledgeAdapter': ('teaagent.external_backends', 'LocalKnowledgeAdapter'),
+    'OkfKnowledgeAdapter': ('teaagent.external_backends', 'OkfKnowledgeAdapter'),
     'MCPClientError': ('teaagent.mcp_client', 'MCPClientError'),
     'MCPHTTPClient': ('teaagent.mcp_client', 'MCPHTTPClient'),
     'MemoryCatalog': ('teaagent.memory', 'MemoryCatalog'),

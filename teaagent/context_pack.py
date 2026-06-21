@@ -220,18 +220,23 @@ def _symbol_hints(
 _GRAPHQLITE_DOCUMENT_QUERY = 'MATCH (n:Document) RETURN n.doc_id AS doc_id, n.text AS text, n.source AS source LIMIT 100'
 
 
-def _knowledge_collection_name(root: Path) -> str:
+def _knowledge_marker_payload(root: Path) -> dict[str, Any]:
     marker = root / '.teaagent' / 'knowledge'
     if marker.is_file():
         try:
             payload = json.loads(marker.read_text(encoding='utf-8'))
             if isinstance(payload, dict):
-                name = payload.get('collection')
-                if isinstance(name, str) and name.strip():
-                    return name.strip()
+                return payload
         except (OSError, json.JSONDecodeError, TypeError):
-            # Marker file missing, unreadable, or invalid JSON; use default collection name
             pass
+    return {}
+
+
+def _knowledge_collection_name(root: Path) -> str:
+    payload = _knowledge_marker_payload(root)
+    name = payload.get('collection')
+    if isinstance(name, str) and name.strip():
+        return name.strip()
     return 'knowledge'
 
 
@@ -405,18 +410,40 @@ def _graph_rag_evidence(  # noqa: C901
 
         knowledge_marker = root / '.teaagent' / 'knowledge'
         if knowledge_marker.exists() and hybrid_db.is_file():
+            marker_payload = _knowledge_marker_payload(root)
             collection = _knowledge_collection_name(root)
-            knowledge_result = search_if_indexed(
-                root, search_query, limit=hit_limit, collection=collection
-            )
+            knowledge_result: dict[str, Any] | None
+            if marker_payload.get('backend') == 'okf':
+                from teaagent.external_backends import get_knowledge_backend
+
+                knowledge_result = get_knowledge_backend('okf').search(
+                    root=root,
+                    args={
+                        'query': search_query,
+                        'limit': hit_limit,
+                        'collection': collection,
+                    },
+                )
+            else:
+                knowledge_result = search_if_indexed(
+                    root, search_query, limit=hit_limit, collection=collection
+                )
             if knowledge_result is not None:
                 knowledge_hits = _tag_hits(
                     knowledge_result.get('hits', []), 'knowledge'
                 )
+                if marker_payload.get('backend') == 'okf':
+                    for hit in knowledge_hits:
+                        hit['format'] = 'okf'
+                        hit['content_role'] = 'data'
+                        hit['trust_level'] = 'untrusted'
                 sources['knowledge'] = {
                     'hits': knowledge_hits,
                     'backend': knowledge_result.get('backend', 'local'),
                     'collection': collection,
+                    'format': marker_payload.get('backend', 'unknown'),
+                    'content_role': 'data',
+                    'trust_level': 'untrusted',
                     'reason': (
                         'knowledge_search_read'
                         if knowledge_hits

@@ -103,6 +103,7 @@ Use this short list instead of scanning every dated analysis file.
 | [Document State Model](governance/document-state-model.md) | Canonical state vocabulary for findings, risks, issues, tickets, and roadmap rows. |
 | [Risk Issue Roadmap Workflow](governance/risk-issue-roadmap-workflow.md) | Pipeline from finding to issue, ticket, roadmap, verification, and supersession. |
 | [Documentation Taxonomy And Ownership](governance/doc-taxonomy-and-ownership.md) | Where each document type belongs and who owns it. |
+| [OKF Document Types](governance/okf-document-types.md) | How canonical project documents map into generated current, reference, and history knowledge bundles. |
 | [Documentation Maintenance Policy](governance/doc-maintenance-policy-2026-06-02.md) | Short policy for adding, updating, and validating docs. |
 | [Documentation Operating Model](governance/documentation-operating-model-2026-06-04.md) | Practical rules for claim classes, freshness windows, source-of-truth conflicts, and CI guard scope. |
 | [Documentation Audit Cadence](governance/documentation-audit-cadence-2026-06-06.md) | When to run docs gates and which evidence artifacts to keep. |
