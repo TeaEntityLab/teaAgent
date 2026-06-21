@@ -92,7 +92,7 @@ Legend: ✅ Done (committed) · 🟡 In progress · ⬜ Not started · 🔵 Alre
 | `check-github-url-consistency.py` | ✅ | `scripts/check_github_url_consistency.py` created; registered in `.pre-commit-config.yaml` |
 | `check-god-modules.py` | ✅ | `scripts/check_god_modules.py` created; registered in `.pre-commit-config.yaml` |
 | `high_risk_paths.yaml` centralized config | ✅ | `scripts/high_risk_paths.yaml` created |
-| `check-high-risk-paths.py` pre-commit hook | ⬜ | Design in automation-plan.md; YAML config ready |
+| `check-high-risk-paths.py` pre-commit hook | ✅ | `scripts/check_high_risk_paths.py` created (reads `high_risk_paths.yaml`); blocks commits that stage a high-risk path without a `docs/reviews/*-risk.md` report or `TEAAGENT_RISK_ACK`; registered in `.pre-commit-config.yaml`; `tests/test_check_high_risk_paths.py` (4 tests) |
 | `audit-schema-conformance` CI job | ✅ | `scripts/check_audit_schema_conformance.py` created; CI job in `review-institution` workflow |
 | CI `review-institution-gate` job | ✅ | `scripts/check_review_institution_gate.py` created; CI job in `review-institution` workflow |
 | `doctor review-institution` subcommand | ✅ | `teaagent doctor review-institution --root .` reports mode, pending actions, audit health |
