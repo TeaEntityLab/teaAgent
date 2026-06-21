@@ -16,6 +16,7 @@ Run the full docs gate whenever any of the following happen:
 | Trust-sensitive code change (approval, audit, sandbox, subagents) | `scripts/verify_docs.sh` + targeted pytest | PR notes + run receipt if applicable |
 | Competitor survey refresh | `scripts/refresh_competitive_docs.py` | Survey `Last reviewed` date |
 | New current-truth doc or front-door link | `scripts/verify_docs.sh` | `docs/INDEX.md` review date |
+| OKF catalog source change | `scripts/verify_docs.sh` | Regenerated `knowledge/teaagent-*` bundles |
 
 ## Monthly baseline
 
@@ -39,7 +40,8 @@ baseline above has run in the same month.
 ./scripts/verify_docs.sh
 ```
 
-This runs inventory, aging, release-docs evidence, and consistency validators.
+This runs inventory, aging, release-docs evidence, OKF catalog stale checks,
+and consistency validators.
 
 ## Escalation
 
@@ -50,6 +52,9 @@ python3 scripts/generate_docs_inventory.py
 python3 scripts/report_docs_aging.py
 python3 scripts/generate_command_snippet_inventory.py
 python3 scripts/build_release_docs_evidence_bundle.py --skip-gates
+python3 scripts/generate_okf_docs_bundle.py
+python3 scripts/generate_okf_docs_bundle.py --manifest docs/okf-catalog-reference.yaml --output knowledge/teaagent-reference
+python3 scripts/generate_okf_docs_bundle.py --manifest docs/okf-catalog-history.yaml --output knowledge/teaagent-history
 python3 scripts/validate_docs_consistency.py
 ```
 

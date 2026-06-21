@@ -7,6 +7,7 @@ roadmap excerpt, documentation freshness, and open residual risks.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import json
 import re
@@ -24,6 +25,11 @@ _RISK_REGISTER = (
     _REPO_ROOT / 'docs' / 'security' / 'risk-register-and-threat-model-2026-06-02.md'
 )
 _ROADMAP_STATUS = _REPO_ROOT / 'docs' / 'roadmap-status.md'
+_OKF_CATALOGS = (
+    ('teaagent-current', _REPO_ROOT / 'docs' / 'okf-catalog.yaml'),
+    ('teaagent-reference', _REPO_ROOT / 'docs' / 'okf-catalog-reference.yaml'),
+    ('teaagent-history', _REPO_ROOT / 'docs' / 'okf-catalog-history.yaml'),
+)
 
 _RISK_ROW = re.compile(r'^\|\s*((?:SEC|DS|SC)-\d+)\s*\|')
 _HORIZON_ROW = re.compile(r'^\|\s*(H\d+)\s*\|')
@@ -157,6 +163,30 @@ def summarize_docs_freshness(*, repo_root: Path) -> dict[str, Any]:
     }
 
 
+def summarize_okf_catalogs(*, repo_root: Path) -> list[dict[str, Any]]:
+    okf_catalogs: list[dict[str, Any]] = []
+    for bundle_name, manifest_path in _OKF_CATALOGS:
+        if not manifest_path.is_file():
+            continue
+        import yaml
+
+        payload = yaml.safe_load(manifest_path.read_text(encoding='utf-8'))
+        if not isinstance(payload, dict):
+            continue
+        digest = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+        okf_catalogs.append(
+            {
+                'bundle': payload.get('bundle', bundle_name),
+                'okf_version': payload.get('okf_version', 'unknown'),
+                'catalog_version': payload.get('catalog_version', 'unknown'),
+                'concept_count': len(payload.get('documents', [])),
+                'manifest_digest': digest,
+                'manifest_path': str(manifest_path.relative_to(repo_root)),
+            }
+        )
+    return okf_catalogs
+
+
 def build_release_docs_evidence_bundle(
     *,
     repo_root: Path = _REPO_ROOT,
@@ -188,6 +218,7 @@ def build_release_docs_evidence_bundle(
     docs_freshness = summarize_docs_freshness(repo_root=repo_root)
     open_risks = parse_open_risks(_RISK_REGISTER)
     roadmap = parse_roadmap_excerpt(_ROADMAP_STATUS)
+    okf_catalogs = summarize_okf_catalogs(repo_root=repo_root)
 
     return {
         'ok': all(cmd['exit_code'] == 0 for cmd in commands),
@@ -198,6 +229,7 @@ def build_release_docs_evidence_bundle(
         'docs_freshness': docs_freshness,
         'roadmap_excerpt': roadmap,
         'open_risks': open_risks,
+        'okf_catalogs': okf_catalogs,
         'regenerate_commands': [
             'python3 scripts/build_release_docs_evidence_bundle.py',
             'python3 scripts/validate_docs_consistency.py',
@@ -276,6 +308,18 @@ def format_release_docs_evidence_markdown(bundle: dict[str, Any]) -> str:
                 desc = desc[:117] + '...'
             lines.append(
                 f'| {row["id"]} | {row["category"]} | {row["priority"]} | {desc} |'
+            )
+
+    okf_catalogs = bundle.get('okf_catalogs', [])
+    if okf_catalogs:
+        lines.extend(['', '## OKF Catalogs', ''])
+        lines.append('| Bundle | OKF version | Concepts | Manifest digest |')
+        lines.append('| --- | --- | --- | --- |')
+        for catalog in okf_catalogs:
+            lines.append(
+                f'| `{catalog["bundle"]}` | `{catalog["okf_version"]}` '
+                f'| {catalog["concept_count"]} '
+                f'| `{catalog["manifest_digest"][:16]}...` |'
             )
     lines.append('')
     return '\n'.join(lines)

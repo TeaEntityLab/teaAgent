@@ -65,3 +65,9 @@ repos:
         entry: python3 scripts/generate_docs_inventory.py --check
         language: system
         pass_filenames: false
+      - id: check-okf-catalogs
+        name: check-okf-catalogs
+        # Fail the commit if any OKF catalog bundle is stale. --check is read-only.
+        entry: bash -c 'python3 scripts/generate_okf_docs_bundle.py --check && python3 scripts/generate_okf_docs_bundle.py --manifest docs/okf-catalog-reference.yaml --output knowledge/teaagent-reference --check && python3 scripts/generate_okf_docs_bundle.py --manifest docs/okf-catalog-history.yaml --output knowledge/teaagent-history --check'
+        language: system
+        pass_filenames: false

@@ -1,33 +1,23 @@
 {
   "ok": true,
-  "created_at": "2026-06-18T05:18:29+00:00",
+  "created_at": "2026-06-21T04:17:42+00:00",
   "repo_root": "/Users/teee/dev/teaagent",
   "git": {
-    "branch": "main",
-    "commit": "41c51fca9cdbc2218ac1686f4c7e1bd058375c07",
+    "branch": "docs/retrospective-and-fact-check-2026-06-20",
+    "commit": "81227dcb9e19182b68ecf6c40639cff4e352579e",
     "dirty": true
   },
-  "commands": [
-    {
-      "cmd": "/Users/teee/dev/teaagent/.venv/bin/python scripts/validate_docs_consistency.py",
-      "exit_code": 0,
-      "stdout": "Risk register evidence coverage: 24/29 rows verified (82%)\nTicket index evidence coverage: 21/21 rows verified (100%)\nDocs consistency check passed.\n",
-      "stderr": ""
-    },
-    {
-      "cmd": "/Users/teee/dev/teaagent/.venv/bin/python scripts/report_docs_aging.py --check",
-      "exit_code": 0,
-      "stdout": "Docs aging dashboard check passed.\n",
-      "stderr": ""
-    }
-  ],
+  "commands": [],
   "docs_freshness": {
     "scanned": 17,
-    "needs_attention": 3,
+    "needs_attention": 7,
     "by_owner": {
+      "project": 1,
       "docs": 1,
+      "daily-driver": 2,
       "cli": 1,
-      "architecture": 1
+      "architecture": 1,
+      "governance": 1
     },
     "stale_threshold_days": 90
   },
@@ -104,6 +94,32 @@
     ]
   },
   "open_risks": [],
+  "okf_catalogs": [
+    {
+      "bundle": "teaagent-current",
+      "okf_version": "0.1",
+      "catalog_version": 1,
+      "concept_count": 15,
+      "manifest_digest": "6bc5a83b500a89369ca0e85d6420d20b4fdcd9dd262c6ad8adf55197d76addb8",
+      "manifest_path": "docs/okf-catalog.yaml"
+    },
+    {
+      "bundle": "teaagent-reference",
+      "okf_version": "0.1",
+      "catalog_version": 1,
+      "concept_count": 27,
+      "manifest_digest": "27a4e67dbe6acd139214dd18964bb6862618bef3a4d15c52be5d347344ca1f52",
+      "manifest_path": "docs/okf-catalog-reference.yaml"
+    },
+    {
+      "bundle": "teaagent-history",
+      "okf_version": "0.1",
+      "catalog_version": 1,
+      "concept_count": 15,
+      "manifest_digest": "45f2bab76514e3f8bfeacbdd0013f7f98f79916b50ab9b0e75ade403037526e3",
+      "manifest_path": "docs/okf-catalog-history.yaml"
+    }
+  ],
   "regenerate_commands": [
     "python3 scripts/build_release_docs_evidence_bundle.py",
     "python3 scripts/validate_docs_consistency.py",
