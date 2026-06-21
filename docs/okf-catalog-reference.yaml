@@ -1,0 +1,203 @@
+catalog_version: 1
+okf_version: "0.1"
+bundle: teaagent-reference
+change_date: "2026-06-21"
+change_summary: >-
+  Initial reference bundle with module specifications, API references,
+  inspection reports, risk records, and selected guides and runbooks.
+documents:
+  - source: docs/modules/cli/spec.md
+    type: Specification
+    description: Behavior specification for the CLI module, the entry point for all user commands.
+    tags: [teaagent, cli, module, specification]
+    docs_tier: working
+    authority: canonical
+    lifecycle: current
+  - source: docs/modules/cli/api.md
+    type: Reference
+    description: Public API reference for the CLI module.
+    tags: [teaagent, cli, module, api, reference]
+    docs_tier: working
+    authority: canonical
+    lifecycle: current
+  - source: docs/modules/cli/inspection.md
+    type: Reference
+    description: Module inspection for CLI covering purpose, dependencies, exports, and call graph.
+    tags: [teaagent, cli, module, inspection, reference]
+    docs_tier: working
+    authority: canonical
+    lifecycle: current
+  - source: docs/modules/cli/risks.md
+    type: Risk Record
+    description: Risk vectors and known issues for the CLI module.
+    tags: [teaagent, cli, module, risks, risk-record]
+    docs_tier: working
+    authority: canonical
+    lifecycle: current
+  - source: docs/modules/audit/spec.md
+    type: Specification
+    description: Behavior specification for the audit module, the append-only hash-chained event log.
+    tags: [teaagent, audit, module, specification]
+    docs_tier: working
+    authority: canonical
+    lifecycle: current
+  - source: docs/modules/audit/api.md
+    type: Reference
+    description: Public API reference for the audit module.
+    tags: [teaagent, audit, module, api, reference]
+    docs_tier: working
+    authority: canonical
+    lifecycle: current
+  - source: docs/modules/audit/inspection.md
+    type: Reference
+    description: Module inspection for audit covering purpose, dependencies, exports, and call graph.
+    tags: [teaagent, audit, module, inspection, reference]
+    docs_tier: working
+    authority: canonical
+    lifecycle: current
+  - source: docs/modules/audit/risks.md
+    type: Risk Record
+    description: Risk vectors and known issues for the audit module.
+    tags: [teaagent, audit, module, risks, risk-record]
+    docs_tier: working
+    authority: canonical
+    lifecycle: current
+  - source: docs/modules/approval_manager/spec.md
+    type: Specification
+    description: Behavior specification for the approval manager module governing destructive tool gates.
+    tags: [teaagent, approval, module, specification]
+    docs_tier: working
+    authority: canonical
+    lifecycle: current
+  - source: docs/modules/approval_manager/api.md
+    type: Reference
+    description: Public API reference for the approval manager module.
+    tags: [teaagent, approval, module, api, reference]
+    docs_tier: working
+    authority: canonical
+    lifecycle: current
+  - source: docs/modules/approval_manager/inspection.md
+    type: Reference
+    description: >-
+      Module inspection for approval manager covering purpose, dependencies,
+      exports, and call graph.
+    tags: [teaagent, approval, module, inspection, reference]
+    docs_tier: working
+    authority: canonical
+    lifecycle: current
+  - source: docs/modules/approval_manager/risks.md
+    type: Risk Record
+    description: Risk vectors and known issues for the approval manager module.
+    tags: [teaagent, approval, module, risks, risk-record]
+    docs_tier: working
+    authority: canonical
+    lifecycle: current
+  - source: docs/modules/context_pack/spec.md
+    type: Specification
+    description: Behavior specification for the context pack module assembling model context.
+    tags: [teaagent, context-pack, module, specification]
+    docs_tier: working
+    authority: canonical
+    lifecycle: current
+  - source: docs/modules/context_pack/api.md
+    type: Reference
+    description: Public API reference for the context pack module.
+    tags: [teaagent, context-pack, module, api, reference]
+    docs_tier: working
+    authority: canonical
+    lifecycle: current
+  - source: docs/modules/context_pack/risks.md
+    type: Risk Record
+    description: Risk vectors and known issues for the context pack module.
+    tags: [teaagent, context-pack, module, risks, risk-record]
+    docs_tier: working
+    authority: canonical
+    lifecycle: current
+  - source: docs/modules/external_backends/spec.md
+    type: Specification
+    description: >-
+      Behavior specification for the external backends module including OKF
+      and knowledge adapters.
+    tags: [teaagent, external-backends, module, specification]
+    docs_tier: working
+    authority: canonical
+    lifecycle: current
+  - source: docs/modules/external_backends/api.md
+    type: Reference
+    description: Public API reference for the external backends module.
+    tags: [teaagent, external-backends, module, api, reference]
+    docs_tier: working
+    authority: canonical
+    lifecycle: current
+  - source: docs/modules/runner/spec.md
+    type: Specification
+    description: Behavior specification for the runner module, the core agent decision loop.
+    tags: [teaagent, runner, module, specification]
+    docs_tier: working
+    authority: canonical
+    lifecycle: current
+  - source: docs/modules/runner/api.md
+    type: Reference
+    description: Public API reference for the runner module.
+    tags: [teaagent, runner, module, api, reference]
+    docs_tier: working
+    authority: canonical
+    lifecycle: current
+  - source: docs/modules/runner/inspection.md
+    type: Reference
+    description: >-
+      Module inspection for runner covering purpose, dependencies, exports,
+      and call graph.
+    tags: [teaagent, runner, module, inspection, reference]
+    docs_tier: working
+    authority: canonical
+    lifecycle: current
+  - source: docs/modules/runner/risks.md
+    type: Risk Record
+    description: Risk vectors, failure modes, edge cases, and known issues for the runner module.
+    tags: [teaagent, runner, module, risks, risk-record]
+    docs_tier: working
+    authority: canonical
+    lifecycle: current
+  - source: docs/api/README.md
+    type: Reference
+    description: TeaAgent API reference index linking to CLI, Python, MCP, TUI, and REPL API docs.
+    tags: [teaagent, api, index, reference]
+    docs_tier: working
+    authority: canonical
+    lifecycle: current
+  - source: docs/api/python-api.md
+    type: Reference
+    description: Python API specification and module surface for programmatic TeaAgent usage.
+    tags: [teaagent, api, python, reference]
+    docs_tier: working
+    authority: canonical
+    lifecycle: current
+  - source: docs/api/cli-api.md
+    type: Reference
+    description: CLI API specification and command surface for all TeaAgent CLI commands.
+    tags: [teaagent, api, cli, reference]
+    docs_tier: working
+    authority: canonical
+    lifecycle: current
+  - source: docs/guides/getting-started-solo-cli.md
+    type: Guide
+    description: Onboarding guide for solo CLI users covering setup, first run, and daily use.
+    tags: [teaagent, guide, onboarding, solo-cli]
+    docs_tier: working
+    authority: canonical
+    lifecycle: current
+  - source: docs/ops/operations-manual.md
+    type: Runbook
+    description: Operations manual for TeaAgent deployment, configuration, and maintenance.
+    tags: [teaagent, ops, operations, runbook]
+    docs_tier: working
+    authority: canonical
+    lifecycle: current
+  - source: docs/ops/troubleshooting.md
+    type: Runbook
+    description: Troubleshooting guide for common TeaAgent issues and recovery procedures.
+    tags: [teaagent, ops, troubleshooting, runbook]
+    docs_tier: working
+    authority: canonical
+    lifecycle: current

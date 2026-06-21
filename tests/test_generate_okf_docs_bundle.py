@@ -247,3 +247,52 @@ def test_failed_generation_preserves_previous_bundle(tmp_path: Path) -> None:
         )
 
     assert (output / 'index.md').read_bytes() == previous
+
+
+def test_repository_reference_catalog_is_conformant() -> None:
+    generator = _load_script(
+        'generate_okf_docs_bundle_reference', 'generate_okf_docs_bundle.py'
+    )
+    root = Path(__file__).resolve().parents[1]
+    output = root / 'knowledge' / 'teaagent-reference'
+
+    errors = generator.check_bundle(
+        repo_root=root,
+        manifest_path=root / 'docs' / 'okf-catalog-reference.yaml',
+        output_path=output,
+    )
+    bundle = validate_okf_bundle(root, 'knowledge/teaagent-reference')
+
+    assert errors == []
+    assert bundle.conformant is True
+    assert len(bundle.concepts) == 27
+    assert {concept.metadata['type'] for concept in bundle.concepts} == {
+        'Guide',
+        'Reference',
+        'Risk Record',
+        'Runbook',
+        'Specification',
+    }
+    assert all(
+        concept.metadata['teaagent']['docs_tier'] != 'archive'
+        for concept in bundle.concepts
+    )
+
+
+def test_repository_reference_bundle_deterministic() -> None:
+    generator = _load_script(
+        'generate_okf_docs_bundle_reference_det', 'generate_okf_docs_bundle.py'
+    )
+    root = Path(__file__).resolve().parents[1]
+
+    catalog1 = generator.load_catalog(
+        repo_root=root,
+        manifest_path=root / 'docs' / 'okf-catalog-reference.yaml',
+    )
+    catalog2 = generator.load_catalog(
+        repo_root=root,
+        manifest_path=root / 'docs' / 'okf-catalog-reference.yaml',
+    )
+
+    assert catalog1.entries == catalog2.entries
+    assert len(catalog1.entries) == 27

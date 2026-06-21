@@ -47,15 +47,14 @@ inventory.
 | Bundle | Purpose | Default behavior |
 | --- | --- | --- |
 | `teaagent-current` | Constitution and explicitly selected current-truth documents | Enabled for normal planning and preflight |
-| `teaagent-reference` | Module, API, guide, and runbook material | Added only after the constitution pilot is evaluated |
+| `teaagent-reference` | Module specifications, API references, inspection reports, risk records, and selected guides and runbooks | Enabled when deeper implementation or operational detail is needed |
 | `teaagent-history` | Dated historical evidence | Opt-in; never mixed into the current bundle |
 
-The catalog contains the eight constitution documents declared by the
-documentation inventory generator plus seven working-tier current-truth
-documents named by `docs/INDEX.md`. Archive-tier documents named by `INDEX.md`
-are excluded from `teaagent-current` even when they appear in the current-truth
-table; their canonical prose remains available through normal documentation
-paths. Root protocol files such as `README.md`, `SECURITY.md`, `SUPPORT.md`,
+The current bundle contains the eight constitution documents plus seven
+working-tier current-truth documents named by `docs/INDEX.md`. The reference
+bundle contains curated module documentation, API references, guides, and
+runbooks. Archive-tier documents are excluded from both current and reference
+bundles. Root protocol files such as `README.md`, `SECURITY.md`, `SUPPORT.md`,
 `CHANGELOG.md`, and `AGENTS.md` are out of scope.
 
 ## Generated Metadata
