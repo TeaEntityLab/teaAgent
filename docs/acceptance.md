@@ -85,7 +85,7 @@ Product claim-to-test traceability: [`docs/architecture/claim-to-test-traceabili
 | `test_memory_auto_curation_flow.py` | Memory auto-curation | Completed runs append curated memory with task/outcome/last-tool context, deduplicate identical summaries, and skip pending-approval runs |
 | `test_mtime_read_before_write_flow.py` | mtime concurrent modification guard | `workspace_read_file` returns mtime; `workspace_write_file` with `expected_mtime` rejects overwrites when file was modified since read; writes without mtime are backward compatible |
 | `test_model_smoke_gating_flow.py` | Hosted-provider smoke gating | Live smoke calls are skipped unless CI explicitly sets the gate |
-| `test_okf_docs_retrieval.py` | OKF documentation retrieval | Generated current-truth bundle preserves source digests, retrieves every constitution document in the top three results, excludes archive material, and labels context as untrusted data |
+| `test_okf_docs_retrieval.py` | OKF documentation retrieval | Generated current-truth bundle preserves source digests, retrieves constitution and current-truth documents in the top three results, excludes archive material, and labels context as untrusted data |
 | `test_p0_slo_flow.py` | P0 operational SLO guardrails | Local run/pending-approval/resume latency stays within budget and heartbeat status exposes liveness ticks |
 | `test_plan_mode_read_only_flow.py` | Read-only planning mode | Read-only runs complete with planning metadata for inspect tasks and block file writes/shell mutation |
 | `test_plugin_install_security_flow.py` | Plugin/skill install security | Candidate artifact contract, provenance validation, offline eval/review gates before install |

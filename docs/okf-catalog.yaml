@@ -2,7 +2,9 @@ catalog_version: 1
 okf_version: "0.1"
 bundle: teaagent-current
 change_date: "2026-06-21"
-change_summary: Generated the constitution-tier documentation catalog pilot.
+change_summary: >-
+  Expanded the catalog from eight constitution documents to include seven
+  working-tier current-truth documents named by docs/INDEX.md.
 documents:
   - source: docs/product-contract.md
     type: Contract
@@ -58,5 +60,67 @@ documents:
     description: Maps repository governance rules to their automated verification gates.
     tags: [teaagent, governance, compliance, constitution]
     docs_tier: constitution
+    authority: canonical
+    lifecycle: current
+  - source: docs/daily-driver-current-status.md
+    type: Reference
+    description: >-
+      Current truth for TeaAgent's TUI, chat, agent mode, approval, cost, undo,
+      and resume behavior.
+    tags: [teaagent, daily-driver, current-status, reference]
+    docs_tier: working
+    authority: canonical
+    lifecycle: current
+  - source: docs/modules/INDEX.md
+    type: Reference
+    description: >-
+      Module documentation index with dependency graph, ownership, and
+      inspection paths.
+    tags: [teaagent, modules, index, reference]
+    docs_tier: working
+    authority: canonical
+    lifecycle: current
+  - source: docs/release-checklist.md
+    type: Runbook
+    description: >-
+      Repeatable release verification procedure covering competitive hygiene,
+      provider drift, and documentation gates.
+    tags: [teaagent, release, checklist, runbook]
+    docs_tier: working
+    authority: canonical
+    lifecycle: current
+  - source: docs/permission-and-approval-playbook.md
+    type: Contract
+    description: >-
+      Normative permission modes and approval gates for tool authority in
+      TeaAgent repositories.
+    tags: [teaagent, permission, approval, governance, contract]
+    docs_tier: working
+    authority: canonical
+    lifecycle: current
+  - source: docs/operator-trust-model.md
+    type: Contract
+    description: >-
+      Defines trust-sensitive facts and permission mode boundaries that
+      TeaAgent must keep consistent across surfaces.
+    tags: [teaagent, trust, operator, contract]
+    docs_tier: working
+    authority: canonical
+    lifecycle: current
+  - source: docs/work-log/operator-friction-log.md
+    type: Evidence
+    description: >-
+      Active intake log of owner-operator friction that drives TeaAgent UX work.
+    tags: [teaagent, friction, intake, evidence]
+    docs_tier: working
+    authority: canonical
+    lifecycle: current
+  - source: docs/adr/0032-run-event-taxonomy.md
+    type: Decision Record
+    description: >-
+      Accepted decision introducing a typed run-lifecycle event spine with
+      explicit event taxonomy.
+    tags: [teaagent, adr, event-spine, decision-record]
+    docs_tier: working
     authority: canonical
     lifecycle: current

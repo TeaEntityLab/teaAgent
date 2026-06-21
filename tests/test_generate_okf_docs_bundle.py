@@ -56,7 +56,7 @@ def _write_manifest(
     return manifest
 
 
-def test_repository_catalog_matches_constitution_inventory() -> None:
+def test_repository_catalog_contains_constitution_and_current_truth() -> None:
     generator = _load_script(
         'generate_okf_docs_bundle_repo', 'generate_okf_docs_bundle.py'
     )
@@ -69,11 +69,20 @@ def test_repository_catalog_matches_constitution_inventory() -> None:
         repo_root=root, manifest_path=root / 'docs' / 'okf-catalog.yaml'
     )
 
-    assert len(catalog.entries) == 8
-    assert {entry.source for entry in catalog.entries} == {
-        f'docs/{path}' for path in inventory._CONSTITUTION_DOCS
-    }
-    assert all(entry.docs_tier == 'constitution' for entry in catalog.entries)
+    constitution_sources = {f'docs/{path}' for path in inventory._CONSTITUTION_DOCS}
+    catalog_sources = {entry.source for entry in catalog.entries}
+
+    assert len(catalog.entries) == 15
+    assert constitution_sources.issubset(catalog_sources)
+    constitution_entries = [
+        entry for entry in catalog.entries if entry.source in constitution_sources
+    ]
+    assert all(entry.docs_tier == 'constitution' for entry in constitution_entries)
+    working_entries = [
+        entry for entry in catalog.entries if entry.source not in constitution_sources
+    ]
+    assert all(entry.docs_tier == 'working' for entry in working_entries)
+    assert all(entry.lifecycle == 'current' for entry in catalog.entries)
     assert all(len(entry.source_sha256) == 64 for entry in catalog.entries)
 
 
@@ -93,12 +102,15 @@ def test_repository_bundle_is_current_and_conformant() -> None:
 
     assert errors == []
     assert bundle.conformant is True
-    assert len(bundle.concepts) == 8
+    assert len(bundle.concepts) == 15
     assert {concept.metadata['type'] for concept in bundle.concepts} == {
         'Architecture',
         'Contract',
+        'Decision Record',
+        'Evidence',
         'Plan',
         'Reference',
+        'Runbook',
     }
     assert all('timestamp' not in concept.metadata for concept in bundle.concepts)
 
