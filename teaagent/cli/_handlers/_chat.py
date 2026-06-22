@@ -1,7 +1,8 @@
 """Interactive chat REPL handler for teaagent.
 
 This module provides the chat command which delegates to the TUI (``run_tui``).
-The legacy REPL implementation has been moved to chat_repl.py (TASK-DD2-007).
+The legacy ``run_chat_repl`` REPL was retired (U-P2-1); its sole live piece,
+``suspend_to_background``, now lives in ``cli._handlers._agent.resume``.
 """
 
 from __future__ import annotations

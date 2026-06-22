@@ -291,7 +291,7 @@ def test_interactive_review_help_text_uses_suspended():
 def test_suspend_to_background_preserves_resumability(capsys):
     with tempfile.TemporaryDirectory() as tmp:
         config = ChatAgentConfig.from_root(tmp)
-        from teaagent.cli._handlers.chat_repl import suspend_to_background
+        from teaagent.cli._handlers._agent.resume import suspend_to_background
 
         session_context = {
             'observations': [{'task': 'test suspension'}],
@@ -401,8 +401,8 @@ def test_resume_requires_run_started_task():
 def test_full_lifecycle_suspend_review_refuse_background(capsys):
     import subprocess
 
+    from teaagent.cli._handlers._agent.resume import suspend_to_background
     from teaagent.cli._handlers.agent_review import interactive_review_mode
-    from teaagent.cli._handlers.chat_repl import suspend_to_background
 
     with tempfile.TemporaryDirectory() as tmp:
         subprocess.run(['git', 'init'], cwd=tmp, capture_output=True)

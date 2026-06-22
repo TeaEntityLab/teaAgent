@@ -1,20 +1,16 @@
 """Real CLI/TUI behavioral parity tests — CG-17 fix.
 
-The hollow test in test_cli_chat.py::test_chat_surface_parity compared two
-ChatSessionController instances and proved nothing about surface delegation.
-These tests drive the actual entry points (run_chat_repl and TeaAgentTUI)
-and verify they each delegate state mutations to ChatSessionController.
+These tests drive the actual TUI entry point (TeaAgentTUI) and verify it
+delegates state mutations to ChatSessionController. (The legacy run_chat_repl
+CLI surface was retired in U-P2-1, leaving the TUI as the single surface.)
 """
 
 from __future__ import annotations
 
-import warnings
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from teaagent.chat_agent import ChatAgentConfig
-from teaagent.chat_session_controller import ChatSessionController, SessionState
 from teaagent.types import FinalAnswer, RunResult
 
 _FAKE_RESULT = RunResult(
@@ -117,44 +113,9 @@ def test_tui_undo_delegates_to_controller(tmp_path):
     )
 
 
-# ---------------------------------------------------------------------------
-# Test 4 — CLI /undo delegates to controller
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.integration
-def test_cli_undo_delegates_to_controller(tmp_path):
-    """run_chat_repl /undo must call controller.undo_last_run(), not raw git logic.
-
-    The CLI REPL should delegate undo to the shared ChatSessionController,
-    so that undo behavior stays consistent with the TUI surface.
-    """
-    from teaagent.cli._handlers.chat_repl import run_chat_repl
-
-    undo_calls: list[bool] = []
-
-    fake_controller = MagicMock(spec=ChatSessionController)
-    fake_controller.session_state = SessionState()
-    fake_controller.undo_last_run.side_effect = lambda: undo_calls.append(True) or True
-
-    config = ChatAgentConfig.from_root(str(tmp_path))
-
-    with (
-        patch(
-            'teaagent.cli._handlers.chat_repl.ChatSessionController',
-            return_value=fake_controller,
-        ),
-        patch('teaagent.cli._handlers.chat_repl.create_llm_adapter'),
-        patch('builtins.input', side_effect=['/undo', '/exit']),
-        warnings.catch_warnings(),
-    ):
-        warnings.simplefilter('ignore', DeprecationWarning)
-        run_chat_repl(config)
-
-    assert len(undo_calls) == 1, (
-        f'CLI /undo must call controller.undo_last_run() exactly once, '
-        f'called {len(undo_calls)} times'
-    )
+# Test 4 (CLI /undo delegates to controller) removed with U-P2-1: the legacy
+# run_chat_repl REPL was retired, so the TUI/ChatSessionController is the single
+# surface — undo-delegation parity is now structural, not a divergence risk.
 
 
 # ---------------------------------------------------------------------------

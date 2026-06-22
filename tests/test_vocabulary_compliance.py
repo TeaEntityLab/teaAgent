@@ -106,39 +106,9 @@ def test_tui_help_text_uses_correct_background_vocab():
     )
 
 
-# ── Chat REPL help text compliance ───────────────────────────────────────────
-
-
-def test_chat_repl_help_handoff_not_confused_with_background():
-    """Chat REPL help text for /handoff must NOT conflate with background execution."""
-    import io
-    import sys
-
-    from teaagent.cli._handlers.chat_repl import print_chat_help
-
-    # Capture printed help
-    buf = io.StringIO()
-    old_stdout = sys.stdout
-    sys.stdout = buf
-    try:
-        print_chat_help()
-    finally:
-        sys.stdout = old_stdout
-
-    help_output = buf.getvalue()
-
-    # Must distinguish suspension checkpoint from background execution
-    assert '/background' in help_output
-    assert '/handoff' in help_output
-    # Should not say "background execution" without clarification
-    handoff_line = [
-        line for line in help_output.splitlines() if 'handoff' in line.lower()
-    ]
-    assert handoff_line, 'handoff should appear in help text'
-    assert (
-        'suspension' in handoff_line[0].lower()
-        or 'checkpoint' in handoff_line[0].lower()
-    )
+# Chat REPL help-text compliance removed with U-P2-1: print_chat_help belonged
+# to the retired run_chat_repl REPL. TUI help vocabulary is owned by the TUI
+# rendering/_commands path and tested there.
 
 
 # ── Run receipt output compliance ────────────────────────────────────────────

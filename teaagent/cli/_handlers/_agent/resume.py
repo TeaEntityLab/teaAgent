@@ -5,13 +5,147 @@ import json
 import os
 import subprocess
 import time
+import uuid
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from teaagent.cli._output import print_json
 
 from .config import _resolve_auto_compact, warn_if_approve_call_id_used
 from .run import _execute_agent_task
+
+if TYPE_CHECKING:
+    from teaagent.chat_agent import ChatAgentConfig
+
+
+def suspend_to_background(
+    config: ChatAgentConfig, session_context: dict, targeted_files: set[Path]
+) -> str:
+    """Suspend a chat session and write a resumable checkpoint.
+
+    Writes ``.teaagent/suspension-<run_id>.json`` (the format consumed by
+    :func:`_load_suspension_data` / ``agent interactive-review``) plus a
+    ``run_started`` audit event so the suspended run is discoverable.
+
+    Relocated here from the retired ``cli._handlers.chat_repl`` module
+    (U-P2-1) so this checkpoint producer lives beside its readers. NOTE:
+    no production surface currently *calls* this — the TUI does not yet wire
+    suspend-to-checkpoint (see action register follow-up). Kept to preserve
+    the capability and its read-path contract.
+
+    Returns:
+        run_id of the created checkpoint, or empty string on failure.
+    """
+    from teaagent.cli.execution import AgentExecutionFactory
+
+    root = config.root.resolve()
+
+    print('[TeaAgent] Suspending session as a checkpoint...')
+
+    run_id = str(uuid.uuid4())[:8]
+
+    tea_dir = root / '.teaagent'
+    tea_dir.mkdir(parents=True, exist_ok=True)
+
+    # Save session state with ACP compliance
+    suspension_data = {
+        'run_id': run_id,
+        'timestamp': time.time(),
+        'acp_version': '1.0.0',  # ACP protocol version for state compatibility
+        'mode': 'suspended_from_repl',  # Track origin mode
+        'config': {
+            'model': config.model,
+            'permission_mode': config.permission_mode.value
+            if config.permission_mode
+            else None,
+            'max_iterations': config.max_iterations,
+            'max_tool_calls': config.max_tool_calls,
+            'max_estimated_cost_cents': config.max_estimated_cost_cents,
+        },
+        'session_context': {
+            'observations_count': len(session_context.get('observations', [])),
+            'compaction_count': session_context.get('compaction_count', 0),
+            'observations': session_context.get('observations', [])[-10:]
+            if session_context.get('observations')
+            else [],  # Keep last 10 for context
+        },
+        'targeted_files': [
+            str(f.resolve().relative_to(root.resolve()))
+            for f in targeted_files
+            if f.resolve().is_relative_to(root.resolve())
+        ],
+    }
+
+    suspension_file = tea_dir / f'suspension-{run_id}.json'
+    try:
+        suspension_file.write_text(
+            json.dumps(suspension_data, indent=2), encoding='utf-8'
+        )
+    except Exception as exc:
+        print(f'[TeaAgent] Error saving suspension state: {exc}')
+        return ''
+
+    # Check if workspace is dirty and warn user
+    branch_created = False
+    try:
+        result = subprocess.run(
+            ['git', 'status', '--porcelain'],
+            cwd=root,
+            capture_output=True,
+            text=True,
+        )
+
+        if result.stdout.strip():
+            print('[TeaAgent] Warning: Workspace has uncommitted changes.')
+            print('[TeaAgent] Session is suspended on current branch.')
+            print('[TeaAgent] Uncommitted changes remain in working directory.')
+            branch_created = False
+    except FileNotFoundError:
+        print('[TeaAgent] Git not found, skipping workspace check')
+    except Exception as exc:
+        print(f'[TeaAgent] Warning: Could not check workspace status: {exc}')
+
+    # Emit audit event for suspension
+    factory = AgentExecutionFactory(root)
+    try:
+        store = factory.create_run_store()
+        audit = store.audit_logger()
+        audit.record(
+            event_type='session_suspended',
+            run_id=run_id,
+            mode='suspended_from_repl',
+            observations_count=len(session_context.get('observations', [])),
+            targeted_files_count=len(targeted_files),
+            branch_created=branch_created,
+        )
+    except Exception as exc:
+        print(f'[TeaAgent] Warning: Could not emit suspension audit event: {exc}')
+
+    # Write a run_started event so agent_resume_command can find this run
+    try:
+        resume_store = factory.create_run_store()
+        resume_audit = resume_store.audit_logger(run_id=run_id)
+        observations = session_context.get('observations', [])
+        last_task = '(resumed from REPL suspension)'
+        if observations:
+            last_obs = observations[-1]
+            if isinstance(last_obs, dict) and 'task' in last_obs:
+                last_task = last_obs['task']
+        resume_audit.record(
+            event_type='run_started',
+            run_id=run_id,
+            task=last_task,
+            suspended_from='repl',
+        )
+    except Exception as exc:
+        print(f'[TeaAgent] Warning: Could not write resume event: {exc}')
+
+    print('[TeaAgent] Session suspended successfully!')
+    print(f'[TeaAgent] Run ID: {run_id}')
+    print(f'[TeaAgent] To review: teaagent agent interactive-review {run_id}')
+    print('[TeaAgent] Note: This is a suspension checkpoint, not background execution.')
+
+    return run_id
 
 
 def agent_resume_command(args: argparse.Namespace) -> int:
