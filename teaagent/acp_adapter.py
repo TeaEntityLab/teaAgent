@@ -15,10 +15,19 @@ import json
 import logging
 import sys
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Optional, Protocol
 from uuid import uuid4
 
+from teaagent.types import JsonMapping, JsonValue
+
 ACP_VERSION = '1.0.0'
+
+
+class ACPNotificationSink(Protocol):
+    """Callback receiving an ACP ``session/update`` JSON-RPC notification."""
+
+    def __call__(self, notification: JsonMapping, /) -> None: ...
+
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +51,7 @@ class ACPRequest:
     jsonrpc: str = '2.0'
     id: Optional[str] = None
     method: str = ''
-    params: dict[str, Any] = field(default_factory=dict)
+    params: JsonMapping = field(default_factory=dict)
 
 
 @dataclass
@@ -51,8 +60,8 @@ class ACPResponse:
 
     jsonrpc: str = '2.0'
     id: Optional[str] = None
-    result: Optional[Any] = None
-    error: Optional[dict[str, Any]] = None
+    result: Optional[JsonValue] = None
+    error: Optional[JsonMapping] = None
 
 
 @dataclass
@@ -60,7 +69,7 @@ class ACPToolCall:
     """Tool call notification."""
 
     tool_name: str
-    arguments: dict[str, Any]
+    arguments: JsonMapping
     call_id: str = field(default_factory=lambda: uuid4().hex[:8])
 
 
@@ -69,7 +78,7 @@ class ACPToolResult:
     """Tool call result."""
 
     call_id: str
-    result: Any
+    result: JsonValue
     error: Optional[str] = None
 
 
@@ -90,16 +99,16 @@ class ACPServer:
         tool_registry: Any,
         agent_runner: Any,
         *,
-        notify: Optional[Any] = None,
+        notify: Optional[ACPNotificationSink] = None,
     ) -> None:
         self._tool_registry = tool_registry
         self._agent_runner = agent_runner
         self._initialized = False
-        self._capabilities: dict[str, Any] = {}
+        self._capabilities: JsonMapping = {}
         self._notify = notify
         self._active_session_id: Optional[str] = None
 
-    def initialize(self, params: dict[str, Any]) -> dict[str, Any]:
+    def initialize(self, params: JsonMapping) -> JsonMapping:
         """Initialize ACP connection."""
         params.get('clientVersion', 'unknown')
         self._initialized = True
@@ -114,21 +123,21 @@ class ACPServer:
             'capabilities': self._capabilities,
         }
 
-    def list_tools(self) -> list[dict[str, Any]]:
+    def list_tools(self) -> list[JsonMapping]:
         """List all available tools."""
         if not self._initialized:
             raise ACPError('Server not initialized')
         return self._tool_registry.mcp_metadata()
 
     def set_notification_sink(
-        self, sink: Any, *, session_id: Optional[str] = None
+        self, sink: ACPNotificationSink, *, session_id: Optional[str] = None
     ) -> None:
         """Register a callback for ACP ``session/update`` notifications."""
         self._notify = sink
         if session_id is not None:
             self._active_session_id = session_id
 
-    def emit_session_update(self, session_id: str, update: dict[str, Any]) -> None:
+    def emit_session_update(self, session_id: str, update: JsonMapping) -> None:
         if self._notify is None:
             return
         from teaagent.acp_progress import build_session_update_notification
@@ -142,7 +151,7 @@ class ACPServer:
             raise ACPError('ACP notification sink is not configured')
         return audit_sink_for_acp_progress(session_id, self._notify)
 
-    def session_prompt(self, params: dict[str, Any]) -> dict[str, Any]:
+    def session_prompt(self, params: JsonMapping) -> JsonMapping:
         """Run one agent task and stream progress via ``session/update``."""
         if not self._initialized:
             raise ACPError('Server not initialized')
@@ -232,7 +241,7 @@ class ACPServer:
             'stopReason': 'completed' if result.status == 'completed' else 'failed',
         }
 
-    def call_tool(self, params: dict[str, Any]) -> dict[str, Any]:
+    def call_tool(self, params: JsonMapping) -> JsonMapping:
         """Execute a tool call."""
         if not self._initialized:
             raise ACPError('Server not initialized')
@@ -259,7 +268,7 @@ class ACPServer:
         params = request.params
 
         try:
-            result: Any = None
+            result: JsonValue = None
             if method == 'initialize':
                 result = self.initialize(params)
             elif method == 'tools/list':
@@ -304,7 +313,7 @@ class ACPClient:
     def __init__(self, process: Any) -> None:
         self._process = process
 
-    def send_request(self, method: str, params: Optional[dict[str, Any]] = None) -> Any:
+    def send_request(self, method: str, params: Optional[JsonMapping] = None) -> Any:
         """Send a request and wait for response."""
         request = ACPRequest(
             id=uuid4().hex[:8],
@@ -338,7 +347,7 @@ def run_acp_server(tool_registry: Any, agent_runner: Any) -> None:
     server = ACPServer(tool_registry, agent_runner, notify=notify)
 
     for line in sys.stdin:
-        request_data: dict[str, Any] | None = None
+        request_data: JsonMapping | None = None
         try:
             request_data = json.loads(line.strip())
             if 'method' in request_data and 'id' not in request_data:
@@ -378,10 +387,10 @@ class ACPIntegrationConfig:
     log_requests: bool = False
 
 
-def create_acp_tool_definitions() -> dict[str, Any]:
+def create_acp_tool_definitions() -> JsonMapping:
     """Create ACP-related tool definitions for the agent."""
 
-    def list_acp_tools(arguments: dict[str, Any]) -> dict[str, Any]:
+    def list_acp_tools(arguments: JsonMapping) -> JsonMapping:
         return {'status': 'available', 'protocol': ACP_VERSION}
 
     return {

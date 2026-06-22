@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Optional
 from teaagent.asset_provenance import ProvenanceRecord
 from teaagent.proof_of_use import ProofOfUseBundle, build_proof_of_use
 from teaagent.run_store import RunStore
+from teaagent.types import JsonMapping
 
 if TYPE_CHECKING:
     from teaagent.runner._events import RunEvent
@@ -113,7 +114,7 @@ class SkillActivationRecord:
     activated_at: str  # ISO 8601 timestamp
     output_artifact_link: Optional[str] = None
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> JsonMapping:
         """Convert to dictionary for serialization."""
         return {
             'skill_name': self.skill_name,
@@ -138,7 +139,7 @@ class GitSandboxEvidence:
     success: bool = False
     error: str | None = None
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> JsonMapping:
         return {
             'branch_name': self.branch_name,
             'original_branch': self.original_branch,
@@ -172,7 +173,7 @@ class HookActivityRecord:
     modified_keys: list[str] = field(default_factory=list)
     timestamp: Optional[str] = None
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> JsonMapping:
         return {
             'activity': self.activity,
             'tool_name': self.tool_name,
@@ -205,7 +206,7 @@ class RunEvidenceBundle:
     undo_outcome: Optional[str] = None  # 'reverted' | 'partial' | 'failed' | None
 
     # ── context health (CTX-001) ──
-    context_health: Optional[dict[str, Any]] = None
+    context_health: Optional[JsonMapping] = None
 
     # ── cost tracking (P0-B) ──
     cost_cents: float = 0.0
@@ -217,7 +218,7 @@ class RunEvidenceBundle:
     # ── hook observability (ADR 0032 M5) ──
     hook_activity: list[HookActivityRecord] = field(default_factory=list)
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> JsonMapping:
         """Convert to dictionary for serialization."""
         return {
             'run_id': self.run_id,
@@ -317,7 +318,7 @@ _HOOK_AUDIT_TYPES: frozenset[str] = frozenset(
 )
 
 
-def extract_hook_activity(events: list[dict[str, Any]]) -> list[HookActivityRecord]:
+def extract_hook_activity(events: list[JsonMapping]) -> list[HookActivityRecord]:
     """Extract PreToolUse/PostToolUse hook side-effects from audit events.
 
     Reads the five ``tool_hook_*`` events emitted by the tool-dispatch
@@ -347,7 +348,7 @@ def extract_hook_activity(events: list[dict[str, Any]]) -> list[HookActivityReco
     return records
 
 
-def extract_git_sandbox(events: list[dict[str, Any]]) -> GitSandboxEvidence | None:
+def extract_git_sandbox(events: list[JsonMapping]) -> GitSandboxEvidence | None:
     """Extract git sandbox lifecycle evidence from audit events."""
     evidence = GitSandboxEvidence()
     saw_event = False
@@ -383,7 +384,7 @@ def extract_git_sandbox(events: list[dict[str, Any]]) -> GitSandboxEvidence | No
     return evidence if saw_event else None
 
 
-def _extract_scope_path(payload: dict[str, Any]) -> str:
+def _extract_scope_path(payload: JsonMapping) -> str:
     """Extract the path scope from an approval event payload."""
     arguments = payload.get('arguments') or {}
     if not isinstance(arguments, dict):
@@ -395,12 +396,12 @@ def _extract_scope_path(payload: dict[str, Any]) -> str:
     return payload.get('path', '') or payload.get('scope', '')
 
 
-def extract_commands_run(events: list[dict[str, Any]]) -> list[CommandEvidence]:
+def extract_commands_run(events: list[JsonMapping]) -> list[CommandEvidence]:
     """Extract command execution evidence from audit events."""
     commands: list[CommandEvidence] = []
     by_call_id: dict[str, CommandEvidence] = {}
 
-    def _command_from_payload(payload: dict[str, Any]) -> str:
+    def _command_from_payload(payload: JsonMapping) -> str:
         arguments = payload.get('arguments') or payload.get('input') or {}
         if isinstance(arguments, dict):
             command = arguments.get('command', arguments.get('cmd', ''))
@@ -498,7 +499,7 @@ def extract_commands_run(events: list[dict[str, Any]]) -> list[CommandEvidence]:
     return commands
 
 
-def extract_tests(events: list[dict[str, Any]]) -> list[TestEvidence]:
+def extract_tests(events: list[JsonMapping]) -> list[TestEvidence]:
     """Extract test execution evidence from audit events."""
     tests: list[TestEvidence] = []
     for event in events:
@@ -521,7 +522,7 @@ def extract_tests(events: list[dict[str, Any]]) -> list[TestEvidence]:
     return tests
 
 
-def extract_approvals(events: list[dict[str, Any]]) -> list[ApprovalEvidence]:
+def extract_approvals(events: list[JsonMapping]) -> list[ApprovalEvidence]:
     """Extract approval evidence from audit events."""
     approvals: list[ApprovalEvidence] = []
 
@@ -530,7 +531,7 @@ def extract_approvals(events: list[dict[str, Any]]) -> list[ApprovalEvidence]:
 
     def append_or_update(
         *,
-        payload: dict[str, Any],
+        payload: JsonMapping,
         timestamp: Any,
         approved: bool = False,
         denied: bool = False,
@@ -584,7 +585,7 @@ def extract_approvals(events: list[dict[str, Any]]) -> list[ApprovalEvidence]:
     return approvals
 
 
-def extract_routes(events: list[dict[str, Any]]) -> list[ModelRouteEvidence]:
+def extract_routes(events: list[JsonMapping]) -> list[ModelRouteEvidence]:
     """Extract model routing evidence from audit events."""
     routes: list[ModelRouteEvidence] = []
     for event in events:
@@ -612,7 +613,7 @@ def extract_routes(events: list[dict[str, Any]]) -> list[ModelRouteEvidence]:
     return routes
 
 
-def extract_provenance(events: list[dict[str, Any]]) -> list[ProvenanceRecord]:
+def extract_provenance(events: list[JsonMapping]) -> list[ProvenanceRecord]:
     """Extract asset provenance records from audit events.
 
     Reads ``provenance_collected`` audit events and reconstructs
@@ -647,9 +648,7 @@ def extract_provenance(events: list[dict[str, Any]]) -> list[ProvenanceRecord]:
     return records
 
 
-def _derive_activation_cause(
-    reason: str, event_type: str, payload: dict[str, Any]
-) -> str:
+def _derive_activation_cause(reason: str, event_type: str, payload: JsonMapping) -> str:
     """Derive the skill activation cause from the transition reason or event payload.
 
     Returns one of ``'explicit'``, ``'auto'``, ``'context'``, or ``'session'``.
@@ -670,7 +669,7 @@ def _derive_activation_cause(
     return 'auto'
 
 
-def _to_iso_timestamp(event: dict[str, Any]) -> str:
+def _to_iso_timestamp(event: JsonMapping) -> str:
     """Convert an event's ``created_at`` to an ISO 8601 string."""
     ts = event.get('created_at')
     if ts is None:
@@ -683,7 +682,7 @@ def _to_iso_timestamp(event: dict[str, Any]) -> str:
 
 def _find_output_artifact_link(
     skill_name: str,
-    events: list[dict[str, Any]],
+    events: list[JsonMapping],
 ) -> Optional[str]:
     """Find an output artifact link for a skill by scanning ``tool_call_completed`` events.
 
@@ -708,7 +707,7 @@ def _find_output_artifact_link(
 
 
 def extract_skill_activations(
-    events: list[dict[str, Any]],
+    events: list[JsonMapping],
 ) -> list[SkillActivationRecord]:
     """Extract skill activation records from audit events.
 
@@ -773,7 +772,7 @@ def extract_skill_activations(
 
 
 def auto_derive_known_gaps(
-    events: list[dict[str, Any]], commands: list[CommandEvidence]
+    events: list[JsonMapping], commands: list[CommandEvidence]
 ) -> list[KnownGap]:
     """Auto-derive known gaps from audit events and command evidence."""
     gaps: list[KnownGap] = []
@@ -831,7 +830,7 @@ def auto_derive_known_gaps(
 
 
 def _extract_undo_evidence(
-    events: list[dict[str, Any]],
+    events: list[JsonMapping],
 ) -> tuple[Optional[str], Optional[str]]:
     """Return (undo_mechanism, undo_outcome) from audit events.
 
@@ -916,7 +915,7 @@ def build_evidence_from_events(
     """
     from teaagent.runner._events import run_event_to_audit_event_type
 
-    event_dicts: list[dict[str, Any]] = [
+    event_dicts: list[JsonMapping] = [
         {
             'event_type': run_event_to_audit_event_type(e.type),
             'run_id': e.run_id,
@@ -931,7 +930,7 @@ def build_evidence_from_events(
 
 
 def _assemble_evidence_bundle(
-    events: list[dict[str, Any]],
+    events: list[JsonMapping],
     *,
     root: str | Path,
     run_id: str,
@@ -970,7 +969,7 @@ def _assemble_evidence_bundle(
         from teaagent.context_health import compute_context_health
 
         ch = compute_context_health(workspace_root=str(root))
-        ctx_health_dict: dict[str, Any] | None = ch.to_dict() if ch else None
+        ctx_health_dict: JsonMapping | None = ch.to_dict() if ch else None
     except Exception:
         ctx_health_dict = None
 
@@ -1071,7 +1070,7 @@ def evidence_completeness_checklist() -> dict[str, list[str]]:
 
 def check_evidence_completeness(
     bundle: RunEvidenceBundle,
-    events: list[dict[str, Any]],
+    events: list[JsonMapping],
     status: str,
 ) -> list[str]:
     """Check a run evidence bundle for completeness against the expected fields per status.

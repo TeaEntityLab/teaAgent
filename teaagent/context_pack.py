@@ -4,7 +4,7 @@ import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 from teaagent.code_analysis._config import CodeAnalysisConfig
 from teaagent.code_analysis._manager import LSPServerManager
@@ -13,6 +13,7 @@ from teaagent.code_ontology import CodeOntologyGraph
 from teaagent.hybrid_search import indexed_db_path, search_if_indexed
 from teaagent.memory import MemoryCatalog
 from teaagent.rag import tokenize
+from teaagent.types import JsonMapping
 
 logger = logging.getLogger(__name__)
 
@@ -30,13 +31,13 @@ class ContextPack:
     """Read-only evidence bundle for planning/preflight (Aider-style repo map)."""
 
     task: str
-    candidate_files: list[dict[str, Any]]
-    memories: list[dict[str, Any]]
-    symbols: list[dict[str, Any]]
-    graph_rag: dict[str, Any]
+    candidate_files: list[JsonMapping]
+    memories: list[JsonMapping]
+    symbols: list[JsonMapping]
+    graph_rag: JsonMapping
     read_only: bool = True
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> JsonMapping:
         return {
             'task': self.task,
             'candidate_files': self.candidate_files,
@@ -65,7 +66,7 @@ def _resolve_code_analysis_config(
     return None
 
 
-def _resolve_candidate_file(root: Path, raw: str) -> dict[str, Any]:
+def _resolve_candidate_file(root: Path, raw: str) -> JsonMapping:
     candidate = (
         (root / raw).resolve() if not Path(raw).is_absolute() else Path(raw).resolve()
     )
@@ -84,7 +85,7 @@ def _resolve_candidate_file(root: Path, raw: str) -> dict[str, Any]:
     }
 
 
-def _candidate_from_graph_hit(root: Path, hit: dict[str, Any]) -> dict[str, Any] | None:
+def _candidate_from_graph_hit(root: Path, hit: JsonMapping) -> JsonMapping | None:
     raw = str(hit.get('path') or hit.get('doc_id') or '').strip()
     if not raw:
         return None
@@ -104,10 +105,10 @@ def _candidate_from_graph_hit(root: Path, hit: dict[str, Any]) -> dict[str, Any]
 def _append_graph_hit_candidates(
     *,
     root: Path,
-    candidate_files: list[dict[str, Any]],
-    graph_rag: dict[str, Any],
+    candidate_files: list[JsonMapping],
+    graph_rag: JsonMapping,
     file_limit: int,
-) -> list[dict[str, Any]]:
+) -> list[JsonMapping]:
     seen = {str(entry.get('path')) for entry in candidate_files}
     enriched = list(candidate_files)
     for hit in graph_rag.get('hits', []):
@@ -123,7 +124,7 @@ def _append_graph_hit_candidates(
     return enriched
 
 
-def _file_stat_symbol(entry: dict[str, Any]) -> dict[str, Any]:
+def _file_stat_symbol(entry: JsonMapping) -> JsonMapping:
     path = Path(str(entry['resolved']))
     try:
         line_count = sum(1 for _ in path.open(encoding='utf-8', errors='ignore'))
@@ -139,13 +140,13 @@ def _file_stat_symbol(entry: dict[str, Any]) -> dict[str, Any]:
 
 def _hydrate_lsp_symbols(
     *,
-    candidate_files: list[dict[str, Any]],
+    candidate_files: list[JsonMapping],
     candidate_paths: list[str],
     config: CodeAnalysisConfig,
     limit: int,
-) -> list[dict[str, Any]]:
+) -> list[JsonMapping]:
     manager = LSPServerManager(config)
-    hints: list[dict[str, Any]] = []
+    hints: list[JsonMapping] = []
     try:
         for raw in candidate_paths:
             if len(hints) >= limit:
@@ -183,13 +184,13 @@ def _hydrate_lsp_symbols(
 
 def _symbol_hints(
     root: Path,
-    candidate_files: list[dict[str, Any]],
+    candidate_files: list[JsonMapping],
     candidate_paths: list[str],
     *,
     limit: int,
     hydrate_lsp: bool,
     code_analysis_config: Optional[CodeAnalysisConfig],
-) -> list[dict[str, Any]]:
+) -> list[JsonMapping]:
     if hydrate_lsp:
         config = _resolve_code_analysis_config(root, code_analysis_config)
         if config is not None:
@@ -205,7 +206,7 @@ def _symbol_hints(
             except (OSError, ValueError, TypeError, ConnectionError) as exc:
                 logger.debug('LSP symbol hydration failed: %s', exc)
 
-    hints: list[dict[str, Any]] = []
+    hints: list[JsonMapping] = []
     for entry in candidate_files:
         if not entry.get('exists'):
             continue
@@ -220,7 +221,7 @@ def _symbol_hints(
 _GRAPHQLITE_DOCUMENT_QUERY = 'MATCH (n:Document) RETURN n.doc_id AS doc_id, n.text AS text, n.source AS source LIMIT 100'
 
 
-def _knowledge_marker_payload(root: Path) -> dict[str, Any]:
+def _knowledge_marker_payload(root: Path) -> JsonMapping:
     marker = root / '.teaagent' / 'knowledge'
     if marker.is_file():
         try:
@@ -240,8 +241,8 @@ def _knowledge_collection_name(root: Path) -> str:
     return 'knowledge'
 
 
-def _tag_hits(hits: list[dict[str, Any]], source: str) -> list[dict[str, Any]]:
-    tagged: list[dict[str, Any]] = []
+def _tag_hits(hits: list[JsonMapping], source: str) -> list[JsonMapping]:
+    tagged: list[JsonMapping] = []
     for hit in hits:
         entry = dict(hit)
         entry['source'] = source
@@ -249,9 +250,9 @@ def _tag_hits(hits: list[dict[str, Any]], source: str) -> list[dict[str, Any]]:
     return tagged
 
 
-def _dedupe_hits(hits: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _dedupe_hits(hits: list[JsonMapping]) -> list[JsonMapping]:
     seen: set[str] = set()
-    deduped: list[dict[str, Any]] = []
+    deduped: list[JsonMapping] = []
     for hit in hits:
         key = str(hit.get('path') or hit.get('doc_id') or hit.get('snippet', ''))
         if key in seen:
@@ -261,9 +262,7 @@ def _dedupe_hits(hits: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return deduped
 
 
-def _graphqlite_hits(
-    root: Path, search_query: str, *, limit: int
-) -> list[dict[str, Any]]:
+def _graphqlite_hits(root: Path, search_query: str, *, limit: int) -> list[JsonMapping]:
     db_path = root / '.teaagent' / 'graphqlite.db'
     if not db_path.is_file():
         return []
@@ -279,7 +278,7 @@ def _graphqlite_hits(
     if not isinstance(rows, list):
         return []
 
-    hits: list[dict[str, Any]] = []
+    hits: list[JsonMapping] = []
     for row in rows:
         if not isinstance(row, dict):
             continue
@@ -301,7 +300,7 @@ def _graphqlite_hits(
     return hits
 
 
-def _code_ontology_hits(root: Path, task: str, *, limit: int) -> list[dict[str, Any]]:
+def _code_ontology_hits(root: Path, task: str, *, limit: int) -> list[JsonMapping]:
     """Extract code ontology dependency information for context."""
     try:
         from teaagent.graphqlite_store import GraphQLiteConfig, GraphQLiteGraphStore
@@ -317,7 +316,7 @@ def _code_ontology_hits(root: Path, task: str, *, limit: int) -> list[dict[str, 
         tokens = tokenize(task)
         entity_names = [t for t in tokens if len(t) > 2 and t.isidentifier()]
 
-        hits: list[dict[str, Any]] = []
+        hits: list[JsonMapping] = []
         for entity_name in entity_names[:5]:  # Limit to top 5 entities
             # Query dependencies
             deps = ontology.query_dependencies(entity_name, direction='both')
@@ -341,9 +340,7 @@ def _code_ontology_hits(root: Path, task: str, *, limit: int) -> list[dict[str, 
         return []
 
 
-def _graph_rag_reason(
-    sources: dict[str, dict[str, Any]], hits: list[dict[str, Any]]
-) -> str:
+def _graph_rag_reason(sources: dict[str, JsonMapping], hits: list[JsonMapping]) -> str:
     if hits:
         active = [name for name, payload in sources.items() if payload.get('hits')]
         if len(active) == 1 and active[0] == 'hybrid':
@@ -364,7 +361,7 @@ def _graph_rag_evidence(  # noqa: C901
     *,
     search_graph: bool,
     hit_limit: int,
-) -> dict[str, Any]:
+) -> JsonMapping:
     indexes = [marker for marker in _INDEX_MARKERS if (root / marker).exists()]
     hybrid_db = indexed_db_path(root)
     if hybrid_db.is_file() and '.teaagent/hybrid_search.sqlite3' not in indexes:
@@ -391,8 +388,8 @@ def _graph_rag_evidence(  # noqa: C901
         }
 
     search_query = ' '.join(tokenize(task)[:12]) or task[:120]
-    sources: dict[str, dict[str, Any]] = {}
-    combined: list[dict[str, Any]] = []
+    sources: dict[str, JsonMapping] = {}
+    combined: list[JsonMapping] = []
 
     try:
         hybrid_result = search_if_indexed(root, search_query, limit=hit_limit)
@@ -412,7 +409,7 @@ def _graph_rag_evidence(  # noqa: C901
         if knowledge_marker.exists() and hybrid_db.is_file():
             marker_payload = _knowledge_marker_payload(root)
             collection = _knowledge_collection_name(root)
-            knowledge_result: dict[str, Any] | None
+            knowledge_result: JsonMapping | None
             if marker_payload.get('backend') == 'okf':
                 from teaagent.external_backends import get_knowledge_backend
 
@@ -483,7 +480,7 @@ def _graph_rag_evidence(  # noqa: C901
         }
 
     hits = _dedupe_hits(combined)[:hit_limit]
-    payload: dict[str, Any] = {
+    payload: JsonMapping = {
         'status': 'indexed',
         'indexes': indexes,
         'query': task[:120],

@@ -42,6 +42,7 @@ from teaagent.subagents._hybrid_store_safety import HybridStoreSafetyMixin
 from teaagent.subagents._hybrid_store_social import HybridStoreSocialMixin
 from teaagent.subagents._hybrid_store_workflow import HybridStoreWorkflowMixin
 from teaagent.subagents._prometheus_metrics import PrometheusMetricsExporter
+from teaagent.types import JsonMapping
 
 logger = logging.getLogger(__name__)
 
@@ -185,11 +186,11 @@ class HybridApprovalQueueStore(
         )  # subagent_id -> timestamps
 
         # Audit trail
-        self._audit_trail: list[dict[str, Any]] = []
+        self._audit_trail: list[JsonMapping] = []
 
         # Security event monitoring
-        self._security_events: list[dict[str, Any]] = []
-        self._security_alerts: list[dict[str, Any]] = []
+        self._security_events: list[JsonMapping] = []
+        self._security_alerts: list[JsonMapping] = []
 
         # Prometheus metrics exporter
         self._prometheus_exporter = PrometheusMetricsExporter()
@@ -201,10 +202,10 @@ class HybridApprovalQueueStore(
         self._lock = self._state_lock
 
         # Request analytics (lazy init)
-        self._analytics: dict[str, Any] = {}
+        self._analytics: JsonMapping = {}
 
         # Notification system (lazy init)
-        self._notifications: list[dict[str, Any]] = []
+        self._notifications: list[JsonMapping] = []
 
         # Approval policies (always init, these are config-driven)
         self._approval_policies: dict[
@@ -215,16 +216,16 @@ class HybridApprovalQueueStore(
         }
 
         # Delegation system (lazy init)
-        self._delegations: dict[str, dict[str, Any]] = {}
+        self._delegations: dict[str, JsonMapping] = {}
 
         # Escalation system (lazy init)
-        self._escalations: dict[str, dict[str, Any]] = {}
+        self._escalations: dict[str, JsonMapping] = {}
 
         # Comments system (lazy init)
-        self._comments: dict[str, list[dict[str, Any]]] = {}
+        self._comments: dict[str, list[JsonMapping]] = {}
 
         # Approval history (lazy init)
-        self._approval_history: dict[str, list[dict[str, Any]]] = {}
+        self._approval_history: dict[str, list[JsonMapping]] = {}
 
         # Quota management (always init, needed for quota checks)
         self._approval_quotas: dict[str, int] = {}
@@ -237,7 +238,7 @@ class HybridApprovalQueueStore(
         self._reviewer_assignments: dict[str, str] = {}
 
         # Approval templates (always init, config-driven)
-        self._approval_templates: dict[str, dict[str, Any]] = {}
+        self._approval_templates: dict[str, JsonMapping] = {}
 
         # Request tags (lazy init)
         self._request_tags: dict[str, set[str]] = {}
@@ -268,13 +269,13 @@ class HybridApprovalQueueStore(
         ] = {}
 
         # Signatures (lazy init)
-        self._signatures: dict[str, dict[str, Any]] = {}
+        self._signatures: dict[str, JsonMapping] = {}
 
         # Versioning (lazy init)
-        self._versions: dict[str, list[dict[str, Any]]] = {}
+        self._versions: dict[str, list[JsonMapping]] = {}
 
         # Conflict resolution (lazy init)
-        self._conflicts: dict[str, dict[str, Any]] = {}
+        self._conflicts: dict[str, JsonMapping] = {}
 
         # Performance metrics (lazy init)
         self._performance_metrics: dict[str, dict[str, float]] = {}

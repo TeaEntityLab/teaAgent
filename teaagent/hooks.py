@@ -26,6 +26,12 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Protocol, cast
 
+# Local JSON-object alias. Defined here rather than imported from teaagent.types
+# because teaagent.tools imports this module during its own initialization, and
+# teaagent.types re-exports from teaagent.tools — importing it here would form a
+# teaagent.tools -> hooks -> teaagent.types -> teaagent.tools import cycle.
+JsonMapping = dict[str, Any]
+
 
 class HookEvent(Enum):
     """Hook lifecycle events (Claude Code compatible)."""
@@ -47,9 +53,7 @@ class HookError(Exception):
 class PreToolUseHookFn(Protocol):
     """Pre-tool hook that can modify arguments or veto execution."""
 
-    def __call__(
-        self, tool_name: str, arguments: dict[str, Any]
-    ) -> dict[str, Any] | None:
+    def __call__(self, tool_name: str, arguments: JsonMapping) -> JsonMapping | None:
         """Return modified arguments, None to allow, or raise HookError to block."""
 
 
@@ -57,21 +61,21 @@ class PostToolUseHookFn(Protocol):
     """Post-tool hook that can modify result."""
 
     def __call__(
-        self, tool_name: str, arguments: dict[str, Any], result: dict[str, Any]
-    ) -> dict[str, Any] | None:
+        self, tool_name: str, arguments: JsonMapping, result: JsonMapping
+    ) -> JsonMapping | None:
         """Return modified result or None to keep original."""
 
 
 class SessionHookFn(Protocol):
     """Session lifecycle hook."""
 
-    def __call__(self, session_id: str, context: dict[str, Any]) -> None: ...
+    def __call__(self, session_id: str, context: JsonMapping) -> None: ...
 
 
 class PreCompactHookFn(Protocol):
     """Pre-compaction hook."""
 
-    def __call__(self, context: dict[str, Any]) -> dict[str, Any] | None:
+    def __call__(self, context: JsonMapping) -> JsonMapping | None:
         """Return modified compaction context or None."""
 
 
@@ -121,8 +125,8 @@ class HookRegistry:
         self.config.subagent_stop_hooks.append(fn)
 
     def run_pre_hooks(
-        self, tool_name: str, arguments: dict[str, Any]
-    ) -> dict[str, Any] | None:
+        self, tool_name: str, arguments: JsonMapping
+    ) -> JsonMapping | None:
         """Run PreToolUse hooks. Returns modified args or None. Raises HookError to block."""
         if not self.config.enabled:
             return None
@@ -134,8 +138,8 @@ class HookRegistry:
         return modified_args
 
     def run_post_hooks(
-        self, tool_name: str, arguments: dict[str, Any], result: dict[str, Any]
-    ) -> dict[str, Any] | None:
+        self, tool_name: str, arguments: JsonMapping, result: JsonMapping
+    ) -> JsonMapping | None:
         """Run PostToolUse hooks. Returns modified result or None."""
         if not self.config.enabled:
             return None
@@ -146,24 +150,24 @@ class HookRegistry:
                 modified_result = hook_result
         return modified_result
 
-    def run_session_start_hooks(self, session_id: str, context: dict[str, Any]) -> None:
+    def run_session_start_hooks(self, session_id: str, context: JsonMapping) -> None:
         if self.config.enabled:
             for hook in self.config.session_start_hooks:
                 hook(session_id, context)
 
-    def run_session_end_hooks(self, session_id: str, context: dict[str, Any]) -> None:
+    def run_session_end_hooks(self, session_id: str, context: JsonMapping) -> None:
         if self.config.enabled:
             for hook in self.config.session_end_hooks:
                 hook(session_id, context)
 
     def run_user_prompt_submit_hooks(
-        self, session_id: str, context: dict[str, Any]
+        self, session_id: str, context: JsonMapping
     ) -> None:
         if self.config.enabled:
             for hook in self.config.user_prompt_submit_hooks:
                 hook(session_id, context)
 
-    def run_pre_compact_hooks(self, context: dict[str, Any]) -> dict[str, Any] | None:
+    def run_pre_compact_hooks(self, context: JsonMapping) -> JsonMapping | None:
         if not self.config.enabled:
             return None
         modified_context = context
@@ -173,12 +177,12 @@ class HookRegistry:
                 modified_context = result
         return modified_context
 
-    def run_stop_hooks(self, session_id: str, context: dict[str, Any]) -> None:
+    def run_stop_hooks(self, session_id: str, context: JsonMapping) -> None:
         if self.config.enabled:
             for hook in self.config.stop_hooks:
                 hook(session_id, context)
 
-    def run_subagent_stop_hooks(self, session_id: str, context: dict[str, Any]) -> None:
+    def run_subagent_stop_hooks(self, session_id: str, context: JsonMapping) -> None:
         if self.config.enabled:
             for hook in self.config.subagent_stop_hooks:
                 hook(session_id, context)
@@ -222,8 +226,8 @@ def post_lint_check_hook(
     """Run linter after file-modifying tools. Raises ``HookError`` on failure."""
 
     def _hook(
-        tool_name: str, arguments: dict[str, Any], _result: dict[str, Any]
-    ) -> dict[str, Any] | None:
+        tool_name: str, arguments: JsonMapping, _result: JsonMapping
+    ) -> JsonMapping | None:
         if tool_name not in tools:
             return None
         try:
@@ -260,8 +264,8 @@ def run_tests_hook(
     cmd = command or ['uv', 'run', 'pytest', 'tests/', '-x', '-q']
 
     def _hook(
-        tool_name: str, arguments: dict[str, Any], _result: dict[str, Any]
-    ) -> dict[str, Any] | None:
+        tool_name: str, arguments: JsonMapping, _result: JsonMapping
+    ) -> JsonMapping | None:
         if tool_name not in tools:
             return None
         try:
@@ -299,8 +303,8 @@ def format_check_hook(
     cmd = ['ruff', 'format', str(root)]
 
     def _hook(
-        tool_name: str, arguments: dict[str, Any], _result: dict[str, Any]
-    ) -> dict[str, Any] | None:
+        tool_name: str, arguments: JsonMapping, _result: JsonMapping
+    ) -> JsonMapping | None:
         if tool_name not in tools:
             return None
         try:
@@ -331,8 +335,8 @@ def shell_command_hook(
     target_tools = tools or on_tools
 
     def _hook(
-        tool_name: str, arguments: dict[str, Any], _result: dict[str, Any]
-    ) -> dict[str, Any] | None:
+        tool_name: str, arguments: JsonMapping, _result: JsonMapping
+    ) -> JsonMapping | None:
         if target_tools and tool_name not in target_tools:
             return None
         try:
@@ -393,7 +397,7 @@ def permission_check_hook(  # noqa: C901
 ) -> PreToolUseHookFn:
     """Permission check hook that enforces Allow/Ask/Deny patterns."""
 
-    def _hook(tool_name: str, _arguments: dict[str, Any]) -> dict[str, Any] | None:  # noqa: C901
+    def _hook(tool_name: str, _arguments: JsonMapping) -> JsonMapping | None:  # noqa: C901
         if mode == HookPermissionMode.ALLOW:
             return None
         if mode == HookPermissionMode.DENY:
@@ -445,7 +449,7 @@ def context_file_loader_hook(
 ) -> SessionHookFn:
     """Load CLAUDE.md/AGENTS.md files into session context."""
 
-    def _hook(session_id: str, context: dict[str, Any]) -> None:
+    def _hook(session_id: str, context: JsonMapping) -> None:
         from teaagent.prompt import load_project_instructions
 
         instructions = load_project_instructions(root)
@@ -464,7 +468,7 @@ def mcp_tool_filter_hook(
 ) -> PreToolUseHookFn:
     """Filter MCP tool calls based on allow/block lists."""
 
-    def _hook(tool_name: str, _arguments: dict[str, Any]) -> dict[str, Any] | None:
+    def _hook(tool_name: str, _arguments: JsonMapping) -> JsonMapping | None:
         if blocked_tools and tool_name in blocked_tools:
             raise HookError(f"MCP tool '{tool_name}' is blocked")
 
@@ -485,7 +489,7 @@ def mcp_sampling_hook(
 ) -> PreToolUseHookFn:
     """Apply sampling configuration to MCP tool calls."""
 
-    def _hook(tool_name: str, arguments: dict[str, Any]) -> dict[str, Any] | None:
+    def _hook(tool_name: str, arguments: JsonMapping) -> JsonMapping | None:
         if tool_name.startswith('mcp_'):
             arguments.setdefault('_sampling', {})
             arguments['_sampling'].setdefault('max_tokens', max_tokens)

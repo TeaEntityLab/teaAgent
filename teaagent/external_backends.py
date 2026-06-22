@@ -16,6 +16,7 @@ from teaagent.okf import OKF_VERSION, get_okf_concept, validate_okf_bundle
 from teaagent.path_safety import resolve_contained_path
 from teaagent.rag import tokenize
 from teaagent.storage import atomic_write_text
+from teaagent.types import JsonMapping
 
 
 @dataclass
@@ -25,7 +26,7 @@ class BackendConfig:
     root: Path
     timeout: int = 30
     max_retries: int = 3
-    additional_config: dict[str, Any] | None = None
+    additional_config: JsonMapping | None = None
 
 
 class BackendAdapter(ABC):
@@ -58,7 +59,7 @@ class BackendError(Exception):
         self,
         message: str,
         backend_name: str,
-        details: dict[str, Any] | None = None,
+        details: JsonMapping | None = None,
     ):
         super().__init__(message)
         self._backend_name = backend_name
@@ -69,7 +70,7 @@ class BackendError(Exception):
         return self._backend_name
 
     @property
-    def details(self) -> dict[str, Any]:
+    def details(self) -> JsonMapping:
         return self._details
 
 
@@ -86,25 +87,25 @@ class BackendHealthCheckError(BackendError):
 
 
 class KnowledgeSearchBackend(Protocol):
-    def health(self, *, root: Path) -> dict[str, Any]: ...
+    def health(self, *, root: Path) -> JsonMapping: ...
 
-    def index(self, *, root: Path, args: dict[str, Any]) -> dict[str, Any]: ...
+    def index(self, *, root: Path, args: JsonMapping) -> JsonMapping: ...
 
-    def search(self, *, root: Path, args: dict[str, Any]) -> dict[str, Any]: ...
+    def search(self, *, root: Path, args: JsonMapping) -> JsonMapping: ...
 
-    def get(self, *, root: Path, args: dict[str, Any]) -> dict[str, Any]: ...
+    def get(self, *, root: Path, args: JsonMapping) -> JsonMapping: ...
 
 
 class CodeParseBackend(Protocol):
-    def health(self, *, root: Path) -> dict[str, Any]: ...
+    def health(self, *, root: Path) -> JsonMapping: ...
 
-    def overview(self, *, root: Path, args: dict[str, Any]) -> dict[str, Any]: ...
+    def overview(self, *, root: Path, args: JsonMapping) -> JsonMapping: ...
 
-    def symbols(self, *, root: Path, args: dict[str, Any]) -> dict[str, Any]: ...
+    def symbols(self, *, root: Path, args: JsonMapping) -> JsonMapping: ...
 
-    def definition(self, *, root: Path, args: dict[str, Any]) -> dict[str, Any]: ...
+    def definition(self, *, root: Path, args: JsonMapping) -> JsonMapping: ...
 
-    def references(self, *, root: Path, args: dict[str, Any]) -> dict[str, Any]: ...
+    def references(self, *, root: Path, args: JsonMapping) -> JsonMapping: ...
 
 
 def register_knowledge_backend(name: str, backend: KnowledgeSearchBackend) -> None:
@@ -229,8 +230,8 @@ class BackendAdapterRegistry:
             if hasattr(cp_backend, 'shutdown'):
                 cp_backend.shutdown()
 
-    def health_check_all(self) -> dict[str, dict[str, Any]]:
-        results: dict[str, dict[str, Any]] = {}
+    def health_check_all(self) -> dict[str, JsonMapping]:
+        results: dict[str, JsonMapping] = {}
         for name, backend in self._knowledge_backends.items():
             if hasattr(backend, 'check_health'):
                 try:
@@ -272,7 +273,7 @@ class FallbackKnowledgeBackend:
     primary: str
     fallback: str = 'local'
 
-    def health(self, *, root: Path) -> dict[str, Any]:
+    def health(self, *, root: Path) -> JsonMapping:
         healthy = []
         for name in (self.primary, self.fallback):
             try:
@@ -288,16 +289,16 @@ class FallbackKnowledgeBackend:
                 healthy.append({'backend': name, 'ok': False, 'error': str(exc)})
         return {'backends': healthy}
 
-    def index(self, *, root: Path, args: dict[str, Any]) -> dict[str, Any]:
+    def index(self, *, root: Path, args: JsonMapping) -> JsonMapping:
         return self._call('index', root=root, args=args)
 
-    def search(self, *, root: Path, args: dict[str, Any]) -> dict[str, Any]:
+    def search(self, *, root: Path, args: JsonMapping) -> JsonMapping:
         return self._call('search', root=root, args=args)
 
-    def get(self, *, root: Path, args: dict[str, Any]) -> dict[str, Any]:
+    def get(self, *, root: Path, args: JsonMapping) -> JsonMapping:
         return self._call('get', root=root, args=args)
 
-    def _call(self, method: str, *, root: Path, args: dict[str, Any]) -> dict[str, Any]:
+    def _call(self, method: str, *, root: Path, args: JsonMapping) -> JsonMapping:
         primary_backend = get_knowledge_backend(self.primary)
         fallback_backend = get_knowledge_backend(self.fallback)
         try:
@@ -332,23 +333,23 @@ class LocalKnowledgeAdapter(BackendAdapter):
     def check_health(self) -> tuple[bool, str]:
         return (True, 'Local backend is healthy')
 
-    def health(self, *, root: Path) -> dict[str, Any]:
+    def health(self, *, root: Path) -> JsonMapping:
         _ = root
         return {'backend': 'local', 'ok': True}
 
-    def index(self, *, root: Path, args: dict[str, Any]) -> dict[str, Any]:
+    def index(self, *, root: Path, args: JsonMapping) -> JsonMapping:
         backend = get_hybrid_backend(self.hybrid_backend_name)
         result = backend.index(root=root, args=args)
         result.setdefault('backend', 'local')
         return result
 
-    def search(self, *, root: Path, args: dict[str, Any]) -> dict[str, Any]:
+    def search(self, *, root: Path, args: JsonMapping) -> JsonMapping:
         backend = get_hybrid_backend(self.hybrid_backend_name)
         result = backend.search(root=root, args=args)
         result.setdefault('backend', 'local')
         return result
 
-    def get(self, *, root: Path, args: dict[str, Any]) -> dict[str, Any]:
+    def get(self, *, root: Path, args: JsonMapping) -> JsonMapping:
         path = resolve_contained_path(
             root, str(args['path']), must_exist=True, require_file=True
         )
@@ -380,7 +381,7 @@ class OkfKnowledgeAdapter(BackendAdapter):
             return (True, 'OKF backend is ready; no default bundle is present')
         return (bool(report.get('ok')), str(report))
 
-    def health(self, *, root: Path) -> dict[str, Any]:
+    def health(self, *, root: Path) -> JsonMapping:
         try:
             bundle_path = resolve_contained_path(root, self.default_bundle)
         except ValueError as exc:
@@ -407,7 +408,7 @@ class OkfKnowledgeAdapter(BackendAdapter):
             'validation': bundle.to_dict(),
         }
 
-    def index(self, *, root: Path, args: dict[str, Any]) -> dict[str, Any]:
+    def index(self, *, root: Path, args: JsonMapping) -> JsonMapping:
         bundle_arg = str(args.get('bundle') or self.default_bundle)
         collection = str(args.get('collection') or self.default_collection)
         bundle = validate_okf_bundle(root, bundle_arg)
@@ -448,7 +449,7 @@ class OkfKnowledgeAdapter(BackendAdapter):
             'index': result,
         }
 
-    def search(self, *, root: Path, args: dict[str, Any]) -> dict[str, Any]:
+    def search(self, *, root: Path, args: JsonMapping) -> JsonMapping:
         payload = dict(args)
         original_query = str(args['query'])
         payload['query'] = ' '.join(tokenize(original_query)) or original_query
@@ -467,7 +468,7 @@ class OkfKnowledgeAdapter(BackendAdapter):
                 )
             relative_bundle = bundle.root.relative_to(root.resolve())
             concepts = {concept.path: concept for concept in bundle.concepts}
-            enriched_hits: list[dict[str, Any]] = []
+            enriched_hits: list[JsonMapping] = []
             for raw_hit in result.get('hits', []):
                 if not isinstance(raw_hit, dict):
                     continue
@@ -508,7 +509,7 @@ class OkfKnowledgeAdapter(BackendAdapter):
         result['query'] = original_query
         return result
 
-    def get(self, *, root: Path, args: dict[str, Any]) -> dict[str, Any]:
+    def get(self, *, root: Path, args: JsonMapping) -> JsonMapping:
         bundle_arg = self._indexed_bundle(root=root, args=args) or self.default_bundle
         concept_id = str(args.get('concept_id') or args.get('path') or '')
         bundle, concept = get_okf_concept(root, bundle_arg, concept_id)
@@ -520,7 +521,7 @@ class OkfKnowledgeAdapter(BackendAdapter):
             'findings': [finding.to_dict() for finding in bundle.findings],
         }
 
-    def _indexed_bundle(self, *, root: Path, args: dict[str, Any]) -> str | None:
+    def _indexed_bundle(self, *, root: Path, args: JsonMapping) -> str | None:
         requested = args.get('bundle')
         if isinstance(requested, str) and requested.strip():
             return requested.strip()
@@ -563,14 +564,14 @@ class QmdMcpAdapter(BackendAdapter):
         except Exception as exc:
             return (False, f'QMD MCP backend health check failed: {exc}')
 
-    def health(self, *, root: Path) -> dict[str, Any]:
+    def health(self, *, root: Path) -> JsonMapping:
         _ = root
         with self._client() as client:
             client.initialize()
             status = client.call_tool('status', {})
         return {'backend': 'qmd_mcp', 'ok': True, 'status': status}
 
-    def index(self, *, root: Path, args: dict[str, Any]) -> dict[str, Any]:
+    def index(self, *, root: Path, args: JsonMapping) -> JsonMapping:
         _ = root
         with self._client() as client:
             client.initialize()
@@ -581,7 +582,7 @@ class QmdMcpAdapter(BackendAdapter):
             'status': status,
         }
 
-    def search(self, *, root: Path, args: dict[str, Any]) -> dict[str, Any]:
+    def search(self, *, root: Path, args: JsonMapping) -> JsonMapping:
         _ = root
         query = str(args['query'])
         params = {'q': query, 'n': int(args.get('limit', 5))}
@@ -592,7 +593,7 @@ class QmdMcpAdapter(BackendAdapter):
             result = client.call_tool('query', params)
         return {'backend': 'qmd_mcp', 'query': query, 'result': result}
 
-    def get(self, *, root: Path, args: dict[str, Any]) -> dict[str, Any]:
+    def get(self, *, root: Path, args: JsonMapping) -> JsonMapping:
         _ = root
         target = str(args['target'])
         with self._client() as client:
@@ -615,17 +616,17 @@ class QmdCliAdapter:
     binary: str = 'qmd'
     timeout: int = 30
 
-    def health(self, *, root: Path) -> dict[str, Any]:
+    def health(self, *, root: Path) -> JsonMapping:
         out = self._run(root, [self.binary, 'status', '--json'])
         return {'backend': 'qmd_cli', 'ok': True, 'status': self._parse(out)}
 
-    def index(self, *, root: Path, args: dict[str, Any]) -> dict[str, Any]:
+    def index(self, *, root: Path, args: JsonMapping) -> JsonMapping:
         _ = args
         out = self._run(root, [self.binary, 'status', '--json'])
         status = self._parse(out)
         return {'backend': 'qmd_cli', 'status': status}
 
-    def search(self, *, root: Path, args: dict[str, Any]) -> dict[str, Any]:
+    def search(self, *, root: Path, args: JsonMapping) -> JsonMapping:
         cmd = [
             self.binary,
             'query',
@@ -643,7 +644,7 @@ class QmdCliAdapter:
             'result': self._parse(out),
         }
 
-    def get(self, *, root: Path, args: dict[str, Any]) -> dict[str, Any]:
+    def get(self, *, root: Path, args: JsonMapping) -> JsonMapping:
         out = self._run(root, [self.binary, 'get', str(args['target']), '--json'])
         return {
             'backend': 'qmd_cli',
@@ -695,17 +696,17 @@ class CxCliAdapter:
     binary: str = 'cx'
     timeout: int = 30
 
-    def health(self, *, root: Path) -> dict[str, Any]:
+    def health(self, *, root: Path) -> JsonMapping:
         out = self._run(root, [self.binary, 'lang', 'list'])
         return {'backend': 'cx_cli', 'ok': True, 'raw': out}
 
-    def overview(self, *, root: Path, args: dict[str, Any]) -> dict[str, Any]:
+    def overview(self, *, root: Path, args: JsonMapping) -> JsonMapping:
         return {
             'backend': 'cx_cli',
             'raw': self._run(root, [self.binary, 'overview', str(args['path'])]),
         }
 
-    def symbols(self, *, root: Path, args: dict[str, Any]) -> dict[str, Any]:
+    def symbols(self, *, root: Path, args: JsonMapping) -> JsonMapping:
         cmd = [self.binary, 'symbols']
         if args.get('name'):
             cmd.extend(['--name', str(args['name'])])
@@ -715,7 +716,7 @@ class CxCliAdapter:
             cmd.extend(['--file', str(args['file'])])
         return {'backend': 'cx_cli', 'raw': self._run(root, cmd)}
 
-    def definition(self, *, root: Path, args: dict[str, Any]) -> dict[str, Any]:
+    def definition(self, *, root: Path, args: JsonMapping) -> JsonMapping:
         cmd = [self.binary, 'definition', '--name', str(args['name'])]
         if args.get('from'):
             cmd.extend(['--from', str(args['from'])])
@@ -723,7 +724,7 @@ class CxCliAdapter:
             cmd.extend(['--kind', str(args['kind'])])
         return {'backend': 'cx_cli', 'raw': self._run(root, cmd)}
 
-    def references(self, *, root: Path, args: dict[str, Any]) -> dict[str, Any]:
+    def references(self, *, root: Path, args: JsonMapping) -> JsonMapping:
         cmd = [self.binary, 'references', '--name', str(args['name'])]
         if args.get('file'):
             cmd.extend(['--file', str(args['file'])])
@@ -767,14 +768,14 @@ class CodegraphMcpAdapter:
     endpoint: str
     auth_token: Optional[str] = None
 
-    def health(self, *, root: Path) -> dict[str, Any]:
+    def health(self, *, root: Path) -> JsonMapping:
         _ = root
         with self._client() as client:
             client.initialize()
             status = client.call_tool('codegraph_status', {})
         return {'backend': 'codegraph_mcp', 'ok': True, 'status': status}
 
-    def overview(self, *, root: Path, args: dict[str, Any]) -> dict[str, Any]:
+    def overview(self, *, root: Path, args: JsonMapping) -> JsonMapping:
         _ = root
         with self._client() as client:
             client.initialize()
@@ -783,7 +784,7 @@ class CodegraphMcpAdapter:
             )
         return {'backend': 'codegraph_mcp', 'result': result}
 
-    def symbols(self, *, root: Path, args: dict[str, Any]) -> dict[str, Any]:
+    def symbols(self, *, root: Path, args: JsonMapping) -> JsonMapping:
         _ = root
         with self._client() as client:
             client.initialize()
@@ -793,14 +794,14 @@ class CodegraphMcpAdapter:
             )
         return {'backend': 'codegraph_mcp', 'result': result}
 
-    def definition(self, *, root: Path, args: dict[str, Any]) -> dict[str, Any]:
+    def definition(self, *, root: Path, args: JsonMapping) -> JsonMapping:
         _ = root
         with self._client() as client:
             client.initialize()
             result = client.call_tool('codegraph_node', {'id': args['name']})
         return {'backend': 'codegraph_mcp', 'result': result}
 
-    def references(self, *, root: Path, args: dict[str, Any]) -> dict[str, Any]:
+    def references(self, *, root: Path, args: JsonMapping) -> JsonMapping:
         _ = root
         with self._client() as client:
             client.initialize()

@@ -27,6 +27,7 @@ from teaagent.types.errors import (
     ToolPermissionError,
     ToolValidationError,
 )
+from teaagent.types.json import JsonMapping, JsonValue
 from teaagent.types.permissions import ApprovalRequest, JITApprovalState, PermissionMode
 from teaagent.types.run import FinalAnswer, RunBudget, RunResult, ToolRequest
 from teaagent.types.tools import (
@@ -41,6 +42,8 @@ __all__ = [
     'ApprovalRequest',
     'AuditDurabilityError',
     'AuditEvent',
+    'JsonMapping',
+    'JsonValue',
     'AuditLogger',
     'BudgetExceededError',
     'ChainVerificationResult',
