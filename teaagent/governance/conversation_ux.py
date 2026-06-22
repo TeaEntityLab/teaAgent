@@ -16,6 +16,24 @@ ADVANCED_CONCEPTS: tuple[str, ...] = (
 )
 
 
+def soften_operator_copy(text: str) -> str:
+    """Replace internal governance nouns with plainer operator language (F2)."""
+    replacements = (
+        ('trust tier', 'trust level'),
+        ('Trust tier', 'Trust level'),
+        ('tenant', 'workspace scope'),
+        ('Tenant', 'Workspace scope'),
+        ('envelope', 'signed request'),
+        ('Envelope', 'Signed request'),
+        ('cockpit', 'status dashboard'),
+        ('Cockpit', 'Status dashboard'),
+    )
+    result = text
+    for old, new in replacements:
+        result = result.replace(old, new)
+    return result
+
+
 def plain_approval_prompt(tool_name: str, call_id: str) -> str:
     return (
         f'TeaAgent wants to run "{tool_name}" (call {call_id}). '

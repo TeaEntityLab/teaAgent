@@ -10,17 +10,45 @@ Periodic documentation audit cadence:
 [Documentation Audit Cadence](governance/documentation-audit-cadence-2026-06-06.md)
 (via `./scripts/verify_docs.sh`).
 
-## Competitive landscape hygiene
+## Generated docs drift (release gate)
+
+Before tagging, confirm the commit was **CI-green on `main`**, including the
+`use-case-matrix` job (`refresh_competitive_docs.py --check`). Do not re-run
+`--check` manually unless tagging an off-main hotfix or a commit that did not
+pass CI.
+
+If drift is reported (locally or in CI):
+
+```bash
+python3 scripts/refresh_competitive_docs.py
+```
+
+`refresh_competitive_docs.py` runs `validate_docs_consistency.py` at the end;
+fix any errors before tagging.
+
+**Also required before tag** (constitution-tier truth — not competitive hygiene):
+
+- `python3 scripts/validate_docs_consistency.py`
+- `python3 -m pytest tests/acceptance --collect-only -q` matches `docs/acceptance.md` status count
+
+> **DR-006 T5 (2026-06-22):** Split gate — see
+> [dr-006-owner-decision-2026-06-22.md](strategy/dr-006-owner-decision-2026-06-22.md).
+
+## Competitive landscape hygiene (quarterly — not a per-release blocker)
+
+Per harness-first §2 non-goals, competitor parity and positioning surveys are
+not release-scheduling drivers. Refresh on **quarterly cadence** or before any
+**public positioning / comparison claim**.
+
+When due:
 
 1. Re-run [scripts/refresh_agent_readme_survey.md](../scripts/refresh_agent_readme_survey.md) against DeepWiki/upstream signals (Codex, Claude Code, OpenCode, OpenHands, Aider, LangGraph, CrewAI).
 2. Update `Last reviewed: **YYYY-MM-DD**` in the survey artifact.
 3. Sync [docs/backlog-priority.md](backlog-priority.md) and [docs/use-cases.md](use-cases.md) differentiator tables.
-4. Check generated coverage artifacts without mutating tracked files:
-   - `python3 scripts/refresh_competitive_docs.py --check`
-5. Regenerate coverage artifacts only when the check reports drift:
-   - `python3 scripts/refresh_competitive_docs.py`
-   - Or step-by-step: `build_acceptance_status.py`, `build_use_case_matrix.py`, `render_use_case_dashboard.py`
-6. `refresh_competitive_docs.py` runs `validate_docs_consistency.py` at the end (must pass).
+4. Regenerate coverage artifacts: `python3 scripts/refresh_competitive_docs.py`
+
+Deferring a quarterly refresh does **not** block a PATCH or harness-only MINOR
+release if generated-docs CI is green and `validate_docs_consistency.py` passes.
 
 ## Provider and docs drift
 

@@ -143,7 +143,10 @@ def run_shell_inspect(
     policy = classify_shell_command_policy(command, workspace_root=config.root)
     if policy != 'inspect':
         raise ValueError(
-            'command is not inspect-safe; retry with workspace_run_shell_mutate'
+            'command is not inspect-safe for workspace_run_shell_inspect. '
+            'Use workspace_run_shell_mutate for pipes, shell operators, cat, or '
+            'compound commands. Inspect-only allows: pwd, ls, rg, grep, wc, find, '
+            'and git status/diff/log/show/branch/grep (no pipes or redirects).'
         )
     timeout = bounded_positive_int_arg(
         args,

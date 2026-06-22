@@ -6,7 +6,7 @@ resource: "urn:teaagent:doc:docs/release-checklist.md"
 tags: ["teaagent", "release", "checklist", "runbook"]
 teaagent:
   source_path: "docs/release-checklist.md"
-  source_sha256: "b637d37bee7b3062be2eef872d54e873ca0a9db77a7b73f9e94bd631978c8349"
+  source_sha256: "1ac16b53625694e4d6c5fc1692a37687eb60b1b9b9c88323158b4eed85af241d"
   docs_tier: "working"
   authority: "canonical"
   lifecycle: "current"

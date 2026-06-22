@@ -3,6 +3,7 @@
 ## Architecture
 
 - Keep the harness thin: orchestration, tool governance, state boundaries, audit, and validation belong here; domain reasoning belongs in the model or skills.
+- Treat thin harness as a **target invariant for new work**, not a claim about current code size (see `docs/strategy/harness-first-direction-2026-06-13.md`).
 - Prefer protocol assets over vendor-specific assets: MCP-style tool metadata, Skills, and portable run records.
 - Do not add a second agent framework without an ADR.
 
@@ -10,7 +11,8 @@
 
 - Tools must be registered through `ToolRegistry`.
 - Each tool requires a name, description, input schema, output schema, and annotations.
-- Destructive tools must not run unless an approval token is present for that exact tool call.
+- In `read-only`, `workspace-write`, and `prompt` modes, destructive tools must not run unless an approval token is present for that exact tool call. In `allow` and `danger-full-access`, destructive tools may proceed under the declared mode with audit; those modes are owner-chosen widenings, not silent bypasses.
+- Side effects in production runs must route through a governed path (`AgentRunner` or equivalent) so `ApprovalPolicy` runs before `ToolRegistry.execute()`. Direct `ToolRegistry.execute()` without policy context is unsupported.
 - Tool errors must be actionable and classified.
 
 ## Runtime Safety

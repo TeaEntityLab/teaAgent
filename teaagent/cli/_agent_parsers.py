@@ -293,9 +293,14 @@ def add_agent_run_arguments(
         '--human',
         action='store_true',
         help=(
-            'Print a human-readable run receipt instead of JSON on completion. '
-            'With --dry-run, print a beginner-friendly preflight summary instead.'
+            'Force human-readable run receipt on stdout. '
+            'Default on a TTY when --json is not set.'
         ),
+    )
+    p.add_argument(
+        '--json',
+        action='store_true',
+        help='Force JSON run result on stdout (overrides TTY human default).',
     )
     p.add_argument(
         '--background',
@@ -615,7 +620,12 @@ def _daily(
     p.add_argument(
         '--human',
         action='store_true',
-        help='Print a beginner-friendly readiness summary instead of JSON.',
+        help='Force human-readable summary (default on a TTY when --json is not set).',
+    )
+    p.add_argument(
+        '--json',
+        action='store_true',
+        help='Force JSON output (overrides TTY human default).',
     )
     p.add_argument(
         '--write-journal',

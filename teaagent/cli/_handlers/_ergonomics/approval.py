@@ -13,6 +13,7 @@ from teaagent.approval.selectors import (
 )
 from teaagent.cli.execution import AgentExecutionFactory
 from teaagent.ergonomics.approval_store import ApprovalPresetStore
+from teaagent.ergonomics.cli_output import wants_human_cli
 from teaagent.ergonomics.workspace_defaults import load_workspace_defaults
 from teaagent.integration.approval_parity import (
     build_approval_granted_payload,
@@ -361,7 +362,7 @@ def approval_audit_command(args: argparse.Namespace) -> int:
 
 def approval_pending_command(args: argparse.Namespace) -> int:
     store = AgentExecutionFactory(args.root).create_run_store(readonly=True)
-    if getattr(args, 'human', False):
+    if wants_human_cli(args):
         views = collect_pending_approval_views(store, limit=args.limit)
         print(format_pending_approvals(views))
         return 0
@@ -481,7 +482,7 @@ def approval_next_command(args: argparse.Namespace) -> int:
         views = collect_pending_approval_views(store, limit=20)
 
         if not views:
-            if getattr(args, 'human', False):
+            if wants_human_cli(args):
                 print('No pending approvals found.')
                 return 0
             print_json(
@@ -497,7 +498,7 @@ def approval_next_command(args: argparse.Namespace) -> int:
             return 0
 
         first_view = views[0]
-        if getattr(args, 'human', False):
+        if wants_human_cli(args):
             print(format_pending_approvals(views))
             return 0
 

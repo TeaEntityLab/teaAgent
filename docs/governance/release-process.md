@@ -63,19 +63,23 @@ All blocking CI jobs must be green on the commit you intend to tag:
 - Security `pip-audit` (base gate, dev/lockfile visibility, optional-extra review)
 - Security `codeql`
 
-### 2 — Competitive landscape hygiene
+### 2 — Generated docs drift (CI + hotfix)
+
+On normal releases, trust CI-green `main` (includes `refresh_competitive_docs.py --check` in the `use-case-matrix` job).
+
+Re-run locally only when tagging an off-main hotfix:
 
 ```bash
 python3 scripts/refresh_competitive_docs.py --check
 ```
 
-If the check reports drift, regenerate:
+If drift is reported, regenerate:
 
 ```bash
 python3 scripts/refresh_competitive_docs.py
 ```
 
-Confirm `Last reviewed:` date is updated in the survey artifact.
+Competitive survey refresh (`Last reviewed:` date, backlog/use-cases sync) is **quarterly**, not per-release — see [release-checklist.md](../release-checklist.md) and [dr-006-owner-decision-2026-06-22.md](../strategy/dr-006-owner-decision-2026-06-22.md).
 
 ### 3 — Docs consistency
 

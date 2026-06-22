@@ -9,6 +9,7 @@ from pathlib import Path
 from teaagent.approval import parse_permission_mode
 from teaagent.cli._output import print_json
 from teaagent.cli.execution import AgentExecutionFactory
+from teaagent.ergonomics.cli_output import wants_human_cli
 from teaagent.integration.run_state import build_attach_snapshot
 from teaagent.types import PermissionMode
 
@@ -127,7 +128,7 @@ def agent_daily_command(args: argparse.Namespace) -> int:
         )
         _emit_readiness_payload(args, payload)
         ready = payload.get('would_invoke_model', False)
-        return 0 if ready or not getattr(args, 'human', False) else 2
+        return 0 if ready or not wants_human_cli(args) else 2
     permission_mode = parse_permission_mode(args.permission_mode)
     from teaagent.daily import build_daily_brief
 
@@ -153,7 +154,7 @@ def agent_daily_command(args: argparse.Namespace) -> int:
     payload = brief.to_dict()
     if banner:
         payload['whats_new'] = banner
-    if getattr(args, 'human', False):
+    if wants_human_cli(args):
         from teaagent.ergonomics.human_output import format_readiness_summary
 
         print(format_readiness_summary(payload, root=args.root, title='TeaAgent daily'))
@@ -172,13 +173,13 @@ def agent_status_command(args: argparse.Namespace) -> int:
             )
 
             summary = build_run_progress_summary(store, args.run_id)
-            if getattr(args, 'human', False) or sys.stdout.isatty():
+            if wants_human_cli(args):
                 print(format_run_progress_summary(summary))
             else:
                 print_json(summary.to_dict())
             return 0
         if getattr(args, 'evidence', False):
-            if getattr(args, 'human', False):
+            if wants_human_cli(args):
                 from teaagent.run_receipt import build_run_receipt
 
                 print(build_run_receipt(store, args.run_id, args.root))
@@ -190,6 +191,14 @@ def agent_status_command(args: argparse.Namespace) -> int:
             return 0
         print_json(store.heartbeat_for_run(args.run_id))
     except FileNotFoundError as exc:
+        if wants_human_cli(args):
+            from teaagent.cli._formatting import format_error_block
+
+            print(
+                format_error_block('Error', str(exc), category='NOT_FOUND'),
+                file=sys.stderr,
+            )
+            return 1
         print_json({'status': 'error', 'message': str(exc)})
         return 1
     return 0

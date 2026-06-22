@@ -341,7 +341,11 @@ def register_workspace_tools(registry: ToolRegistry, factory: Any) -> None:
     )
     registry.register(
         name='workspace_run_shell_inspect',
-        description='Run a bounded read-oriented shell command inside the workspace root.',
+        description=(
+            'Run a bounded read-only shell command (pwd, ls, rg, grep, wc, find, '
+            'git status/diff/log/show/branch/grep). No pipes or shell operators — '
+            'use workspace_run_shell_mutate for those.'
+        ),
         input_schema=object_schema(
             {'command': 'string', 'timeout_seconds': 'integer'},
             required=['command'],

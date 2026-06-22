@@ -296,7 +296,12 @@ def _approval(
     pending.add_argument(
         '--human',
         action='store_true',
-        help='Show numbered pending actions with tool, reason, path, and risk.',
+        help='Force numbered pending list (default on a TTY when --json is not set).',
+    )
+    pending.add_argument(
+        '--json',
+        action='store_true',
+        help='Force JSON output (overrides TTY human default).',
     )
     pending.set_defaults(func=handlers['approval_pending'], command='approval')
     approve = subs.add_parser(

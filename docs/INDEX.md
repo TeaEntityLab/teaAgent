@@ -57,6 +57,8 @@ governance ledgers should prefer the canonical set above.
 | Question | Canonical source |
 | --- | --- |
 | Project identity and scope | [Harness-First Direction](strategy/harness-first-direction-2026-06-13.md) |
+| Post-intent review agenda (owner decisions) | [Direction Review Agenda 2026-06-22](strategy/direction-review-agenda-2026-06-22.md) |
+| DR-006 epistemology & release gates | [DR-006 Owner Decision](strategy/dr-006-owner-decision-2026-06-22.md) |
 | Current owner-operated daily behavior | [Daily-Driver Current Status](daily-driver-current-status.md) |
 | Acceptance flow inventory | [Acceptance Coverage](acceptance.md) |
 | Roadmap state | [Roadmap Status](roadmap-status.md) |

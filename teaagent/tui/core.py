@@ -228,14 +228,14 @@ class TeaAgentTUI:
         print(f'Destructive: {"allowed" if self.allow_destructive else "blocked"}')
         print(f'Chat: {"enabled" if self.chat else "disabled"}')
 
-        # Cockpit state (blocked approvals, harness health, budget, recoverable)
-        print('\n[Cockpit]')
+        # Run status (blocked approvals, harness health, budget, recoverable)
+        print('\n[Run status]')
         if self._cockpit_state:
             # Active root and approval scope
             if self._cockpit_state.workspace_root:
-                print(f'  Workspace Root: {self._cockpit_state.workspace_root}')
+                print(f'  Workspace: {self._cockpit_state.workspace_root}')
             if self._cockpit_state.approval_scope:
-                print(f'  Approval Scope: {self._cockpit_state.approval_scope}')
+                print(f'  Approval area: {self._cockpit_state.approval_scope}')
 
             # Blocked approvals
             if self._cockpit_state.approvals.blocked_count > 0:

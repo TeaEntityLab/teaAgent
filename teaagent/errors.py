@@ -117,6 +117,7 @@ class ToolPermissionError(AgentHarnessError):
             message,
             hint=hint
             or (
+                'Check effective permission and config with `teaagent doctor config`. '
                 'Use --permission-mode allow (or prompt/approve the call) '
                 'to permit this operation.'
             ),

@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
+from teaagent.governance.conversation_ux import soften_operator_copy
+
 ReadinessLevel = Literal['blocking', 'warning', 'info']
 
 # ANSI color codes (emoji-free)
@@ -168,7 +170,7 @@ def format_readiness_summary(  # noqa: C901
         'ready', preflight.get('ready', payload.get('would_invoke_model'))
     )
     lines = [
-        title,
+        soften_operator_copy(title),
         f'  Provider: {provider}',
         f'  Ready: {"yes" if ready else "no"}',
     ]
@@ -189,7 +191,7 @@ def format_readiness_summary(  # noqa: C901
             continue
         lines.append(f'  {level.capitalize()}:')
         for item in level_items:
-            lines.append(f'    - {item.message}')
+            lines.append(f'    - {soften_operator_copy(item.message)}')
             if item.next_command:
                 lines.append(f'      → {item.next_command}')
 

@@ -16,6 +16,7 @@ from teaagent.cli._formatting import format_error_block
 from teaagent.cli._output import print_json
 from teaagent.cli.execution import AgentExecutionFactory
 from teaagent.code_analysis import CodeAnalysisConfig
+from teaagent.ergonomics.cli_output import wants_human_cli
 from teaagent.intent import build_task_spec, clarify_task
 from teaagent.model_routing import route_model
 from teaagent.run_store import safe_run_id, summarize_audit_events
@@ -126,6 +127,26 @@ def agent_run_task(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
         return 1
+    run_id_candidate = (getattr(args, 'task', None) or '').strip()
+    if run_id_candidate:
+        from teaagent.run_store import RunStore
+
+        store = RunStore(Path(args.root))
+        if store.run_path(run_id_candidate).is_file():
+            print(
+                format_error_block(
+                    'Error',
+                    f"'{run_id_candidate}' is an existing run id, not a task description.",
+                    hint=(
+                        f'Use `teaagent agent resume {run_id_candidate}` or '
+                        f'`teaagent agent interactive-review {run_id_candidate}`. '
+                        'Do not pass a run id as the task text.'
+                    ),
+                    category='RUN_ID',
+                ),
+                file=sys.stderr,
+            )
+            return 2
     if getattr(args, 'dry_run', False):
         from teaagent.ergonomics.dry_run import build_dry_run_payload
 
@@ -140,7 +161,7 @@ def agent_run_task(args: argparse.Namespace) -> int:
         )
         _emit_readiness_payload(args, payload)
         ready = payload.get('would_invoke_model', False)
-        return 0 if ready or not getattr(args, 'human', False) else 2
+        return 0 if ready or not wants_human_cli(args) else 2
     return _execute_agent_task(args, task, plan_contract=plan_contract)
 
 
@@ -166,14 +187,14 @@ def _execute_agent_task(  # noqa: C901
         if isinstance(parallel_value, int):
             mode = parse_permission_mode(args.permission_mode)
             if mode != PermissionMode.READ_ONLY:
-                print_json(
-                    {
-                        'status': 'error',
-                        'message': (
-                            'Numeric --parallel requires read-only permission mode '
-                            'for safe parallel analysis branches.'
-                        ),
-                    }
+                print(
+                    format_error_block(
+                        'Error',
+                        'Numeric --parallel requires read-only permission mode '
+                        'for safe parallel analysis branches.',
+                        category='PARALLEL',
+                    ),
+                    file=sys.stderr,
                 )
                 return 2
             parallel_options = ','.join(

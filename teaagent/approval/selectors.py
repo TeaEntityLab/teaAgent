@@ -202,21 +202,19 @@ def format_pending_approvals(views: list[PendingApprovalView]) -> str:
     if not views:
         return 'No pending destructive tool approvals.'
     lines = [
-        f'Pending approvals: depth={len(views)} (approve with --selector N):',
+        f'{len(views)} action(s) need your approval:',
         '',
     ]
     for view in views:
         age = f'{view.age_seconds:.0f}s' if view.age_seconds is not None else 'unknown'
         lines.extend(
             [
-                f'{view.selector}. run={view.run_id} tool={view.tool_name}',
-                f'   task: {view.task}',
-                f'   reason: {view.reason}',
-                f'   path: {view.path_summary}',
-                f'   risk: {view.risk_class}',
-                f'   age: {age}',
-                f'   expires: {view.expires_at}',
-                f'   call_id: {view.call_id}',
+                f'{view.selector}. Approve "{view.tool_name}" — {view.path_summary}',
+                f'   Task: {view.task}',
+                f'   Why: {view.reason}',
+                f'   Risk: {view.risk_class} · age {age} · expires {view.expires_at}',
+                f'   → teaagent approval approve --selector {view.selector}',
+                f'   (advanced call_id: {view.call_id})',
                 '',
             ]
         )

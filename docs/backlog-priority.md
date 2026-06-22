@@ -2,10 +2,45 @@
 
 > **Last reviewed:** 2026-06-06
 > **Review trigger:** Backlog priorities or shipped/beta status claims change.
+> **Scheduling gate (2026-06-22):** DR-001 met — 5 owner evidence entries in
+> [Operator Friction Log](work-log/operator-friction-log.md). New UX work should cite
+> friction log IDs. **DR-006 T1/T5 ratified 2026-06-22.**
 
 Prioritized by impact order: security and production risk → core platform capabilities → developer experience and ecosystem.
 
-Last updated: 2026-06-01 (P0 acceptance tests complete, strategic P2 research initiated, monitoring automation scripts created, first monitoring cycle executed)
+---
+
+## Backlog Provenance (DR-004, 2026-06-22)
+
+Tags classify **why** work exists. Scheduling still gated per
+[Direction Review Agenda](strategy/direction-review-agenda-2026-06-22.md) until
+DR-001 (owner friction evidence) completes.
+
+| Tag | Meaning |
+| --- | --- |
+| `friction-driven` | Owner friction log evidence or closed hypothesis promoted after validation |
+| `governance-gap` | Security/audit/approval correctness; not UX speculation |
+| `legacy-competitive` | Pre–2026-06-13 competitive positioning or survey machinery |
+| `owner-override` | Explicit owner direction record or dated override rationale |
+| `harness-migration` | Event spine, thin runner, TASK-006 arc |
+
+### Open items — provenance
+
+| Item | Tag | Scheduling |
+| --- | --- | --- |
+| CP-4 OpenCode Gap Watch | `legacy-competitive` | Monitoring only; escalation → feature sprint **blocked** without friction evidence |
+| CP-6 Community Presence | `legacy-competitive` | **Hold** — external acquisition non-goal |
+| M4 cloud/background/control-plane cockpit | `legacy-competitive` | **Hold** — T4 owner decision |
+| RBAC enforce flip (ADR 0031, 2026-09-12) | `governance-gap` | **Hold** until owner demand signal |
+| TASK-006 RunEvent taxonomy + M0 | `harness-migration` | **Promote** |
+| TASK-001 constitution repositioning | `owner-override` | **Promote** (harness-first ratified) |
+| TASK-002 docs tiering | `harness-migration` | **Promote** |
+| TASK-003 test typing pass | `harness-migration` | **Promote** |
+| TASK-004 flagship tests off deprecated approval | `governance-gap` | **Promote** |
+| TASK-007 friction log bootstrap | `friction-driven` | **Owner-blocking** — 0/5 evidence entries |
+| Phase 4–6 Beta (consensus, sandbox, control plane) | `owner-override` | Shipped; **freeze** new platform surface per T3/T4 |
+| Competitive refresh release gate | `legacy-competitive` | **Resolved (DR-006 T5):** split gate — CI blocks on `main`; manual survey quarterly |
+| Seven-control-loops SCL-P0 tickets | `legacy-competitive` | **Hold** until owner validates in friction log |
 
 ---
 

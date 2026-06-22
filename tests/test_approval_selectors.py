@@ -79,8 +79,9 @@ def test_collect_and_format_pending_approval_views(tmp_path: Path) -> None:
     assert view.expires_at.endswith('+00:00')
 
     text = format_pending_approvals(views)
-    assert '1. run=run-pending tool=workspace_write_file' in text
-    assert 'reason: destructive tool requires approval' in text
+    assert 'Approve "workspace_write_file" — docs/cli.md' in text
+    assert 'Why: destructive tool requires approval' in text
+    assert 'approval approve --selector 1' in text
     assert resolve_selector(views, 1) is view
     assert resolve_selector(views, 99) is None
 
@@ -114,7 +115,8 @@ def test_approval_pending_human_and_selector_approve(tmp_path: Path) -> None:
     with redirect_stdout(out):
         assert main(['approval', 'pending', '--human', '--root', str(tmp_path)]) == 0
     human = out.getvalue()
-    assert '1. run=run-pending tool=workspace_write_file' in human
+    assert 'Approve "workspace_write_file"' in human
+    assert 'approval approve --selector 1' in human
 
     out = StringIO()
     with redirect_stdout(out):

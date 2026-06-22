@@ -8,6 +8,7 @@ from typing import Any
 
 from teaagent.cli._output import print_json
 from teaagent.cli.execution import AgentExecutionFactory
+from teaagent.ergonomics.cli_output import wants_human_cli
 from teaagent.run_store import RunStore
 from teaagent.runner import RunResult
 
@@ -65,7 +66,7 @@ def _display_recovery_guidance(
 
 
 def _emit_readiness_payload(args: argparse.Namespace, payload: dict[str, Any]) -> None:
-    if getattr(args, 'human', False):
+    if wants_human_cli(args):
         from teaagent.ergonomics.human_output import format_readiness_summary
 
         print(format_readiness_summary(payload, root=args.root))
@@ -80,25 +81,20 @@ def _emit_run_completion_output(
     run_id: str,
     payload: dict[str, Any],
 ) -> None:
-    """Print JSON run payload and/or a human-readable receipt (WS1-001)."""
+    """Print human receipt or JSON run payload (F3: plain language first on TTY)."""
     if getattr(args, 'json_stream', False):
         from teaagent.streaming.events import StreamEvent, emit_stream_event
 
         emit_stream_event(StreamEvent('run_result', payload))
         return
 
-    if getattr(args, 'human', False):
-        from teaagent.run_receipt import build_run_receipt
+    from teaagent.run_receipt import build_run_receipt
 
+    if wants_human_cli(args):
         print(build_run_receipt(store, run_id, args.root))
         return
 
     print_json(payload)
-    if sys.stderr.isatty():
-        from teaagent.run_receipt import build_run_receipt
-
-        receipt = build_run_receipt(store, run_id, args.root)
-        print(f'\n{receipt}', file=sys.stderr)
 
 
 def show_interactive_diff(root: str | Path, sandbox_branch: str) -> bool:
