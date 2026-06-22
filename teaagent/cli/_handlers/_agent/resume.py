@@ -7,7 +7,7 @@ import subprocess
 import time
 import uuid
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable
 
 from teaagent.cli._output import print_json
 
@@ -19,7 +19,11 @@ if TYPE_CHECKING:
 
 
 def suspend_to_background(
-    config: ChatAgentConfig, session_context: dict, targeted_files: set[Path]
+    config: ChatAgentConfig,
+    session_context: dict,
+    targeted_files: set[Path],
+    *,
+    output: Callable[[str], None] = print,
 ) -> str:
     """Suspend a chat session and write a resumable checkpoint.
 
@@ -28,10 +32,11 @@ def suspend_to_background(
     ``run_started`` audit event so the suspended run is discoverable.
 
     Relocated here from the retired ``cli._handlers.chat_repl`` module
-    (U-P2-1) so this checkpoint producer lives beside its readers. NOTE:
-    no production surface currently *calls* this — the TUI does not yet wire
-    suspend-to-checkpoint (see action register follow-up). Kept to preserve
-    the capability and its read-path contract.
+    (U-P2-1) so this checkpoint producer lives beside its readers. Called by
+    the TUI ``/background`` and ``/handoff`` commands
+    (``TeaAgentTUI._handle_background``). ``output`` lets the caller route
+    messages through its own sink (the TUI passes ``output_fn``); it defaults
+    to ``print``.
 
     Returns:
         run_id of the created checkpoint, or empty string on failure.
@@ -40,7 +45,7 @@ def suspend_to_background(
 
     root = config.root.resolve()
 
-    print('[TeaAgent] Suspending session as a checkpoint...')
+    output('[TeaAgent] Suspending session as a checkpoint...')
 
     run_id = str(uuid.uuid4())[:8]
 
@@ -82,7 +87,7 @@ def suspend_to_background(
             json.dumps(suspension_data, indent=2), encoding='utf-8'
         )
     except Exception as exc:
-        print(f'[TeaAgent] Error saving suspension state: {exc}')
+        output(f'[TeaAgent] Error saving suspension state: {exc}')
         return ''
 
     # Check if workspace is dirty and warn user
@@ -96,14 +101,14 @@ def suspend_to_background(
         )
 
         if result.stdout.strip():
-            print('[TeaAgent] Warning: Workspace has uncommitted changes.')
-            print('[TeaAgent] Session is suspended on current branch.')
-            print('[TeaAgent] Uncommitted changes remain in working directory.')
+            output('[TeaAgent] Warning: Workspace has uncommitted changes.')
+            output('[TeaAgent] Session is suspended on current branch.')
+            output('[TeaAgent] Uncommitted changes remain in working directory.')
             branch_created = False
     except FileNotFoundError:
-        print('[TeaAgent] Git not found, skipping workspace check')
+        output('[TeaAgent] Git not found, skipping workspace check')
     except Exception as exc:
-        print(f'[TeaAgent] Warning: Could not check workspace status: {exc}')
+        output(f'[TeaAgent] Warning: Could not check workspace status: {exc}')
 
     # Emit audit event for suspension
     factory = AgentExecutionFactory(root)
@@ -119,7 +124,7 @@ def suspend_to_background(
             branch_created=branch_created,
         )
     except Exception as exc:
-        print(f'[TeaAgent] Warning: Could not emit suspension audit event: {exc}')
+        output(f'[TeaAgent] Warning: Could not emit suspension audit event: {exc}')
 
     # Write a run_started event so agent_resume_command can find this run
     try:
@@ -138,12 +143,14 @@ def suspend_to_background(
             suspended_from='repl',
         )
     except Exception as exc:
-        print(f'[TeaAgent] Warning: Could not write resume event: {exc}')
+        output(f'[TeaAgent] Warning: Could not write resume event: {exc}')
 
-    print('[TeaAgent] Session suspended successfully!')
-    print(f'[TeaAgent] Run ID: {run_id}')
-    print(f'[TeaAgent] To review: teaagent agent interactive-review {run_id}')
-    print('[TeaAgent] Note: This is a suspension checkpoint, not background execution.')
+    output('[TeaAgent] Session suspended successfully!')
+    output(f'[TeaAgent] Run ID: {run_id}')
+    output(f'[TeaAgent] To review: teaagent agent interactive-review {run_id}')
+    output(
+        '[TeaAgent] Note: This is a suspension checkpoint, not background execution.'
+    )
 
     return run_id
 

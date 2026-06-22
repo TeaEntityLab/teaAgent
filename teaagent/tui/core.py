@@ -1043,11 +1043,28 @@ class TeaAgentTUI:
         )
 
     def _handle_background(self) -> None:
-        self.output_fn(
-            'background: /background creates a suspension checkpoint, not background execution. '
-            'Use "teaagent agent interactive-review <run_id>" to inspect changes and '
-            '"teaagent agent resume <run_id>" where supported.'
+        """Create a suspension checkpoint for the current session (``/background``).
+
+        Writes ``.teaagent/suspension-<run_id>.json`` so the session can be
+        reviewed via ``teaagent agent interactive-review <run_id>``. This is a
+        checkpoint, not detached background execution.
+        """
+        from teaagent.cli._handlers._agent.resume import suspend_to_background
+
+        controller = self._get_chat_controller()
+        session_context = {
+            'observations': controller.session_state.observations,
+            'compaction_count': controller.session_state.compaction_count,
+        }
+        config = ChatAgentConfig.from_root(
+            self.root,
+            model=self.model,
+            permission_mode=self.permission_mode,
+            max_iterations=self.max_iterations,
+            max_tool_calls=self.max_tool_calls,
+            max_estimated_cost_cents=self._runtime_max_cost_cents,
         )
+        suspend_to_background(config, session_context, set(), output=self.output_fn)
 
     def _get_session_store(self) -> SessionStore:
         if self._session_store is None:

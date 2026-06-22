@@ -147,3 +147,28 @@ def test_tui_cost_property_reads_controller_state(tmp_path):
         f'Setting TUI._session_cost_cents must update controller.session_state, '
         f'controller sees {controller.session_state.session_cost_cents}'
     )
+
+
+# ---------------------------------------------------------------------------
+# Test 6 — TUI /background actually creates a suspension checkpoint
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.integration
+def test_tui_background_creates_suspension_checkpoint(tmp_path):
+    """/background and /handoff must WRITE a suspension checkpoint, not just
+    print instructions (U-P2-1 follow-up: wired suspend_to_background into the
+    TUI now that the legacy REPL — the previous sole producer — was retired).
+    """
+    outputs: list[str] = []
+    tui = _make_tui(tmp_path, output_fn=outputs.append)
+
+    tui._handle_background()
+
+    checkpoints = list((tmp_path / '.teaagent').glob('suspension-*.json'))
+    assert len(checkpoints) == 1, (
+        f'/background must write exactly one suspension checkpoint, got {checkpoints}'
+    )
+    joined = '\n'.join(outputs)
+    assert 'suspension checkpoint' in joined
+    assert 'interactive-review' in joined
