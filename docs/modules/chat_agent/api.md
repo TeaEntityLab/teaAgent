@@ -211,5 +211,6 @@ def register_subagent_tool(
 | `model` | `model` |
 | `code_analysis_enabled` | `code_analysis_config` |
 | `git_tools_enabled` | `enable_git_tools` |
+| `github_tools_enabled` | `enable_github_tools` |
 | `skill_search_dirs` | `skill_search_dirs` |
 | `skill_source_profile` | `skill_source_profile` |

@@ -42,7 +42,7 @@ acceptance flow writes the user TUI state file. In sandboxed environments, run
 them with permission to bind localhost ports and write the TeaAgent state
 directory.
 
-**Current acceptance test count: `661 passed`** (pytest-collected guard target)
+**Current acceptance test count: `663 passed`** (pytest-collected guard target)
 
 Keep historical acceptance-count snapshots in dated analysis or roadmap docs.
 This file only owns the live guard target.

@@ -26,6 +26,43 @@ def test_github_tools_registered() -> None:
     assert 'github_ci_status' in tools, 'Expected github_ci_status to be registered'
 
 
+def _setup_registry(tmp_path, *, enable_github_tools: bool):
+    """Run the chat-agent registry setup with a stub adapter (G-P1-2 wiring)."""
+    from unittest.mock import MagicMock
+
+    from teaagent.chat_agent import ChatAgentConfig, _setup_tool_registry
+
+    config = ChatAgentConfig.from_root(
+        str(tmp_path), enable_github_tools=enable_github_tools
+    )
+    registry, _ = _setup_tool_registry(
+        config,
+        MagicMock(),
+        None,
+        task='noop',
+        task_spec=None,
+        depth=0,
+        initial_context_extra=None,
+    )
+    return registry
+
+
+def test_github_tools_reachable_when_enabled(tmp_path) -> None:
+    """G-P1-2: opt-in config.enable_github_tools registers all four tools."""
+    registry = _setup_registry(tmp_path, enable_github_tools=True)
+    tools = registry.list_tools()
+    assert 'github_create_pr' in tools
+    assert 'github_list_prs' in tools
+    assert 'github_review_pr' in tools
+    assert 'github_ci_status' in tools
+
+
+def test_github_tools_absent_by_default(tmp_path) -> None:
+    """G-P1-2: GitHub tools stay opt-in — not loaded unless enabled."""
+    registry = _setup_registry(tmp_path, enable_github_tools=False)
+    assert 'github_create_pr' not in registry.list_tools()
+
+
 def test_github_create_pr_no_token() -> None:
     """Should raise PermissionError when GITHUB_TOKEN is not set."""
     import os

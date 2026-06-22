@@ -104,6 +104,7 @@ class ChatAgentConfig:
     subagent_manager: Optional[SubagentManager] = None
     code_analysis_config: Optional[CodeAnalysisConfig] = None
     enable_git_tools: bool = False
+    enable_github_tools: bool = False
     skill_search_dirs: Optional[list[str]] = None
     skill_source_profile: SkillSourceProfile = 'default'
     selected_skills: Optional[frozenset[str]] = None
@@ -171,6 +172,10 @@ class ChatAgentConfig:
             git_enabled = rc.get('git_tools_enabled')
             if isinstance(git_enabled, bool) and git_enabled:
                 profile_overrides['enable_git_tools'] = True
+        if 'enable_github_tools' not in kwargs:
+            github_enabled = rc.get('github_tools_enabled')
+            if isinstance(github_enabled, bool) and github_enabled:
+                profile_overrides['enable_github_tools'] = True
         if 'skill_search_dirs' not in kwargs:
             configured_skill_dirs = rc.get('skill_search_dirs')
             if isinstance(configured_skill_dirs, list):
@@ -530,6 +535,10 @@ def _setup_tool_registry(
         )
     if _registry_fresh and config.enable_git_tools:
         register_git_tools(tool_registry, GitToolConfig(root=config.root))
+    if _registry_fresh and config.enable_github_tools:
+        from teaagent.github_integration import register_github_tools
+
+        register_github_tools(tool_registry)
     if _registry_fresh and 'browser_navigate' not in tool_registry.list_tools():
         register_browser_tools(tool_registry)
     from teaagent.mcp_trust import apply_mcp_trust_hooks
