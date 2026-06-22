@@ -29,7 +29,6 @@ DEFAULT_EXEMPTIONS: set[str] = {
     'teaagent/chat_agent.py',  # Library entry point
     'teaagent/cli/__init__.py',  # CLI root dispatch
     'teaagent/cli/_agent_parsers.py',  # A-P2-2 split target
-    'teaagent/cli/_handlers/_ergonomics/approval.py',
     'teaagent/domain/issue_intake.py',
     'teaagent/external_backends.py',  # A-P1-2 Any reduction target
     'teaagent/llm/_adapters.py',

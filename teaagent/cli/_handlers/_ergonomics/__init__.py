@@ -8,6 +8,11 @@ from __future__ import annotations
 # implementation, not the proxy, to avoid recursion.
 from teaagent.cli._handlers._misc import print_json
 
+# A-P2-2 god-module split: these two commands were extracted from approval.py
+# into sibling modules. Imported from there directly (they import shared helpers
+# from .approval, so re-exporting through .approval would create a cycle).
+from ._approval_doctor import approval_doctor_command
+from ._approval_preset import approval_preset_command
 from .approval import (
     _DENIAL_REASON_DESCRIPTIONS,
     _build_explanation_summary,
@@ -17,13 +22,11 @@ from .approval import (
     approval_audit_command,
     approval_check_command,
     approval_deny_command,
-    approval_doctor_command,
     approval_explain_command,
     approval_grant_command,
     approval_list_command,
     approval_next_command,
     approval_pending_command,
-    approval_preset_command,
     approval_revoke_command,
     approval_why_denied_command,
 )

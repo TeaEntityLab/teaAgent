@@ -56,7 +56,7 @@ Legend: ✅ Done (committed) · 🟡 In progress · ⬜ Not started · 🔵 Alre
 | G-P2-4 | Governance | Document the `scope` field taxonomy (`call_id`/`payload_digest`/`session`/`preset`). | `teaagent/runner/_core.py:730,742` | Taxonomy documented in `docs/governance/scope-taxonomy.md`. | 🔵 | Already existed — `docs/governance/scope-taxonomy.md` with full taxonomy, blast radius, revocation, and implementation status |
 | G-P2-5 | Governance | Make `max_skill_md_lines` an error for installed (candidate-provenance) skills; keep it a warning during development. | `teaagent/skill_review.py:187-193` | Error/warning split by provenance. | ✅ | Candidate-provenance installed skills receive an error; development skills receive a warning; `tests/test_skill_review_installed_strictness.py` |
 | A-P2-1 | Architecture | Consolidate optional-extra aliases: fold `crypto`/`oauth`/`audit-encryption` into a single `crypto` extra. | `pyproject.toml:60-68` | Single `crypto` extra, aliases removed. | ✅ | `pyproject.toml` exposes one `crypto` extra; obsolete aliases are absent |
-| A-P2-2 | Architecture | Split CLI handler god modules: `_ergonomics.py:1407`, `_doctor.py:1022`, `_agent/run.py:999`, `chat_repl.py:894`. | As listed | Each module under 800 lines. | 🟡 | `_doctor`/`_ergonomics`/`_agent/run.py` split; `chat_repl.py` (906) eliminated by retiring it (U-P2-1). Only `_ergonomics/approval.py` (1,014) remains above the gate |
+| A-P2-2 | Architecture | Split CLI handler god modules: `_ergonomics.py:1407`, `_doctor.py:1022`, `_agent/run.py:999`, `chat_repl.py:894`. | As listed | Each module under 800 lines. | ✅ | `_doctor`/`_ergonomics`/`_agent/run.py` split; `chat_repl.py` (906) eliminated by retiring it (U-P2-1); `_ergonomics/approval.py` (1,014) split — extracted `approval_doctor_command`→`_approval_doctor.py` (306) and `approval_preset_command`→`_approval_preset.py` (168), leaving `approval.py` at 567. `check_god_modules` clean at threshold 800. |
 | A-P2-3 | Architecture | Expand property-based testing with Hypothesis strategies for permission-mode transitions, budget enforcement, approval-hash exactness, and audit-chain invariants. | `tests/` | Hypothesis tests exist for the four areas. | ✅ | All four invariant families are covered in `tests/test_hypothesis_invariants.py` |
 | A-P2-4 | Architecture | Populate `tests/skills/` or remove the empty directory. | `tests/skills/` | Directory is non-empty. | 🔵 | Already populated — `test_skill_loading.py` + `fixtures/` |
 | A-P2-5 | Architecture | Reconcile `tests/e2e/` (one file) with 127 acceptance tests by moving it or defining an e2e contract. | `tests/e2e/` | Clear contract or migration. | ✅ | `tests/e2e/README.md` defines the e2e/acceptance boundary and placement contract |
@@ -79,10 +79,10 @@ Legend: ✅ Done (committed) · 🟡 In progress · ⬜ Not started · 🔵 Alre
 
 | Status | Count | Items |
 | --- | --- | --- |
-| ✅ Done (verified) | 35 | S-P0-1, S-P0-2, S-P0-3, A-P0-1, A-P0-2, U-P0-1, U-P0-2, G-P0-1; S-P1-1, S-P1-2, S-P1-3, G-P1-1, G-P1-3, A-P1-1, A-P1-3, A-P1-4, A-P1-5, U-P1-1, U-P1-2, U-P1-3, U-P1-4, U-P1-5, U-P1-6; S-P2-1, S-P2-4, G-P2-1, G-P2-2, G-P2-3, G-P2-5, A-P2-1, A-P2-3, A-P2-5, U-P2-2, U-P2-3, U-P2-4 |
+| ✅ Done (verified) | 41 | S-P0-1, S-P0-2, S-P0-3, A-P0-1, A-P0-2, U-P0-1, U-P0-2, G-P0-1; S-P1-1, S-P1-2, S-P1-3, G-P1-1, G-P1-2, G-P1-3, A-P1-1, A-P1-2, A-P1-3, A-P1-4, A-P1-5, U-P1-1, U-P1-2, U-P1-3, U-P1-4, U-P1-5, U-P1-6; S-P2-1, S-P2-4, S-P2-5, G-P2-1, G-P2-2, G-P2-3, G-P2-5, A-P2-1, A-P2-2, A-P2-3, A-P2-5, U-P2-1, U-P2-2, U-P2-3, U-P2-4, U-P2-5 |
 | 🔵 Already existed | 4 | S-P2-2, S-P2-3, G-P2-4, A-P2-4 |
-| 🟡 In progress | 2 | A-P2-2, U-P2-5 |
-| ⬜ Not started | 4 | G-P1-2, A-P1-2, S-P2-5, U-P2-1 |
+| 🟡 In progress | 0 | — |
+| ⬜ Not started | 0 | — |
 
 ### Phase B Infrastructure (New, not in original register)
 
@@ -103,6 +103,6 @@ Legend: ✅ Done (committed) · 🟡 In progress · ⬜ Not started · 🔵 Alre
 1. **Sprint 1 (Trust repair)**: U-P0-1 (URL) ✅, U-P0-2 (TUI advertised semantics) ✅, G-P0-1 (schema) ✅ — complete.
 2. **Sprint 2 (Security bypasses)**: S-P0-1 (AutoMode) ✅, S-P0-2 (HMAC) ✅, S-P0-3 (library audit) ✅ — verified complete (implemented across the refactor + 5acaae7/25a234e/79cfe2e; register corrected after a fact-check found the rows stale).
 3. **Sprint 3 (Architecture debt kickoff)**: A-P0-1 (decompose the god module) ✅ and A-P0-2 (remove silent observability failures) ✅ — complete.
-4. **Sprint 4+**: finish A-P2-2 and U-P2-5; then execute G-P1-2, A-P1-2, S-P2-5, and U-P2-1 in priority order.
+4. **Sprint 4+**: A-P2-2 (CLI god-module splits), U-P2-5, G-P1-2 (GitHub tools opt-in), A-P1-2 (Any reduction), S-P2-5, and U-P2-1 (retire chat REPL) — all complete. Open follow-up: wire TUI suspend-to-checkpoint or retire the suspend/review feature (surfaced by U-P2-1).
 
 > Phase B ([review-system.md](review-system.md), [automation-plan.md](automation-plan.md), [tool-capability-review.md](tool-capability-review.md)) is designed to turn this register from a one-time list into a continuously governed work queue.
