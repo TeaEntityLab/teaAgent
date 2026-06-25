@@ -12,7 +12,7 @@ described:
 from __future__ import annotations
 
 import re
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from teaagent.tui import TeaAgentTUI
 from teaagent.tui.rendering import HELP_TEXT
@@ -49,11 +49,7 @@ def _advertised_commands() -> set[str]:
 def _make_tui() -> tuple[TeaAgentTUI, list[str]]:
     output: list[str] = []
     tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
-    controller = MagicMock()
-    controller.undo_last_run.return_value = False
-    controller.get_session_cost.return_value = 0.0
-    controller.session_state.session_cost_cents = 0.0
-    tui._chat_controller = controller
+    tui._get_chat_controller()
     return tui, output
 
 

@@ -615,35 +615,23 @@ class AgentRunner:
         digest = compute_scoped_payload_digest(tool_name, arguments)
         return digest in self.approval_policy.preapproved_payload_digests
 
-    def _execute_tool_decision(  # noqa: C901
+    def _authorize_tool_call(
         self,
         decision: ToolRequest,
         context: RunContext,
         run_id: str,
-        tool_calls: int,
         cost_cents: float,
-    ) -> tuple[int, RunContext]:
-        """Execute a tool decision with approval flow and return updated state.
-
-        Returns:
-            Tuple of (updated_tool_calls, updated_context)
-        """
-        tool = self.registry.get(decision.tool_name)
-        annotations = {
-            'read_only': tool.annotations.read_only,
-            'destructive': tool.annotations.destructive,
-            'idempotent': tool.annotations.idempotent,
-        }
+        *,
+        tool: Any,
+        annotations: dict[str, Any],
+    ) -> None:
+        """Authorize a tool call via spine, auto-mode, and approval policy."""
         if self.file_policy is not None:
             self.file_policy.assert_allowed(
                 tool_name=decision.tool_name,
                 arguments=decision.arguments,
             )
 
-        # M3-T002 Slice B: the plan gate is the EventSpine interceptor. Emitting
-        # TOOL_CALL_REQUESTED runs it; it raises ToolPermissionError if the
-        # write is blocked. The inline evaluate_write_gate was removed here —
-        # Slice A proved the interceptor's decision is identical.
         tcr_payload: dict[str, Any] = {
             'tool_name': decision.tool_name,
         }
@@ -683,7 +671,6 @@ class AgentRunner:
                 approval_request=approval_request,
             ) from None
 
-        # Auto mode: block disallowed tools, auto-approve allowed ones
         self.auto_mode_manager.validate_tool_allowed(decision.tool_name)
         auto_approval = self.auto_mode_manager.get_auto_approve_policy(
             parent_policy=self.approval_policy,
@@ -695,14 +682,8 @@ class AgentRunner:
         auto_mode_digest: str | None = None
         if auto_approval is not None:
             scoped_policy, auto_mode_digest = auto_approval
-            # Apply the scoped (payload-digest-preapproved) policy so the
-            # nine-stage assert_allowed pipeline below can authorize this call.
-            # The tool_call_approved audit event is emitted only AFTER
-            # assert_allowed succeeds (see below), so a denial elsewhere in the
-            # pipeline never leaves a false approval in the audit trail.
             self.approval_policy = scoped_policy
         try:
-            # Get plan contract from plan validator
             plan_contract = self.plan_validator.get_plan_contract()
             preapproved_by_payload_digest = (
                 not auto_mode_approved
@@ -779,7 +760,6 @@ class AgentRunner:
                             input_tokens=context.get('_input_tokens', 0),
                             output_tokens=context.get('_output_tokens', 0),
                         )
-                        # Include approval metadata in the exception for later extraction
                         raise ToolPermissionError(
                             f'Tool call pending approval: {decision.tool_name}',
                             reason_code=exc_reason_code,
@@ -795,6 +775,21 @@ class AgentRunner:
                 )
                 raise
 
+    def _dispatch_tool_call(
+        self,
+        decision: ToolRequest,
+        context: RunContext,
+        run_id: str,
+        tool_calls: int,
+        cost_cents: float,
+        annotations: dict[str, Any],
+    ) -> tuple[int, RunContext, Any | None, float]:
+        """Execute an authorized tool call.
+
+        Returns ``(tool_calls, context, result, started_at)``. When
+        ``result`` is ``None`` the execution error path already updated
+        state and the caller should return immediately.
+        """
         self.audit.record(
             'tool_call_started',
             run_id,
@@ -835,8 +830,20 @@ class AgentRunner:
             )
             if self.checkpoint_store is not None:
                 self.checkpoint_store.save(run_id, context)
-            return tool_calls, context
+            return tool_calls, context, None, tool_started_at
 
+        return tool_calls, context, result, tool_started_at
+
+    def _process_tool_result(
+        self,
+        decision: ToolRequest,
+        context: RunContext,
+        run_id: str,
+        tool_calls: int,
+        result: Any,
+        started_at: float,
+    ) -> tuple[int, RunContext]:
+        """Record a successful tool result and optionally compact context."""
         _long_meta: dict[str, Any] | None = None
         if (
             isinstance(result, str)
@@ -864,7 +871,7 @@ class AgentRunner:
 
         tool_calls += 1
         self.auto_mode_manager.record_tool_call()
-        duration_ms = round((time.monotonic() - tool_started_at) * 1000.0, 2)
+        duration_ms = round((time.monotonic() - started_at) * 1000.0, 2)
         logger.info(
             '%s completed',
             decision.tool_name,
@@ -904,6 +911,48 @@ class AgentRunner:
             )
             self.audit.record('context_compacted', run_id, summary=compacted.summary)
         return tool_calls, context
+
+    def _execute_tool_decision(
+        self,
+        decision: ToolRequest,
+        context: RunContext,
+        run_id: str,
+        tool_calls: int,
+        cost_cents: float,
+    ) -> tuple[int, RunContext]:
+        """Execute a tool decision with approval flow and return updated state."""
+        tool = self.registry.get(decision.tool_name)
+        annotations = {
+            'read_only': tool.annotations.read_only,
+            'destructive': tool.annotations.destructive,
+            'idempotent': tool.annotations.idempotent,
+        }
+        self._authorize_tool_call(
+            decision,
+            context,
+            run_id,
+            cost_cents,
+            tool=tool,
+            annotations=annotations,
+        )
+        tool_calls, context, result, started_at = self._dispatch_tool_call(
+            decision,
+            context,
+            run_id,
+            tool_calls,
+            cost_cents,
+            annotations,
+        )
+        if result is None:
+            return tool_calls, context
+        return self._process_tool_result(
+            decision,
+            context,
+            run_id,
+            tool_calls,
+            result,
+            started_at,
+        )
 
     def _handle_budget_exceeded(
         self,

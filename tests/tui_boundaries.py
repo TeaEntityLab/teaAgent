@@ -92,6 +92,27 @@ def ask_run_patches(
 
 
 @contextmanager
+def chat_typo_patches(
+    tui: TeaAgentTUI,
+    *,
+    run_result: RunResult | None = None,
+    execute_task: bool = False,
+) -> Iterator[None]:
+    """Lifecycle patches for chat-mode typo-confirmation tests."""
+    if execute_task:
+        with ask_run_patches(tui, run_result=run_result):
+            yield
+        return
+    with (
+        patch.object(tui, '_start_file_watcher'),
+        patch.object(tui, '_load_tui_state'),
+        patch.object(tui, '_save_tui_state'),
+        patch('teaagent.tui.state.create_llm_adapter'),
+    ):
+        yield
+
+
+@contextmanager
 def cost_run_boundary(
     tui: TeaAgentTUI,
     *,

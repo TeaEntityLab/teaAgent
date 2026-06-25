@@ -444,8 +444,8 @@ Modules without any module docstring (first non-import line is code):
 
 ## Implementation status (2026-06-25)
 
-**Authoritative closure register** for Tier 0–2 items below. Verified at HEAD `7593331`
-(CG-16 command-path de-mock + RISK-2 store seam). Sections §1–§9 are not updated inline.
+**Authoritative closure register** for Tier 0–2 items below. Verified at HEAD (pending commit)
+(CG-16 final de-mock + RISK-1 tool-decision split). Sections §1–§9 are not updated inline.
 
 Tracked against `docs/retrospective/06-action-register.md` (**A-P2-6**, **S-P2-5**) and harness goals in `AGENTS.md` (thin harness, centralized HTTP, governed tests).
 
@@ -482,7 +482,8 @@ Tracked against `docs/retrospective/06-action-register.md` (**A-P2-6**, **S-P2-5
 | M-06 | ✅ Done | Narrowed broad `except Exception` in `plugin_system.py`, `domain/agent_factory.py`, `backend_registry`, `external_backends.py`, `code_analysis/_client.py` |
 | M-07 | ✅ Done | `Subagent.task` / `parent_run_id` / `batch_index` properties; `SwarmManager` uses public accessors |
 | M-08 | ✅ Done | Removed duplicate `PackageNotFoundError` import from `teaagent/__init__.py` `TYPE_CHECKING` block |
-| CG-16-tail | ✅ Done | `test_tui_command_path.py` de-mocked (real `ChatSessionController`, boundary `@patch` only); RISK-2 `_create_store()` audit seam + `test_execute_task_uses_store_factory_when_audit_missing`; stale `.pyc` guard in `tests/conftest.py` |
+| CG-16-final | ✅ Done | `test_tui_typo_confirmation.py`, `test_tui_undo_scope.py`, `test_tui_command_truth.py` de-mocked (real `ChatSessionController`, `chat_typo_patches` boundary); shared `tests/tui_boundaries.py` |
+| RISK-1 | ✅ Done | `_execute_tool_decision` split → `_authorize_tool_call`, `_dispatch_tool_call`, `_process_tool_result`; `docs/reviews/runner-tool-decision-split-risk.md` |
 
 
 ---
