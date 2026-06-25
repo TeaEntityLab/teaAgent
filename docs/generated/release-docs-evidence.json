@@ -1,21 +1,21 @@
 {
   "ok": true,
-  "created_at": "2026-06-21T15:33:34+00:00",
+  "created_at": "2026-06-25T06:49:30+00:00",
   "repo_root": "/Users/teee/dev/teaagent",
   "git": {
     "branch": "main",
-    "commit": "0e8d393005b60c6b0c3b197a00ddc794b0475a13",
+    "commit": "759333114341efac78714690a83c7317a986c7d2",
     "dirty": true
   },
   "commands": [
     {
-      "cmd": "/Users/teee/dev/teaagent/.venv/bin/python3 scripts/validate_docs_consistency.py",
+      "cmd": "/Users/teee/dev/teaagent/.venv/bin/python scripts/validate_docs_consistency.py",
       "exit_code": 0,
       "stdout": "Risk register evidence coverage: 24/29 rows verified (82%)\nTicket index evidence coverage: 21/21 rows verified (100%)\nDocs consistency check passed.\n",
       "stderr": ""
     },
     {
-      "cmd": "/Users/teee/dev/teaagent/.venv/bin/python3 scripts/report_docs_aging.py --check",
+      "cmd": "/Users/teee/dev/teaagent/.venv/bin/python scripts/report_docs_aging.py --check",
       "exit_code": 0,
       "stdout": "Docs aging dashboard check passed.\n",
       "stderr": ""
@@ -23,12 +23,15 @@
   ],
   "docs_freshness": {
     "scanned": 17,
-    "needs_attention": 7,
+    "needs_attention": 11,
     "by_owner": {
       "project": 1,
       "docs": 1,
-      "daily-driver": 1,
+      "daily-driver": 2,
       "cli": 1,
+      "verification": 1,
+      "release": 1,
+      "strategy": 1,
       "governance": 2,
       "architecture": 1
     },

@@ -527,6 +527,10 @@ class TeaAgentTUI:
             ):
                 print('  (use /skill-diagnostics for full JSON report)')
         except Exception:
+            logger.debug(
+                'skills header: skills panel unavailable',
+                exc_info=True,
+            )
             print('\nSkills Loaded: (unavailable)')
 
         print('=' * columns)

@@ -48,7 +48,7 @@ or what to expect next.
 - Exception swallowing removed from ChatSessionController (CG-13 fixed).
 - Failure-card matching has stopword filtering and relevance threshold (TASK-DD2-012 fixed).
 - Memory and run store corruption warnings surfaced in preflight/daily (TASK-DD2-011 fixed).
-- TUI ask/run/cost/undo/root/resume commands all delegate to ChatSessionController (P0-A-001). Headless command-path tests (24 tests in `test_tui_command_path.py`) verify each command goes through the controller.
+- TUI ask/run/cost/undo/root/resume commands all delegate to ChatSessionController (P0-A-001). Headless command-path tests (22 tests in `test_tui_command_path.py`) verify each command goes through the controller.
 - TUI undo output explicitly labels fallback: "journal undo completed", "checkpoint restore completed", or "nothing to undo" (P0-A-003).
 - TUI help text includes a "TUI Command Reference" section documenting controller-backed command semantics (P0-A-004).
 
@@ -168,7 +168,7 @@ bug or that TeaAgent has already fixed the class.
 | TUI `session clear` now clears persisted chat messages. | The command empties the active session's `messages` list, saves it, and reports an error when no active session exists. | TUI session UX |
 | Run evidence summaries surfaced in agent mode payload. | `run_evidence` field added to agent run output with commands, tests, approvals, gaps. | — |
 | Updated daily-driver status docs. | Removed stale known issues, added recently-fixed section. | — |
-| TUI/CLI semantic parity (P0-A). | Headless command-path tests (24 tests) verify ask/run/cost/undo/root/resume delegate to ChatSessionController. TUI undo output labels journal vs checkpoint fallback. Help text includes controller-backed command reference. | P0-A-001, P0-A-002, P0-A-003, P0-A-004 |
+| TUI/CLI semantic parity (P0-A). | Headless command-path tests (22 tests) verify ask/run/cost/undo/root/resume delegate to ChatSessionController. TUI undo output labels journal vs checkpoint fallback. Help text includes controller-backed command reference. | P0-A-001, P0-A-002, P0-A-003, P0-A-004 |
 
 ## Do not rely on yet
 
