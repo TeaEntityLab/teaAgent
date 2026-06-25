@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from teaagent.tui._approval_subagents import (
     _build_approval_tree,
@@ -347,10 +348,36 @@ class TestResolveParentRunId:
 # ── tui_approve_subagent_request ────────────────────────────────────────
 
 
-def _mock_queue(approve_sync_return: bool = True) -> MagicMock:
-    q = MagicMock()
-    q.approve_request_sync.return_value = approve_sync_return
-    return q
+@dataclass
+class _FakeApprovalQueue:
+    approve_sync_return: bool = True
+    deny_sync_return: bool = True
+    approve_calls: list[str] = field(default_factory=list)
+    deny_calls: list[tuple[str, str]] = field(default_factory=list)
+
+    def approve_request_sync(self, request_id: str, approved_by: str = 'human') -> bool:
+        self.approve_calls.append(request_id)
+        return self.approve_sync_return
+
+    def deny_request_sync(
+        self,
+        request_id: str,
+        reason: str = 'Denied by human',
+        denied_by: str = 'human',
+    ) -> bool:
+        self.deny_calls.append((request_id, reason))
+        return self.deny_sync_return
+
+
+def _fake_queue(
+    *,
+    approve_sync_return: bool = True,
+    deny_sync_return: bool = True,
+) -> _FakeApprovalQueue:
+    return _FakeApprovalQueue(
+        approve_sync_return=approve_sync_return,
+        deny_sync_return=deny_sync_return,
+    )
 
 
 class TestTuiApproveSubagentRequest:
@@ -358,7 +385,7 @@ class TestTuiApproveSubagentRequest:
 
     def test_success_via_queue_sync(self) -> None:
         """Returns (True, msg) when queue.approve_request_sync succeeds."""
-        queue = _mock_queue(approve_sync_return=True)
+        queue = _fake_queue(approve_sync_return=True)
         with (
             patch(
                 'teaagent.tui._approval_subagents.try_get_approval_queue',
@@ -373,12 +400,12 @@ class TestTuiApproveSubagentRequest:
             )
         assert ok is True
         assert 'approved' in msg
-        queue.approve_request_sync.assert_called_once_with('req-1')
+        assert queue.approve_calls == ['req-1']
         mock_cross.assert_not_called()
 
     def test_fallback_to_cross_process_when_queue_fails(self) -> None:
         """Calls approve_request_cross_process when queue.approve_request_sync fails."""
-        queue = _mock_queue(approve_sync_return=False)
+        queue = _fake_queue(approve_sync_return=False)
         with (
             patch(
                 'teaagent.tui._approval_subagents.try_get_approval_queue',
@@ -417,7 +444,7 @@ class TestTuiApproveSubagentRequest:
 
     def test_returns_false_when_request_not_found(self) -> None:
         """Returns (False, msg) when both queue sync and cross-process fail."""
-        queue = _mock_queue(approve_sync_return=False)
+        queue = _fake_queue(approve_sync_return=False)
         with (
             patch(
                 'teaagent.tui._approval_subagents.try_get_approval_queue',
@@ -461,8 +488,7 @@ class TestTuiDenySubagentRequest:
 
     def test_success_via_queue_sync(self) -> None:
         """Returns (True, msg) when queue.deny_request_sync succeeds."""
-        queue = MagicMock()
-        queue.deny_request_sync.return_value = True
+        queue = _fake_queue(deny_sync_return=True)
         with (
             patch(
                 'teaagent.tui._approval_subagents.try_get_approval_queue',
@@ -477,15 +503,12 @@ class TestTuiDenySubagentRequest:
             )
         assert ok is True
         assert 'denied' in msg
-        queue.deny_request_sync.assert_called_once_with(
-            'req-1', reason='Denied by operator'
-        )
+        assert queue.deny_calls == [('req-1', 'Denied by operator')]
         mock_cross.assert_not_called()
 
     def test_fallback_to_cross_process_when_queue_fails(self) -> None:
         """Calls deny_request_cross_process when queue.deny_request_sync fails."""
-        queue = MagicMock()
-        queue.deny_request_sync.return_value = False
+        queue = _fake_queue(deny_sync_return=False)
         with (
             patch(
                 'teaagent.tui._approval_subagents.try_get_approval_queue',
@@ -505,8 +528,7 @@ class TestTuiDenySubagentRequest:
 
     def test_returns_false_when_request_not_found(self) -> None:
         """Returns (False, msg) when both queue and cross-process fail."""
-        queue = MagicMock()
-        queue.deny_request_sync.return_value = False
+        queue = _fake_queue(deny_sync_return=False)
         with (
             patch(
                 'teaagent.tui._approval_subagents.try_get_approval_queue',
@@ -525,8 +547,7 @@ class TestTuiDenySubagentRequest:
 
     def test_custom_reason_passed_through(self) -> None:
         """Custom reason string is passed to deny_request_sync."""
-        queue = MagicMock()
-        queue.deny_request_sync.return_value = True
+        queue = _fake_queue(deny_sync_return=True)
         with (
             patch(
                 'teaagent.tui._approval_subagents.try_get_approval_queue',
@@ -543,14 +564,11 @@ class TestTuiDenySubagentRequest:
                 reason='Security violation',
             )
         assert ok is True
-        queue.deny_request_sync.assert_called_once_with(
-            'req-1', reason='Security violation'
-        )
+        assert queue.deny_calls == [('req-1', 'Security violation')]
 
     def test_deny_with_custom_reason_via_cross_process(self) -> None:
         """Custom reason is passed to deny_request_cross_process when queue fails."""
-        queue = MagicMock()
-        queue.deny_request_sync.return_value = False
+        queue = _fake_queue(deny_sync_return=False)
         with (
             patch(
                 'teaagent.tui._approval_subagents.try_get_approval_queue',

@@ -6,7 +6,7 @@ import builtins
 import importlib.util
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import PropertyMock, patch
 
 import pytest
 
@@ -35,8 +35,8 @@ def test_tui_uses_prompt_toolkit_session() -> None:
                 mock_state_path.return_value = state_path
                 tui = TeaAgentTUI(root=root, input_fn=None)
 
-                # Mock output to avoid printing to console
-                tui.output_fn = MagicMock()
+                output_lines: list[str] = []
+                tui.output_fn = output_lines.append
 
                 tui.run()
 
@@ -75,6 +75,7 @@ def test_tui_falls_back_without_prompt_toolkit() -> None:
             mock_state_path.return_value = state_path
             with patch('builtins.input', side_effect=['help', 'exit']) as mock_input:
                 tui = TeaAgentTUI(root=root, input_fn=None)
-                tui.output_fn = MagicMock()
+                output_lines: list[str] = []
+                tui.output_fn = output_lines.append
                 tui.run()
                 assert mock_input.called

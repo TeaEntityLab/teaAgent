@@ -482,7 +482,7 @@ Tracked against `docs/retrospective/06-action-register.md` (**A-P2-6**, **S-P2-5
 | M-06 | ✅ Done | Narrowed broad `except Exception` in `plugin_system.py`, `domain/agent_factory.py`, `backend_registry`, `external_backends.py`, `code_analysis/_client.py` |
 | M-07 | ✅ Done | `Subagent.task` / `parent_run_id` / `batch_index` properties; `SwarmManager` uses public accessors |
 | M-08 | ✅ Done | Removed duplicate `PackageNotFoundError` import from `teaagent/__init__.py` `TYPE_CHECKING` block |
-| CG-16-final | ✅ Done | `test_tui_typo_confirmation.py`, `test_tui_undo_scope.py`, `test_tui_command_truth.py`, `test_tui_setup.py` de-mocked (real controller/stub + `WizardResult`, boundary `@patch` only); shared `tests/tui_boundaries.py` |
+| CG-16-final | ✅ Done | `test_tui_typo_confirmation.py`, `test_tui_undo_scope.py`, `test_tui_command_truth.py`, `test_tui_setup.py`, `test_tui_interactive.py`, `test_tui_approval_subagents.py` de-mocked (real controller/stub/queue fake, boundary `@patch` only); shared `tests/tui_boundaries.py` |
 | RISK-1 | ✅ Done | `_execute_tool_decision` split → `_authorize_tool_call`, `_dispatch_tool_call`, `_process_tool_result`; `docs/reviews/runner-tool-decision-split-risk.md` |
 
 
