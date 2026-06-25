@@ -11,79 +11,16 @@ from __future__ import annotations
 
 import json
 import tempfile
-from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterator
 from unittest.mock import patch
 
 import pytest
+from tui_boundaries import ask_run_patches, completed_run_result
 
 from teaagent.chat_session_controller import ChatSessionController
 from teaagent.run_store import RunStore
 from teaagent.tui import TeaAgentTUI
 from teaagent.tui._commands import _safe_run_agent_task
-from teaagent.types import FinalAnswer, RunResult
-
-
-def _completed_run_result(
-    *,
-    run_id: str = 'cost-test-run',
-    cost_cents: float = 0.0,
-    content: str = 'done',
-) -> RunResult:
-    return RunResult(
-        run_id=run_id,
-        status='completed',
-        iterations=1,
-        tool_calls=0,
-        cost_cents=cost_cents,
-        input_tokens=100,
-        output_tokens=50,
-        final_answer=FinalAnswer(content=content),
-        metadata={},
-        error_message=None,
-    )
-
-
-@contextmanager
-def _command_path_boundary(
-    *,
-    run_result: RunResult | None = None,
-    patch_show_run: bool = True,
-) -> Iterator[None]:
-    """CG-16 boundary: real controller/store, mock LLM + show_run only."""
-    result = run_result or _completed_run_result()
-    patches = [
-        patch(
-            'teaagent.chat_session_controller.run_chat_agent',
-            return_value=result,
-        ),
-        patch('teaagent.tui.state.create_llm_adapter'),
-    ]
-    if patch_show_run:
-        patches.append(patch('teaagent.tui.core.RunStore.show_run', return_value=[]))
-    from contextlib import ExitStack
-
-    with ExitStack() as stack:
-        for item in patches:
-            stack.enter_context(item)
-        yield
-
-
-@contextmanager
-def _ask_run_patches(
-    tui: TeaAgentTUI,
-    *,
-    run_result: RunResult | None = None,
-    patch_show_run: bool = True,
-) -> Iterator[None]:
-    with (
-        patch.object(tui, '_start_file_watcher'),
-        patch.object(tui, '_load_tui_state'),
-        patch.object(tui, '_save_tui_state'),
-        _command_path_boundary(run_result=run_result, patch_show_run=patch_show_run),
-    ):
-        yield
 
 
 def test_ask_calls_controller_execute_task() -> None:
@@ -91,7 +28,7 @@ def test_ask_calls_controller_execute_task() -> None:
         output: list[str] = []
         tui = TeaAgentTUI(root=tmp, input_fn=lambda _: '', output_fn=output.append)
         with (
-            _ask_run_patches(tui),
+            ask_run_patches(tui),
             patch.object(
                 ChatSessionController,
                 'execute_task',
@@ -109,7 +46,7 @@ def test_run_calls_controller_execute_task() -> None:
         output: list[str] = []
         tui = TeaAgentTUI(root=tmp, input_fn=lambda _: '', output_fn=output.append)
         with (
-            _ask_run_patches(tui),
+            ask_run_patches(tui),
             patch.object(
                 ChatSessionController,
                 'execute_task',
@@ -127,7 +64,7 @@ def test_ask_does_not_bypass_controller() -> None:
         output: list[str] = []
         tui = TeaAgentTUI(root=tmp, input_fn=lambda _: '', output_fn=output.append)
         with (
-            _ask_run_patches(tui),
+            ask_run_patches(tui),
             patch.object(
                 ChatSessionController,
                 'execute_task',
@@ -328,9 +265,9 @@ def test_resume_goes_through_controller_execute_task() -> None:
         )
 
         with (
-            _ask_run_patches(
+            ask_run_patches(
                 tui,
-                run_result=_completed_run_result(run_id=run_id),
+                run_result=completed_run_result(run_id=run_id),
                 patch_show_run=False,
             ),
             patch.object(
@@ -421,7 +358,7 @@ def test_run_agent_task_accumulates_cost_in_controller() -> None:
             patch.object(tui, '_save_tui_state'),
             patch(
                 'teaagent.chat_session_controller.run_chat_agent',
-                return_value=_completed_run_result(cost_cents=175.0),
+                return_value=completed_run_result(cost_cents=175.0),
             ),
             patch('teaagent.tui.core.RunStore.show_run', return_value=[]),
             patch('teaagent.tui.state.create_llm_adapter'),

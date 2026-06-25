@@ -11,57 +11,11 @@ Tests for:
 from __future__ import annotations
 
 import tempfile
-from contextlib import contextmanager
-from typing import Iterator
-from unittest.mock import MagicMock, patch
+
+from run_store_fixtures import write_run_events
+from tui_boundaries import completed_run_result, cost_run_boundary
 
 from teaagent.tui import TeaAgentTUI, _format_budget_cents, _format_remaining_cents
-from teaagent.types import FinalAnswer, RunResult
-
-
-def _completed_run_result(
-    *,
-    run_id: str = 'cost-test-run',
-    cost_cents: float = 0.0,
-    content: str = 'done',
-    iterations: int = 1,
-    tool_calls: int = 0,
-    input_tokens: int = 100,
-    output_tokens: int = 50,
-) -> RunResult:
-    return RunResult(
-        run_id=run_id,
-        status='completed',
-        iterations=iterations,
-        tool_calls=tool_calls,
-        cost_cents=cost_cents,
-        input_tokens=input_tokens,
-        output_tokens=output_tokens,
-        final_answer=FinalAnswer(content=content),
-        metadata={},
-        error_message=None,
-    )
-
-
-@contextmanager
-def _cost_run_boundary(
-    tui: TeaAgentTUI,
-    *,
-    run_result: RunResult | None = None,
-) -> Iterator[MagicMock]:
-    result = run_result or _completed_run_result()
-    with (
-        patch.object(tui, '_start_file_watcher'),
-        patch.object(tui, '_load_tui_state'),
-        patch.object(tui, '_save_tui_state'),
-        patch(
-            'teaagent.chat_session_controller.run_chat_agent',
-            return_value=result,
-        ) as mock_run,
-        patch('teaagent.tui.core.RunStore.show_run', return_value=[]),
-        patch('teaagent.tui.state.create_llm_adapter'),
-    ):
-        yield mock_run
 
 
 def test_cost_state_defaults_to_unlimited_when_no_cap() -> None:
@@ -204,9 +158,9 @@ def test_mocked_task_accumulates_cost_via_command_path() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         output: list[str] = []
         tui = TeaAgentTUI(root=tmp, input_fn=lambda _: '', output_fn=output.append)
-        with _cost_run_boundary(
+        with cost_run_boundary(
             tui,
-            run_result=_completed_run_result(
+            run_result=completed_run_result(
                 run_id='test-run-1',
                 cost_cents=150.0,
                 iterations=2,
@@ -228,22 +182,22 @@ def test_multi_task_cost_accumulation() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         output: list[str] = []
         tui = TeaAgentTUI(root=tmp, input_fn=lambda _: '', output_fn=output.append)
-        with _cost_run_boundary(tui) as mock_run:
-            mock_run.return_value = _completed_run_result(
+        with cost_run_boundary(tui) as mock_run:
+            mock_run.return_value = completed_run_result(
                 run_id='test-run-1',
                 cost_cents=150.0,
             )
             tui._run_agent_task('first task')
             assert tui._session_cost_cents == 150.0
 
-            mock_run.return_value = _completed_run_result(
+            mock_run.return_value = completed_run_result(
                 run_id='test-run-2',
                 cost_cents=75.0,
             )
             tui._run_agent_task('second task')
             assert tui._session_cost_cents == 225.0
 
-            mock_run.return_value = _completed_run_result(
+            mock_run.return_value = completed_run_result(
                 run_id='test-run-3',
                 cost_cents=25.0,
             )
@@ -260,9 +214,9 @@ def test_cost_accumulation_with_estimated_state() -> None:
         output: list[str] = []
         tui = TeaAgentTUI(root=tmp, input_fn=lambda _: '', output_fn=output.append)
         tui._max_cost_budget_cents = 1000
-        with _cost_run_boundary(
+        with cost_run_boundary(
             tui,
-            run_result=_completed_run_result(run_id='test-run', cost_cents=200.0),
+            run_result=completed_run_result(run_id='test-run', cost_cents=200.0),
         ):
             tui._run_agent_task('test task')
             assert tui._determine_cost_state() == 'estimated'
@@ -273,9 +227,9 @@ def test_cost_accumulation_with_unlimited_state() -> None:
         output: list[str] = []
         tui = TeaAgentTUI(root=tmp, input_fn=lambda _: '', output_fn=output.append)
         tui._max_cost_budget_cents = None
-        with _cost_run_boundary(
+        with cost_run_boundary(
             tui,
-            run_result=_completed_run_result(run_id='test-run', cost_cents=500.0),
+            run_result=completed_run_result(run_id='test-run', cost_cents=500.0),
         ):
             tui._run_agent_task('test task')
             assert tui._session_cost_cents == 500.0
@@ -439,61 +393,57 @@ def test_evidence_summary_has_cost_state_and_cap() -> None:
 
 
 def test_build_evidence_summary_cost_state() -> None:
-    from unittest.mock import MagicMock
-
     from teaagent.evidence_summary import build_evidence_summary
+    from teaagent.run_store import RunStore
 
-    with patch('teaagent.evidence_summary.RunStore') as mock_store_cls:
-        mock_store = MagicMock()
-        mock_store.show_run.return_value = [
-            {
-                'event_type': 'run_started',
-                'payload': {},
-                'created_at': '2026-01-01T00:00:00',
-            },
-            {
-                'event_type': 'tool_call',
-                'payload': {'estimated_cost_cents': 150},
-                'created_at': '2026-01-01T00:01:00',
-            },
-            {
-                'event_type': 'run_completed',
-                'payload': {'cost_cents': 0},
-                'created_at': '2026-01-01T00:02:00',
-            },
-        ]
-        mock_store_cls.return_value = mock_store
-
+    events = [
+        {
+            'event_type': 'run_started',
+            'payload': {},
+            'created_at': '2026-01-01T00:00:00',
+        },
+        {
+            'event_type': 'tool_call',
+            'payload': {'estimated_cost_cents': 150},
+            'created_at': '2026-01-01T00:01:00',
+        },
+        {
+            'event_type': 'run_completed',
+            'payload': {'cost_cents': 0},
+            'created_at': '2026-01-01T00:02:00',
+        },
+    ]
+    with tempfile.TemporaryDirectory() as tmpdir:
+        write_run_events(tmpdir, 'test-run', events)
+        store = RunStore(tmpdir)
         summary = build_evidence_summary(
-            mock_store, 'test-run', '.', budget_cap_cents=1000
+            store, 'test-run', tmpdir, budget_cap_cents=1000
         )
         assert summary.cost_state == 'estimated'
         assert summary.budget_cap_cents == 1000
 
 
 def test_build_evidence_summary_unlimited_state() -> None:
-    from unittest.mock import MagicMock
-
     from teaagent.evidence_summary import build_evidence_summary
+    from teaagent.run_store import RunStore
 
-    with patch('teaagent.evidence_summary.RunStore') as mock_store_cls:
-        mock_store = MagicMock()
-        mock_store.show_run.return_value = [
-            {
-                'event_type': 'run_started',
-                'payload': {},
-                'created_at': '2026-01-01T00:00:00',
-            },
-            {
-                'event_type': 'run_completed',
-                'payload': {'cost_cents': 500},
-                'created_at': '2026-01-01T00:02:00',
-            },
-        ]
-        mock_store_cls.return_value = mock_store
-
+    events = [
+        {
+            'event_type': 'run_started',
+            'payload': {},
+            'created_at': '2026-01-01T00:00:00',
+        },
+        {
+            'event_type': 'run_completed',
+            'payload': {'cost_cents': 500},
+            'created_at': '2026-01-01T00:02:00',
+        },
+    ]
+    with tempfile.TemporaryDirectory() as tmpdir:
+        write_run_events(tmpdir, 'test-run', events)
+        store = RunStore(tmpdir)
         summary = build_evidence_summary(
-            mock_store, 'test-run', '.', budget_cap_cents=None
+            store, 'test-run', tmpdir, budget_cap_cents=None
         )
         assert summary.cost_state == 'unlimited'
         assert summary.budget_cap_cents is None

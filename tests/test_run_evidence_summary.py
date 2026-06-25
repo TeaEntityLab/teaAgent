@@ -1,8 +1,8 @@
 """Tests for run evidence summary extraction."""
 
-import json
 import tempfile
-from pathlib import Path
+
+from run_store_fixtures import write_run_events, write_undo_journal
 
 from teaagent.evidence_summary import (
     RunEvidenceSummary,
@@ -10,22 +10,6 @@ from teaagent.evidence_summary import (
     summarize_run_events,
 )
 from teaagent.run_store import RunStore
-
-
-def _write_run_events(root: str, run_id: str, events: list[dict]) -> Path:
-    store = RunStore(root)
-    run_path = store.run_path(run_id)
-    lines = '\n'.join(json.dumps(e, sort_keys=True) for e in events) + '\n'
-    run_path.write_text(lines, encoding='utf-8')
-    return run_path
-
-
-def _write_undo_journal(root: str, run_id: str) -> Path:
-    store = RunStore(root)
-    undo_path = store.undo_path(run_id)
-    undo_path.parent.mkdir(parents=True, exist_ok=True)
-    undo_path.write_text(json.dumps({'entry': 'fake'}) + '\n', encoding='utf-8')
-    return undo_path
 
 
 class TestRunEvidenceSummary:
@@ -59,7 +43,7 @@ class TestRunEvidenceSummary:
             },
         ]
         with tempfile.TemporaryDirectory() as tmpdir:
-            _write_run_events(tmpdir, 'test-success', events)
+            write_run_events(tmpdir, 'test-success', events)
             store = RunStore(tmpdir)
             summary = build_evidence_summary(store, 'test-success', tmpdir)
             assert summary.run_id == 'test-success'
@@ -109,7 +93,7 @@ class TestRunEvidenceSummary:
             },
         ]
         with tempfile.TemporaryDirectory() as tmpdir:
-            _write_run_events(tmpdir, 'test-files', events)
+            write_run_events(tmpdir, 'test-files', events)
             store = RunStore(tmpdir)
             summary = build_evidence_summary(store, 'test-files', tmpdir)
             assert summary.status == 'success'
@@ -142,7 +126,7 @@ class TestRunEvidenceSummary:
             },
         ]
         with tempfile.TemporaryDirectory() as tmpdir:
-            _write_run_events(tmpdir, 'test-cost', events)
+            write_run_events(tmpdir, 'test-cost', events)
             store = RunStore(tmpdir)
             summary = build_evidence_summary(store, 'test-cost', tmpdir)
             assert summary.total_cost_cents == 700
@@ -161,8 +145,8 @@ class TestRunEvidenceSummary:
             },
         ]
         with tempfile.TemporaryDirectory() as tmpdir:
-            _write_run_events(tmpdir, 'test-rollback', events)
-            _write_undo_journal(tmpdir, 'test-rollback')
+            write_run_events(tmpdir, 'test-rollback', events)
+            write_undo_journal(tmpdir, 'test-rollback')
             store = RunStore(tmpdir)
             summary = build_evidence_summary(store, 'test-rollback', tmpdir)
             assert summary.rollback_available is True
@@ -185,7 +169,7 @@ class TestRunEvidenceSummary:
             },
         ]
         with tempfile.TemporaryDirectory() as tmpdir:
-            _write_run_events(tmpdir, 'test-failure', events)
+            write_run_events(tmpdir, 'test-failure', events)
             store = RunStore(tmpdir)
             summary = build_evidence_summary(store, 'test-failure', tmpdir)
             assert summary.status == 'failure'
@@ -206,7 +190,7 @@ class TestRunEvidenceSummary:
             },
         ]
         with tempfile.TemporaryDirectory() as tmpdir:
-            _write_run_events(tmpdir, 'test-pending', events)
+            write_run_events(tmpdir, 'test-pending', events)
             store = RunStore(tmpdir)
             summary = build_evidence_summary(store, 'test-pending', tmpdir)
             assert summary.status == 'pending_approval'
@@ -252,7 +236,7 @@ class TestRunEvidenceSummary:
             },
         ]
         with tempfile.TemporaryDirectory() as tmpdir:
-            _write_run_events(tmpdir, 'test-ct', events)
+            write_run_events(tmpdir, 'test-ct', events)
             store = RunStore(tmpdir)
             summary = build_evidence_summary(store, 'test-ct', tmpdir)
             assert len(summary.commands_run) == 1
@@ -303,7 +287,7 @@ class TestRunEvidenceSummary:
             },
         ]
         with tempfile.TemporaryDirectory() as tmpdir:
-            _write_run_events(tmpdir, 'test-approvals', events)
+            write_run_events(tmpdir, 'test-approvals', events)
             store = RunStore(tmpdir)
             summary = build_evidence_summary(store, 'test-approvals', tmpdir)
             assert len(summary.approvals) == 2

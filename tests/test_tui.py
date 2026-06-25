@@ -4,55 +4,19 @@ import io
 import json
 import tempfile
 import unittest
-from contextlib import contextmanager, redirect_stdout
+from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import PropertyMock, patch
 
 from conftest import FakeAdapter
+from tui_boundaries import completed_run_result, patch_run_agent_task_boundary
 
 from teaagent.cli import main
 from teaagent.ergonomics._approval_grants import _compute_argument_digest
 from teaagent.graphqlite_store import GraphQLiteRuntimeError
 from teaagent.tui import TeaAgentTUI
-from teaagent.types import FinalAnswer, PermissionMode, RunResult
+from teaagent.types import PermissionMode
 from test_support import can_bind_loopback
-
-
-def _completed_run_result(
-    *,
-    run_id: str = 'test-run',
-    cost_cents: float = 0.0,
-    content: str = 'ok',
-    input_tokens: int = 0,
-    output_tokens: int = 0,
-) -> RunResult:
-    return RunResult(
-        run_id=run_id,
-        status='completed',
-        iterations=1,
-        tool_calls=0,
-        cost_cents=cost_cents,
-        input_tokens=input_tokens,
-        output_tokens=output_tokens,
-        final_answer=FinalAnswer(content=content),
-        metadata={},
-        error_message=None,
-    )
-
-
-@contextmanager
-def _patch_run_agent_task_boundary(*, run_result: RunResult | None = None):
-    """Boundary patches for TUI _run_agent_task (CG-16: real RunStore, mock LLM only)."""
-    result = run_result or _completed_run_result()
-    with (
-        patch(
-            'teaagent.chat_session_controller.run_chat_agent',
-            return_value=result,
-        ) as mock_run,
-        patch('teaagent.tui.core.RunStore.show_run', return_value=[]),
-        patch('teaagent.tui.state.create_llm_adapter'),
-    ):
-        yield mock_run
 
 
 class CapturingAdapterFactory:
@@ -1412,7 +1376,7 @@ class TUITests(unittest.TestCase):
                 patch.object(tui, '_start_file_watcher'),
                 patch.object(tui, '_load_tui_state'),
                 patch.object(tui, '_save_tui_state'),
-                _patch_run_agent_task_boundary() as mock_run,
+                patch_run_agent_task_boundary() as mock_run,
             ):
                 tui._run_agent_task('test task')
 
@@ -1430,7 +1394,7 @@ class TUITests(unittest.TestCase):
                 patch.object(tui, '_start_file_watcher'),
                 patch.object(tui, '_load_tui_state'),
                 patch.object(tui, '_save_tui_state'),
-                _patch_run_agent_task_boundary() as mock_run,
+                patch_run_agent_task_boundary() as mock_run,
             ):
                 tui._run_agent_task('test task')
 
@@ -1463,8 +1427,8 @@ class TUITests(unittest.TestCase):
             tui = TeaAgentTUI(
                 root=tmpdir, input_fn=lambda _: '', output_fn=output.append
             )
-            with _patch_run_agent_task_boundary() as mock_run:
-                mock_run.return_value = _completed_run_result(
+            with patch_run_agent_task_boundary() as mock_run:
+                mock_run.return_value = completed_run_result(
                     cost_cents=150.0, input_tokens=100, output_tokens=50
                 )
 
@@ -1472,7 +1436,7 @@ class TUITests(unittest.TestCase):
                 tui._run_agent_task('test task')
                 self.assertEqual(tui._session_cost_cents, 150.0)
 
-                mock_run.return_value = _completed_run_result(cost_cents=75.0)
+                mock_run.return_value = completed_run_result(cost_cents=75.0)
                 tui._run_agent_task('second task')
                 self.assertEqual(tui._session_cost_cents, 225.0)
 
@@ -1679,7 +1643,7 @@ class TUITests(unittest.TestCase):
                 patch.object(tui, '_start_file_watcher'),
                 patch.object(tui, '_load_tui_state'),
                 patch.object(tui, '_save_tui_state'),
-                _patch_run_agent_task_boundary() as mock_run,
+                patch_run_agent_task_boundary() as mock_run,
             ):
                 tui._run_agent_task('test task')
 
