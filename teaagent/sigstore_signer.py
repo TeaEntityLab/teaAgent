@@ -10,6 +10,7 @@ from __future__ import annotations
 import base64
 import logging
 import os
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
 
@@ -68,6 +69,18 @@ def detect_ci_oidc_token() -> str | None:
         return os.getenv('GOOGLE_OIDC_TOKEN')
 
     return None
+
+
+@dataclass(frozen=True)
+class SigstoreVerificationConfig:
+    """Grouped parameters for :meth:`SigstoreSigner.verify`."""
+
+    bundle_path: Path
+    signature: str
+    certificate: str
+    identity: str | None = None
+    issuer: str | None = None
+    offline: bool = False
 
 
 class SigstoreSigner:
@@ -191,6 +204,17 @@ class SigstoreSigner:
         except (ImportError, OSError, ValueError, TypeError, RuntimeError) as exc:
             logger.warning('Sigstore verification failed: %s', exc)
             raise ValueError(f'Sigstore verification failed: {exc}') from exc
+
+    def verify_with_config(self, config: SigstoreVerificationConfig) -> bool:
+        """Verify a bundle signature from a grouped :class:`SigstoreVerificationConfig`."""
+        return self.verify(
+            config.bundle_path,
+            config.signature,
+            config.certificate,
+            identity=config.identity,
+            issuer=config.issuer,
+            offline=config.offline,
+        )
 
 
 class TSBProvenanceVerifier:

@@ -10,6 +10,7 @@ import pytest
 
 from teaagent.sigstore_signer import (
     SIGSTORE_AVAILABLE,
+    SigstoreVerificationConfig,
     TSBProvenanceVerifier,
 )
 
@@ -123,6 +124,37 @@ def test_verify_bundle_success() -> None:
             )
 
             assert result
+            mock_verifier.verify.assert_called_once()
+    finally:
+        if tmp_path and tmp_path.exists():
+            tmp.cleanup()
+            assert not tmp_path.exists(), (
+                f'Temporary directory {tmp_path} was not cleaned up'
+            )
+
+
+@pytest.mark.skipif(not SIGSTORE_AVAILABLE, reason='sigstore-python not installed')
+def test_verify_with_config_dataclass() -> None:
+    """Test verification via grouped SigstoreVerificationConfig."""
+    tmp_path = None
+    try:
+        tmp = tempfile.TemporaryDirectory()
+        tmp_path = Path(tmp.name)
+        bundle_path = tmp_path / 'bundle.tsb'
+        bundle_path.write_bytes(b'test bundle content')
+
+        with patch('teaagent.sigstore_signer.Verifier') as mock_verifier_cls:
+            mock_verifier = Mock()
+            mock_verifier.verify.return_value = Mock()
+            mock_verifier_cls.production.return_value = mock_verifier
+
+            signer = SigstoreSigner()
+            config = SigstoreVerificationConfig(
+                bundle_path=bundle_path,
+                signature='dGVzdF9zaWduYXR1cmU=',
+                certificate='test_certificate',
+            )
+            assert signer.verify_with_config(config)
             mock_verifier.verify.assert_called_once()
     finally:
         if tmp_path and tmp_path.exists():

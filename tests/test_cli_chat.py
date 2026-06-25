@@ -5,11 +5,13 @@ from __future__ import annotations
 import argparse
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
+from conftest import FakeAdapter
 
 from teaagent.chat_agent import ChatAgentConfig
+from teaagent.chat_session_controller import ChatSessionController, SessionState
 from teaagent.cli._handlers._agent import agent_resume_command, agent_run_task
 from teaagent.cli._handlers._agent.resume import suspend_to_background
 from teaagent.cli._handlers._chat import chat_command
@@ -17,6 +19,8 @@ from teaagent.cli._handlers.agent_review import interactive_review_mode
 from teaagent.cli._handlers.chat_commands import execute_shell_command
 from teaagent.cli._handlers.chat_completion import complete_file_path, complete_symbol
 from teaagent.run_store import RunStore
+from teaagent.run_undo import UndoJournal
+from teaagent.types import AuditLogger
 
 
 def test_chat_command_with_invalid_args():
@@ -129,13 +133,8 @@ def test_suspend_to_background_no_branch_switch(monkeypatch, capsys):
         assert '--background' not in captured.out
 
 
-def test_chat_session_controller_execute_task(monkeypatch, capsys):
+def test_chat_session_controller_execute_task(capsys):
     """Test ChatSessionController executes tasks with consistent behavior (CG-01, CG-03)."""
-    from unittest.mock import MagicMock, patch
-
-    from teaagent.chat_session_controller import ChatSessionController, SessionState
-    from teaagent.types import FinalAnswer, RunResult
-
     with tempfile.TemporaryDirectory() as tmpdir:
         session_state = SessionState()
         output_messages = []
@@ -149,60 +148,42 @@ def test_chat_session_controller_execute_task(monkeypatch, capsys):
             session_state=session_state,
         )
 
-        # Mock run_chat_agent to return a successful result
-        success_result = RunResult(
-            run_id='test-run-1',
-            final_answer=FinalAnswer(content='Test answer'),
-            iterations=1,
-            tool_calls=0,
-            status='completed',
-            cost_cents=15.0,
-            input_tokens=100,
-            output_tokens=50,
+        adapter = FakeAdapter(['{"type":"final","content":"Test answer"}'])
+        store = RunStore(tmpdir)
+        audit = store.audit_logger()
+        journal = UndoJournal(tmpdir)
+        audit.add_sink(journal)
+
+        config = ChatAgentConfig.from_root(
+            tmpdir,
+            model='fake/fake-model',
+            max_iterations=3,
+            max_tool_calls=2,
+        )
+        execution = controller.execute_task(
+            'test task',
+            config,
+            adapter=adapter,
+            audit=audit,
+            undo_journal=journal,
         )
 
-        # Mock RunStore, AuditLogger, and UndoJournal
-        with (
-            patch('teaagent.chat_session_controller.RunStore') as mock_store_class,
-            patch('teaagent.chat_session_controller.UndoJournal') as mock_journal_class,
-            patch(
-                'teaagent.chat_session_controller.run_chat_agent'
-            ) as mock_run_chat_agent,
-        ):
-            mock_store = MagicMock()
-            mock_store_class.return_value = mock_store
-            mock_audit = MagicMock()
-            mock_store.audit_logger.return_value = mock_audit
-            mock_store.logger_for_result = MagicMock()
-            mock_store.undo_path = MagicMock(return_value=tmpdir + '/undo.jsonl')
-
-            mock_journal = MagicMock()
-            mock_journal_class.return_value = mock_journal
-            mock_journal.has_entries = False
-            mock_journal.save_to = MagicMock()
-
-            mock_run_chat_agent.return_value = success_result
-
-            config = ChatAgentConfig.from_root(tmpdir, model='gpt/gpt-4')
-            controller.execute_task('test task', config)
-
-            # Should print answer (CG-01)
-            assert 'Test answer' in output_messages
-            # Should update session cost (CG-03)
-            assert session_state.session_cost_cents == 15.0
-            # Should append observation
-            assert len(session_state.observations) == 1
-            assert session_state.observations[0]['cost_cents'] == 15.0
+        # Should print answer (CG-01)
+        assert 'Test answer' in output_messages
+        # Should update session cost (CG-03)
+        assert session_state.session_cost_cents == execution.cost_cents
+        # Should append observation
+        assert len(session_state.observations) == 1
+        assert session_state.observations[0]['cost_cents'] == execution.cost_cents
 
 
-def test_chat_session_controller_undo(monkeypatch, capsys):
+def test_chat_session_controller_undo(capsys):
     """Test ChatSessionController undo uses UndoJournal (CG-02)."""
-    from unittest.mock import MagicMock, patch
-
-    from teaagent.chat_session_controller import ChatSessionController, SessionState
-    from teaagent.run_undo import UndoResult
-
     with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        existing = root / 'file1.txt'
+        existing.write_text('before\n', encoding='utf-8')
+
         session_state = SessionState()
         output_messages = []
 
@@ -215,41 +196,57 @@ def test_chat_session_controller_undo(monkeypatch, capsys):
             session_state=session_state,
         )
 
-        # Mock RunStore and UndoJournal
-        with (
-            patch('teaagent.chat_session_controller.RunStore') as mock_store_class,
-            patch('teaagent.chat_session_controller.UndoJournal') as mock_journal_class,
-        ):
-            mock_store = MagicMock()
-            mock_store_class.return_value = mock_store
-            mock_store.latest_run_with_undo.return_value = 'test-run-id'
-            undo_path = Path(tmpdir) / 'undo.jsonl'
-            undo_path.touch()  # Create file
-            mock_store.undo_path.return_value = undo_path
+        adapter = FakeAdapter(
+            [
+                (
+                    '{"type":"tool","tool_name":"workspace_write_file",'
+                    '"arguments":{"path":"file1.txt","content":"after\\n"},'
+                    '"call_id":"write-existing"}'
+                ),
+                '{"type":"final","content":"writes complete"}',
+            ]
+        )
+        store = RunStore(tmpdir)
+        audit = store.audit_logger()
+        journal = UndoJournal(tmpdir)
+        audit.add_sink(journal)
 
-            mock_journal = MagicMock()
-            mock_journal_class.return_value = mock_journal
-            mock_journal.restore.return_value = UndoResult(
-                restored=['file1.txt'],
-                deleted=[],
-                errors=[],
-            )
+        config = ChatAgentConfig.from_root(
+            tmpdir,
+            allow_destructive=True,
+            max_iterations=5,
+            max_tool_calls=5,
+        )
+        execution = controller.execute_task(
+            'Update file1.txt',
+            config,
+            adapter=adapter,
+            audit=audit,
+            undo_journal=journal,
+        )
+        assert existing.read_text(encoding='utf-8') == 'after\n'
 
-            result = controller.undo_last_run()
+        undo_path = store.undo_path(execution.run_result.run_id)
+        assert undo_path.is_file()
 
-            # Should succeed
-            assert result is True
-            # Should print success message
-            assert any('journal undo completed' in msg for msg in output_messages)
-            # Should clean up journal
-            assert undo_path.exists() is False  # File should be unlinked
+        result = controller.undo_last_run()
+
+        assert result is True
+        assert any('journal undo completed' in msg for msg in output_messages)
+        assert existing.read_text(encoding='utf-8') == 'before\n'
+        assert undo_path.exists() is False
 
 
 def test_controller_surfaces_save_failure():
     """TICKET-13: A save failure in undo_journal is not swallowed."""
-    from unittest.mock import patch
 
-    from teaagent.chat_session_controller import ChatSessionController, SessionState
+    class _BrokenUndoJournal(UndoJournal):
+        @property
+        def has_entries(self) -> bool:
+            return True
+
+        def save_to(self, path: Path) -> None:
+            raise AttributeError('injected: bad attr')
 
     with tempfile.TemporaryDirectory() as tmpdir:
         session_state = SessionState()
@@ -264,66 +261,46 @@ def test_controller_surfaces_save_failure():
             session_state=session_state,
         )
 
-        # Create a bad journal that raises AttributeError on save
-        bad_journal = MagicMock()
-        bad_journal.has_entries = True
-        bad_journal.save_to.side_effect = AttributeError('injected: bad attr')
+        adapter = FakeAdapter(['{"type":"final","content":"ok"}'])
+        audit = AuditLogger(path=Path(tmpdir) / '.teaagent' / 'audit.jsonl')
+        config = ChatAgentConfig.from_root(
+            tmpdir,
+            model='fake/fake-model',
+            max_iterations=3,
+            max_tool_calls=2,
+        )
 
-        # Create a mock config
-        mock_config = MagicMock()
-        mock_config.model = 'gpt-4'
-
-        # Create a mock audit logger
-        mock_audit = MagicMock()
-        mock_audit.path = Path(tmpdir) / 'audit.jsonl'
-
-        with (
-            patch('teaagent.chat_session_controller.run_chat_agent') as mock_run,
-            patch('teaagent.chat_session_controller.RunStore') as mock_store,
-        ):
-            mock_run.return_value = MagicMock(
-                status='completed',
-                cost_cents=0,
-                run_id='r1',
-                final_answer=MagicMock(content='ok'),
-                error_message=None,
+        with pytest.raises(AttributeError, match='injected'):
+            controller.execute_task(
+                'test task',
+                config,
+                adapter=adapter,
+                audit=audit,
+                undo_journal=_BrokenUndoJournal(tmpdir),
             )
-            mock_store.return_value.undo_path.return_value = Path(tmpdir) / 'undo.jsonl'
-            mock_store.return_value.logger_for_result.return_value = None
-
-            # Should raise AttributeError, not swallow it
-            with pytest.raises(AttributeError, match='injected'):
-                controller.execute_task(
-                    'test task',
-                    adapter=None,
-                    config=mock_config,
-                    undo_journal=bad_journal,
-                    audit=mock_audit,
-                )
 
 
 def test_cli_default_entry_launches_chat():
     """Test that running CLI with no arguments defaults to agent chat command."""
-    from unittest.mock import MagicMock, patch
-
     from teaagent.cli import main
 
-    # Mock the chat_command to verify it's called
     chat_called = []
 
     def mock_chat_command(args):
         chat_called.append(True)
         return 0
 
+    def _noop_injected(*_args, **_kwargs):
+        return None
+
     with patch('teaagent.cli.chat_command', side_effect=mock_chat_command):
-        # Simulate running with no arguments
         result = main(
             argv=[],
-            _adapter_factory=MagicMock(),
-            _serve_mcp_http=MagicMock(),
-            _check_graphqlite=MagicMock(),
-            _check_llm=MagicMock(),
-            _run_model_conformance=MagicMock(),
+            _adapter_factory=_noop_injected,
+            _serve_mcp_http=_noop_injected,
+            _check_graphqlite=_noop_injected,
+            _check_llm=_noop_injected,
+            _run_model_conformance=_noop_injected,
         )
 
     assert len(chat_called) == 1

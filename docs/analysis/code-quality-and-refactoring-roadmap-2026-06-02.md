@@ -440,7 +440,7 @@ Tracked against `docs/retrospective/06-action-register.md` (**A-P2-6**, **S-P2-5
 | QW-10 | ✅ Done | `# nosec B608` on safe SQL f-strings (`schema_migration`, `context_bus`) |
 | QW-11 | ✅ Done | `tempfile.gettempdir()` in `tsb_format.py` |
 | 1c | ✅ Done | Explicit imports in `git_sandbox.py` shim (no wildcard import) |
-| M-01 | 🟡 Partial | `FakeLLMAdapter` shipped (`teaagent/llm/_fake_adapter.py`); `tests/test_cli_chat.py` no longer mock-heavy |
+| M-01 | ✅ Done | `FakeLLMAdapter` + `conftest.FakeAdapter`; `tests/test_cli_chat.py` controller tests use real RunStore/UndoJournal (no `MagicMock`) |
 | M-02 | ✅ Done | Acceptance tests use `FakeLLMAdapter`, `RunResult`/`FinalAnswer`, and direct manager stubs; narrow `patch` only for `run_chat_agent` / `Path.home` boundaries |
 | S-06 | ✅ Done | `# noqa: B102` on both code_mode exec sites |
 | S-04 | ✅ Done | CLI handlers log swallowed paths: `_chat.py`, `chat_commands.py`, `chat_completion.py`, `agent_misc.py`, `_agent/preflight.py` |
@@ -450,7 +450,7 @@ Tracked against `docs/retrospective/06-action-register.md` (**A-P2-6**, **S-P2-5
 | S-10 | ✅ Done | Return types on core APIs: `AgentRunner.run` → `RunResult`, `ToolRegistry.execute` → `dict`, `parse_permission_mode` → `PermissionMode`, `run_subagent` → `dict[str, Any]`, `assert_allowed` → `None` |
 | M-05 | ✅ Done | Core path docstrings on `run()`, `execute()`, `run_subagent()`, `assert_allowed()` |
 | M-03 | ✅ Done | Deferred imports hoisted in `swarm.py` and `acp_adapter.py`; circular-import check clean |
-| M-04 | ✅ Done | `SwarmManagerConfig` + `SwarmManager.from_config()` |
+| M-04 | ✅ Done | `SwarmManagerConfig` + `SwarmManager.from_config()`; `SigstoreVerificationConfig` + `SigstoreSigner.verify_with_config()` |
 | M-06 | ✅ Done | Narrowed broad `except Exception` in `plugin_system.py`, `domain/agent_factory.py`, `backend_registry`, `external_backends.py`, `code_analysis/_client.py` |
 | M-07 | ✅ Done | `Subagent.task` / `parent_run_id` / `batch_index` properties; `SwarmManager` uses public accessors |
 | M-08 | ✅ Done | Removed duplicate `PackageNotFoundError` import from `teaagent/__init__.py` `TYPE_CHECKING` block |
