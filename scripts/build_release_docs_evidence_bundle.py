@@ -16,6 +16,7 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from types import ModuleType
 from typing import Any
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -36,7 +37,7 @@ _HORIZON_ROW = re.compile(r'^\|\s*(H\d+)\s*\|')
 _MILESTONE_ROW = re.compile(r'^\|\s*(M\d+)\s*\|')
 
 
-def _load_report_docs_aging():
+def _load_report_docs_aging() -> ModuleType:
     script = _REPO_ROOT / 'scripts' / 'report_docs_aging.py'
     spec = importlib.util.spec_from_file_location('report_docs_aging_bundle', script)
     assert spec and spec.loader
@@ -70,6 +71,37 @@ def _git_field(repo_root: Path, *args: str) -> str:
         check=False,
     )
     return proc.stdout.strip() if proc.returncode == 0 else ''
+
+
+def _is_git_ancestor(repo_root: Path, ancestor: str, descendant: str) -> bool:
+    if ancestor == descendant:
+        return True
+    proc = subprocess.run(
+        ['git', 'merge-base', '--is-ancestor', ancestor, descendant],
+        cwd=str(repo_root),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return proc.returncode == 0
+
+
+def _allow_recorded_git_lag(
+    *,
+    repo_root: Path,
+    recorded_git: dict[str, Any],
+    current_git: dict[str, Any],
+) -> bool:
+    """Allow evidence to record a pre-meta-commit HEAD on a clean tree."""
+    recorded_commit = recorded_git.get('commit')
+    current_commit = current_git.get('commit')
+    if not recorded_commit or not current_commit:
+        return False
+    if recorded_commit == current_commit:
+        return False
+    if recorded_git.get('dirty') or current_git.get('dirty'):
+        return False
+    return _is_git_ancestor(repo_root, recorded_commit, current_commit)
 
 
 def parse_open_risks(path: Path) -> list[dict[str, str]]:
@@ -381,6 +413,14 @@ def check_release_docs_evidence_bundle(
     # recomputing fields that describe the current repository.
     expected['commands'] = recorded.get('commands', [])
     expected['ok'] = recorded.get('ok', False)
+    recorded_git = recorded.get('git', {})
+    current_git = expected['git']
+    if _allow_recorded_git_lag(
+        repo_root=repo_root,
+        recorded_git=recorded_git,
+        current_git=current_git,
+    ):
+        expected['git'] = dict(recorded_git)
     expected_md = _normalize_generated_markdown(
         format_release_docs_evidence_markdown(expected)
     )
