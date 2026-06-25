@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
@@ -47,6 +48,8 @@ from .state import (
     _format_remaining_cents,
     default_adapter_factory,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class TeaAgentTUI:
@@ -468,7 +471,10 @@ class TeaAgentTUI:
                     for c in candidates[:3]:
                         print(f'    - {c.name}: {c.status}')
             except Exception:
-                pass
+                logger.debug(
+                    'skills header: candidate store unavailable',
+                    exc_info=True,
+                )
 
             # Long-result artifacts
             artifact_dir = self.root / '.teaagent' / 'artifacts' / 'tool-results'
@@ -509,7 +515,10 @@ class TeaAgentTUI:
                     f'eval_failed={len(health.get("failed_evals", []))}'
                 )
             except Exception:
-                pass
+                logger.debug(
+                    'skills header: skill health summary unavailable',
+                    exc_info=True,
+                )
 
             if (
                 index_count > 0

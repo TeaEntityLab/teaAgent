@@ -122,6 +122,27 @@ def fake_adapter(
     return FakeAdapter(outputs, before_each=before_each)
 
 
+def _drop_stale_teaagent_bytecode() -> None:
+    """Remove teaagent .pyc files older than their .py source (flake guard)."""
+    import importlib.util
+
+    pkg_root = Path(__file__).resolve().parents[1] / 'teaagent'
+    if not pkg_root.is_dir():
+        return
+    for source in pkg_root.rglob('*.py'):
+        try:
+            pyc_path = Path(importlib.util.cache_from_source(str(source)))
+        except (OSError, ValueError):
+            continue
+        if not pyc_path.is_file():
+            continue
+        try:
+            if source.stat().st_mtime > pyc_path.stat().st_mtime:
+                pyc_path.unlink(missing_ok=True)
+        except OSError:
+            continue
+
+
 @pytest.fixture(autouse=True)
 def _reset_module_caches() -> None:
     """Reset global caches between tests (TST-012).
@@ -134,6 +155,7 @@ def _reset_module_caches() -> None:
 
     from teaagent.config_loader import clear_config_cache
 
+    _drop_stale_teaagent_bytecode()
     clear_config_cache()
     _clear_lazy_export_cache()
     _clear_tui_completion_cache()

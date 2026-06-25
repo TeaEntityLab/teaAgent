@@ -130,7 +130,7 @@ class ChatSessionController:
         """
         # Set up audit and undo journal if not provided
         if audit is None:
-            store = RunStore(self.root)
+            store = self._create_store()
             audit = store.audit_logger()
         if undo_journal is None:
             undo_journal = UndoJournal(self.root)

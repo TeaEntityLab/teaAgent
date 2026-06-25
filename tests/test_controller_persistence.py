@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from conftest import FakeAdapter
@@ -18,6 +19,7 @@ from teaagent.chat_agent import ChatAgentConfig
 from teaagent.chat_session_controller import ChatSessionController, SessionState
 from teaagent.run_store import RunStore
 from teaagent.run_undo import UndoJournal
+from teaagent.runner._types import RunResult
 
 
 def _allow_config(root: str | Path) -> ChatAgentConfig:
@@ -317,3 +319,37 @@ class TestStoreFactorySeam:
 
             assert isinstance(store, RunStore)
             assert store.root == Path(tmpdir).resolve()
+
+    def test_execute_task_uses_store_factory_when_audit_missing(self) -> None:
+        """RISK-2: audit bootstrap must use _create_store(), not RunStore() directly."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            factory_called = [0]
+
+            def my_factory() -> RunStore:
+                factory_called[0] += 1
+                return RunStore(tmpdir)
+
+            controller = ChatSessionController(
+                root=tmpdir,
+                output_fn=lambda _: None,
+                _store_factory=my_factory,
+            )
+            config = _allow_config(tmpdir)
+            with patch(
+                'teaagent.chat_session_controller.run_chat_agent',
+                return_value=RunResult(
+                    run_id='factory-audit-run',
+                    status='completed',
+                    iterations=1,
+                    tool_calls=0,
+                    cost_cents=0.0,
+                    input_tokens=1,
+                    output_tokens=1,
+                    final_answer=None,
+                    metadata={},
+                    error_message=None,
+                ),
+            ):
+                controller.execute_task('task', config, adapter=_success_adapter())
+
+            assert factory_called[0] >= 1
