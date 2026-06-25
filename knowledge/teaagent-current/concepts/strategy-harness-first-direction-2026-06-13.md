@@ -6,7 +6,7 @@ resource: "urn:teaagent:doc:docs/strategy/harness-first-direction-2026-06-13.md"
 tags: ["teaagent", "strategy", "harness", "constitution"]
 teaagent:
   source_path: "docs/strategy/harness-first-direction-2026-06-13.md"
-  source_sha256: "b04cf7200ba3ed98e81bfab13c3ed62f03f150d268b0692e287131e49f3ce1b6"
+  source_sha256: "7879fb8c69948ea65612d0fcf251e10c17096f2aa8e3414d000ee91a0352cdeb"
   docs_tier: "constitution"
   authority: "canonical"
   lifecycle: "current"

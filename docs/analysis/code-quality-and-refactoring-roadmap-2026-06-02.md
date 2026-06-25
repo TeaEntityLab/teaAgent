@@ -1,5 +1,19 @@
 # Code Quality & Refactoring Roadmap — 2026-06-02
 
+> **Claim class:** Historical audit snapshot + implementation status register.
+>
+> **Current truth for closure status:** [§10 Implementation status](#implementation-status-2026-06-25)
+> (last verified **2026-06-25** @ `8cdfbee`). Sections **§1–§9** preserve the
+> original 2026-06-02 findings as audit evidence. File paths and line numbers in
+> those sections may be stale after package relocations (`chat_repl.py` retired,
+> `consensus/` and `_agent/` package splits, etc.) — do **not** treat them as
+> live defect lists.
+>
+> **Cross-doc authority:** Daily-driver finding closure →
+> [Active Findings Status Ledger (2026-06-06)](active-findings-status-ledger-2026-06-06.md).
+> Ticket execution → [Action Register](../retrospective/06-action-register.md).
+
+
 **Scope:** `teaagent/` package + `tests/`  
 **Tools used:** flake8 7.3.0 · bandit 1.9.4 · radon 6.0.1 · vulture 2.16 · pylint 4.0.5 · manual audit  
 **Total source functions analysed:** 2,928  
@@ -18,6 +32,8 @@
 ---
 
 ## 1. Static Analysis Findings
+
+> **Historical (2026-06-02).** Status resolved — see [§10](#implementation-status-2026-06-25).
 
 ### 1a. Undefined symbols in `__all__` (P0)
 
@@ -269,6 +285,8 @@ Add types incrementally starting from the public API surface (`runner`, `tools`,
 
 ### 7a. CG-16: Test suite validates mock behaviour, not real integration (P1)
 
+> **Partially addressed (M-01 ✅).** Controller tests de-mocked at `8cdfbee`; mock counts below are the 2026-06-02 audit snapshot.
+
 **82 test files** use `MagicMock`, `@patch`, or `monkeypatch`. This means the test suite primarily validates that mocked collaborators are called correctly — not that the real integration works.
 
 Worst offenders by mock density:
@@ -424,7 +442,10 @@ Modules without any module docstring (first non-import line is code):
 
 ---
 
-## Implementation status (2026-06-27)
+## Implementation status (2026-06-25)
+
+**Authoritative closure register** for Tier 0–2 items below. Verified at HEAD `8cdfbee`
+(DocsAdvisor currency audit + code spot-check). Sections §1–§9 are not updated inline.
 
 Tracked against `docs/retrospective/06-action-register.md` (**A-P2-6**, **S-P2-5**) and harness goals in `AGENTS.md` (thin harness, centralized HTTP, governed tests).
 
@@ -435,7 +456,14 @@ Tracked against `docs/retrospective/06-action-register.md` (**A-P2-6**, **S-P2-5
 | S-03 | ✅ Done | `runner/_core.py` → `_execute_run_loop()` |
 | S-05 | ✅ Done | `teaagent/http_utils.py` (`safe_urlopen` / `safe_urlopen_request`); callers migrated |
 | S-P2-5 | ✅ Done | `config_lint` dev-signature warning + `notify.py` `shell=False` docs |
+| QW-01 | ✅ Done | Unused `nonlocal` removed from `_chat.py` handlers (`chat_repl.py` retired) |
 | QW-02 | ✅ Done | Lazy exports via `teaagent/_lazy_exports.py` (no broken `__all__` symbols) |
+| QW-03 | ✅ Done | Dead `encode_dss_signature` import removed from `oauth21/_types.py` |
+| QW-04 | ✅ Done | `# noqa: F401` on `llm/__init__.py` and `workspace_tools/__init__.py` re-exports |
+| QW-05 | ✅ Done | Unreachable branches removed (`budget_monitor.py`, `_ergonomics/approval.py`) |
+| QW-09 | ✅ Done | `plugin_system.py` uses `entry_points(group=…)` via `_entry_points()` helper |
+| QW-12 | ✅ Done | Unused context-manager params prefixed with `_` (`heartbeat.py`, `hooks.py`, `tui/_completion.py`) |
+| QW-13 | ✅ Done | `elif`-after-`return` cleaned in `domain/coordinator.py` |
 | QW-06, QW-07 | ✅ Done | `HEARTBEAT_TICK_INTERVAL` module constant; no in-function `threading`/`time` reimports in `swarm.py` |
 | QW-10 | ✅ Done | `# nosec B608` on safe SQL f-strings (`schema_migration`, `context_bus`) |
 | QW-11 | ✅ Done | `tempfile.gettempdir()` in `tsb_format.py` |

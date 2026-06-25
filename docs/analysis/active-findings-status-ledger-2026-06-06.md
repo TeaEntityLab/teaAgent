@@ -11,7 +11,7 @@
 > prose in dated analysis files.
 >
 > **Review trigger:** Finding closure status or new CG/AG/DS ids.
-> **Last reviewed:** 2026-06-09
+> **Last reviewed:** 2026-06-25 (CG-16 controller de-mock @ `8cdfbee`)
 
 **Successor to:** [Daily-Driver Findings Status Ledger (2026-06-01)](daily-driver-findings-status-ledger-2026-06-01.md)
 
@@ -33,7 +33,7 @@ authoritative. Dated detail docs remain evidence for reasoning and test names.
 | CG-01 | P0 | Fixed | REPL prints answer and branches on status | TICKET-12 / controller | `test_chat_repl_displays_answer` |
 | CG-02 | P0 | Fixed | `/undo` surgical via UndoJournal | TICKET-12 | `test_task002_undo_honesty.py` |
 | CG-03 (REPL) | P1 | Fixed | REPL cost accumulates | TICKET-12 | `test_task003_cost_truth.py` |
-| CG-04 | P1 | Fixed | Compaction on real observations | chat REPL | `chat_repl.py` compaction path |
+| CG-04 | P1 | Fixed | Compaction on real observations | chat session | `teaagent/session.py` `compress_returned_topic` + compaction tests |
 | CG-05 | P1 | Fixed | Shared controller on CLI and TUI | TICKET-12 | `test_task001_surface_parity.py` |
 | CG-06 | P1 | Fixed | TUI no clear-screen regression | TUI | `test_tui.py` |
 | CG-07 | P2 | Fixed | TUI compact is real | TUI | `test_tui.py` |
@@ -45,7 +45,7 @@ authoritative. Dated detail docs remain evidence for reasoning and test names.
 | CG-13 | P2 | Fixed | Controller no longer swallows errors as mock | TICKET-13 | controller isinstance checks |
 | CG-14 | P3 | Fixed | Redundant suspension `audit_trail` removed | TICKET-15 | review JSON tests |
 | CG-15 | P2 | Fixed | TUI/REPL undo semantics aligned | TICKET-12 / TICKET-15 | surface parity + help text |
-| CG-16 | P1 | Fixed | Misleading cost state-injection test removed | TICKET-14 | active-path cost tests |
+| CG-16 | P1 | Fixed | Controller tests use real stubs, not mock wiring | TICKET-14 / M-01 | `test_controller_persistence.py`, `test_chat_repl_displays_answer.py` (0 `MagicMock`) |
 | CG-17 | P1 | Fixed | Surface parity test exercises controller path | TICKET-12 | `test_task001_surface_parity.py` |
 | AG-01 | P1 | Fixed | `teaagent resume <repl-id>` round-trip | TICKET-16 Phase 2 | `test_repl_suspend_resume_roundtrip` |
 | AG-02 | P1 | Fixed | Background run no longer treats id as task | TICKET-16 | background UUID rejection test |
