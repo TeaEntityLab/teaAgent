@@ -1,8 +1,8 @@
 # Release Documentation Evidence Bundle (Generated)
 
-**Generated:** 2026-06-25T08:20:29+00:00
-**Git commit:** `046b579b5c1900560f75f2e43a5abc6be6854a7b` on `main`
-**Working tree dirty:** no
+**Generated:** 2026-06-25T08:25:39+00:00
+**Git commit:** `2f2d9f181f3b33df9d27d329eef08226be337c1a` on `main`
+**Working tree dirty:** yes
 
 Regenerate: `python3 scripts/build_release_docs_evidence_bundle.py`
 
@@ -14,8 +14,8 @@ Regenerate: `python3 scripts/build_release_docs_evidence_bundle.py`
 
 ## Last Gate Run
 
-- Overall gate status: **pass**
-- `/Users/teee/dev/teaagent/.venv/bin/python scripts/validate_docs_consistency.py` — **pass** (exit 0)
+- Overall gate status: **fail**
+- `/Users/teee/dev/teaagent/.venv/bin/python scripts/validate_docs_consistency.py` — **fail** (exit 1)
 - `/Users/teee/dev/teaagent/.venv/bin/python scripts/report_docs_aging.py --check` — **pass** (exit 0)
 
 ## Documentation Freshness
