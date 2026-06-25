@@ -175,6 +175,7 @@ class TeaAgentTUI:
                 cost_state=self._determine_cost_state(),
             )
         except Exception:
+            logger.debug('control cockpit unavailable', exc_info=True)
             self._control_cockpit = None
 
         self._refresh_cockpit_state()
@@ -195,6 +196,7 @@ class TeaAgentTUI:
                 context_health=ctx_health.to_dict() if ctx_health else None,
             )
         except Exception:
+            logger.debug('cockpit state unavailable', exc_info=True)
             self._cockpit_state = None
 
     def _should_use_split_pane(self) -> bool:
@@ -222,6 +224,7 @@ class TeaAgentTUI:
         try:
             self._context_pressure = compute_context_pressure(self.root)
         except Exception:
+            logger.debug('context pressure unavailable', exc_info=True)
             self._context_pressure = None
 
         # Print header (no clear screen - CG-06 fix)
@@ -406,6 +409,7 @@ class TeaAgentTUI:
             for run in recent_runs:
                 print(f'  - {run.run_id[:8]}: {run.status}')
         except Exception:
+            logger.debug('state panel: recent runs unavailable', exc_info=True)
             print('\nRecent Runs: (unavailable)')
 
         # Memory catalog
@@ -418,6 +422,7 @@ class TeaAgentTUI:
             for mem_entry in mem_entries:
                 print(f'  - {mem_entry.memory_id[:8]}: {mem_entry.content[:30]}...')
         except Exception:
+            logger.debug('state panel: memory entries unavailable', exc_info=True)
             print('\nMemory Entries: (unavailable)')
 
         # Skills panel (DSK-P1-004) extended with diagnostics (DSK-P2-001)

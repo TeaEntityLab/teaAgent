@@ -2,7 +2,7 @@
 
 Tests for:
 - /cost displays cost_state label (actual, estimated, unavailable, unlimited)
-- Task-driven cost accumulation via mocked agent runs
+- Task-driven cost accumulation via boundary-patched agent runs (CG-16)
 - /budget shows same cost numbers as /cost
 - Cost state label appears (not just a number)
 - Same-run consistency across surfaces
@@ -10,9 +10,58 @@ Tests for:
 
 from __future__ import annotations
 
-from unittest.mock import patch
+import tempfile
+from contextlib import contextmanager
+from typing import Iterator
+from unittest.mock import MagicMock, patch
 
 from teaagent.tui import TeaAgentTUI, _format_budget_cents, _format_remaining_cents
+from teaagent.types import FinalAnswer, RunResult
+
+
+def _completed_run_result(
+    *,
+    run_id: str = 'cost-test-run',
+    cost_cents: float = 0.0,
+    content: str = 'done',
+    iterations: int = 1,
+    tool_calls: int = 0,
+    input_tokens: int = 100,
+    output_tokens: int = 50,
+) -> RunResult:
+    return RunResult(
+        run_id=run_id,
+        status='completed',
+        iterations=iterations,
+        tool_calls=tool_calls,
+        cost_cents=cost_cents,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        final_answer=FinalAnswer(content=content),
+        metadata={},
+        error_message=None,
+    )
+
+
+@contextmanager
+def _cost_run_boundary(
+    tui: TeaAgentTUI,
+    *,
+    run_result: RunResult | None = None,
+) -> Iterator[MagicMock]:
+    result = run_result or _completed_run_result()
+    with (
+        patch.object(tui, '_start_file_watcher'),
+        patch.object(tui, '_load_tui_state'),
+        patch.object(tui, '_save_tui_state'),
+        patch(
+            'teaagent.chat_session_controller.run_chat_agent',
+            return_value=result,
+        ) as mock_run,
+        patch('teaagent.tui.core.RunStore.show_run', return_value=[]),
+        patch('teaagent.tui.state.create_llm_adapter'),
+    ):
+        yield mock_run
 
 
 def test_cost_state_defaults_to_unlimited_when_no_cap() -> None:
@@ -152,164 +201,85 @@ def test_budget_and_cost_show_same_cost_number() -> None:
 
 
 def test_mocked_task_accumulates_cost_via_command_path() -> None:
-    from unittest.mock import MagicMock
+    with tempfile.TemporaryDirectory() as tmp:
+        output: list[str] = []
+        tui = TeaAgentTUI(root=tmp, input_fn=lambda _: '', output_fn=output.append)
+        with _cost_run_boundary(
+            tui,
+            run_result=_completed_run_result(
+                run_id='test-run-1',
+                cost_cents=150.0,
+                iterations=2,
+                tool_calls=3,
+                input_tokens=500,
+                output_tokens=200,
+            ),
+        ):
+            assert tui._session_cost_cents == 0.0
+            tui._run_agent_task('test task')
+            assert tui._session_cost_cents == 150.0
 
-    output: list[str] = []
-    tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
-    with (
-        patch.object(tui, '_start_file_watcher'),
-        patch.object(tui, '_load_tui_state'),
-        patch.object(tui, '_save_tui_state'),
-        patch('teaagent.chat_session_controller.run_chat_agent') as mock_run,
-        patch('teaagent.tui.core.RunStore') as mock_store,
-        patch('teaagent.tui.state.create_llm_adapter'),
-    ):
-        mock_run.return_value = MagicMock(
-            run_id='test-run-1',
-            status='completed',
-            iterations=2,
-            tool_calls=3,
-            cost_cents=150.0,
-            input_tokens=500,
-            output_tokens=200,
-            final_answer=MagicMock(content='done'),
-            metadata={},
-            error_message=None,
-        )
-        mock_store.return_value.list_runs.return_value = []
-        mock_store.return_value.show_run.return_value = {}
-        mock_store.return_value.logger_for_result = lambda *_a: None
-        mock_store.return_value.audit_logger = lambda: MagicMock()
-
-        assert tui._session_cost_cents == 0.0
-        tui._run_agent_task('test task')
-        assert tui._session_cost_cents == 150.0
-
-        # Cost command reflects accumulated cost with state label
-        tui._max_cost_budget_cents = 1000
-        tui._handle_cost()
-        assert output[-1] == 'cost: $1.50 (estimated)'
+            tui._max_cost_budget_cents = 1000
+            tui._handle_cost()
+            assert output[-1] == 'cost: $1.50 (estimated)'
 
 
 def test_multi_task_cost_accumulation() -> None:
-    from unittest.mock import MagicMock
+    with tempfile.TemporaryDirectory() as tmp:
+        output: list[str] = []
+        tui = TeaAgentTUI(root=tmp, input_fn=lambda _: '', output_fn=output.append)
+        with _cost_run_boundary(tui) as mock_run:
+            mock_run.return_value = _completed_run_result(
+                run_id='test-run-1',
+                cost_cents=150.0,
+            )
+            tui._run_agent_task('first task')
+            assert tui._session_cost_cents == 150.0
 
-    output: list[str] = []
-    tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
-    with (
-        patch.object(tui, '_start_file_watcher'),
-        patch.object(tui, '_load_tui_state'),
-        patch.object(tui, '_save_tui_state'),
-        patch('teaagent.chat_session_controller.run_chat_agent') as mock_run,
-        patch('teaagent.tui.core.RunStore') as mock_store,
-        patch('teaagent.tui.state.create_llm_adapter'),
-    ):
-        mock_run.return_value = MagicMock(
-            run_id='test-run-1',
-            status='completed',
-            iterations=1,
-            tool_calls=1,
-            cost_cents=150.0,
-            input_tokens=100,
-            output_tokens=50,
-            final_answer=MagicMock(content='ok'),
-            metadata={},
-            error_message=None,
-        )
-        mock_store.return_value.list_runs.return_value = []
-        mock_store.return_value.show_run.return_value = {}
-        mock_store.return_value.logger_for_result = lambda *_a: None
-        mock_store.return_value.audit_logger = lambda: MagicMock()
+            mock_run.return_value = _completed_run_result(
+                run_id='test-run-2',
+                cost_cents=75.0,
+            )
+            tui._run_agent_task('second task')
+            assert tui._session_cost_cents == 225.0
 
-        tui._run_agent_task('first task')
-        assert tui._session_cost_cents == 150.0
+            mock_run.return_value = _completed_run_result(
+                run_id='test-run-3',
+                cost_cents=25.0,
+            )
+            tui._run_agent_task('third task')
+            assert tui._session_cost_cents == 250.0
 
-        mock_run.return_value.cost_cents = 75.0
-        mock_run.return_value.run_id = 'test-run-2'
-        tui._run_agent_task('second task')
-        assert tui._session_cost_cents == 225.0
-
-        mock_run.return_value.cost_cents = 25.0
-        mock_run.return_value.run_id = 'test-run-3'
-        tui._run_agent_task('third task')
-        assert tui._session_cost_cents == 250.0
-
-        # /cost reflects accumulated total
-        tui._max_cost_budget_cents = 1000
-        tui._handle_cost()
-        assert output[-1] == 'cost: $2.50 (estimated)'
+            tui._max_cost_budget_cents = 1000
+            tui._handle_cost()
+            assert output[-1] == 'cost: $2.50 (estimated)'
 
 
 def test_cost_accumulation_with_estimated_state() -> None:
-    from unittest.mock import MagicMock
-
-    output: list[str] = []
-    tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
-    tui._max_cost_budget_cents = 1000
-    with (
-        patch.object(tui, '_start_file_watcher'),
-        patch.object(tui, '_load_tui_state'),
-        patch.object(tui, '_save_tui_state'),
-        patch('teaagent.chat_session_controller.run_chat_agent') as mock_run,
-        patch('teaagent.tui.core.RunStore') as mock_store,
-        patch('teaagent.tui.state.create_llm_adapter'),
-    ):
-        mock_run.return_value = MagicMock(
-            run_id='test-run',
-            status='completed',
-            iterations=1,
-            tool_calls=1,
-            cost_cents=200.0,
-            input_tokens=100,
-            output_tokens=50,
-            final_answer=MagicMock(content='ok'),
-            metadata={},
-            error_message=None,
-        )
-        mock_store.return_value.list_runs.return_value = []
-        mock_store.return_value.show_run.return_value = {}
-        mock_store.return_value.logger_for_result = lambda *_a: None
-        mock_store.return_value.audit_logger = lambda: MagicMock()
-
-        tui._run_agent_task('test task')
-        # Cost state should be 'estimated' when cap is set and cost > 0
-        assert tui._determine_cost_state() == 'estimated'
+    with tempfile.TemporaryDirectory() as tmp:
+        output: list[str] = []
+        tui = TeaAgentTUI(root=tmp, input_fn=lambda _: '', output_fn=output.append)
+        tui._max_cost_budget_cents = 1000
+        with _cost_run_boundary(
+            tui,
+            run_result=_completed_run_result(run_id='test-run', cost_cents=200.0),
+        ):
+            tui._run_agent_task('test task')
+            assert tui._determine_cost_state() == 'estimated'
 
 
 def test_cost_accumulation_with_unlimited_state() -> None:
-    from unittest.mock import MagicMock
-
-    output: list[str] = []
-    tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
-    tui._max_cost_budget_cents = None
-    with (
-        patch.object(tui, '_start_file_watcher'),
-        patch.object(tui, '_load_tui_state'),
-        patch.object(tui, '_save_tui_state'),
-        patch('teaagent.chat_session_controller.run_chat_agent') as mock_run,
-        patch('teaagent.tui.core.RunStore') as mock_store,
-        patch('teaagent.tui.state.create_llm_adapter'),
-    ):
-        mock_run.return_value = MagicMock(
-            run_id='test-run',
-            status='completed',
-            iterations=1,
-            tool_calls=1,
-            cost_cents=500.0,
-            input_tokens=100,
-            output_tokens=50,
-            final_answer=MagicMock(content='ok'),
-            metadata={},
-            error_message=None,
-        )
-        mock_store.return_value.list_runs.return_value = []
-        mock_store.return_value.show_run.return_value = {}
-        mock_store.return_value.logger_for_result = lambda *_a: None
-        mock_store.return_value.audit_logger = lambda: MagicMock()
-
-        tui._run_agent_task('test task')
-        assert tui._session_cost_cents == 500.0
-        assert tui._determine_cost_state() == 'unlimited'
+    with tempfile.TemporaryDirectory() as tmp:
+        output: list[str] = []
+        tui = TeaAgentTUI(root=tmp, input_fn=lambda _: '', output_fn=output.append)
+        tui._max_cost_budget_cents = None
+        with _cost_run_boundary(
+            tui,
+            run_result=_completed_run_result(run_id='test-run', cost_cents=500.0),
+        ):
+            tui._run_agent_task('test task')
+            assert tui._session_cost_cents == 500.0
+            assert tui._determine_cost_state() == 'unlimited'
 
 
 def test_cost_state_consistency_across_cost_and_budget() -> None:
