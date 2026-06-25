@@ -10,128 +10,136 @@ from __future__ import annotations
 import logging
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
+from conftest import FakeAdapter
 
+from teaagent.chat_agent import ChatAgentConfig
 from teaagent.chat_session_controller import ChatSessionController, SessionState
-from teaagent.types import FinalAnswer, RunResult
+from teaagent.run_store import RunStore
+from teaagent.run_undo import UndoJournal
 
 
-def _make_store_mock_factory(failing_method: str, exc: Exception):
-    """Build a _store_factory that returns a store mock with a failing method."""
-
-    def factory():
-        store = MagicMock()
-        store.audit_logger.return_value = MagicMock()
-        store.logger_for_result = MagicMock()
-        store.undo_path.return_value = Path(tempfile.mkdtemp()) / 'undo.jsonl'
-        getattr(store, failing_method).side_effect = exc
-        return store
-
-    return factory
-
-
-def _make_success_result() -> RunResult:
-    return RunResult(
-        run_id='test-run-persist',
-        final_answer=FinalAnswer(content='answer'),
-        iterations=1,
-        tool_calls=0,
-        status='completed',
-        cost_cents=5.0,
-        input_tokens=50,
-        output_tokens=25,
+def _allow_config(root: str | Path) -> ChatAgentConfig:
+    return ChatAgentConfig.from_root(
+        root,
+        model='fake/fake-model',
+        permission_mode='allow',
+        max_iterations=5,
+        max_tool_calls=5,
     )
+
+
+def _success_adapter() -> FakeAdapter:
+    return FakeAdapter(['{"type":"final","content":"answer"}'])
+
+
+def _write_then_final_adapter() -> FakeAdapter:
+    return FakeAdapter(
+        [
+            (
+                '{"type":"tool","tool_name":"workspace_write_file",'
+                '"arguments":{"path":"notes.txt","content":"after\\n"},'
+                '"call_id":"write-existing"}'
+            ),
+            '{"type":"final","content":"writes complete"}',
+        ]
+    )
+
+
+class _FailingRunStore(RunStore):
+    """RunStore stub that injects persistence failures for one method."""
+
+    def __init__(self, root: str | Path, *, exc: Exception) -> None:
+        super().__init__(root)
+        self._exc = exc
+
+    def logger_for_result(self, result, audit) -> None:  # noqa: ANN001
+        raise self._exc
+
+    def latest_run_with_undo(self) -> str | None:
+        raise self._exc
+
+
+class _FailingUndoJournal(UndoJournal):
+    """UndoJournal stub that fails on save_to."""
+
+    def __init__(self, root: str | Path, *, exc: Exception) -> None:
+        super().__init__(root)
+        self._exc = exc
+
+    def save_to(self, path: str | Path) -> None:
+        raise self._exc
+
+
+class _BrokenUndoJournal(UndoJournal):
+    """UndoJournal stub that always has entries and raises AttributeError on save."""
+
+    @property
+    def has_entries(self) -> bool:
+        return True
+
+    def save_to(self, path: str | Path) -> None:
+        raise AttributeError('injected: bad attr')
 
 
 class TestStoreSaveFailure:
     """P1-C-002: Store save failure produces classified warning log."""
 
-    def test_store_logger_for_result_oserror_is_logged(self, caplog):
-        """OSError from RunStore.logger_for_result should emit a warning, not crash."""
+    def test_store_logger_for_result_oserror_is_logged(self, caplog) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             output_messages: list[str] = []
+            store = RunStore(tmpdir)
+            audit = store.audit_logger()
 
             controller = ChatSessionController(
                 root=tmpdir,
                 output_fn=lambda msg: output_messages.append(msg),
-                _store_factory=_make_store_mock_factory(
-                    'logger_for_result', OSError('disk full')
+                _store_factory=lambda: _FailingRunStore(
+                    tmpdir, exc=OSError('disk full')
                 ),
             )
 
-            # Create an audit logger with a valid path so the save path is entered
-            audit = MagicMock()
-            audit.path = Path(tmpdir) / 'audit.jsonl'
-            audit.add_sink = MagicMock()
+            with caplog.at_level(logging.WARNING):
+                result = controller.execute_task(
+                    'test task',
+                    _allow_config(tmpdir),
+                    adapter=_success_adapter(),
+                    audit=audit,
+                )
 
-            # Mock undo journal — no entries, so undo save is skipped
-            undo_journal = MagicMock()
-            undo_journal.has_entries = False
-
-            mock_config = MagicMock()
-            mock_config.model = 'gpt/gpt-4'
-
-            with patch('teaagent.chat_session_controller.run_chat_agent') as mock_run:
-                mock_run.return_value = _make_success_result()
-
-                with caplog.at_level(logging.WARNING):
-                    result = controller.execute_task(
-                        'test task',
-                        config=mock_config,
-                        adapter=None,
-                        audit=audit,
-                        undo_journal=undo_journal,
-                    )
-
-            # Controller should NOT crash — ExecutionResult is returned
             assert result.run_result.status == 'completed'
-            assert result.cost_cents == 5.0
-            # Warning should be logged
+            assert result.run_result.final_answer is not None
+            assert result.run_result.final_answer.content == 'answer'
             assert any(
                 'Persistence failure: could not save run result to store'
                 in record.message
                 for record in caplog.records
             )
-            # Answer should still be printed
             assert 'answer' in output_messages
 
-    def test_store_logger_for_result_runtimeerror_is_logged(self, caplog):
-        """RuntimeError (e.g. readonly mode) should emit a warning, not crash."""
+    def test_store_logger_for_result_runtimeerror_is_logged(self, caplog) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             output_messages: list[str] = []
+            store = RunStore(tmpdir)
+            audit = store.audit_logger()
 
             controller = ChatSessionController(
                 root=tmpdir,
                 output_fn=lambda msg: output_messages.append(msg),
-                _store_factory=_make_store_mock_factory(
-                    'logger_for_result',
-                    RuntimeError('Cannot persist logger result in readonly mode'),
+                _store_factory=lambda: _FailingRunStore(
+                    tmpdir,
+                    exc=RuntimeError('Cannot persist logger result in readonly mode'),
                 ),
             )
 
-            audit = MagicMock()
-            audit.path = Path(tmpdir) / 'audit.jsonl'
-            audit.add_sink = MagicMock()
-
-            undo_journal = MagicMock()
-            undo_journal.has_entries = False
-
-            mock_config = MagicMock()
-            mock_config.model = 'gpt/gpt-4'
-
-            with patch('teaagent.chat_session_controller.run_chat_agent') as mock_run:
-                mock_run.return_value = _make_success_result()
-
-                with caplog.at_level(logging.WARNING):
-                    result = controller.execute_task(
-                        'test task',
-                        config=mock_config,
-                        adapter=None,
-                        audit=audit,
-                        undo_journal=undo_journal,
-                    )
+            with caplog.at_level(logging.WARNING):
+                result = controller.execute_task(
+                    'test task',
+                    _allow_config(tmpdir),
+                    adapter=_success_adapter(),
+                    audit=audit,
+                )
 
             assert result.run_result.status == 'completed'
             assert any(
@@ -144,47 +152,27 @@ class TestStoreSaveFailure:
 class TestUndoSaveFailure:
     """P1-C-002: Undo journal save failure produces classified warning log."""
 
-    def test_undo_journal_save_oserror_is_logged(self, caplog):
-        """OSError from UndoJournal.save_to should emit a warning, not crash."""
+    def test_undo_journal_save_oserror_is_logged(self, caplog) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             output_messages: list[str] = []
+            store = RunStore(tmpdir)
+            audit = store.audit_logger()
+            journal = _FailingUndoJournal(tmpdir, exc=OSError('disk full'))
+            audit.add_sink(journal)
 
             controller = ChatSessionController(
                 root=tmpdir,
                 output_fn=lambda msg: output_messages.append(msg),
             )
 
-            audit = MagicMock()
-            audit.path = Path(tmpdir) / 'audit.jsonl'
-            audit.add_sink = MagicMock()
-
-            # Journal with entries that will fail on save
-            undo_journal = MagicMock()
-            undo_journal.has_entries = True
-            undo_journal.save_to.side_effect = OSError('disk full')
-
-            mock_config = MagicMock()
-            mock_config.model = 'gpt/gpt-4'
-
-            with (
-                patch('teaagent.chat_session_controller.RunStore') as mock_store_cls,
-                patch('teaagent.chat_session_controller.run_chat_agent') as mock_run,
-            ):
-                mock_store = MagicMock()
-                mock_store_cls.return_value = mock_store
-                mock_store.logger_for_result = MagicMock()
-                mock_store.undo_path.return_value = Path(tmpdir) / 'undo.jsonl'
-
-                mock_run.return_value = _make_success_result()
-
-                with caplog.at_level(logging.WARNING):
-                    result = controller.execute_task(
-                        'test task',
-                        config=mock_config,
-                        adapter=None,
-                        audit=audit,
-                        undo_journal=undo_journal,
-                    )
+            with caplog.at_level(logging.WARNING):
+                result = controller.execute_task(
+                    'test task',
+                    _allow_config(tmpdir),
+                    adapter=_write_then_final_adapter(),
+                    audit=audit,
+                    undo_journal=journal,
+                )
 
             assert result.run_result.status == 'completed'
             assert any(
@@ -192,46 +180,27 @@ class TestUndoSaveFailure:
                 for record in caplog.records
             )
 
-    def test_undo_journal_save_runtimeerror_is_logged(self, caplog):
-        """RuntimeError from UndoJournal.save_to should emit a warning."""
+    def test_undo_journal_save_runtimeerror_is_logged(self, caplog) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             output_messages: list[str] = []
+            store = RunStore(tmpdir)
+            audit = store.audit_logger()
+            journal = _FailingUndoJournal(tmpdir, exc=RuntimeError('readonly store'))
+            audit.add_sink(journal)
 
             controller = ChatSessionController(
                 root=tmpdir,
                 output_fn=lambda msg: output_messages.append(msg),
             )
 
-            audit = MagicMock()
-            audit.path = Path(tmpdir) / 'audit.jsonl'
-            audit.add_sink = MagicMock()
-
-            undo_journal = MagicMock()
-            undo_journal.has_entries = True
-            undo_journal.save_to.side_effect = RuntimeError('readonly store')
-
-            mock_config = MagicMock()
-            mock_config.model = 'gpt/gpt-4'
-
-            with (
-                patch('teaagent.chat_session_controller.RunStore') as mock_store_cls,
-                patch('teaagent.chat_session_controller.run_chat_agent') as mock_run,
-            ):
-                mock_store = MagicMock()
-                mock_store_cls.return_value = mock_store
-                mock_store.logger_for_result = MagicMock()
-                mock_store.undo_path.return_value = Path(tmpdir) / 'undo.jsonl'
-
-                mock_run.return_value = _make_success_result()
-
-                with caplog.at_level(logging.WARNING):
-                    result = controller.execute_task(
-                        'test task',
-                        config=mock_config,
-                        adapter=None,
-                        audit=audit,
-                        undo_journal=undo_journal,
-                    )
+            with caplog.at_level(logging.WARNING):
+                result = controller.execute_task(
+                    'test task',
+                    _allow_config(tmpdir),
+                    adapter=_write_then_final_adapter(),
+                    audit=audit,
+                    undo_journal=journal,
+                )
 
             assert result.run_result.status == 'completed'
             assert any(
@@ -243,10 +212,13 @@ class TestUndoSaveFailure:
 class TestStoreSaveAttributeErrorStillPropagates:
     """P1-C-002: Non-OSError exceptions from store/undo still propagate."""
 
-    def test_undo_journal_attributeerror_still_propagates(self):
-        """AttributeError from UndoJournal.save_to should propagate (not swallowed)."""
+    def test_undo_journal_attributeerror_still_propagates(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             output_messages: list[str] = []
+            store = RunStore(tmpdir)
+            audit = store.audit_logger()
+            journal = _BrokenUndoJournal(tmpdir)
+            audit.add_sink(journal)
 
             controller = ChatSessionController(
                 root=tmpdir,
@@ -254,60 +226,33 @@ class TestStoreSaveAttributeErrorStillPropagates:
                 session_state=SessionState(),
             )
 
-            bad_journal = MagicMock()
-            bad_journal.has_entries = True
-            bad_journal.save_to.side_effect = AttributeError('injected: bad attr')
-
-            audit = MagicMock()
-            audit.path = Path(tmpdir) / 'audit.jsonl'
-            audit.add_sink = MagicMock()
-
-            mock_config = MagicMock()
-            mock_config.model = 'gpt/gpt-4'
-
-            with (
-                patch('teaagent.chat_session_controller.RunStore') as mock_store_cls,
-                patch('teaagent.chat_session_controller.run_chat_agent') as mock_run,
-            ):
-                mock_store = MagicMock()
-                mock_store_cls.return_value = mock_store
-                mock_store.logger_for_result = MagicMock()
-                mock_store.undo_path.return_value = Path(tmpdir) / 'undo.jsonl'
-
-                mock_run.return_value = _make_success_result()
-
-                with pytest.raises(AttributeError, match='injected'):
-                    controller.execute_task(
-                        'test task',
-                        config=mock_config,
-                        adapter=None,
-                        audit=audit,
-                        undo_journal=bad_journal,
-                    )
+            with pytest.raises(AttributeError, match='injected'):
+                controller.execute_task(
+                    'test task',
+                    _allow_config(tmpdir),
+                    adapter=_write_then_final_adapter(),
+                    audit=audit,
+                    undo_journal=journal,
+                )
 
 
 class TestUndoLastRunPersistence:
     """P1-C-002: undo_last_run error handling is specific and logged."""
 
-    def test_undo_last_run_oserror_is_logged(self, caplog):
-        """OSError in undo_last_run should log warning and return False."""
+    def test_undo_last_run_oserror_is_logged(self, caplog) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             output_messages: list[str] = []
 
             controller = ChatSessionController(
                 root=tmpdir,
                 output_fn=lambda msg: output_messages.append(msg),
+                _store_factory=lambda: _FailingRunStore(
+                    tmpdir, exc=OSError('permission denied')
+                ),
             )
 
-            with patch('teaagent.chat_session_controller.RunStore') as mock_store_cls:
-                mock_store = MagicMock()
-                mock_store_cls.return_value = mock_store
-                mock_store.latest_run_with_undo.side_effect = OSError(
-                    'permission denied'
-                )
-
-                with caplog.at_level(logging.WARNING):
-                    result = controller.undo_last_run()
+            with caplog.at_level(logging.WARNING):
+                result = controller.undo_last_run()
 
             assert result is False
             assert any(
@@ -316,25 +261,20 @@ class TestUndoLastRunPersistence:
             )
             assert any('journal undo error' in msg for msg in output_messages)
 
-    def test_undo_last_run_valueerror_is_logged(self, caplog):
-        """ValueError in undo_last_run should log warning and return False."""
+    def test_undo_last_run_valueerror_is_logged(self, caplog) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             output_messages: list[str] = []
 
             controller = ChatSessionController(
                 root=tmpdir,
                 output_fn=lambda msg: output_messages.append(msg),
+                _store_factory=lambda: _FailingRunStore(
+                    tmpdir, exc=ValueError('invalid state')
+                ),
             )
 
-            with patch('teaagent.chat_session_controller.RunStore') as mock_store_cls:
-                mock_store = MagicMock()
-                mock_store_cls.return_value = mock_store
-                mock_store.latest_run_with_undo.side_effect = ValueError(
-                    'invalid state'
-                )
-
-                with caplog.at_level(logging.WARNING):
-                    result = controller.undo_last_run()
+            with caplog.at_level(logging.WARNING):
+                result = controller.undo_last_run()
 
             assert result is False
             assert any(
@@ -344,16 +284,15 @@ class TestUndoLastRunPersistence:
 
 
 class TestStoreFactorySeam:
-    """P1-C-002: The _store_factory mocking seam works correctly."""
+    """P1-C-002: The _store_factory seam works correctly."""
 
-    def test_store_factory_is_used_when_provided(self):
-        """When _store_factory is set, _create_store uses it."""
+    def test_store_factory_is_used_when_provided(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             factory_called = [0]
 
-            def my_factory():
+            def my_factory() -> RunStore:
                 factory_called[0] += 1
-                return MagicMock()
+                return RunStore(tmpdir)
 
             controller = ChatSessionController(
                 root=tmpdir,
@@ -365,10 +304,9 @@ class TestStoreFactorySeam:
             store2 = controller._create_store()
 
             assert factory_called[0] == 2
-            assert store1 is not store2  # Each call creates a new store
+            assert store1 is not store2
 
-    def test_default_store_without_factory(self):
-        """Without _store_factory, _create_store uses real RunStore."""
+    def test_default_store_without_factory(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             controller = ChatSessionController(
                 root=tmpdir,
@@ -376,8 +314,6 @@ class TestStoreFactorySeam:
             )
 
             store = controller._create_store()
-
-            from teaagent.run_store import RunStore
 
             assert isinstance(store, RunStore)
             assert store.root == Path(tmpdir).resolve()
