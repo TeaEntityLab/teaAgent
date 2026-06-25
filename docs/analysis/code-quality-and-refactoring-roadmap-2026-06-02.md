@@ -421,6 +421,30 @@ Modules without any module docstring (first non-import line is code):
 | M-07 | **Expose `swarm.py` private fields as properties** | 15+ cross-class private accesses make refactoring brittle | 1 day |
 | M-08 | **Restructure `teaagent/__init__.py` import ordering** | 50+ C0413 warnings; unconditional imports after guarded block confuses static analysis | 1 day |
 
+
+---
+
+## Implementation status (2026-06-25)
+
+Tracked against `docs/retrospective/06-action-register.md` (**A-P2-6**, **S-P2-5**) and harness goals in `AGENTS.md` (thin harness, centralized HTTP, governed tests).
+
+| ID | Status | Evidence |
+|---|---|---|
+| S-01 | ✅ Done | `teaagent/tui/_commands.py` dispatch table (`_COMMAND_DISPATCH`) |
+| S-02 | ✅ Done | `chat_agent.py` helpers (`_resolve_audit_logger`, `_execute_chat_run`, …) |
+| S-03 | ✅ Done | `runner/_core.py` → `_execute_run_loop()` |
+| S-05 | ✅ Done | `teaagent/http_utils.py` (`safe_urlopen` / `safe_urlopen_request`); callers migrated |
+| S-P2-5 | ✅ Done | `config_lint` dev-signature warning + `notify.py` `shell=False` docs |
+| QW-02 | ✅ Done | Lazy exports via `teaagent/_lazy_exports.py` (no broken `__all__` symbols) |
+| QW-06, QW-07 | ✅ Done | `HEARTBEAT_TICK_INTERVAL` module constant; no in-function `threading`/`time` reimports in `swarm.py` |
+| QW-10 | ✅ Done | `# nosec B608` on safe SQL f-strings (`schema_migration`, `context_bus`) |
+| QW-11 | ✅ Done | `tempfile.gettempdir()` in `tsb_format.py` |
+| 1c | ✅ Done | Explicit imports in `git_sandbox.py` shim (no wildcard import) |
+| M-01 | 🟡 Partial | `FakeLLMAdapter` shipped (`teaagent/llm/_fake_adapter.py`); `tests/test_cli_chat.py` no longer mock-heavy |
+| M-02 | 🟡 Partial | Acceptance `@patch` usage reduced (5 files remain vs 24 listed at audit) |
+| S-04, S-06–S-09, S-10 | ⬜ Open | See Tier 1 table above; not in scope for A-P2-6 |
+
+
 ---
 
 ## Appendix: Tool Invocations

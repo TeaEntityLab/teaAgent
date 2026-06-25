@@ -7,8 +7,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from teaagent.approval.manager import PermissionMode
+from teaagent.approval.manager import MultiSigQuorumConfig, PermissionMode
 from teaagent.security_env import allow_dev_signatures
+
+_DEV_WORKSPACE_ENV_VALUES = frozenset({'1', 'true', 'yes', 'on'})
 
 
 @dataclass(frozen=True)
@@ -19,6 +21,20 @@ class ConfigLintFinding:
 
     def to_dict(self) -> dict[str, Any]:
         return {'severity': self.severity, 'code': self.code, 'message': self.message}
+
+
+def _is_development_workspace(root_path: Path) -> bool:
+    """True when the workspace is explicitly marked for local development."""
+    env_flag = os.environ.get('TEAAGENT_DEVELOPMENT_WORKSPACE', '').strip().lower()
+    if env_flag in _DEV_WORKSPACE_ENV_VALUES:
+        return True
+    return (root_path / '.teaagent' / 'development').is_file()
+
+
+def _dev_signature_sources(root_path: Path) -> tuple[bool, bool]:
+    """Return (env_enabled, config_enabled) for dev-hash signature acceptance."""
+    multi_sig = MultiSigQuorumConfig.from_workspace_config(root_path)
+    return allow_dev_signatures(), multi_sig.allow_dev_signatures
 
 
 def lint_runtime_config(
@@ -99,14 +115,23 @@ def lint_runtime_config(
             )
         )
 
-    if allow_dev_signatures():
+    env_dev_sigs, config_dev_sigs = _dev_signature_sources(root_path)
+    if (env_dev_sigs or config_dev_sigs) and not _is_development_workspace(root_path):
+        sources: list[str] = []
+        if env_dev_sigs:
+            sources.append('TEAAGENT_ALLOW_DEV_SIGNATURES')
+        if config_dev_sigs:
+            sources.append('multi_sig.allow_dev_signatures in .teaagent/config.json')
+        source_text = ' and '.join(sources)
         findings.append(
             ConfigLintFinding(
-                severity='error',
+                severity='warning',
                 code='dev_signatures_enabled',
                 message=(
-                    'TEAAGENT_ALLOW_DEV_SIGNATURES is enabled; dev-hash signatures '
-                    'bypass cryptographic verification. Never use in production.'
+                    f'{source_text} enables dev-hash signatures that bypass '
+                    'cryptographic verification. Mark a development workspace with '
+                    'TEAAGENT_DEVELOPMENT_WORKSPACE=1 or .teaagent/development before '
+                    'using this outside local harness work; never enable in production.'
                 ),
             )
         )

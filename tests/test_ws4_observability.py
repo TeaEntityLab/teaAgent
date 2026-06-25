@@ -168,8 +168,36 @@ def test_config_lint_flags_dev_signatures_enabled(
 ) -> None:
     monkeypatch.setenv('TEAAGENT_ALLOW_DEV_SIGNATURES', '1')
     findings = lint_runtime_config(root=tmp_path)
-    codes = {finding.code for finding in findings}
-    assert 'dev_signatures_enabled' in codes
+    dev_findings = [f for f in findings if f.code == 'dev_signatures_enabled']
+    assert len(dev_findings) == 1
+    assert dev_findings[0].severity == 'warning'
+
+
+def test_config_lint_skips_dev_signatures_in_marked_dev_workspace(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv('TEAAGENT_ALLOW_DEV_SIGNATURES', '1')
+    dev_marker = tmp_path / '.teaagent' / 'development'
+    dev_marker.parent.mkdir(parents=True, exist_ok=True)
+    dev_marker.touch()
+    findings = lint_runtime_config(root=tmp_path)
+    assert 'dev_signatures_enabled' not in {finding.code for finding in findings}
+
+
+def test_config_lint_warns_multi_sig_dev_signatures_in_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv('TEAAGENT_ALLOW_DEV_SIGNATURES', raising=False)
+    config_dir = tmp_path / '.teaagent'
+    config_dir.mkdir(parents=True, exist_ok=True)
+    config_dir.joinpath('config.json').write_text(
+        '{"multi_sig": {"allow_dev_signatures": true}}',
+        encoding='utf-8',
+    )
+    findings = lint_runtime_config(root=tmp_path)
+    dev_findings = [f for f in findings if f.code == 'dev_signatures_enabled']
+    assert len(dev_findings) == 1
+    assert 'multi_sig.allow_dev_signatures' in dev_findings[0].message
 
 
 def test_config_lint_flags_unsafe_combinations(
