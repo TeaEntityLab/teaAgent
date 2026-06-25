@@ -13,9 +13,9 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 from teaagent.chat_agent import ChatAgentConfig
+from teaagent.llm import FakeLLMAdapter
 from teaagent.subagent_run_context import bind_parent_run_id, reset_parent_run_id
 from teaagent.subagents import SubagentManager
 from teaagent.subagents._tools import register_subagent_tools
@@ -28,8 +28,9 @@ def test_subagent_tool_forwards_worktree_isolation() -> None:
         (root / '.teaagent').mkdir()
         registry = ToolRegistry()
         config = ChatAgentConfig(root=root, enable_subagent=True)
+        adapter = FakeLLMAdapter()
         manager = SubagentManager(
-            root=root, parent_config=config, parent_adapter=MagicMock()
+            root=root, parent_config=config, parent_adapter=adapter
         )
         captured: dict[str, str] = {}
 
@@ -51,22 +52,22 @@ def test_subagent_tool_forwards_worktree_isolation() -> None:
                 'message': '',
             }
 
-        with patch.object(manager, 'run_subagent', side_effect=fake_run):
-            register_subagent_tools(
-                registry,
-                adapter=MagicMock(),
-                config=config,
-                depth=0,
-                manager=manager,
+        manager.run_subagent = fake_run
+        register_subagent_tools(
+            registry,
+            adapter=adapter,
+            config=config,
+            depth=0,
+            manager=manager,
+        )
+        token = bind_parent_run_id('parent-flow')
+        try:
+            result = registry.execute(
+                'subagent',
+                {'task': 'inspect README', 'isolation': 'worktree'},
             )
-            token = bind_parent_run_id('parent-flow')
-            try:
-                result = registry.execute(
-                    'subagent',
-                    {'task': 'inspect README', 'isolation': 'worktree'},
-                )
-            finally:
-                reset_parent_run_id(token)
+        finally:
+            reset_parent_run_id(token)
 
         assert captured['isolation'] == 'worktree'
         assert result['lineage']['isolation'] == 'worktree'

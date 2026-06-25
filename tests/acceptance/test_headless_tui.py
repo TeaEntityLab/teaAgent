@@ -9,12 +9,18 @@ import tempfile
 from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import patch
 
 import pytest
 from conftest import FakeAdapter
 
+from teaagent.runner import FinalAnswer, RunResult
 from teaagent.tui import TeaAgentTUI
+
+
+class _NoopAudit:
+    def add_sink(self, _sink: object) -> None:
+        return None
 
 
 def _run_tui_headless(
@@ -180,13 +186,11 @@ def test_pin_file_flow() -> None:
             input_fn=lambda _p: '',
             output_fn=output.append,
         )
-        with (
-            patch.object(tui, '_start_file_watcher'),
-            patch.object(tui, '_stop_file_watcher'),
-        ):
-            tui.handle_command('pin test.txt')
-            tui.handle_command('pinned')
-            tui.handle_command('unpin test.txt')
+        tui._start_file_watcher = lambda: None
+        tui._stop_file_watcher = lambda: None
+        tui.handle_command('pin test.txt')
+        tui.handle_command('pinned')
+        tui.handle_command('unpin test.txt')
         joined = '\n'.join(output)
         assert 'pinned: test.txt' in joined
         assert 'unpinned: test.txt' in joined
@@ -286,7 +290,7 @@ def test_headless_cost_accumulation_through_ask_command() -> None:
             patch('teaagent.tui.state.create_llm_adapter'),
         ):
             # Mock run_chat_agent to return a result with cost
-            mock_run.return_value = MagicMock(
+            mock_run.return_value = RunResult(
                 run_id='test-run',
                 status='completed',
                 iterations=1,
@@ -294,14 +298,14 @@ def test_headless_cost_accumulation_through_ask_command() -> None:
                 cost_cents=100.0,  # This must be accumulated
                 input_tokens=50,
                 output_tokens=25,
-                final_answer=MagicMock(content='done'),
+                final_answer=FinalAnswer(content='done'),
                 metadata={},
                 error_message=None,
             )
             mock_store.return_value.show_run.return_value = []
             mock_store.return_value.logger_for_result = lambda *a: None
-            mock_store.return_value.audit_logger = lambda: MagicMock()
-            mock_store.return_value.undo_path = lambda *a: MagicMock()
+            mock_store.return_value.audit_logger = lambda: _NoopAudit()
+            mock_store.return_value.undo_path = lambda *a: Path('/tmp/undo.json')
 
             # Initial cost should be zero
             assert tui._session_cost_cents == 0.0
@@ -330,10 +334,14 @@ def test_headless_explicit_root_not_overridden_by_state() -> None:
         explicit_root = Path(tmpdir) / 'explicit'
         explicit_root.mkdir()
 
-        # Create saved state with different root
+        # Create saved state with different root under a fake home directory
         saved_root = Path(tmpdir) / 'saved'
         saved_root.mkdir()
-        state_file = Path(tmpdir) / 'state.json'
+        fake_home = Path(tmpdir) / 'fakehome'
+        fake_home.mkdir()
+        state_dir = fake_home / '.teaagent'
+        state_dir.mkdir()
+        state_file = state_dir / 'tui_state.json'
         saved_state = {
             'root': str(saved_root),
             'provider': 'test',
@@ -349,14 +357,7 @@ def test_headless_explicit_root_not_overridden_by_state() -> None:
         )
         tui._root_explicit = True  # Simulate CLI --root flag
 
-        # Patch _state_path to use our mock state file
-        with patch.object(
-            type(tui),
-            '_state_path',
-            new_callable=PropertyMock,
-            return_value=state_file,
-        ):
-            # Drive through the actual state loading path
+        with patch('teaagent.tui.core.Path.home', return_value=fake_home):
             tui._load_tui_state()
 
         # Root must remain the explicit one, not the saved one
@@ -379,20 +380,24 @@ def test_headless_initial_task_executed_before_repl() -> None:
             output_fn=output.append,
         )
 
-        with (
-            patch.object(tui, '_run_agent_task') as mock_task,
-            patch.object(tui, '_load_workspace_defaults'),
-            patch.object(tui, '_load_tui_state'),
-            patch.object(tui, '_print_header'),
-            patch.object(tui, '_start_file_watcher'),
-            patch.object(tui, '_stop_file_watcher'),
-            patch.object(tui, '_save_tui_state'),
-        ):
-            # Drive through the actual run() path with initial_task
-            tui.run(initial_task='the initial task')
+        captured_tasks: list[str] = []
+
+        def capture_task(task: str, **kwargs: object) -> None:
+            captured_tasks.append(task)
+
+        tui._run_agent_task = capture_task
+        tui._load_workspace_defaults = lambda: None
+        tui._load_tui_state = lambda: None
+        tui._print_header = lambda: None
+        tui._start_file_watcher = lambda: None
+        tui._stop_file_watcher = lambda: None
+        tui._save_tui_state = lambda: None
+
+        # Drive through the actual run() path with initial_task
+        tui.run(initial_task='the initial task')
 
         # _run_agent_task must be called with the initial task
-        mock_task.assert_called_once_with('the initial task')
+        assert captured_tasks == ['the initial task']
 
 
 def test_headless_undo_command_updates_state() -> None:

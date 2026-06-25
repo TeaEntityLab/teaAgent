@@ -5,10 +5,11 @@ from __future__ import annotations
 import subprocess
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from teaagent.chat_agent import ChatAgentConfig
 from teaagent.cli import main
+from teaagent.llm import FakeLLMAdapter
 from teaagent.runner import FinalAnswer, RunResult
 from teaagent.subagent_run_context import bind_parent_run_id, reset_parent_run_id
 from teaagent.subagents import SubagentManager
@@ -44,8 +45,9 @@ def test_parallel_worktree_children_expose_lineage_for_parent_review() -> None:
         (root / '.teaagent').mkdir()
         registry = ToolRegistry()
         config = ChatAgentConfig(root=root, enable_subagent=True)
+        adapter = FakeLLMAdapter()
         manager = SubagentManager(
-            root=root, parent_config=config, parent_adapter=MagicMock()
+            root=root, parent_config=config, parent_adapter=adapter
         )
         worktrees = [
             '.teaagent/subagent-worktrees/alpha',
@@ -73,26 +75,26 @@ def test_parallel_worktree_children_expose_lineage_for_parent_review() -> None:
                 'message': 'ready for parent review',
             }
 
-        with patch.object(manager, 'run_subagent', side_effect=fake_run):
-            register_subagent_tools(
-                registry,
-                adapter=MagicMock(),
-                config=config,
-                depth=0,
-                manager=manager,
+        manager.run_subagent = fake_run
+        register_subagent_tools(
+            registry,
+            adapter=adapter,
+            config=config,
+            depth=0,
+            manager=manager,
+        )
+        token = bind_parent_run_id('parent-merge')
+        try:
+            first = registry.execute(
+                'subagent',
+                {'task': 'edit docs in worktree A', 'isolation': 'worktree'},
             )
-            token = bind_parent_run_id('parent-merge')
-            try:
-                first = registry.execute(
-                    'subagent',
-                    {'task': 'edit docs in worktree A', 'isolation': 'worktree'},
-                )
-                second = registry.execute(
-                    'subagent',
-                    {'task': 'edit tests in worktree B', 'isolation': 'worktree'},
-                )
-            finally:
-                reset_parent_run_id(token)
+            second = registry.execute(
+                'subagent',
+                {'task': 'edit tests in worktree B', 'isolation': 'worktree'},
+            )
+        finally:
+            reset_parent_run_id(token)
 
         for result, expected_wt in zip((first, second), worktrees, strict=True):
             assert result['lineage']['isolation'] == 'worktree'
@@ -106,8 +108,9 @@ def test_worktree_child_review_patch_can_be_checked_and_applied() -> None:
         root = Path(tmp)
         _init_repo(root)
         config = ChatAgentConfig(root=root, enable_subagent=True)
+        adapter = FakeLLMAdapter()
         manager = SubagentManager(
-            root=root, parent_config=config, parent_adapter=MagicMock()
+            root=root, parent_config=config, parent_adapter=adapter
         )
 
         def fake_child_run(config, task, adapter, audit, *args, **kwargs) -> RunResult:

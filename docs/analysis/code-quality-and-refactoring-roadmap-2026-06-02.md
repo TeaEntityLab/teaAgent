@@ -424,7 +424,7 @@ Modules without any module docstring (first non-import line is code):
 
 ---
 
-## Implementation status (2026-06-26)
+## Implementation status (2026-06-27)
 
 Tracked against `docs/retrospective/06-action-register.md` (**A-P2-6**, **S-P2-5**) and harness goals in `AGENTS.md` (thin harness, centralized HTTP, governed tests).
 
@@ -441,7 +441,7 @@ Tracked against `docs/retrospective/06-action-register.md` (**A-P2-6**, **S-P2-5
 | QW-11 | ✅ Done | `tempfile.gettempdir()` in `tsb_format.py` |
 | 1c | ✅ Done | Explicit imports in `git_sandbox.py` shim (no wildcard import) |
 | M-01 | 🟡 Partial | `FakeLLMAdapter` shipped (`teaagent/llm/_fake_adapter.py`); `tests/test_cli_chat.py` no longer mock-heavy |
-| M-02 | 🟡 Partial | `test_github_integration_flow.py` uses `FakeLLMAdapter`; 4 acceptance files still `@patch`-heavy (subagent/TUI isolation) |
+| M-02 | ✅ Done | Acceptance tests use `FakeLLMAdapter`, `RunResult`/`FinalAnswer`, and direct manager stubs; narrow `patch` only for `run_chat_agent` / `Path.home` boundaries |
 | S-06 | ✅ Done | `# noqa: B102` on both code_mode exec sites |
 | S-04 | ✅ Done | CLI handlers log swallowed paths: `_chat.py`, `chat_commands.py`, `chat_completion.py`, `agent_misc.py`, `_agent/preflight.py` |
 | S-07–S-09, S-10 | ⬜ Open | See Tier 1 table above |
