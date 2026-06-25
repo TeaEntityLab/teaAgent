@@ -444,7 +444,12 @@ Tracked against `docs/retrospective/06-action-register.md` (**A-P2-6**, **S-P2-5
 | M-02 | ✅ Done | Acceptance tests use `FakeLLMAdapter`, `RunResult`/`FinalAnswer`, and direct manager stubs; narrow `patch` only for `run_chat_agent` / `Path.home` boundaries |
 | S-06 | ✅ Done | `# noqa: B102` on both code_mode exec sites |
 | S-04 | ✅ Done | CLI handlers log swallowed paths: `_chat.py`, `chat_commands.py`, `chat_completion.py`, `agent_misc.py`, `_agent/preflight.py` |
-| S-07–S-09, S-10 | ⬜ Open | See Tier 1 table above |
+| S-07 | ✅ Done | `ChatSession.compress_returned_topic` uses `CompactionManager.compactor.compact_chat_history` |
+| S-08 | ✅ Done | `cancelled_by` on `ConsensusState`; `consensus cancel` CLI; `denied_by` propagated on subagent denials |
+| S-09 | ✅ Done | No production `except BaseException` in consensus path (removed/narrowed) |
+| S-10 | ✅ Done | Return types on core APIs: `AgentRunner.run` → `RunResult`, `ToolRegistry.execute` → `dict`, `parse_permission_mode` → `PermissionMode`, `run_subagent` → `dict[str, Any]`, `assert_allowed` → `None` |
+| M-05 | 🟡 Partial | Docstrings added to `run()`, `execute()`, `run_subagent()` |
+| M-03–M-08 | ⬜ Open | See Tier 2 table above for remaining cycle work |
 
 
 ---

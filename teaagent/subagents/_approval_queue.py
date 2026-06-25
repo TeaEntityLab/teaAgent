@@ -66,6 +66,7 @@ class SubagentApprovalRequest:
     approved_at: Optional[str] = None
     denied_at: Optional[str] = None
     denial_reason: Optional[str] = None
+    denied_by: Optional[str] = None
     timeout_seconds: int = 180  # 3 minutes default
     priority: Optional[str] = None  # Priority level for escalation
 
@@ -91,6 +92,8 @@ class SubagentApprovalRequest:
             payload['denied_at'] = self.denied_at
         if self.denial_reason:
             payload['denial_reason'] = self.denial_reason
+        if self.denied_by:
+            payload['denied_by'] = self.denied_by
         return payload
 
 
@@ -242,6 +245,7 @@ class CentralizedApprovalQueue:
                     existing.approved_at = loaded.approved_at
                     existing.denied_at = loaded.denied_at
                     existing.denial_reason = loaded.denial_reason
+                    existing.denied_by = loaded.denied_by
                     if loaded.status == ApprovalRequestStatus.APPROVED:
                         self._sync_results[request_id] = True
                         event = self._sync_waiters.get(request_id)
@@ -396,17 +400,24 @@ class CentralizedApprovalQueue:
         return approved
 
     def deny_all_pending_sync(
-        self, reason: str = 'Denied by human', _denied_by: str = 'human'
+        self,
+        reason: str = 'Denied by human',
+        denied_by: str = 'human',
     ) -> int:
         """Deny every pending sync request. Returns count denied."""
         denied = 0
         for request in list(self.get_pending_requests()):
-            if self.deny_request_sync(request.request_id, reason=reason):
+            if self.deny_request_sync(
+                request.request_id, reason=reason, denied_by=denied_by
+            ):
                 denied += 1
         return denied
 
     def deny_request_sync(
-        self, request_id: str, reason: str = 'Denied by human'
+        self,
+        request_id: str,
+        reason: str = 'Denied by human',
+        denied_by: str = 'human',
     ) -> bool:
         """Deny a pending sync request (parent TUI / CLI)."""
         with self._sync_lock:
@@ -416,13 +427,14 @@ class CentralizedApprovalQueue:
             request.status = ApprovalRequestStatus.DENIED
             request.denied_at = datetime.now(timezone.utc).isoformat()
             request.denial_reason = reason
+            request.denied_by = denied_by
             self._sync_results[request_id] = False
             event = self._sync_waiters.get(request_id)
         if event is not None:
             event.set()
         self._mark_persist_dirty()
         self._persist(force=True)
-        logger.info('Denied sync request %s: %s', request_id, reason)
+        logger.info('Denied sync request %s by %s: %s', request_id, denied_by, reason)
         return True
 
     async def submit_request(

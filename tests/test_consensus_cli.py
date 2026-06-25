@@ -5,6 +5,7 @@ import tempfile
 from pathlib import Path
 
 from teaagent.cli._handlers._consensus import (
+    consensus_cancel_command,
     consensus_config_set_command,
     consensus_history_command,
     consensus_peers_activate_command,
@@ -226,3 +227,61 @@ def test_consensus_vote():
         result = consensus_vote_command(vote_args)
         # Should fail with "not found"
         assert result == 1
+
+
+def test_consensus_cancel_command() -> None:
+    """Cancel an active proposal and surface cancelled_by in the result."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        peer_storage = Path(tmpdir) / 'peers.json'
+        consensus_storage = Path(tmpdir) / 'consensus.json'
+        add_args = argparse.Namespace(
+            name='peer1',
+            ssh_key='ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ...',
+            ssh_key_file=None,
+            storage=str(peer_storage),
+        )
+        consensus_peers_add_command(add_args)
+        consensus_peers_activate_command(
+            argparse.Namespace(name='peer1', storage=str(peer_storage))
+        )
+        request_args = argparse.Namespace(
+            task='Deploy to production',
+            risk_level='high',
+            proposed_by='admin',
+            threshold=None,
+            storage=tmpdir,
+            peer_storage=str(peer_storage),
+            consensus_storage=str(consensus_storage),
+            wait=False,
+            timeout=1.0,
+            auto_approve=False,
+        )
+        assert consensus_request_command(request_args) == 0
+
+        from teaagent.consensus import ConsensusConfig, ConsensusEngine, PeerRegistry
+
+        engine = ConsensusEngine(
+            peer_registry=PeerRegistry(storage_path=peer_storage),
+            config=ConsensusConfig(),
+            storage_path=consensus_storage,
+        )
+        active = engine.list_active_consensus()
+        assert active
+        proposal_id = active[0].proposal.id
+
+        cancel_args = argparse.Namespace(
+            proposal_id=proposal_id,
+            cancelled_by='cli-operator',
+            storage=tmpdir,
+            peer_storage=str(peer_storage),
+            consensus_storage=str(consensus_storage),
+        )
+        assert consensus_cancel_command(cancel_args) == 0
+        reloaded = ConsensusEngine(
+            peer_registry=PeerRegistry(storage_path=peer_storage),
+            config=ConsensusConfig(),
+            storage_path=consensus_storage,
+        )
+        final = reloaded.get_consensus_status(proposal_id)
+        assert final is not None
+        assert final.cancelled_by == 'cli-operator'

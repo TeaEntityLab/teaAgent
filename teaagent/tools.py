@@ -213,6 +213,7 @@ class ToolRegistry:
         return self.execute(name, arguments)
 
     def execute(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+        """Validate, authorize, and invoke a registered tool handler."""
         tool = self.get(name)
         validate_object_schema(tool.input_schema, arguments, label=f'tool.{name}.input')
         if self.hook_registry is not None:

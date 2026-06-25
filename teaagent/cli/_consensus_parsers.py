@@ -99,6 +99,7 @@ def register(
         handlers.get('request'),
         handlers.get('vote'),
         handlers.get('wait'),
+        handlers.get('cancel'),
         handlers.get('votes_import'),
         handlers.get('relay_serve'),
         handlers.get('relay_submit'),
@@ -118,6 +119,7 @@ def _consensus(
     request_handler: Optional[Callable] = None,
     vote_handler: Optional[Callable] = None,
     wait_handler: Optional[Callable] = None,
+    cancel_handler: Optional[Callable] = None,
     votes_import_handler: Optional[Callable] = None,
     relay_serve_handler: Optional[Callable] = None,
     relay_submit_handler: Optional[Callable] = None,
@@ -218,6 +220,22 @@ def _consensus(
     wait_cmd.add_argument('--peer-storage', help='Path to peer registry storage')
     wait_cmd.add_argument('--consensus-storage', help='Path to consensus state storage')
     wait_cmd.set_defaults(func=wait_handler)
+
+    cancel_cmd = consensus_subs.add_parser(
+        'cancel', help='Cancel an active consensus proposal'
+    )
+    cancel_cmd.add_argument('proposal_id', help='Proposal ID')
+    cancel_cmd.add_argument(
+        '--cancelled-by',
+        default='cli',
+        help='Peer identifier recorded as the canceller',
+    )
+    cancel_cmd.add_argument('--storage', help='Path to consensus storage')
+    cancel_cmd.add_argument('--peer-storage', help='Path to peer registry storage')
+    cancel_cmd.add_argument(
+        '--consensus-storage', help='Path to consensus state storage'
+    )
+    cancel_cmd.set_defaults(func=cancel_handler)
 
     import_cmd = consensus_subs.add_parser(
         'votes-import', help='Import batched peer votes from JSON'

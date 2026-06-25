@@ -131,14 +131,14 @@ class ChatSession:
         )
 
     def compress_returned_topic(
-        self, frame: FocusFrame, _compaction_manager: Any
+        self, frame: FocusFrame, compaction_manager: Any | None = None
     ) -> None:
         """Compress messages from a returned topic into a summary card.
 
         Args:
             frame: The focus frame that was returned.
-            _compaction_manager: CompactionManager instance (currently unused -
-                compression is done manually via summary replacement).
+            compaction_manager: Optional :class:`~teaagent.context.CompactionManager`
+                used to compact the full chat history after topic summarization.
         """
         if frame.message_start_index >= len(self.messages):
             return
@@ -154,6 +154,26 @@ class ChatSession:
 
         self.messages[frame.message_start_index : frame.message_end_index] = [
             summary_message
+        ]
+
+        if compaction_manager is None:
+            return
+
+        compactor = getattr(compaction_manager, 'compactor', None)
+        if compactor is None or not hasattr(compactor, 'compact_chat_history'):
+            return
+
+        max_context_tokens = getattr(compaction_manager, 'max_context_tokens', 200000)
+        token_budget = max(max_context_tokens // 4, 256)
+        message_dicts = [
+            {'role': message.role, 'content': message.content}
+            for message in self.messages
+        ]
+        compacted_dicts = compactor.compact_chat_history(message_dicts, token_budget)
+        self.messages = [
+            ChatMessage(role=item['role'], content=item.get('content', ''))
+            for item in compacted_dicts
+            if isinstance(item, dict) and 'role' in item
         ]
 
 

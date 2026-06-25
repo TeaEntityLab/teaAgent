@@ -537,6 +537,7 @@ def request_from_dict(data: dict[str, Any]) -> SubagentApprovalRequest:
         approved_at=data.get('approved_at'),
         denied_at=data.get('denied_at'),
         denial_reason=data.get('denial_reason'),
+        denied_by=data.get('denied_by'),
         timeout_seconds=timeout_seconds,
     )
 

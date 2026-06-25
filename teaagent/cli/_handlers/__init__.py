@@ -61,6 +61,7 @@ from ._cloud import (
 )
 from ._cockpit import cockpit_show_command
 from ._consensus import (
+    consensus_cancel_command,
     consensus_config_set_command,
     consensus_history_command,
     consensus_peers_activate_command,
@@ -459,6 +460,7 @@ __all__ = [
     'consensus_vote_command',
     'consensus_relay_serve_command',
     'consensus_relay_submit_command',
+    'consensus_cancel_command',
     'consensus_wait_command',
     'consensus_votes_import_command',
     'control_plane_serve_command',

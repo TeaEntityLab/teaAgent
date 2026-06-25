@@ -253,12 +253,43 @@ def consensus_wait_command(args: argparse.Namespace) -> int:
         print(f'Proposal "{args.proposal_id}" not found.')
         return 1
     print(f'Status: {final.status.value}')
+    if final.cancelled_by:
+        print(f'Cancelled by: {final.cancelled_by}')
     print(
         json.dumps(final.to_dict(), indent=2, default=lambda o: f'[{type(o).__name__}]')
     )
-    if final.status in {ConsensusStatus.APPROVED, ConsensusStatus.REJECTED}:
+    if final.status in {
+        ConsensusStatus.APPROVED,
+        ConsensusStatus.REJECTED,
+        ConsensusStatus.CANCELLED,
+    }:
         return 0
     return 1
+
+
+def consensus_cancel_command(args: argparse.Namespace) -> int:
+    """Cancel an active consensus proposal and record who cancelled it."""
+    engine = _consensus_engine_from_args(args)
+    cancelled = engine.cancel_consensus(
+        args.proposal_id, cancelled_by=args.cancelled_by
+    )
+    if not cancelled:
+        print(
+            f'Could not cancel proposal "{args.proposal_id}" '
+            '(not found or not in voting state).'
+        )
+        return 1
+    state = engine.get_consensus_status(args.proposal_id)
+    if state is None:
+        print(f'Proposal "{args.proposal_id}" cancelled.')
+        return 0
+    print(f'Status: {state.status.value}')
+    if state.cancelled_by:
+        print(f'Cancelled by: {state.cancelled_by}')
+    print(
+        json.dumps(state.to_dict(), indent=2, default=lambda o: f'[{type(o).__name__}]')
+    )
+    return 0
 
 
 def consensus_votes_import_command(args: argparse.Namespace) -> int:

@@ -79,6 +79,53 @@ def test_consensus_wait_and_votes_import(tmp_path: Path) -> None:
     assert summary['accepted'] == 1
 
 
+def test_consensus_cancel_records_cancelled_by(tmp_path: Path) -> None:
+    registry = PeerRegistry(storage_path=tmp_path / 'peers.json')
+    peer = PeerIdentity(name='peer-a', ssh_public_key='ssh-rsa KEY')
+    registry.register(peer)
+    registry.activate(peer.name)
+    engine = ConsensusEngine(
+        peer_registry=registry,
+        config=ConsensusConfig(),
+        storage_path=tmp_path / 'consensus.json',
+    )
+    state = engine.request_consensus(
+        task_description='deploy',
+        risk_level=RiskLevel.MEDIUM,
+        proposed_by='cli',
+    )
+    assert engine.cancel_consensus(state.proposal.id, cancelled_by='operator-a')
+    final = engine.get_consensus_status(state.proposal.id)
+    assert final is not None
+    assert final.status == ConsensusStatus.CANCELLED
+    assert final.cancelled_by == 'operator-a'
+
+
+def test_deny_request_sync_records_denied_by() -> None:
+    from teaagent.subagents._approval_queue import (
+        CentralizedApprovalQueue,
+        SubagentApprovalRequest,
+    )
+
+    queue = CentralizedApprovalQueue(parent_run_id='parent-1')
+    request_id = queue.generate_request_id()
+    queue._requests[request_id] = SubagentApprovalRequest(
+        request_id=request_id,
+        subagent_id='sub-1',
+        parent_run_id='parent-1',
+        subagent_name='worker',
+        tool_name='workspace_write_file',
+        tool_arguments={'path': 'README.md'},
+        permission_mode='prompt',
+        isolation='none',
+    )
+
+    assert queue.deny_request_sync(
+        request_id, reason='too risky', denied_by='reviewer-1'
+    )
+    assert queue._requests[request_id].denied_by == 'reviewer-1'
+
+
 def test_control_plane_bridge_publishes_workflow() -> None:
     state = ControlPlaneState()
     publish_swarm_workflow(

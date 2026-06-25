@@ -1,7 +1,6 @@
 """Tests for FocusStackManager and auto-local compression."""
 
-from unittest.mock import MagicMock
-
+from teaagent.context import CompactionManager
 from teaagent.session import (
     ChatMessage,
     ChatSession,
@@ -81,9 +80,9 @@ def test_session_compression_on_topic_return():
         conclusion='Topic A completed successfully',
     )
 
-    mock_compaction_manager = MagicMock()
+    compaction_manager = CompactionManager(max_context_tokens=200000)
 
-    session.compress_returned_topic(frame, mock_compaction_manager)
+    session.compress_returned_topic(frame, compaction_manager)
 
     assert len(session.messages) == 1
     assert session.messages[0].role == 'system'

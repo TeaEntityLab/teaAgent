@@ -244,6 +244,7 @@ class SubagentManager:
         skill_path: Optional[str | Path] = None,
         skill_risk_level: Optional[Any] = None,
     ) -> dict[str, Any]:
+        """Spawn and run an isolated subagent, returning a serializable result payload."""
         if depth >= self._parent_config.max_subagent_depth:
             return _error(
                 f'global subagent depth limit {self._parent_config.max_subagent_depth} reached',
