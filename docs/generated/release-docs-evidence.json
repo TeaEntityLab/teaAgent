@@ -1,24 +1,24 @@
 {
-  "ok": false,
-  "created_at": "2026-06-25T08:01:40+00:00",
+  "ok": true,
+  "created_at": "2026-06-25T08:11:20+00:00",
   "repo_root": "/Users/teee/dev/teaagent",
   "git": {
     "branch": "main",
-    "commit": "f7e33f1f8bec531839ade861bdfd4feefddce745",
+    "commit": "41e8d4be57714e8294c17455b1abe35d11c6b828",
     "dirty": true
   },
   "commands": [
     {
       "cmd": "/Users/teee/dev/teaagent/.venv/bin/python scripts/validate_docs_consistency.py",
-      "exit_code": 1,
-      "stdout": "Risk register evidence coverage: 24/29 rows verified (82%)\nTicket index evidence coverage: 21/21 rows verified (100%)\nERROR: docs/generated/docs-aging-dashboard.md is out of date; run: python3 scripts/report_docs_aging.py\n",
+      "exit_code": 0,
+      "stdout": "Risk register evidence coverage: 24/29 rows verified (82%)\nTicket index evidence coverage: 21/21 rows verified (100%)\nDocs consistency check passed.\n",
       "stderr": ""
     },
     {
       "cmd": "/Users/teee/dev/teaagent/.venv/bin/python scripts/report_docs_aging.py --check",
-      "exit_code": 1,
-      "stdout": "",
-      "stderr": "docs/generated/docs-aging-dashboard.md is out of date; run: python3 scripts/report_docs_aging.py\n"
+      "exit_code": 0,
+      "stdout": "Docs aging dashboard check passed.\n",
+      "stderr": ""
     }
   ],
   "docs_freshness": {
