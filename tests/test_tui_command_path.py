@@ -18,6 +18,27 @@ import pytest
 
 from teaagent.tui import TeaAgentTUI
 from teaagent.tui._commands import _safe_run_agent_task
+from teaagent.types import FinalAnswer, RunResult
+
+
+def _completed_run_result(
+    *,
+    run_id: str = 'cost-test-run',
+    cost_cents: float = 0.0,
+    content: str = 'done',
+) -> RunResult:
+    return RunResult(
+        run_id=run_id,
+        status='completed',
+        iterations=1,
+        tool_calls=0,
+        cost_cents=cost_cents,
+        input_tokens=100,
+        output_tokens=50,
+        final_answer=FinalAnswer(content=content),
+        metadata={},
+        error_message=None,
+    )
 
 
 def _make_controller_mock(
@@ -417,39 +438,25 @@ def test_get_session_cost_cents_uses_controller() -> None:
 
 
 def test_run_agent_task_accumulates_cost_in_controller() -> None:
-    output: list[str] = []
-    tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+    with tempfile.TemporaryDirectory() as tmp:
+        output: list[str] = []
+        tui = TeaAgentTUI(root=tmp, input_fn=lambda _: '', output_fn=output.append)
 
-    controller = tui._get_chat_controller()
-    assert controller.session_state.session_cost_cents == 0.0
+        controller = tui._get_chat_controller()
+        assert controller.session_state.session_cost_cents == 0.0
 
-    with (
-        patch.object(tui, '_start_file_watcher'),
-        patch.object(tui, '_load_tui_state'),
-        patch.object(tui, '_save_tui_state'),
-        patch('teaagent.chat_session_controller.run_chat_agent') as mock_run,
-        patch('teaagent.tui.core.RunStore') as mock_store_class,
-        patch('teaagent.tui.state.create_llm_adapter'),
-    ):
-        mock_run.return_value = MagicMock(
-            run_id='cost-test-run',
-            status='completed',
-            iterations=1,
-            tool_calls=0,
-            cost_cents=175.0,
-            input_tokens=100,
-            output_tokens=50,
-            final_answer=MagicMock(content='done'),
-            metadata={},
-            error_message=None,
-        )
-        mock_store = MagicMock()
-        mock_store.show_run.return_value = []
-        mock_store.logger_for_result = MagicMock()
-        mock_store.audit_logger.return_value = MagicMock()
-        mock_store_class.return_value = mock_store
+        with (
+            patch.object(tui, '_start_file_watcher'),
+            patch.object(tui, '_load_tui_state'),
+            patch.object(tui, '_save_tui_state'),
+            patch(
+                'teaagent.chat_session_controller.run_chat_agent',
+                return_value=_completed_run_result(cost_cents=175.0),
+            ),
+            patch('teaagent.tui.core.RunStore.show_run', return_value=[]),
+            patch('teaagent.tui.state.create_llm_adapter'),
+        ):
+            tui._run_agent_task('cost accum task')
 
-        tui._run_agent_task('cost accum task')
-
-    assert tui._session_cost_cents == 175.0
-    assert controller.session_state.session_cost_cents == 175.0
+        assert tui._session_cost_cents == 175.0
+        assert controller.session_state.session_cost_cents == 175.0

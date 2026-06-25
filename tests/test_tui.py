@@ -4,7 +4,7 @@ import io
 import json
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import contextmanager, redirect_stdout
 from pathlib import Path
 from unittest.mock import PropertyMock, patch
 
@@ -38,6 +38,21 @@ def _completed_run_result(
         metadata={},
         error_message=None,
     )
+
+
+@contextmanager
+def _patch_run_agent_task_boundary(*, run_result: RunResult | None = None):
+    """Boundary patches for TUI _run_agent_task (CG-16: real RunStore, mock LLM only)."""
+    result = run_result or _completed_run_result()
+    with (
+        patch(
+            'teaagent.chat_session_controller.run_chat_agent',
+            return_value=result,
+        ) as mock_run,
+        patch('teaagent.tui.core.RunStore.show_run', return_value=[]),
+        patch('teaagent.tui.state.create_llm_adapter'),
+    ):
+        yield mock_run
 
 
 class CapturingAdapterFactory:
@@ -1387,52 +1402,40 @@ class TUITests(unittest.TestCase):
 
     def test_tui_budget_unlimited_wired_to_agent_run(self) -> None:
         """Verify unlimited (None) is passed as max_estimated_cost_cents."""
-        output: list[str] = []
-        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
-        tui._runtime_max_cost_cents = None
-        with (
-            patch.object(tui, '_start_file_watcher'),
-            patch.object(tui, '_load_tui_state'),
-            patch.object(tui, '_save_tui_state'),
-            patch('teaagent.chat_session_controller.run_chat_agent') as mock_run,
-            patch('teaagent.tui.core.RunStore') as mock_store,
-            patch('teaagent.tui.state.create_llm_adapter'),
-        ):
-            mock_run.return_value = _completed_run_result()
-            mock_store.return_value.list_runs.return_value = []
-            mock_store.return_value.show_run.return_value = {}
-            mock_store.return_value.logger_for_result = lambda *a: None
-            mock_store.return_value.audit_logger = lambda: unittest.mock.MagicMock()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output: list[str] = []
+            tui = TeaAgentTUI(
+                root=tmpdir, input_fn=lambda _: '', output_fn=output.append
+            )
+            tui._runtime_max_cost_cents = None
+            with (
+                patch.object(tui, '_start_file_watcher'),
+                patch.object(tui, '_load_tui_state'),
+                patch.object(tui, '_save_tui_state'),
+                _patch_run_agent_task_boundary() as mock_run,
+            ):
+                tui._run_agent_task('test task')
 
-            tui._run_agent_task('test task')
-
-            _args, kwargs = mock_run.call_args
-            config = _args[0]
-            self.assertIsNone(config.max_estimated_cost_cents)
+                config = mock_run.call_args[0][0]
+                self.assertIsNone(config.max_estimated_cost_cents)
 
     def test_tui_budget_zero_wired_to_agent_run(self) -> None:
-        output: list[str] = []
-        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
-        tui._runtime_max_cost_cents = 0
-        with (
-            patch.object(tui, '_start_file_watcher'),
-            patch.object(tui, '_load_tui_state'),
-            patch.object(tui, '_save_tui_state'),
-            patch('teaagent.chat_session_controller.run_chat_agent') as mock_run,
-            patch('teaagent.tui.core.RunStore') as mock_store,
-            patch('teaagent.tui.state.create_llm_adapter'),
-        ):
-            mock_run.return_value = _completed_run_result()
-            mock_store.return_value.list_runs.return_value = []
-            mock_store.return_value.show_run.return_value = {}
-            mock_store.return_value.logger_for_result = lambda *a: None
-            mock_store.return_value.audit_logger = lambda: unittest.mock.MagicMock()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output: list[str] = []
+            tui = TeaAgentTUI(
+                root=tmpdir, input_fn=lambda _: '', output_fn=output.append
+            )
+            tui._runtime_max_cost_cents = 0
+            with (
+                patch.object(tui, '_start_file_watcher'),
+                patch.object(tui, '_load_tui_state'),
+                patch.object(tui, '_save_tui_state'),
+                _patch_run_agent_task_boundary() as mock_run,
+            ):
+                tui._run_agent_task('test task')
 
-            tui._run_agent_task('test task')
-
-            _args, kwargs = mock_run.call_args
-            config = _args[0]
-            self.assertEqual(config.max_estimated_cost_cents, 0)
+                config = mock_run.call_args[0][0]
+                self.assertEqual(config.max_estimated_cost_cents, 0)
 
     def test_tui_budget_shows_remaining(self) -> None:
         output: list[str] = []
@@ -1455,29 +1458,23 @@ class TUITests(unittest.TestCase):
         directly, so it passed even when the accumulation line was absent.
         This test drives through the real code path to catch that gap.
         """
-        output: list[str] = []
-        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
-        with (
-            patch('teaagent.chat_session_controller.run_chat_agent') as mock_run,
-            patch('teaagent.tui.core.RunStore') as mock_store,
-            patch('teaagent.tui.state.create_llm_adapter'),
-        ):
-            mock_run.return_value = _completed_run_result(
-                cost_cents=150.0, input_tokens=100, output_tokens=50
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output: list[str] = []
+            tui = TeaAgentTUI(
+                root=tmpdir, input_fn=lambda _: '', output_fn=output.append
             )
-            mock_store.return_value.show_run.return_value = {}
-            mock_store.return_value.logger_for_result = lambda *a: None
-            mock_store.return_value.audit_logger = lambda: unittest.mock.MagicMock()
+            with _patch_run_agent_task_boundary() as mock_run:
+                mock_run.return_value = _completed_run_result(
+                    cost_cents=150.0, input_tokens=100, output_tokens=50
+                )
 
-            self.assertEqual(tui._session_cost_cents, 0.0)
-            tui._run_agent_task('test task')
-            # After one run, accumulated cost must equal the run's cost_cents.
-            self.assertEqual(tui._session_cost_cents, 150.0)
+                self.assertEqual(tui._session_cost_cents, 0.0)
+                tui._run_agent_task('test task')
+                self.assertEqual(tui._session_cost_cents, 150.0)
 
-            # Run a second task; total must be additive.
-            mock_run.return_value = _completed_run_result(cost_cents=75.0)
-            tui._run_agent_task('second task')
-            self.assertEqual(tui._session_cost_cents, 225.0)
+                mock_run.return_value = _completed_run_result(cost_cents=75.0)
+                tui._run_agent_task('second task')
+                self.assertEqual(tui._session_cost_cents, 225.0)
 
     def test_tui_compact_no_session(self) -> None:
         output: list[str] = []
@@ -1516,19 +1513,23 @@ class TUITests(unittest.TestCase):
 
     def test_tui_handle_undo_calls_controller_first(self) -> None:
         """_handle_undo must call ChatSessionController.undo_last_run() before checkpoint fallback."""
-        import unittest.mock
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output: list[str] = []
+            tui = TeaAgentTUI(
+                root=tmpdir, input_fn=lambda _: '', output_fn=output.append
+            )
+            controller = tui._get_chat_controller()
+            undo_calls: list[bool] = []
 
-        output: list[str] = []
-        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
-        with patch.object(tui, '_get_chat_controller') as mock_get:
-            mock_controller = unittest.mock.MagicMock()
-            mock_controller.undo_last_run.return_value = True
-            mock_get.return_value = mock_controller
+            def spy_undo() -> bool:
+                undo_calls.append(True)
+                return True
+
+            controller.undo_last_run = spy_undo
 
             tui._handle_undo()
 
-            mock_controller.undo_last_run.assert_called_once()
-            # Should say journal undo completed, not fall back to checkpoint
+            self.assertEqual(len(undo_calls), 1)
             self.assertIn('journal undo completed', ' '.join(output))
 
     def test_tui_undo_uses_journal(self) -> None:
@@ -1668,28 +1669,22 @@ class TUITests(unittest.TestCase):
 
     def test_tui_budget_wired_to_agent_run(self) -> None:
         """Verify max_estimated_cost_cents is passed to ChatAgentConfig.from_root."""
-        output: list[str] = []
-        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
-        tui._runtime_max_cost_cents = 200
-        with (
-            patch.object(tui, '_start_file_watcher'),
-            patch.object(tui, '_load_tui_state'),
-            patch.object(tui, '_save_tui_state'),
-            patch('teaagent.chat_session_controller.run_chat_agent') as mock_run,
-            patch('teaagent.tui.core.RunStore') as mock_store,
-            patch('teaagent.tui.state.create_llm_adapter'),
-        ):
-            mock_run.return_value = _completed_run_result()
-            mock_store.return_value.list_runs.return_value = []
-            mock_store.return_value.show_run.return_value = {}
-            mock_store.return_value.logger_for_result = lambda *a: None
-            mock_store.return_value.audit_logger = lambda: unittest.mock.MagicMock()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output: list[str] = []
+            tui = TeaAgentTUI(
+                root=tmpdir, input_fn=lambda _: '', output_fn=output.append
+            )
+            tui._runtime_max_cost_cents = 200
+            with (
+                patch.object(tui, '_start_file_watcher'),
+                patch.object(tui, '_load_tui_state'),
+                patch.object(tui, '_save_tui_state'),
+                _patch_run_agent_task_boundary() as mock_run,
+            ):
+                tui._run_agent_task('test task')
 
-            tui._run_agent_task('test task')
-
-            _args, kwargs = mock_run.call_args
-            config = _args[0]
-            self.assertEqual(config.max_estimated_cost_cents, 200)
+                config = mock_run.call_args[0][0]
+                self.assertEqual(config.max_estimated_cost_cents, 200)
 
     def test_tui_file_watcher_start_stop(self) -> None:
         """Verify watcher starts and stops cleanly."""
