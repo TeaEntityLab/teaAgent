@@ -6,8 +6,8 @@ import json
 from typing import Any, Optional
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote
-from urllib.request import Request, urlopen
 
+from teaagent.http_utils import safe_urlopen
 from teaagent.subagents._approval_queue import (
     ApprovalBatch,
     ApprovalRequestStatus,
@@ -61,14 +61,15 @@ class HttpApprovalCoordinationBackend:
         allow_404: bool = False,
     ) -> dict[str, Any] | None:
         payload = json.dumps(body).encode('utf-8') if body is not None else None
-        request = Request(
-            f'{self._base_url}{path}',
-            data=payload,
-            headers=self._headers(),
-            method=method,
-        )
         try:
-            with urlopen(request, timeout=self._timeout_seconds) as response:
+            with safe_urlopen(
+                f'{self._base_url}{path}',
+                timeout=int(self._timeout_seconds),
+                allow_http=True,
+                data=payload,
+                headers=self._headers(),
+                method=method,
+            ) as response:
                 raw = response.read().decode('utf-8')
                 if not raw.strip():
                     return {}

@@ -38,7 +38,7 @@ class ApprovalCoordinationHttpServer:
         if self._httpd is None:
             raise RuntimeError('server not started')
         host = self._host
-        if host in {'0.0.0.0', '::'}:
+        if host in {'0.0.0.0', '::'}:  # nosec B104 - normalize bind-all host for display URL only
             host = '127.0.0.1'
         return f'http://{host}:{self._httpd.server_port}'
 

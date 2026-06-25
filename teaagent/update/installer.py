@@ -19,7 +19,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Callable, Optional
 from urllib.error import URLError
-from urllib.request import Request, urlopen
+
+from teaagent.http_utils import safe_urlopen
 
 
 class UpdateStatus(str, Enum):
@@ -113,9 +114,11 @@ class UpdateDownloader:
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         try:
-            request = Request(package.download_url, headers={'User-Agent': 'teaagent'})
-
-            with urlopen(request, timeout=30) as response:
+            with safe_urlopen(
+                package.download_url,
+                timeout=30,
+                headers={'User-Agent': 'teaagent'},
+            ) as response:
                 total_size = int(response.headers.get('content-length', 0))
                 downloaded = 0
 

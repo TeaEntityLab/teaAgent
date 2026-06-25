@@ -750,64 +750,58 @@ def _apply_plan_contract(
     return run_started_extra
 
 
-def _run_chat_agent_impl(
+def _resolve_audit_logger(
     *,
-    task: str,
-    adapter: LLMAdapter,
     config: ChatAgentConfig,
-    audit: Optional[AuditLogger] = None,
-    registry: Optional[ToolRegistry] = None,
-    task_spec: Optional[str] = None,
-    depth: int = 0,
-    initial_observations: Optional[list[dict[str, Any]]] = None,
-    initial_context_extra: Optional[dict[str, Any]] = None,
-    run_id: Optional[str] = None,
-    no_audit: bool = False,
-) -> RunResult:
-    run_id = run_id or uuid4().hex
-    project_instructions = load_project_instructions(config.root)
-
+    audit: Optional[AuditLogger],
+    run_id: str,
+    no_audit: bool,
+) -> AuditLogger:
+    """Resolve the audit logger for a chat agent run."""
     if audit is not None:
-        audit_logger = audit
-    elif no_audit:
+        return audit
+    if no_audit:
         import sys
 
         sys.stderr.write(
             'audit_disabled: --no-audit is set, audit events kept in memory only\n'
         )
-        audit_logger = AuditLogger()
-    else:
-        from teaagent.run_store import RunStore
+        return AuditLogger()
+    from teaagent.run_store import RunStore
 
-        audit_logger = AuditLogger(path=RunStore(config.root).run_path(run_id))
+    return AuditLogger(path=RunStore(config.root).run_path(run_id))
 
-    tool_registry, context_extra = _setup_tool_registry(
-        config, adapter, registry, task, task_spec, depth, initial_context_extra
-    )
-    skill_index_entries, memories, active_skills = _load_skills_and_memory(
-        config, task, run_id, audit_logger
-    )
-    runner, engine = _create_runner_and_engine(
-        config,
-        adapter,
-        tool_registry,
-        project_instructions,
-        task_spec,
-        active_skills,
-        skill_index_entries,
-        context_extra,
-        run_id,
-        audit_logger,
-    )
-    heartbeat = _setup_heartbeat(config, audit_logger, run_id)
+
+def _build_run_started_extra(
+    runner: AgentRunner,
+    context_extra: dict[str, Any],
+    config: ChatAgentConfig,
+) -> dict[str, Any]:
+    """Build run_started_extra metadata for the runner."""
     run_started_extra = _apply_plan_contract(runner, context_extra) or {}
-    run_started_extra = {
+    return {
         **run_started_extra,
         'provider': str(context_extra.get('provider', '') or ''),
         'model': str(context_extra.get('model', '') or config.model or ''),
         'permission_mode': config.permission_mode.value,
     }
 
+
+def _execute_chat_run(
+    *,
+    task: str,
+    config: ChatAgentConfig,
+    runner: AgentRunner,
+    engine: ModelDecisionEngine,
+    memories: list[dict],
+    run_id: str,
+    audit_logger: AuditLogger,
+    heartbeat: Optional[Heartbeat],
+    context_extra: dict[str, Any],
+    initial_observations: Optional[list[dict[str, Any]]],
+    run_started_extra: dict[str, Any],
+) -> RunResult:
+    """Execute the chat agent run loop and post-run memory curation."""
     try:
         engine.reset_usage()
         result = runner.run(
@@ -833,6 +827,63 @@ def _run_chat_agent_impl(
             from teaagent.ergonomics.run_liveness import clear_liveness
 
             clear_liveness(config.root, run_id)
+
+
+def _run_chat_agent_impl(
+    *,
+    task: str,
+    adapter: LLMAdapter,
+    config: ChatAgentConfig,
+    audit: Optional[AuditLogger] = None,
+    registry: Optional[ToolRegistry] = None,
+    task_spec: Optional[str] = None,
+    depth: int = 0,
+    initial_observations: Optional[list[dict[str, Any]]] = None,
+    initial_context_extra: Optional[dict[str, Any]] = None,
+    run_id: Optional[str] = None,
+    no_audit: bool = False,
+) -> RunResult:
+    run_id = run_id or uuid4().hex
+    project_instructions = load_project_instructions(config.root)
+    audit_logger = _resolve_audit_logger(
+        config=config,
+        audit=audit,
+        run_id=run_id,
+        no_audit=no_audit,
+    )
+    tool_registry, context_extra = _setup_tool_registry(
+        config, adapter, registry, task, task_spec, depth, initial_context_extra
+    )
+    skill_index_entries, memories, active_skills = _load_skills_and_memory(
+        config, task, run_id, audit_logger
+    )
+    runner, engine = _create_runner_and_engine(
+        config,
+        adapter,
+        tool_registry,
+        project_instructions,
+        task_spec,
+        active_skills,
+        skill_index_entries,
+        context_extra,
+        run_id,
+        audit_logger,
+    )
+    heartbeat = _setup_heartbeat(config, audit_logger, run_id)
+    run_started_extra = _build_run_started_extra(runner, context_extra, config)
+    return _execute_chat_run(
+        task=task,
+        config=config,
+        runner=runner,
+        engine=engine,
+        memories=memories,
+        run_id=run_id,
+        audit_logger=audit_logger,
+        heartbeat=heartbeat,
+        context_extra=context_extra,
+        initial_observations=initial_observations,
+        run_started_extra=run_started_extra,
+    )
 
 
 def with_memories(context: dict, memories: list[dict]) -> dict:

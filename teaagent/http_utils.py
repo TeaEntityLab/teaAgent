@@ -13,6 +13,7 @@ to improve security and consistency.
 from __future__ import annotations
 
 import logging
+import ssl
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -30,6 +31,36 @@ MAX_REDIRECTS = 5
 DEFAULT_ALLOWED_SCHEMES = {'https'}
 
 
+def _allowed_schemes(*, allow_http: bool) -> set[str]:
+    return DEFAULT_ALLOWED_SCHEMES | ({'http'} if allow_http else set())
+
+
+def _validate_url_scheme(url: str, *, allow_http: bool) -> None:
+    parsed = urllib.parse.urlparse(url)
+    allowed_schemes = _allowed_schemes(allow_http=allow_http)
+    if parsed.scheme not in allowed_schemes:
+        raise ValueError(
+            f"URL scheme '{parsed.scheme}' not allowed. "
+            f'Allowed schemes: {", ".join(sorted(allowed_schemes))}'
+        )
+
+
+def safe_urlopen_request(
+    request: urllib.request.Request,
+    *,
+    timeout: int = DEFAULT_TIMEOUT,
+    allow_http: bool = False,
+    context: Optional[ssl.SSLContext] = None,
+) -> Any:
+    """Open a pre-built Request after validating its URL scheme."""
+    _validate_url_scheme(request.full_url, allow_http=allow_http)
+    open_kwargs: dict[str, Any] = {'timeout': timeout}
+    if context is not None:
+        open_kwargs['context'] = context
+    # Centralized, scheme-validated HTTP entry point (S-05).
+    return urllib.request.urlopen(request, **open_kwargs)  # nosec B310
+
+
 def safe_urlopen(  # noqa: C901
     url: str,
     *,
@@ -38,6 +69,8 @@ def safe_urlopen(  # noqa: C901
     max_redirects: int = MAX_REDIRECTS,
     data: Optional[bytes] = None,
     headers: Optional[dict[str, str]] = None,
+    method: str = 'GET',
+    context: Optional[ssl.SSLContext] = None,
 ) -> Any:
     """Open a URL with security constraints and consistent error handling.
 
@@ -48,6 +81,8 @@ def safe_urlopen(  # noqa: C901
         max_redirects: Maximum number of redirects to follow (default: 5)
         data: Optional data to send with the request (for POST requests)
         headers: Optional HTTP headers to include in the request
+        method: HTTP method (default: GET)
+        context: Optional SSL context for HTTPS requests
 
     Returns:
         The response object from urllib.request.urlopen
@@ -58,20 +93,16 @@ def safe_urlopen(  # noqa: C901
         urllib.error.HTTPError: If the HTTP request returns an error status
         TimeoutError: If the request times out
     """
-    # Validate scheme
-    parsed = urllib.parse.urlparse(url)
-    allowed_schemes = DEFAULT_ALLOWED_SCHEMES | ({'http'} if allow_http else set())
-    if parsed.scheme not in allowed_schemes:
-        raise ValueError(
-            f"URL scheme '{parsed.scheme}' not allowed. "
-            f'Allowed schemes: {", ".join(sorted(allowed_schemes))}'
-        )
+    _validate_url_scheme(url, allow_http=allow_http)
+    allowed_schemes = _allowed_schemes(allow_http=allow_http)
 
     # Create request with headers if provided
     if data is not None:
-        req = urllib.request.Request(url, data=data, headers=headers or {})
+        req = urllib.request.Request(
+            url, data=data, headers=headers or {}, method=method
+        )
     else:
-        req = urllib.request.Request(url, headers=headers or {})
+        req = urllib.request.Request(url, headers=headers or {}, method=method)
 
     # Set redirect limit
     redirect_count = 0
@@ -79,7 +110,10 @@ def safe_urlopen(  # noqa: C901
 
     while redirect_count <= max_redirects:
         try:
-            response = urllib.request.urlopen(req, timeout=timeout)
+            open_kwargs: dict[str, Any] = {'timeout': timeout}
+            if context is not None:
+                open_kwargs['context'] = context
+            response = urllib.request.urlopen(req, **open_kwargs)  # nosec B310
             # Check for redirect
             if response.getcode() in (301, 302, 303, 307, 308):
                 redirect_count += 1
@@ -96,7 +130,9 @@ def safe_urlopen(  # noqa: C901
                         f"Redirect to scheme '{redirect_parsed.scheme}' not allowed. "
                         f'Allowed schemes: {", ".join(sorted(allowed_schemes))}'
                     )
-                req = urllib.request.Request(current_url, headers=headers or {})
+                req = urllib.request.Request(
+                    current_url, headers=headers or {}, method=method
+                )
                 continue
             return response
         except urllib.error.HTTPError:

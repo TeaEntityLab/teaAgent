@@ -456,9 +456,8 @@ class ContextBus:
             try:
                 if delta_ids is not None:
                     placeholders = ','.join('?' for _ in delta_ids)
-                    # noqa: B608 - placeholders is safely constructed from '?' characters only
                     cursor.execute(
-                        f'DELETE FROM delta_cards WHERE delta_id IN ({placeholders})',
+                        f'DELETE FROM delta_cards WHERE delta_id IN ({placeholders})',  # nosec B608
                         delta_ids,
                     )
                 elif max_timestamp is not None:

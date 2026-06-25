@@ -137,6 +137,10 @@ class TeaAgentTUI:
         # Skill activation explain cache (DSK-P1-004)
         self._skill_explain: Optional[SkillActivationExplain] = None
 
+        # State panel render cache (perf roadmap QW-4)
+        self._state_panel_last_printed: float = 0.0
+        self._state_panel_cache_ttl: float = 2.0
+
     def _determine_cost_state(self) -> str:
         """Determine the cost display state label.
 
@@ -200,6 +204,13 @@ class TeaAgentTUI:
 
     def _print_state_panel(self) -> None:
         """Print the state panel showing token budget, files, and memory."""
+        import time
+
+        now = time.monotonic()
+        if now - self._state_panel_last_printed < self._state_panel_cache_ttl:
+            return
+        self._state_panel_last_printed = now
+
         try:
             columns, lines = shutil.get_terminal_size()
         except (OSError, ValueError):
@@ -1391,13 +1402,6 @@ class TeaAgentTUI:
         if not self._chat_explicit:
             self.chat = data.get('chat', self.chat)
         self.session_id = data.get('session_id', self.session_id)
-        self.progress = data.get('progress', self.progress)
-        self.stream = data.get('stream', self.stream)
-        self.subagent = data.get('subagent', self.subagent)
-        self.route_model_enabled = data.get(
-            'route_model_enabled', self.route_model_enabled
-        )
-        self.heartbeat_seconds = data.get('heartbeat_seconds', self.heartbeat_seconds)
 
     def _save_tui_state(self) -> None:
         data = {

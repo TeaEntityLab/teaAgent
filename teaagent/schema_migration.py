@@ -91,9 +91,8 @@ class SQLiteMigrationStore:
 
     def applied_versions(self) -> list[int]:
         with self._connect() as conn:
-            # noqa: B608 - TABLE is validated in __init__ to be identifier-safe
             rows = conn.execute(
-                f'SELECT version FROM {self.TABLE} ORDER BY version'
+                f'SELECT version FROM {self.TABLE} ORDER BY version'  # nosec B608
             ).fetchall()
         return [r[0] for r in rows]
 

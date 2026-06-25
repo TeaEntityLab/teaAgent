@@ -14,7 +14,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Optional
 from urllib.error import URLError
-from urllib.request import Request, urlopen
+
+from teaagent.http_utils import safe_urlopen
 
 
 class UpdateChannel(str, Enum):
@@ -179,9 +180,12 @@ class UpdateServer:
 
             # Fetch latest version from server
             url = f'{self.base_url}/updates/latest?channel={channel.value}'
-            request = Request(url, headers={'User-Agent': 'teaagent'})
 
-            with urlopen(request, timeout=10) as response:
+            with safe_urlopen(
+                url,
+                timeout=10,
+                headers={'User-Agent': 'teaagent'},
+            ) as response:
                 data = json.loads(response.read().decode('utf-8'))
 
             latest = Version.from_string(data['version'])

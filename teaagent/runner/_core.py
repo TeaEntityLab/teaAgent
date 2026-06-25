@@ -941,26 +941,19 @@ class AgentRunner:
             output_tokens=output_tokens,
         )
 
-    def run(  # noqa: C901
+    def _execute_run_loop(
         self,
         *,
         task: str,
         decide: DecisionFn,
-        run_id: Optional[str] = None,
-        initial_observations: Optional[list[dict[str, Any]]] = None,
-        initial_context_extra: Optional[dict[str, Any]] = None,
-        run_started_extra: Optional[dict[str, Any]] = None,
+        current_run_id: str,
+        context: RunContext,
+        tool_calls: int,
+        cost_cents: float,
+        input_tokens: int,
+        output_tokens: int,
     ) -> RunResult:
-        current_run_id, context, tool_calls, cost_cents, input_tokens, output_tokens = (
-            self._initialize_run_state(
-                task,
-                run_id,
-                initial_observations,
-                initial_context_extra,
-                run_started_extra,
-            )
-        )
-        setup_run_logging(current_run_id)
+        """Execute the main iteration loop for a run."""
         iterations = 0
 
         while iterations < self.budget.max_iterations:
@@ -1017,9 +1010,6 @@ class AgentRunner:
                 if tool_calls >= self.budget.max_tool_calls:
                     raise BudgetExceededError('tool-call budget exceeded')
 
-                # DSK-P0-007: structural validation gate for tool decisions.
-                # Prevent malformed decisions (empty tool_name, null arguments)
-                # from being silently dispatched to the tool registry.
                 if isinstance(decision, ToolRequest):
                     valid, reason = validate_tool_decision(
                         {
@@ -1051,8 +1041,6 @@ class AgentRunner:
                 )
                 self.phase_tracker.record_tool_call()
             except ToolPermissionError as exc:
-                # This happens when approval_handler is None and we want to pause
-                # Extract approval metadata from the exception context if available
                 approval_metadata = {}
                 if hasattr(exc, 'reason_code') and exc.reason_code:
                     approval_metadata['reason_code'] = exc.reason_code.value
@@ -1101,4 +1089,35 @@ class AgentRunner:
             cost_cents,
             input_tokens,
             output_tokens,
+        )
+
+    def run(
+        self,
+        *,
+        task: str,
+        decide: DecisionFn,
+        run_id: Optional[str] = None,
+        initial_observations: Optional[list[dict[str, Any]]] = None,
+        initial_context_extra: Optional[dict[str, Any]] = None,
+        run_started_extra: Optional[dict[str, Any]] = None,
+    ) -> RunResult:
+        current_run_id, context, tool_calls, cost_cents, input_tokens, output_tokens = (
+            self._initialize_run_state(
+                task,
+                run_id,
+                initial_observations,
+                initial_context_extra,
+                run_started_extra,
+            )
+        )
+        setup_run_logging(current_run_id)
+        return self._execute_run_loop(
+            task=task,
+            decide=decide,
+            current_run_id=current_run_id,
+            context=context,
+            tool_calls=tool_calls,
+            cost_cents=cost_cents,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
         )

@@ -10,6 +10,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
 
 from teaagent.http_rate_limit import TokenRateLimiter
+from teaagent.http_utils import safe_urlopen_request
 from teaagent.llm._extract import (
     _extract_claude_content,
     _extract_gemini_content,
@@ -322,7 +323,12 @@ class OpenAICompatibleAdapter:
             request_kwargs: dict[str, Any] = {'timeout': self.timeout}
             if ssl_context is not None:
                 request_kwargs['context'] = ssl_context
-            with urllib_request.urlopen(req, **request_kwargs) as resp:
+            with safe_urlopen_request(
+                req,
+                timeout=self.timeout,
+                allow_http=True,
+                context=ssl_context,
+            ) as resp:
                 yield from resp
         except HTTPError as exc:
             detail = exc.read().decode('utf-8', errors='replace')
@@ -519,7 +525,12 @@ def _iter_http_post_lines(
         request_kwargs: dict[str, Any] = {'timeout': timeout}
         if ssl_context is not None:
             request_kwargs['context'] = ssl_context
-        with urllib_request.urlopen(req, **request_kwargs) as resp:
+        with safe_urlopen_request(
+            req,
+            timeout=timeout,
+            allow_http=True,
+            context=ssl_context,
+        ) as resp:
             yield from resp
     except HTTPError as exc:
         detail = exc.read().decode('utf-8', errors='replace')

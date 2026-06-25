@@ -66,332 +66,6 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
     if handler:
         return handler(tui, args)
 
-    # Handle inline commands (these were previously in the dispatch but handlers were never implemented)
-    if action in ('ask', 'run'):
-        if not args or args[0] == '--clarify':
-            if len(args) < 2 or (args[0] == '--clarify' and len(args) < 2):
-                tui.output_fn('error: ask requires a task')
-                return True
-            # Handle ask --clarify
-            if args[0] == '--clarify':
-                task = ' '.join(args[1:])
-                _safe_run_agent_task(tui, task, clarify_first=True)
-                return True
-        task = ' '.join(args)
-        _safe_run_agent_task(tui, task)
-        return True
-
-    if action == 'clarify':
-        if not args:
-            tui.output_fn('error: clarify requires a task')
-            return True
-        from teaagent.intent import clarify_task
-
-        task = ' '.join(args)
-        clarification = clarify_task(task)
-        tui._print_json(clarification.to_dict())
-        return True
-
-    if action == 'preflight':
-        if not args:
-            tui.output_fn('error: preflight requires a task')
-            return True
-        task = ' '.join(args)
-        from teaagent.preflight import preflight
-
-        report = preflight(
-            task,
-            root=tui.root,
-            provider=tui.provider or 'gpt',
-            model=tui.model,
-            permission_mode=tui.permission_mode,
-            route=tui.route_model_enabled,
-            memory_limit=tui.memory_limit,
-        )
-        tui._print_json(report.to_dict())
-        return True
-
-    if action == 'route':
-        if not args:
-            tui.output_fn('error: route requires a task')
-            return True
-        from teaagent.model_routing import route_model
-
-        task = ' '.join(args)
-        provider = tui.provider or 'gpt'
-        routing = (
-            route_model(task, provider=provider, model=tui.model)
-            if tui.route_model_enabled
-            else None
-        )
-        if routing:
-            tui._print_json(routing.to_dict())
-        else:
-            tui._print_json({'model': tui.model or 'default', 'task': task})
-        return True
-
-    if action == 'complexity':
-        if not args:
-            tui.output_fn('error: complexity requires a task')
-            return True
-        from teaagent.model_routing import analyze_complexity
-
-        task = ' '.join(args)
-        complexity = analyze_complexity(task)
-        tui._print_json({'complexity': complexity, 'task': task})
-        return True
-
-    if action == 'estimate':
-        if not args:
-            tui.output_fn('error: estimate requires a task')
-            return True
-        from teaagent.model_routing import estimate_tokens
-
-        task = ' '.join(args)
-        estimate = estimate_tokens(task, complexity='medium')
-        tui._print_json({'estimate': estimate, 'task': task})
-        return True
-
-    if action == 'session':
-        if not args:
-            tui.output_fn(
-                'error: session requires a subcommand (new, list, switch, clear, show)'
-            )
-            return True
-        subcommand = args[0]
-        if subcommand == 'new':
-            tui._ensure_session()
-            tui.output_fn(
-                f'session new: {tui.session_id[:8] if tui.session_id else "none"}'
-            )
-        elif subcommand == 'list':
-            store = tui._get_session_store()
-            sessions = store.list_sessions()
-            tui._print_json(sessions)
-        elif subcommand == 'switch':
-            if len(args) < 2:
-                tui.output_fn('error: session switch requires a session id')
-                return True
-            tui.session_id = args[1]
-            tui.output_fn(f'session: {tui.session_id[:8]}')
-        elif subcommand == 'clear':
-            session = tui._current_session()
-            if session:
-                session.messages.clear()
-                tui._get_session_store().save(session)
-                tui.output_fn('session cleared')
-            else:
-                tui.output_fn('error: no active session')
-        elif subcommand == 'show':
-            session = tui._current_session()
-            if session:
-                tui._print_json(session.to_dict())
-        else:
-            tui.output_fn(f"error: unknown session subcommand '{subcommand}'")
-        return True
-
-    if action == 'status':
-        if not args:
-            tui.output_fn('error: status requires a run id')
-            return True
-        run_id = args[0]
-        run_store = RunStore(tui.root)
-        try:
-            tui._print_json(run_store.heartbeat_for_run(run_id))
-        except FileNotFoundError:
-            tui.output_fn(f"error: run '{run_id}' not found")
-        return True
-
-    if action == 'plan':
-        if not args:
-            tui.output_fn('error: plan requires a task')
-            return True
-        task = ' '.join(args)
-        from teaagent.intent import clarify_task
-
-        try:
-            clarification = clarify_task(task)
-            tui._print_json(
-                {
-                    'task': task,
-                    'plan': clarification.to_dict(),
-                    'status': 'clarification_generated',
-                }
-            )
-        except Exception as e:
-            tui._print_json(
-                {'task': task, 'plan': f'error: {str(e)}', 'status': 'error'}
-            )
-        return True
-
-    if action == 'permissions':
-        from teaagent.ergonomics.approval_store import ApprovalPresetStore
-
-        approval_store = ApprovalPresetStore(str(tui.root))
-        presets = approval_store.list_presets()  # type: ignore[attr-defined]
-        tui._print_json([p.to_dict() for p in presets])
-        return True
-
-    if action == 'mcp':
-        tui.output_fn('error: mcp commands are run from the shell, not the TUI')
-        return True
-
-    if action == 'context':
-        if not args:
-            tui.output_fn('error: context requires a subcommand (list)')
-            return True
-        subcommand = args[0]
-        if subcommand == 'list':
-            tui._print_json([])
-        else:
-            tui.output_fn(f"error: unknown context subcommand '{subcommand}'")
-        return True
-
-    if action == 'daily':
-        task_str: str | None = ' '.join(args) if args else None
-        from teaagent.daily import build_daily_brief
-
-        provider = tui.provider or 'gpt'
-        brief = build_daily_brief(
-            task=task_str,
-            root=tui.root,
-            provider=provider,
-            permission_mode=tui.permission_mode,
-        )
-        tui.output_fn(f'daily: ready={brief.ready}')
-        tui._print_json(brief.to_dict())
-        return True
-
-    if action == 'resume':
-        if not args:
-            tui.output_fn('error: resume requires a run id')
-            return True
-        run_id = args[0]
-        from teaagent.ergonomics.workspace_defaults import load_workspace_defaults
-        from teaagent.integration.resume_preparation import (
-            ResumePreparationError,
-            prepare_run_resume,
-        )
-
-        defaults = load_workspace_defaults(tui.root)
-        auto_compact = bool(defaults.get('auto_compact_on_resume', True))
-        try:
-            prepared = prepare_run_resume(
-                tui.root,
-                run_id,
-                approve_call_ids=frozenset(tui.approved_call_ids),
-                auto_compact=auto_compact,
-                auto_approve_pending=False,
-            )
-        except ResumePreparationError as exc:
-            tui.output_fn(f'error: {exc}')
-            return True
-
-        if prepared.pending_warning:
-            tui.output_fn(f'warning: {prepared.pending_warning}')
-        elif prepared.auto_approved_call_id:
-            tui.output_fn(
-                f'resume: {run_id} (auto-approved pending call {prepared.auto_approved_call_id})'
-            )
-        else:
-            tui.output_fn(f'resume: {run_id}')
-        _safe_run_agent_task(
-            tui,
-            prepared.original_task,
-            resumed_from=prepared.run_id,
-            initial_observations=prepared.initial_observations,
-            initial_context_extra=prepared.initial_context_extra,
-        )
-        return True
-
-    if action == 'parallel':
-        if not args:
-            tui.output_fn('error: parallel requires at least one option')
-            return True
-        # Store parallel options for later selection
-        tui._parallel_options = args
-        tui._print_json(
-            {
-                'options': args,
-                'count': len(args),
-                'status': 'options_stored',
-                'hint': 'use "select <index>" to choose an option',
-            }
-        )
-        return True
-
-    if action == 'select':
-        if not args:
-            tui.output_fn('error: select requires an option index or value')
-            return True
-        if not hasattr(tui, '_parallel_options') or not tui._parallel_options:
-            tui.output_fn('error: no parallel options available. Use "parallel" first.')
-            return True
-        selection = args[0]
-        try:
-            # Try to parse as index
-            index = int(selection)
-            if 0 <= index < len(tui._parallel_options):
-                selected = tui._parallel_options[index]
-                tui._print_json(
-                    {'selected': selected, 'index': index, 'status': 'selected'}
-                )
-                tui._parallel_options = None  # Clear after selection
-            else:
-                tui.output_fn(
-                    f'error: index {index} out of range (0-{len(tui._parallel_options) - 1})'
-                )
-        except ValueError:
-            # Try to match as value
-            if tui._parallel_options and selection in tui._parallel_options:
-                tui._print_json({'selected': selection, 'status': 'selected'})
-                tui._parallel_options = None
-            else:
-                tui.output_fn(
-                    f'error: option "{selection}" not found in parallel options'
-                )
-        return True
-
-    if action == 'cancel':
-        if hasattr(tui, '_parallel_options') and tui._parallel_options:
-            tui._parallel_options = None
-            tui._print_json(
-                {'status': 'cancelled', 'action': 'cleared_parallel_options'}
-            )
-        else:
-            tui._print_json({'status': 'cancelled', 'action': 'no_active_operation'})
-        return True
-
-    if action == 'conflict':
-        tui._print_json(
-            {
-                'status': 'not_available',
-                'message': 'Conflict resolution mode is not available',
-                'hint': 'Use git tools directly for conflict resolution',
-            }
-        )
-        return True
-
-    # Conflict resolution shortcuts
-    if action in ('o', 't', 'n', 'p', 'a'):
-        shortcuts = {
-            'o': 'accept_ours',
-            't': 'accept_theirs',
-            'n': 'next_conflict',
-            'p': 'prev_conflict',
-            'a': 'abort_conflict',
-        }
-        tui._print_json(
-            {
-                'status': 'not_available',
-                'shortcut': action,
-                'action': shortcuts[action],
-                'message': 'Conflict resolution shortcuts are not available',
-                'hint': 'Use git tools: git checkout --ours/theirs, git diff, etc.',
-            }
-        )
-        return True
-
     # Handle chat mode fallback: unknown command → prompt before forwarding as task
     if tui.chat:
         return _handle_unknown_chat_command(tui, raw_command)
@@ -1033,6 +707,387 @@ def _cmd_artifact_list(tui: 'TeaAgentTUI', args: list[str]) -> bool:
     return True
 
 
+def _cmd_conflict_shortcut(tui: 'TeaAgentTUI', args: list[str], shortcut: str) -> bool:
+    """Handle conflict resolution shortcut keys."""
+    shortcuts = {
+        'o': 'accept_ours',
+        't': 'accept_theirs',
+        'n': 'next_conflict',
+        'p': 'prev_conflict',
+        'a': 'abort_conflict',
+    }
+    tui._print_json(
+        {
+            'status': 'not_available',
+            'shortcut': shortcut,
+            'action': shortcuts[shortcut],
+            'message': 'Conflict resolution shortcuts are not available',
+            'hint': 'Use git tools: git checkout --ours/theirs, git diff, etc.',
+        }
+    )
+    return True
+
+
+def _cmd_ask_run(tui: 'TeaAgentTUI', args: list[str]) -> bool:
+    """Handle ask/run command."""
+    if not args or args[0] == '--clarify':
+        if len(args) < 2 or (args[0] == '--clarify' and len(args) < 2):
+            tui.output_fn('error: ask requires a task')
+            return True
+        # Handle ask --clarify
+        if args[0] == '--clarify':
+            task = ' '.join(args[1:])
+            _safe_run_agent_task(tui, task, clarify_first=True)
+            return True
+    task = ' '.join(args)
+    _safe_run_agent_task(tui, task)
+    return True
+
+
+def _cmd_clarify(tui: 'TeaAgentTUI', args: list[str]) -> bool:
+    """Handle clarify command."""
+    if not args:
+        tui.output_fn('error: clarify requires a task')
+        return True
+    from teaagent.intent import clarify_task
+
+    task = ' '.join(args)
+    clarification = clarify_task(task)
+    tui._print_json(clarification.to_dict())
+    return True
+
+
+def _cmd_preflight(tui: 'TeaAgentTUI', args: list[str]) -> bool:
+    """Handle preflight command."""
+    if not args:
+        tui.output_fn('error: preflight requires a task')
+        return True
+    task = ' '.join(args)
+    from teaagent.preflight import preflight
+
+    report = preflight(
+        task,
+        root=tui.root,
+        provider=tui.provider or 'gpt',
+        model=tui.model,
+        permission_mode=tui.permission_mode,
+        route=tui.route_model_enabled,
+        memory_limit=tui.memory_limit,
+    )
+    tui._print_json(report.to_dict())
+    return True
+
+
+def _cmd_route(tui: 'TeaAgentTUI', args: list[str]) -> bool:
+    """Handle route command."""
+    if not args:
+        tui.output_fn('error: route requires a task')
+        return True
+    from teaagent.model_routing import route_model
+
+    task = ' '.join(args)
+    provider = tui.provider or 'gpt'
+    routing = (
+        route_model(task, provider=provider, model=tui.model)
+        if tui.route_model_enabled
+        else None
+    )
+    if routing:
+        tui._print_json(routing.to_dict())
+    else:
+        tui._print_json({'model': tui.model or 'default', 'task': task})
+    return True
+
+
+def _cmd_complexity(tui: 'TeaAgentTUI', args: list[str]) -> bool:
+    """Handle complexity command."""
+    if not args:
+        tui.output_fn('error: complexity requires a task')
+        return True
+    from teaagent.model_routing import analyze_complexity
+
+    task = ' '.join(args)
+    complexity = analyze_complexity(task)
+    tui._print_json({'complexity': complexity, 'task': task})
+    return True
+
+
+def _cmd_estimate(tui: 'TeaAgentTUI', args: list[str]) -> bool:
+    """Handle estimate command."""
+    if not args:
+        tui.output_fn('error: estimate requires a task')
+        return True
+    from teaagent.model_routing import estimate_tokens
+
+    task = ' '.join(args)
+    estimate = estimate_tokens(task, complexity='medium')
+    tui._print_json({'estimate': estimate, 'task': task})
+    return True
+
+
+def _cmd_session(tui: 'TeaAgentTUI', args: list[str]) -> bool:
+    """Handle session command."""
+    if not args:
+        tui.output_fn(
+            'error: session requires a subcommand (new, list, switch, clear, show)'
+        )
+        return True
+    subcommand = args[0]
+    if subcommand == 'new':
+        tui._ensure_session()
+        tui.output_fn(
+            f'session new: {tui.session_id[:8] if tui.session_id else "none"}'
+        )
+    elif subcommand == 'list':
+        store = tui._get_session_store()
+        sessions = store.list_sessions()
+        tui._print_json(sessions)
+    elif subcommand == 'switch':
+        if len(args) < 2:
+            tui.output_fn('error: session switch requires a session id')
+            return True
+        tui.session_id = args[1]
+        tui.output_fn(f'session: {tui.session_id[:8]}')
+    elif subcommand == 'clear':
+        session = tui._current_session()
+        if session:
+            session.messages.clear()
+            tui._get_session_store().save(session)
+            tui.output_fn('session cleared')
+        else:
+            tui.output_fn('error: no active session')
+    elif subcommand == 'show':
+        session = tui._current_session()
+        if session:
+            tui._print_json(session.to_dict())
+    else:
+        tui.output_fn(f"error: unknown session subcommand '{subcommand}'")
+    return True
+
+
+def _cmd_status(tui: 'TeaAgentTUI', args: list[str]) -> bool:
+    """Handle status command."""
+    if not args:
+        tui.output_fn('error: status requires a run id')
+        return True
+    run_id = args[0]
+    run_store = RunStore(tui.root)
+    try:
+        tui._print_json(run_store.heartbeat_for_run(run_id))
+    except FileNotFoundError:
+        tui.output_fn(f"error: run '{run_id}' not found")
+    return True
+
+
+def _cmd_plan(tui: 'TeaAgentTUI', args: list[str]) -> bool:
+    """Handle plan command."""
+    if not args:
+        tui.output_fn('error: plan requires a task')
+        return True
+    task = ' '.join(args)
+    from teaagent.intent import clarify_task
+
+    try:
+        clarification = clarify_task(task)
+        tui._print_json(
+            {
+                'task': task,
+                'plan': clarification.to_dict(),
+                'status': 'clarification_generated',
+            }
+        )
+    except Exception as e:
+        tui._print_json({'task': task, 'plan': f'error: {str(e)}', 'status': 'error'})
+    return True
+
+
+def _cmd_permissions(tui: 'TeaAgentTUI', args: list[str]) -> bool:
+    """Handle permissions command."""
+    from teaagent.ergonomics.approval_store import ApprovalPresetStore
+
+    approval_store = ApprovalPresetStore(str(tui.root))
+    presets = approval_store.list_presets()  # type: ignore[attr-defined]
+    tui._print_json([p.to_dict() for p in presets])
+    return True
+
+
+def _cmd_mcp(tui: 'TeaAgentTUI', args: list[str]) -> bool:
+    """Handle mcp command."""
+    tui.output_fn('error: mcp commands are run from the shell, not the TUI')
+    return True
+
+
+def _cmd_context(tui: 'TeaAgentTUI', args: list[str]) -> bool:
+    """Handle context command."""
+    if not args:
+        tui.output_fn('error: context requires a subcommand (list)')
+        return True
+    subcommand = args[0]
+    if subcommand == 'list':
+        tui._print_json([])
+    else:
+        tui.output_fn(f"error: unknown context subcommand '{subcommand}'")
+    return True
+
+
+def _cmd_daily(tui: 'TeaAgentTUI', args: list[str]) -> bool:
+    """Handle daily command."""
+    task_str: str | None = ' '.join(args) if args else None
+    from teaagent.daily import build_daily_brief
+
+    provider = tui.provider or 'gpt'
+    brief = build_daily_brief(
+        task=task_str,
+        root=tui.root,
+        provider=provider,
+        permission_mode=tui.permission_mode,
+    )
+    tui.output_fn(f'daily: ready={brief.ready}')
+    tui._print_json(brief.to_dict())
+    return True
+
+
+def _cmd_resume(tui: 'TeaAgentTUI', args: list[str]) -> bool:
+    """Handle resume command."""
+    if not args:
+        tui.output_fn('error: resume requires a run id')
+        return True
+    run_id = args[0]
+    from teaagent.ergonomics.workspace_defaults import load_workspace_defaults
+    from teaagent.integration.resume_preparation import (
+        ResumePreparationError,
+        prepare_run_resume,
+    )
+
+    defaults = load_workspace_defaults(tui.root)
+    auto_compact = bool(defaults.get('auto_compact_on_resume', True))
+    try:
+        prepared = prepare_run_resume(
+            tui.root,
+            run_id,
+            approve_call_ids=frozenset(tui.approved_call_ids),
+            auto_compact=auto_compact,
+            auto_approve_pending=False,
+        )
+    except ResumePreparationError as exc:
+        tui.output_fn(f'error: {exc}')
+        return True
+
+    if prepared.pending_warning:
+        tui.output_fn(f'warning: {prepared.pending_warning}')
+    elif prepared.auto_approved_call_id:
+        tui.output_fn(
+            f'resume: {run_id} (auto-approved pending call {prepared.auto_approved_call_id})'
+        )
+    else:
+        tui.output_fn(f'resume: {run_id}')
+    _safe_run_agent_task(
+        tui,
+        prepared.original_task,
+        resumed_from=prepared.run_id,
+        initial_observations=prepared.initial_observations,
+        initial_context_extra=prepared.initial_context_extra,
+    )
+    return True
+
+
+def _cmd_parallel(tui: 'TeaAgentTUI', args: list[str]) -> bool:
+    """Handle parallel command."""
+    if not args:
+        tui.output_fn('error: parallel requires at least one option')
+        return True
+    # Store parallel options for later selection
+    tui._parallel_options = args
+    tui._print_json(
+        {
+            'options': args,
+            'count': len(args),
+            'status': 'options_stored',
+            'hint': 'use "select <index>" to choose an option',
+        }
+    )
+    return True
+
+
+def _cmd_select(tui: 'TeaAgentTUI', args: list[str]) -> bool:
+    """Handle select command."""
+    if not args:
+        tui.output_fn('error: select requires an option index or value')
+        return True
+    if not hasattr(tui, '_parallel_options') or not tui._parallel_options:
+        tui.output_fn('error: no parallel options available. Use "parallel" first.')
+        return True
+    selection = args[0]
+    try:
+        # Try to parse as index
+        index = int(selection)
+        if 0 <= index < len(tui._parallel_options):
+            selected = tui._parallel_options[index]
+            tui._print_json(
+                {'selected': selected, 'index': index, 'status': 'selected'}
+            )
+            tui._parallel_options = None  # Clear after selection
+        else:
+            tui.output_fn(
+                f'error: index {index} out of range (0-{len(tui._parallel_options) - 1})'
+            )
+    except ValueError:
+        # Try to match as value
+        if tui._parallel_options and selection in tui._parallel_options:
+            tui._print_json({'selected': selection, 'status': 'selected'})
+            tui._parallel_options = None
+        else:
+            tui.output_fn(f'error: option "{selection}" not found in parallel options')
+    return True
+
+
+def _cmd_cancel(tui: 'TeaAgentTUI', args: list[str]) -> bool:
+    """Handle cancel command."""
+    if hasattr(tui, '_parallel_options') and tui._parallel_options:
+        tui._parallel_options = None
+        tui._print_json({'status': 'cancelled', 'action': 'cleared_parallel_options'})
+    else:
+        tui._print_json({'status': 'cancelled', 'action': 'no_active_operation'})
+    return True
+
+
+def _cmd_conflict(tui: 'TeaAgentTUI', args: list[str]) -> bool:
+    """Handle conflict command."""
+    tui._print_json(
+        {
+            'status': 'not_available',
+            'message': 'Conflict resolution mode is not available',
+            'hint': 'Use git tools directly for conflict resolution',
+        }
+    )
+    return True
+
+
+def _cmd_conflict_shortcut_o(tui: 'TeaAgentTUI', args: list[str]) -> bool:
+    """Handle conflict shortcut 'o'."""
+    return _cmd_conflict_shortcut(tui, args, 'o')
+
+
+def _cmd_conflict_shortcut_t(tui: 'TeaAgentTUI', args: list[str]) -> bool:
+    """Handle conflict shortcut 't'."""
+    return _cmd_conflict_shortcut(tui, args, 't')
+
+
+def _cmd_conflict_shortcut_n(tui: 'TeaAgentTUI', args: list[str]) -> bool:
+    """Handle conflict shortcut 'n'."""
+    return _cmd_conflict_shortcut(tui, args, 'n')
+
+
+def _cmd_conflict_shortcut_p(tui: 'TeaAgentTUI', args: list[str]) -> bool:
+    """Handle conflict shortcut 'p'."""
+    return _cmd_conflict_shortcut(tui, args, 'p')
+
+
+def _cmd_conflict_shortcut_a(tui: 'TeaAgentTUI', args: list[str]) -> bool:
+    """Handle conflict shortcut 'a'."""
+    return _cmd_conflict_shortcut(tui, args, 'a')
+
+
 # Command dispatch dictionary
 _COMMAND_DISPATCH: dict[str, typing.Callable[[TeaAgentTUI, list[str]], bool]] = {
     'artifact': _cmd_artifact,
@@ -1076,4 +1131,28 @@ _COMMAND_DISPATCH: dict[str, typing.Callable[[TeaAgentTUI, list[str]], bool]] = 
     'skills': _cmd_skills,
     'skill-diagnostics': _cmd_skill_diagnostics,
     'skill-health': _cmd_skill_health,
+    'a': _cmd_conflict_shortcut_a,
+    'ask': _cmd_ask_run,
+    'cancel': _cmd_cancel,
+    'clarify': _cmd_clarify,
+    'complexity': _cmd_complexity,
+    'conflict': _cmd_conflict,
+    'context': _cmd_context,
+    'daily': _cmd_daily,
+    'estimate': _cmd_estimate,
+    'mcp': _cmd_mcp,
+    'n': _cmd_conflict_shortcut_n,
+    'o': _cmd_conflict_shortcut_o,
+    'p': _cmd_conflict_shortcut_p,
+    'parallel': _cmd_parallel,
+    'permissions': _cmd_permissions,
+    'plan': _cmd_plan,
+    'preflight': _cmd_preflight,
+    'resume': _cmd_resume,
+    'route': _cmd_route,
+    'run': _cmd_ask_run,
+    'select': _cmd_select,
+    'session': _cmd_session,
+    'status': _cmd_status,
+    't': _cmd_conflict_shortcut_t,
 }

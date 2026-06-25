@@ -93,8 +93,8 @@ def test_update_server_init_trailing_slash():
     assert server.base_url == 'https://api.example.com'
 
 
-@patch('teaagent.update.update.urlopen')
-def test_check_for_updates_available(mock_urlopen):
+@patch('teaagent.update.update.safe_urlopen')
+def test_check_for_updates_available(mock_safe_urlopen):
     """Test checking for updates when update available."""
     # Mock response
     mock_response = Mock()
@@ -106,7 +106,7 @@ def test_check_for_updates_available(mock_urlopen):
             'changelog': 'Bug fixes and improvements',
         }
     ).encode('utf-8')
-    mock_urlopen.return_value.__enter__.return_value = mock_response
+    mock_safe_urlopen.return_value.__enter__.return_value = mock_response
 
     server = UpdateServer('https://api.example.com')
     update_info = server.check_for_updates('1.2.3', UpdateChannel.STABLE)
@@ -115,8 +115,8 @@ def test_check_for_updates_available(mock_urlopen):
     assert str(update_info.version) == '1.2.4'
 
 
-@patch('teaagent.update.update.urlopen')
-def test_check_for_updates_none(mock_urlopen):
+@patch('teaagent.update.update.safe_urlopen')
+def test_check_for_updates_none(mock_safe_urlopen):
     """Test checking for updates when no update available."""
     # Mock response with same version
     mock_response = Mock()
@@ -125,7 +125,7 @@ def test_check_for_updates_none(mock_urlopen):
             'version': '1.2.3',
         }
     ).encode('utf-8')
-    mock_urlopen.return_value.__enter__.return_value = mock_response
+    mock_safe_urlopen.return_value.__enter__.return_value = mock_response
 
     server = UpdateServer('https://api.example.com')
     update_info = server.check_for_updates('1.2.3', UpdateChannel.STABLE)
@@ -133,11 +133,11 @@ def test_check_for_updates_none(mock_urlopen):
     assert update_info is None
 
 
-@patch('teaagent.update.update.urlopen')
-def test_check_for_updates_error(mock_urlopen):
+@patch('teaagent.update.update.safe_urlopen')
+def test_check_for_updates_error(mock_safe_urlopen):
     """Test checking for updates on error."""
     # Mock error
-    mock_urlopen.side_effect = URLError('Network error')
+    mock_safe_urlopen.side_effect = URLError('Network error')
 
     server = UpdateServer('https://api.example.com')
     update_info = server.check_for_updates('1.2.3', UpdateChannel.STABLE)

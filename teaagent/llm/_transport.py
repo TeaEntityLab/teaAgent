@@ -7,6 +7,7 @@ from typing import Any
 from urllib import request as urllib_request
 from urllib.error import HTTPError, URLError
 
+from teaagent.http_utils import safe_urlopen_request
 from teaagent.llm._types import LLMHTTPError
 
 
@@ -52,7 +53,12 @@ class UrllibHTTPTransport:
             request_kwargs: dict[str, Any] = {'timeout': timeout}
             if ssl_context is not None:
                 request_kwargs['context'] = ssl_context
-            with urllib_request.urlopen(req, **request_kwargs) as response:
+            with safe_urlopen_request(
+                req,
+                timeout=timeout,
+                allow_http=True,
+                context=ssl_context,
+            ) as response:
                 return json.loads(response.read().decode('utf-8'))
         except HTTPError as exc:
             detail = exc.read().decode('utf-8', errors='replace')
