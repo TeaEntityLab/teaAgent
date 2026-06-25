@@ -3,7 +3,7 @@
 > **Claim class:** Historical audit snapshot + implementation status register.
 >
 > **Current truth for closure status:** [§10 Implementation status](#implementation-status-2026-06-25)
-> (last verified **2026-06-25** @ `8c311cd`). Sections **§1–§9** preserve the
+> (last verified **2026-06-25** @ `f7e33f1`). Sections **§1–§9** preserve the
 > original 2026-06-02 findings as audit evidence. File paths and line numbers in
 > those sections may be stale after package relocations (`chat_repl.py` retired,
 > `consensus/` and `_agent/` package splits, etc.) — do **not** treat them as
@@ -285,7 +285,7 @@ Add types incrementally starting from the public API surface (`runner`, `tools`,
 
 ### 7a. CG-16: Test suite validates mock behaviour, not real integration (P1)
 
-> **Partially addressed (M-01 ✅).** Controller tests de-mocked at `8cdfbee`; `test_tui_command_path.py` fully de-mocked at `7593331` (0 `MagicMock`, boundary-only `@patch`). Mock counts below are the 2026-06-02 audit snapshot.
+> **Substantially addressed (M-01 ✅, CG-16-final ✅).** Controller and TUI command-path suites de-mocked (`test_tui_command_path.py`, `test_tui_cost.py`, `tests/tui/*`, `test_tui_setup.py`, `test_tui_interactive.py`, `test_tui_approval_subagents.py`); `test_tui.py` retains only boundary `@patch` plus `DoctorGraphStoreStub` for doctor smoke. Mock-density table below is the 2026-06-02 audit snapshot.
 
 **82 test files** use `MagicMock`, `@patch`, or `monkeypatch`. This means the test suite primarily validates that mocked collaborators are called correctly — not that the real integration works.
 
@@ -444,8 +444,8 @@ Modules without any module docstring (first non-import line is code):
 
 ## Implementation status (2026-06-25)
 
-**Authoritative closure register** for Tier 0–2 items below. Verified at HEAD `8c311cd`
-(CG-16 TUI de-mock tail + RISK-1 tool-decision split). Sections §1–§9 are not updated inline.
+**Authoritative closure register** for Tier 0–2 items below. Verified at HEAD `f7e33f1`
+(CG-16 TUI suite complete + RISK-1 tool-decision split). Sections §1–§9 are not updated inline.
 
 Tracked against `docs/retrospective/06-action-register.md` (**A-P2-6**, **S-P2-5**) and harness goals in `AGENTS.md` (thin harness, centralized HTTP, governed tests).
 
@@ -482,7 +482,7 @@ Tracked against `docs/retrospective/06-action-register.md` (**A-P2-6**, **S-P2-5
 | M-06 | ✅ Done | Narrowed broad `except Exception` in `plugin_system.py`, `domain/agent_factory.py`, `backend_registry`, `external_backends.py`, `code_analysis/_client.py` |
 | M-07 | ✅ Done | `Subagent.task` / `parent_run_id` / `batch_index` properties; `SwarmManager` uses public accessors |
 | M-08 | ✅ Done | Removed duplicate `PackageNotFoundError` import from `teaagent/__init__.py` `TYPE_CHECKING` block |
-| CG-16-final | ✅ Done | `test_tui_typo_confirmation.py`, `test_tui_undo_scope.py`, `test_tui_command_truth.py`, `test_tui_setup.py`, `test_tui_interactive.py`, `test_tui_approval_subagents.py` de-mocked (real controller/stub/queue fake, boundary `@patch` only); shared `tests/tui_boundaries.py` |
+| CG-16-final | ✅ Done | Full TUI CG-16 slice: `tests/tui/*`, `test_tui_command_path.py`, `test_tui_cost.py`, `test_tui_setup.py`, `test_tui_interactive.py`, `test_tui_approval_subagents.py`, `test_tui.py` doctor stub; shared `tests/tui_boundaries.py` (`DoctorGraphStoreStub`, boundary helpers) |
 | RISK-1 | ✅ Done | `_execute_tool_decision` split → `_authorize_tool_call`, `_dispatch_tool_call`, `_process_tool_result`; `docs/reviews/runner-tool-decision-split-risk.md` |
 
 

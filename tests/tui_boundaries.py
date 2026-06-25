@@ -1,13 +1,46 @@
-"""CG-16 TUI test boundary helpers — real RunStore/controller, mock LLM only."""
+"""CG-16 TUI test boundary helpers — real RunStore/controller, transport boundaries only."""
 
 from __future__ import annotations
 
 from contextlib import ExitStack, contextmanager
-from typing import Iterator
+from dataclasses import dataclass, field
+from typing import Any, Iterator
 from unittest.mock import MagicMock, patch
 
 from teaagent.tui import TeaAgentTUI
 from teaagent.types import FinalAnswer, RunResult
+
+
+@dataclass
+class DoctorGraphStoreStub:
+    """Minimal GraphQLite store double for doctor smoke TUI tests."""
+
+    query_results: list[dict[str, Any]] = field(
+        default_factory=lambda: [{'n.name': 'TeaAgent'}]
+    )
+    queries: list[str] = field(default_factory=list)
+    upsert_calls: list[tuple[tuple[Any, ...], dict[str, Any]]] = field(
+        default_factory=list
+    )
+
+    def __post_init__(self) -> None:
+        self.graph = self
+
+    def upsert_node(self, *args: Any, **kwargs: Any) -> None:
+        self.upsert_calls.append((args, kwargs))
+
+    def query(self, sql: str) -> list[dict[str, Any]]:
+        self.queries.append(sql)
+        return list(self.query_results)
+
+
+def doctor_graph_store_stub(
+    *,
+    query_results: list[dict[str, Any]] | None = None,
+) -> DoctorGraphStoreStub:
+    return DoctorGraphStoreStub(
+        query_results=query_results or [{'n.name': 'TeaAgent'}],
+    )
 
 
 def completed_run_result(

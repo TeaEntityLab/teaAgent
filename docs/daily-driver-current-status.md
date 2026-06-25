@@ -11,7 +11,7 @@
 > `docs/analysis/`.
 >
 > **Review trigger:** TUI, chat, agent mode, approval, cost, undo, or resume behavior changes.
-> **Last reviewed:** 2026-06-18 (REPL suspend/resume truth reconciled)
+> **Last reviewed:** 2026-06-25 (CG-16 test-harness only; no user-visible behavior change)
 
 This page is the short daily-use entry point for TeaAgent's TUI, TUI chat, and
 agent mode. It is intentionally more practical than the audit corpus.
@@ -181,6 +181,13 @@ bug or that TeaAgent has already fixed the class.
   a roadmap control model until the SCL work items have tests and audit receipts.
 - Do not treat community pain-point docs as mitigation evidence. They are input
   to the roadmap until CPP/SCL/DSK rows land with tests.
+
+
+## 2026-06-25 review note
+
+CG-16 test-harness work (TUI de-mock slices, `test_tui.py` doctor GraphQLite stub,
+runner tool-decision split) does **not** change user-visible daily-driver behavior.
+Evidence: `pytest tests/test_tui*.py tests/tui/ tests/test_tui_command_path.py -q`.
 
 ## Read next
 

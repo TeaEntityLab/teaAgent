@@ -9,7 +9,11 @@ from pathlib import Path
 from unittest.mock import PropertyMock, patch
 
 from conftest import FakeAdapter
-from tui_boundaries import completed_run_result, patch_run_agent_task_boundary
+from tui_boundaries import (
+    completed_run_result,
+    doctor_graph_store_stub,
+    patch_run_agent_task_boundary,
+)
 
 from teaagent.cli import main
 from teaagent.ergonomics._approval_grants import _compute_argument_digest
@@ -31,7 +35,7 @@ class CapturingAdapterFactory:
 
 class TUITests(unittest.TestCase):
     def test_tui_handles_doctor_smoke_query_and_exit(self) -> None:
-        from unittest.mock import MagicMock, patch
+        from unittest.mock import patch
 
         commands = iter(
             [
@@ -45,9 +49,7 @@ class TUITests(unittest.TestCase):
         tui = TeaAgentTUI(
             input_fn=lambda _prompt: next(commands), output_fn=output.append
         )
-        graph_store = MagicMock()
-        graph_store.graph.upsert_node = MagicMock()
-        graph_store.query.return_value = [{'n.name': 'TeaAgent'}]
+        graph_store = doctor_graph_store_stub()
 
         with (
             patch.object(TeaAgentTUI, '_load_tui_state'),

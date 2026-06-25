@@ -11,7 +11,7 @@
 > prose in dated analysis files.
 >
 > **Review trigger:** Finding closure status or new CG/AG/DS ids.
-> **Last reviewed:** 2026-06-25 (CG-16 interactive/approval de-mock — `test_tui_interactive.py`, `test_tui_approval_subagents.py`)
+> **Last reviewed:** 2026-06-25 (CG-16 complete — TUI suite de-mocked incl. `test_tui.py` doctor stub)
 
 **Successor to:** [Daily-Driver Findings Status Ledger (2026-06-01)](daily-driver-findings-status-ledger-2026-06-01.md)
 
@@ -45,7 +45,7 @@ authoritative. Dated detail docs remain evidence for reasoning and test names.
 | CG-13 | P2 | Fixed | Controller no longer swallows errors as mock | TICKET-13 | controller isinstance checks |
 | CG-14 | P3 | Fixed | Redundant suspension `audit_trail` removed | TICKET-15 | review JSON tests |
 | CG-15 | P2 | Fixed | TUI/REPL undo semantics aligned | TICKET-12 / TICKET-15 | surface parity + help text |
-| CG-16 | P1 | Fixed | Controller/TUI command-path tests use real stubs, not mock wiring | TICKET-14 / M-01 / RISK-2 | `tests/tui_boundaries.py`; `test_tui_command_path.py`, `test_tui_cost.py`, `test_tui_typo_confirmation.py`, `test_tui_undo_scope.py`, `test_tui_command_truth.py`, `test_tui_setup.py`, `test_tui_interactive.py`, `test_tui_approval_subagents.py` (real controller/stub/queue fake, boundary `@patch` only); audit bootstrap via `_create_store()` |
+| CG-16 | P1 | Fixed | Controller/TUI command-path tests use real stubs, not mock wiring | TICKET-14 / M-01 / RISK-2 | `tests/tui_boundaries.py`; `test_tui_command_path.py`, `test_tui_cost.py`, `test_tui_typo_confirmation.py`, `test_tui_undo_scope.py`, `test_tui_command_truth.py`, `test_tui_setup.py`, `test_tui_interactive.py`, `test_tui_approval_subagents.py`, `test_tui.py` doctor GraphQLite stub via `doctor_graph_store_stub()` (real controller/stub/queue fake, boundary `@patch` only); audit bootstrap via `_create_store()` |
 | CG-17 | P1 | Fixed | Surface parity test exercises controller path | TICKET-12 | `test_task001_surface_parity.py` |
 | AG-01 | P1 | Fixed | `teaagent resume <repl-id>` round-trip | TICKET-16 Phase 2 | `test_repl_suspend_resume_roundtrip` |
 | AG-02 | P1 | Fixed | Background run no longer treats id as task | TICKET-16 | background UUID rejection test |
