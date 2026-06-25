@@ -3,7 +3,7 @@
 > **Claim class:** Historical audit snapshot + implementation status register.
 >
 > **Current truth for closure status:** [§10 Implementation status](#implementation-status-2026-06-25)
-> (last verified **2026-06-25** @ `7593331`). Sections **§1–§9** preserve the
+> (last verified **2026-06-25** @ `04e9aa6`). Sections **§1–§9** preserve the
 > original 2026-06-02 findings as audit evidence. File paths and line numbers in
 > those sections may be stale after package relocations (`chat_repl.py` retired,
 > `consensus/` and `_agent/` package splits, etc.) — do **not** treat them as
@@ -444,8 +444,8 @@ Modules without any module docstring (first non-import line is code):
 
 ## Implementation status (2026-06-25)
 
-**Authoritative closure register** for Tier 0–2 items below. Verified at HEAD (pending commit)
-(CG-16 final de-mock + RISK-1 tool-decision split). Sections §1–§9 are not updated inline.
+**Authoritative closure register** for Tier 0–2 items below. Verified at HEAD `04e9aa6`
+(CG-16 TUI de-mock tail + RISK-1 tool-decision split). Sections §1–§9 are not updated inline.
 
 Tracked against `docs/retrospective/06-action-register.md` (**A-P2-6**, **S-P2-5**) and harness goals in `AGENTS.md` (thin harness, centralized HTTP, governed tests).
 
@@ -482,7 +482,7 @@ Tracked against `docs/retrospective/06-action-register.md` (**A-P2-6**, **S-P2-5
 | M-06 | ✅ Done | Narrowed broad `except Exception` in `plugin_system.py`, `domain/agent_factory.py`, `backend_registry`, `external_backends.py`, `code_analysis/_client.py` |
 | M-07 | ✅ Done | `Subagent.task` / `parent_run_id` / `batch_index` properties; `SwarmManager` uses public accessors |
 | M-08 | ✅ Done | Removed duplicate `PackageNotFoundError` import from `teaagent/__init__.py` `TYPE_CHECKING` block |
-| CG-16-final | ✅ Done | `test_tui_typo_confirmation.py`, `test_tui_undo_scope.py`, `test_tui_command_truth.py` de-mocked (real `ChatSessionController`, `chat_typo_patches` boundary); shared `tests/tui_boundaries.py` |
+| CG-16-final | ✅ Done | `test_tui_typo_confirmation.py`, `test_tui_undo_scope.py`, `test_tui_command_truth.py`, `test_tui_setup.py` de-mocked (real controller/stub + `WizardResult`, boundary `@patch` only); shared `tests/tui_boundaries.py` |
 | RISK-1 | ✅ Done | `_execute_tool_decision` split → `_authorize_tool_call`, `_dispatch_tool_call`, `_process_tool_result`; `docs/reviews/runner-tool-decision-split-risk.md` |
 
 
