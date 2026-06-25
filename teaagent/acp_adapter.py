@@ -18,6 +18,20 @@ from dataclasses import dataclass, field
 from typing import Any, Optional, Protocol
 from uuid import uuid4
 
+from teaagent.acp_progress import (
+    audit_sink_for_acp_progress,
+    build_session_update_notification,
+    default_acp_emitter,
+    text_sink_for_acp_progress,
+)
+from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
+from teaagent.ergonomics.context_inject import merge_acp_context_blocks
+from teaagent.ergonomics.workspace_defaults import load_workspace_defaults
+from teaagent.llm import create_llm_adapter
+from teaagent.policy import parse_permission_mode
+from teaagent.run_store import RunStore
+from teaagent.streaming.content_filter import DecisionContentStreamer
+from teaagent.streaming.handlers import adapter_supports_streaming
 from teaagent.types import JsonMapping, JsonValue
 
 ACP_VERSION = '1.0.0'
@@ -140,13 +154,10 @@ class ACPServer:
     def emit_session_update(self, session_id: str, update: JsonMapping) -> None:
         if self._notify is None:
             return
-        from teaagent.acp_progress import build_session_update_notification
 
         self._notify(build_session_update_notification(session_id, update))
 
     def progress_audit_sink(self, session_id: str) -> Any:
-        from teaagent.acp_progress import audit_sink_for_acp_progress
-
         if self._notify is None:
             raise ACPError('ACP notification sink is not configured')
         return audit_sink_for_acp_progress(session_id, self._notify)
@@ -169,12 +180,6 @@ class ACPServer:
         root = str(params.get('root') or '.')
         provider = params.get('provider')
         model = params.get('model')
-        from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
-        from teaagent.ergonomics.workspace_defaults import load_workspace_defaults
-        from teaagent.llm import create_llm_adapter
-        from teaagent.policy import parse_permission_mode
-        from teaagent.run_store import RunStore
-        from teaagent.streaming.handlers import adapter_supports_streaming
 
         defaults = load_workspace_defaults(root)
         provider = provider or defaults.get('provider')
@@ -192,9 +197,6 @@ class ACPServer:
 
         on_chunk = None
         if stream_requested and self._notify is not None:
-            from teaagent.acp_progress import text_sink_for_acp_progress
-            from teaagent.streaming.content_filter import DecisionContentStreamer
-
             on_chunk = DecisionContentStreamer(
                 text_sink_for_acp_progress(session_id, self._notify)
             ).feed
@@ -276,8 +278,6 @@ class ACPServer:
             elif method == 'tools/call':
                 result = self.call_tool(params)
             elif method == 'prompt/assemble':
-                from teaagent.ergonomics.context_inject import merge_acp_context_blocks
-
                 task = str(params.get('prompt', params.get('task', '')))
                 blocks = (
                     params.get('contextBlocks') or params.get('context_blocks') or []
@@ -341,7 +341,6 @@ def create_acp_server(
 
 def run_acp_server(tool_registry: Any, agent_runner: Any) -> None:
     """Run ACP server with stdio transport."""
-    from teaagent.acp_progress import default_acp_emitter
 
     notify = default_acp_emitter(lambda line: print(line, file=sys.stdout, flush=True))
     server = ACPServer(tool_registry, agent_runner, notify=notify)

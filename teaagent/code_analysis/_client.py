@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import json
+import logging
 import subprocess
 from pathlib import Path
 from typing import Any, Callable, Optional
 
 from teaagent.code_analysis._types import CodeReference, LSPClient, LSPServerConfig
+
+logger = logging.getLogger(__name__)
 
 
 class StdioLSPClient(LSPClient):
@@ -41,10 +44,14 @@ class StdioLSPClient(LSPClient):
         try:
             self._request('shutdown', {})
             self._notify('exit', {})
-        except Exception as exc:
-            import logging
-
-            logging.getLogger(__name__).debug('LSP client shutdown error: %s', exc)
+        except (
+            OSError,
+            RuntimeError,
+            ValueError,
+            json.JSONDecodeError,
+            BrokenPipeError,
+        ) as exc:
+            logger.debug('LSP client shutdown error: %s', exc)
         proc = self._proc
         self._proc = None
         if proc.poll() is None:

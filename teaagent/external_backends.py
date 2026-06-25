@@ -284,7 +284,9 @@ class FallbackKnowledgeBackend:
                 OSError,
                 ImportError,
                 RuntimeError,
-                Exception,
+                ValueError,
+                TypeError,
+                AttributeError,
             ) as exc:
                 healthy.append({'backend': name, 'ok': False, 'error': str(exc)})
         return {'backends': healthy}
@@ -306,7 +308,17 @@ class FallbackKnowledgeBackend:
             result.setdefault('backend', self.primary)
             result.setdefault('fallback_used', False)
             return result
-        except Exception as exc:
+        except (
+            ConnectionError,
+            TimeoutError,
+            OSError,
+            ImportError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+        ) as exc:
             result = getattr(fallback_backend, method)(root=root, args=args)
             result.setdefault('backend', self.fallback)
             result['fallback_used'] = True
@@ -561,7 +573,15 @@ class QmdMcpAdapter(BackendAdapter):
                 client.initialize()
                 status = client.call_tool('status', {})
             return (True, f'QMD MCP backend is healthy: {status}')
-        except Exception as exc:
+        except (
+            ConnectionError,
+            TimeoutError,
+            OSError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+        ) as exc:
             return (False, f'QMD MCP backend health check failed: {exc}')
 
     def health(self, *, root: Path) -> JsonMapping:

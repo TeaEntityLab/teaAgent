@@ -449,9 +449,9 @@ Tracked against `docs/retrospective/06-action-register.md` (**A-P2-6**, **S-P2-5
 | S-09 | ✅ Done | No production `except BaseException` in consensus path (removed/narrowed) |
 | S-10 | ✅ Done | Return types on core APIs: `AgentRunner.run` → `RunResult`, `ToolRegistry.execute` → `dict`, `parse_permission_mode` → `PermissionMode`, `run_subagent` → `dict[str, Any]`, `assert_allowed` → `None` |
 | M-05 | ✅ Done | Core path docstrings on `run()`, `execute()`, `run_subagent()`, `assert_allowed()` |
-| M-03 | 🟡 Partial | `swarm.py` deferred imports hoisted to module level; `acp_adapter.py` cycle work deferred |
+| M-03 | ✅ Done | Deferred imports hoisted in `swarm.py` and `acp_adapter.py`; circular-import check clean |
 | M-04 | ✅ Done | `SwarmManagerConfig` + `SwarmManager.from_config()` |
-| M-06 | 🟡 Partial | Narrowed `except Exception` in `plugin_system.py`, `domain/agent_factory.py`, `backend_registry._health_of` |
+| M-06 | ✅ Done | Narrowed broad `except Exception` in `plugin_system.py`, `domain/agent_factory.py`, `backend_registry`, `external_backends.py`, `code_analysis/_client.py` |
 | M-07 | ✅ Done | `Subagent.task` / `parent_run_id` / `batch_index` properties; `SwarmManager` uses public accessors |
 | M-08 | ✅ Done | Removed duplicate `PackageNotFoundError` import from `teaagent/__init__.py` `TYPE_CHECKING` block |
 | QW-08 | ✅ Done | Lazy `%s` logging in `plugin_system.py` and `domain/agent_factory.py` |
