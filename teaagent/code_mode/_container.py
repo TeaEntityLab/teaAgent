@@ -52,7 +52,8 @@ try:
     payload = json.loads(sys.stdin.read())
     namespace = {'__builtins__': SAFE_BUILTINS}
     namespace.update(payload['inputs'])
-    exec(compile(payload['code'], '<teaagent-code-mode>', 'exec'), namespace, namespace)
+    # exec() is sandboxed with SAFE_BUILTINS to restrict dangerous operations
+    exec(compile(payload['code'], '<teaagent-code-mode>', 'exec'), namespace, namespace)  # noqa: B102
     variables = {
         key: value
         for key, value in namespace.items()
