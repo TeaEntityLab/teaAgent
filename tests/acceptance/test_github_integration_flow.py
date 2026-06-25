@@ -28,16 +28,15 @@ def test_github_tools_registered() -> None:
 
 def _setup_registry(tmp_path, *, enable_github_tools: bool):
     """Run the chat-agent registry setup with a stub adapter (G-P1-2 wiring)."""
-    from unittest.mock import MagicMock
-
     from teaagent.chat_agent import ChatAgentConfig, _setup_tool_registry
+    from teaagent.llm import FakeLLMAdapter
 
     config = ChatAgentConfig.from_root(
         str(tmp_path), enable_github_tools=enable_github_tools
     )
     registry, _ = _setup_tool_registry(
         config,
-        MagicMock(),
+        FakeLLMAdapter(),
         None,
         task='noop',
         task_spec=None,

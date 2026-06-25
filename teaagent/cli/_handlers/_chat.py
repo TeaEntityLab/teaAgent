@@ -8,8 +8,11 @@ The legacy ``run_chat_repl`` REPL was retired (U-P2-1); its sole live piece,
 from __future__ import annotations
 
 import argparse
+import logging
 
 from teaagent.approval import parse_permission_mode
+
+logger = logging.getLogger(__name__)
 
 
 def chat_command(args: argparse.Namespace) -> int:
@@ -64,4 +67,5 @@ def chat_command(args: argparse.Namespace) -> int:
     except KeyboardInterrupt:
         return 130
     except Exception:
+        logger.error('Unhandled exception in chat REPL', exc_info=True)
         return 1

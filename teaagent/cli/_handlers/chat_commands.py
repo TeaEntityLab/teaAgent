@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 import subprocess
 import sys
@@ -12,6 +13,8 @@ from typing import Any, Callable
 from teaagent.context import ContextCompactor
 from teaagent.memory.failure_card import FailureCardStorage
 from teaagent.memory.pinned_file import PinnedFileStorage
+
+logger = logging.getLogger(__name__)
 
 
 def handle_compact(
@@ -245,6 +248,10 @@ def get_failure_warnings(task: str, root: Path) -> str:
 
         return '\n\n' + '\n'.join(warnings) + '\n'
     except Exception:
+        logger.debug(
+            'Swallowed exception formatting failure cards; continuing without warnings',
+            exc_info=True,
+        )
         # Don't let failure warnings break the chat system
         return ''
 

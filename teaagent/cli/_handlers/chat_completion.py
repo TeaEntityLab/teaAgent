@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 def complete_file_path(text: str, root: Path) -> list[str]:  # noqa: C901
@@ -41,6 +44,7 @@ def complete_file_path(text: str, root: Path) -> list[str]:  # noqa: C901
         if not search_dir.is_relative_to(root.resolve()):
             return []
     except Exception:
+        logger.debug('Path resolution failed during file completion', exc_info=True)
         return []
 
     # Get matching files and directories
@@ -66,9 +70,7 @@ def complete_file_path(text: str, root: Path) -> list[str]:  # noqa: C901
                 completions.append(completion)
     except (OSError, PermissionError) as exc:
         # Log but don't crash completion - filesystem errors are expected in some scenarios
-        import logging
-
-        logging.getLogger(__name__).debug('File completion error: %s', exc)
+        logger.debug('File completion error: %s', exc)
 
     return sorted(completions)
 
@@ -109,5 +111,6 @@ def complete_symbol(text: str, root: Path) -> list[str]:
 
         return sorted(set(completions))
     except Exception:
+        logger.debug('Exception during workspace symbol completion', exc_info=True)
         # Fallback: simple file-based symbol search
         return []

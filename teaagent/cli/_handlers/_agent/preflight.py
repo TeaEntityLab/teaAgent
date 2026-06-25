@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import base64
 import difflib
+import logging
 import subprocess
 from pathlib import Path
 
@@ -11,6 +12,8 @@ from teaagent.cli._output import print_json
 from teaagent.ergonomics.human_output import format_preflight_summary
 from teaagent.preflight import preflight
 from teaagent.types import PermissionMode
+
+logger = logging.getLogger(__name__)
 
 
 def agent_preflight_command(args: argparse.Namespace) -> int:
@@ -167,6 +170,9 @@ def agent_undo_command(args: argparse.Namespace) -> int:  # noqa: C901
             try:
                 before_bytes = base64.b64decode(before_b64)
             except Exception:
+                logger.debug(
+                    'Invalid base64 in undo preview entry; skipping', exc_info=True
+                )
                 continue
             try:
                 before_text = before_bytes.decode('utf-8')
