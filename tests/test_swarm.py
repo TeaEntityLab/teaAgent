@@ -21,6 +21,7 @@ from teaagent.swarm import (
     SubagentResult,
     SubagentTask,
     SwarmManager,
+    SwarmManagerConfig,
     SwarmReport,
 )
 from test_support import skip_if_thread_start_is_blocked
@@ -110,6 +111,28 @@ def test_subagent_execute_with_git():
         assert result.task_id == 'task-1'
         # Should succeed or fail with git-related error
         assert result is not None
+
+
+def test_swarm_manager_from_config():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config = SwarmManagerConfig(root=tmpdir, max_parallel=5, enable_consensus=True)
+        manager = SwarmManager.from_config(config)
+        assert manager._max_parallel == 5
+        assert manager._enable_consensus is True
+        assert len(manager._subagents) == 0
+
+
+def test_subagent_readonly_properties():
+    task = SubagentTask(task_id='prop-task', description='property test')
+    with tempfile.TemporaryDirectory() as tmpdir:
+        subagent = Subagent(task, tmpdir, parent_run_id='parent-1', batch_index=2)
+        assert subagent.task is task
+        assert subagent.parent_run_id == 'parent-1'
+        assert subagent.batch_index == 2
+        subagent.parent_run_id = 'parent-2'
+        subagent.batch_index = 3
+        assert subagent.parent_run_id == 'parent-2'
+        assert subagent.batch_index == 3
 
 
 def test_swarm_manager_creation():

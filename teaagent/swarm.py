@@ -35,8 +35,18 @@ from teaagent.context_bus import (
     DeltaCard,
     DeltaType,
 )
+from teaagent.control_plane_bridge import publish_swarm_workflow
 from teaagent.sandbox import GitBranchSandbox
+from teaagent.subagent_run_context import (
+    bind_parallel_approval_mode,
+    bind_parent_run_id,
+    reset_parallel_approval_mode,
+    reset_parent_run_id,
+)
 from teaagent.subagents._approval_queue import get_approval_queue
+from teaagent.subagents._manager import SubagentManager
+from teaagent.tournament.benchmark import select_winner_from_subagent_results
+from teaagent.workspace_tools._files import build_workspace_tool_registry
 
 # Heartbeat tick interval for subagent heartbeat ticker (seconds)
 # Must be < lock_timeout_seconds (default 60)
@@ -190,6 +200,23 @@ def save_prompt_to_gene_pool(
     return path
 
 
+@dataclass
+class SwarmManagerConfig:
+    """Grouped constructor parameters for :class:`SwarmManager`."""
+
+    root: str | Path
+    max_parallel: int = 3
+    enable_consensus: bool = False
+    peer_registry: Optional[PeerRegistry] = None
+    consensus_config: Optional[ConsensusConfig] = None
+    lock_timeout_seconds: int = 60
+    prompt_by_task_id: dict[str, str] | None = None
+    subagent_manager: Any = None
+    control_plane_state: Any = None
+    control_plane_tenant_id: str = 'default'
+    context_bus_config: Optional[ContextBusConfig] = None
+
+
 class Subagent:
     """Individual subagent with isolated sandbox execution and approval lineage tracking."""
 
@@ -213,6 +240,26 @@ class Subagent:
         # Thread-liveness tracking for heartbeat monitoring
         self.is_running: bool = False
         self.last_heartbeat: float = time.time()
+
+    @property
+    def task(self) -> SubagentTask:
+        return self._task
+
+    @property
+    def parent_run_id(self) -> Optional[str]:
+        return self._parent_run_id
+
+    @parent_run_id.setter
+    def parent_run_id(self, value: Optional[str]) -> None:
+        self._parent_run_id = value
+
+    @property
+    def batch_index(self) -> int:
+        return self._batch_index
+
+    @batch_index.setter
+    def batch_index(self, value: int) -> None:
+        self._batch_index = value
 
     def tick_heartbeat(self) -> None:
         """Update last heartbeat timestamp for thread-liveness monitoring."""
@@ -303,13 +350,6 @@ class Subagent:
         }
 
     def _execute_task_via_subagent_manager(self) -> dict[str, Any]:
-        from teaagent.subagent_run_context import (
-            bind_parallel_approval_mode,
-            bind_parent_run_id,
-            reset_parallel_approval_mode,
-            reset_parent_run_id,
-        )
-
         parallel_token = bind_parallel_approval_mode(True)
         parent_token = bind_parent_run_id(self._parent_run_id or '')
         try:
@@ -416,6 +456,23 @@ class SwarmManager:
                 config=self._consensus_config,
             )
 
+    @classmethod
+    def from_config(cls, config: SwarmManagerConfig) -> SwarmManager:
+        """Build a manager from a grouped :class:`SwarmManagerConfig`."""
+        return cls(
+            config.root,
+            max_parallel=config.max_parallel,
+            enable_consensus=config.enable_consensus,
+            peer_registry=config.peer_registry,
+            consensus_config=config.consensus_config,
+            lock_timeout_seconds=config.lock_timeout_seconds,
+            prompt_by_task_id=config.prompt_by_task_id,
+            subagent_manager=config.subagent_manager,
+            control_plane_state=config.control_plane_state,
+            control_plane_tenant_id=config.control_plane_tenant_id,
+            context_bus_config=config.context_bus_config,
+        )
+
     def add_subagent(self, task: SubagentTask) -> None:
         """Add a subagent task to the swarm."""
         batch_index = len(self._subagents)
@@ -437,12 +494,11 @@ class SwarmManager:
     ) -> None:
         if self._control_plane_state is None or self._parent_run_id is None:
             return
-        from teaagent.control_plane_bridge import publish_swarm_workflow
 
         snapshot = [
             {
-                'task_id': subagent._task.task_id,
-                'description': subagent._task.description[:120],
+                'task_id': subagent.task.task_id,
+                'description': subagent.task.description[:120],
                 'status': phase,
             }
             for subagent in subagents
@@ -467,9 +523,6 @@ class SwarmManager:
         **kwargs: Any,
     ) -> SwarmManager:
         """Create a swarm that runs real agent work through ``SubagentManager``."""
-        from teaagent.subagents._manager import SubagentManager
-        from teaagent.workspace_tools._files import build_workspace_tool_registry
-
         tool_registry = registry or build_workspace_tool_registry(root)
         manager = SubagentManager(
             root=Path(root).resolve(),
@@ -568,8 +621,8 @@ class SwarmManager:
 
         self._publish_control_plane('starting', subagents=self._subagents)
         for index, subagent in enumerate(self._subagents):
-            subagent._parent_run_id = self._parent_run_id
-            subagent._batch_index = index
+            subagent.parent_run_id = self._parent_run_id
+            subagent.batch_index = index
         get_approval_queue(self._parent_run_id, workspace_root=self._root)
 
         # Publish swarm-start delta
@@ -601,15 +654,15 @@ class SwarmManager:
                     immediate = [
                         subagent
                         for subagent in self._subagents
-                        if not subagent._task.require_consensus
+                        if not subagent.task.require_consensus
                         or consensus_results.get('task_results', {})
-                        .get(subagent._task.task_id, {})
+                        .get(subagent.task.task_id, {})
                         .get('approved', False)
                     ]
                     deferred = [
                         subagent
                         for subagent in self._subagents
-                        if subagent._task.task_id in pending
+                        if subagent.task.task_id in pending
                     ]
                     results = self._execute_subagent_batch(immediate)
                     resolved = self._resolve_pending_consensus(pending)
@@ -618,7 +671,7 @@ class SwarmManager:
                         approved_deferred = [
                             subagent
                             for subagent in deferred
-                            if subagent._task.task_id in approved_ids
+                            if subagent.task.task_id in approved_ids
                         ]
                         results.extend(self._execute_subagent_batch(approved_deferred))
                 else:
@@ -681,10 +734,6 @@ class SwarmManager:
         """Select best branch via prompt fitness tournament when prompts are set."""
         if not self._prompt_by_task_id:
             if len(results) > 1:
-                from teaagent.tournament.benchmark import (
-                    select_winner_from_subagent_results,
-                )
-
                 winner_id, winner_score, best_result = (
                     select_winner_from_subagent_results(results)
                 )
@@ -741,7 +790,7 @@ class SwarmManager:
                         subprocess.SubprocessError,
                     ) as exc:
                         result = SubagentResult(
-                            task_id=subagent._task.task_id,
+                            task_id=subagent.task.task_id,
                             success=False,
                             error=str(exc),
                         )
@@ -762,7 +811,7 @@ class SwarmManager:
                             subprocess.SubprocessError,
                         ) as exc:
                             result = SubagentResult(
-                                task_id=subagent._task.task_id,
+                                task_id=subagent.task.task_id,
                                 success=False,
                                 error=str(exc),
                             )
@@ -770,7 +819,7 @@ class SwarmManager:
                             self._publish_subagent_delta(result)
                     else:
                         result = SubagentResult(
-                            task_id=subagent._task.task_id,
+                            task_id=subagent.task.task_id,
                             success=False,
                             error='Timed out',
                         )
@@ -831,12 +880,12 @@ class SwarmManager:
         all_approved = True
 
         for subagent in self._subagents:
-            if subagent._task.require_consensus:
+            if subagent.task.require_consensus:
                 # Request consensus for this task
                 try:
                     state = self._consensus_engine.request_consensus(
-                        task_description=subagent._task.description,
-                        risk_level=subagent._task.risk_level,
+                        task_description=subagent.task.description,
+                        risk_level=subagent.task.risk_level,
                         proposed_by='swarm-orchestrator',
                         threshold=VotingThreshold.SIMPLE_MAJORITY,
                     )
@@ -848,7 +897,7 @@ class SwarmManager:
                         status
                         and status.status != ConsensusStatus.APPROVED
                         and task_matches_pre_approval(
-                            subagent._task.description,
+                            subagent.task.description,
                             self._consensus_config,
                         )
                     ):
@@ -860,7 +909,7 @@ class SwarmManager:
                         )
 
                     if status and status.status == ConsensusStatus.APPROVED:
-                        task_results[subagent._task.task_id] = {
+                        task_results[subagent.task.task_id] = {
                             'approved': True,
                             'attestation': self._consensus_engine.generate_attestation(
                                 state.proposal.id
@@ -871,15 +920,15 @@ class SwarmManager:
                         and status.status == ConsensusStatus.VOTING
                         and self._consensus_config.async_vote_collection
                     ):
-                        pending[subagent._task.task_id] = state.proposal.id
+                        pending[subagent.task.task_id] = state.proposal.id
                     else:
-                        task_results[subagent._task.task_id] = {
+                        task_results[subagent.task.task_id] = {
                             'approved': False,
                             'reason': 'Consensus not reached',
                         }
                         all_approved = False
                 except (RuntimeError, ValueError, ConnectionError) as exc:
-                    task_results[subagent._task.task_id] = {
+                    task_results[subagent.task.task_id] = {
                         'approved': False,
                         'reason': str(exc),
                     }
@@ -901,8 +950,8 @@ class SwarmManager:
         self._subagents = [
             subagent
             for subagent in self._subagents
-            if not subagent._task.require_consensus
-            or task_results.get(subagent._task.task_id, {}).get('approved', False)
+            if not subagent.task.require_consensus
+            or task_results.get(subagent.task.task_id, {}).get('approved', False)
         ]
 
     def enable_consensus_mode(

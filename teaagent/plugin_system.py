@@ -172,7 +172,7 @@ def load_entry_point_tools(
         try:
             # Audit plugin source before loading (RSK-10)
             if not _audit_plugin_source(ep):
-                logger.warning(f'Plugin {name} blocked by source audit')
+                logger.warning('Plugin %s blocked by source audit', name)
                 failed.append(name)
                 continue
 
@@ -197,7 +197,14 @@ def load_entry_point_tools(
                     failed.append(name)
                     continue
             loaded.append(name)
-        except Exception as exc:
+        except (
+            ImportError,
+            AttributeError,
+            TypeError,
+            ValueError,
+            RuntimeError,
+            OSError,
+        ) as exc:
             logger.warning('Plugin %s failed to load: %s', name, exc)
             failed.append(name)
 
@@ -356,7 +363,7 @@ def discover_plugins(root: Path) -> list[Plugin]:  # noqa: C901
 
             try:
                 manifest = _load_manifest(manifest_path)
-            except Exception:
+            except (OSError, ValueError, TypeError, KeyError):
                 continue
 
             if manifest.name in seen_names:

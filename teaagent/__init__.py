@@ -31,8 +31,6 @@ __all__ = [
 
 
 if TYPE_CHECKING:
-    from importlib.metadata import PackageNotFoundError
-
     from teaagent.a2a_trace import (
         TraceparentError,
         generate_traceparent,

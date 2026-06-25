@@ -96,7 +96,7 @@ class AgentFactory:
         if flush and self._persist_to_disk:
             self._persist_agent(agent)
 
-        logger.info(f'Generated dynamic agent: {spec.name}')
+        logger.info('Generated dynamic agent: %s', spec.name)
         return agent
 
     def _generate_system_prompt(self, spec: AgentSpecification) -> str:
@@ -186,9 +186,17 @@ Respond with the system prompt as markdown (no JSON wrapper).
 
             response = self._llm_adapter.complete(request)
             return response.content.strip()
-        except Exception as exc:
+        except (
+            OSError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            ConnectionError,
+            TimeoutError,
+        ) as exc:
             logger.warning(
-                f'LLM prompt generation failed, falling back to template: {exc}'
+                'LLM prompt generation failed, falling back to template: %s',
+                exc,
             )
             return self._generate_template_prompt(spec)
 
@@ -235,7 +243,7 @@ def register(registry):
 
         _atomic_write(agent_dir / 'agent.py', agent_code)
 
-        logger.info(f'Persisted agent to disk: {agent_dir}')
+        logger.info('Persisted agent to disk: %s', agent_dir)
 
     def hot_reload_agent(self, agent_name: str, new_system_prompt: str) -> AgentPlugin:
         """Hot-reload an agent with a new system prompt (polish mode).
@@ -267,7 +275,7 @@ def register(registry):
         if self._persist_to_disk:
             self._persist_agent(updated)
 
-        logger.info(f'Hot-reloaded agent: {agent_name}')
+        logger.info('Hot-reloaded agent: %s', agent_name)
         return updated
 
     def list_dynamic_agents(self) -> list[str]:
@@ -400,9 +408,17 @@ Respond with the evolved system prompt as markdown (no JSON wrapper).
 
             response = self._llm_adapter.complete(request)
             return response.content.strip()
-        except Exception as exc:
+        except (
+            OSError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            ConnectionError,
+            TimeoutError,
+        ) as exc:
             logger.warning(
-                f'LLM prompt evolution failed, falling back to heuristic: {exc}'
+                'LLM prompt evolution failed, falling back to heuristic: %s',
+                exc,
             )
             return self._heuristic_evolve_prompt(
                 current_prompt, performance_feedback, success_metrics
@@ -416,7 +432,7 @@ Respond with the evolved system prompt as markdown (no JSON wrapper).
         """
         # Remove from memory (PluginRegistry doesn't have remove, so we'd need to add it)
         # For now, this is a placeholder
-        logger.warning(f'Agent removal not fully implemented: {agent_name}')
+        logger.warning('Agent removal not fully implemented: %s', agent_name)
 
         # Remove from disk if persisted
         if self._persist_to_disk:
@@ -425,4 +441,4 @@ Respond with the evolved system prompt as markdown (no JSON wrapper).
                 import shutil
 
                 shutil.rmtree(agent_dir)
-                logger.info(f'Removed agent from disk: {agent_dir}')
+                logger.info('Removed agent from disk: %s', agent_dir)

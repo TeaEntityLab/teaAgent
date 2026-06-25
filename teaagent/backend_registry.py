@@ -98,14 +98,26 @@ class BackendRegistry:
             try:
                 healthy, msg = backend.check_health()
                 return {'healthy': healthy, 'message': msg}
-            except Exception as exc:
+            except (
+                OSError,
+                RuntimeError,
+                ValueError,
+                TypeError,
+                AttributeError,
+            ) as exc:
                 return {'healthy': False, 'message': str(exc)}
         if hasattr(backend, 'health'):
             try:
                 result = backend.health(root=Path('.'))
                 ok = result.get('ok', True) if isinstance(result, dict) else True
                 return {'healthy': bool(ok), 'message': str(result)}
-            except Exception as exc:
+            except (
+                OSError,
+                RuntimeError,
+                ValueError,
+                TypeError,
+                AttributeError,
+            ) as exc:
                 return {'healthy': False, 'message': str(exc)}
         return {'healthy': True, 'message': 'no health check available'}
 
