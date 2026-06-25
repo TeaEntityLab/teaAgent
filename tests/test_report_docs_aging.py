@@ -61,6 +61,15 @@ def test_is_archive_tier(tmp_path: Path) -> None:
     assert not module._is_archive_tier('docs/cli.md')
 
 
+def test_is_archive_tier_respects_working_current_truth_override() -> None:
+    module = _load_module()
+    ledger = 'docs/analysis/active-findings-status-ledger-2026-06-06.md'
+    assert not module._is_archive_tier(ledger)
+    assert not module._is_archive_tier(
+        'analysis/active-findings-status-ledger-2026-06-06.md'
+    )
+
+
 def test_generate_docs_aging_excludes_archive_from_stale_list(tmp_path: Path) -> None:
     module = _load_module()
     docs = tmp_path / 'docs'

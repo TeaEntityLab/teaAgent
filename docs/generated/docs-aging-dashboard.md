@@ -5,7 +5,7 @@
 **Stale threshold:** 90 days since `Last reviewed`
 **Current-truth docs scanned:** 17
 **Needs attention (working tier only):** 10
-**Archive-tier docs (exempt from staleness):** 1
+**Archive-tier docs (exempt from staleness):** 0
 
 Regenerate: `python3 scripts/report_docs_aging.py`
 
@@ -66,14 +66,6 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 | --- | --- | --- | --- | --- |
 | `docs/acceptance.md` | stale_by_mtime | 2026-06-21 | 2026-06-22 | File modified after last reviewed date |
 
-## Archive Tier (Dated, Immutable Records — Exempt from Staleness Checks)
-
-These docs are dated records and are not expected to be kept current.
-
-| Document | Owner |
-| --- | --- |
-| `docs/analysis/active-findings-status-ledger-2026-06-06.md` | daily-driver |
-
 ## Review Triggers (Current-Truth Docs)
 
 | Document | Owner | Tier | Review trigger |
@@ -94,4 +86,4 @@ These docs are dated records and are not expected to be kept current.
 | `docs/permission-and-approval-playbook.md` | security | working | Approval, permission, or MCP trust behavior changes. |
 | `docs/governance/README.md` | governance | working | Governance index or process entry points change. |
 | `docs/plans/ticket-plans/index.md` | daily-driver | working | Ticket closure status or execution order changes. |
-| `docs/analysis/active-findings-status-ledger-2026-06-06.md` | daily-driver | archive | Finding closure status or new CG/AG/DS ids. |
+| `docs/analysis/active-findings-status-ledger-2026-06-06.md` | daily-driver | working | Finding closure status or new CG/AG/DS ids. |

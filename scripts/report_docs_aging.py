@@ -17,6 +17,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import NamedTuple
 
+from docs_tier import is_archive_tier as _shared_is_archive_tier
+
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _DEFAULT_OUTPUT = _REPO_ROOT / 'docs' / 'generated' / 'docs-aging-dashboard.md'
 
@@ -29,14 +31,13 @@ _REVIEW_TRIGGER = re.compile(
     r'>\s*\*\*Review trigger:\*\*\s*(.+?)(?:\n|$)', re.IGNORECASE
 )
 _OWNER_SURFACE = re.compile(r'>\s*\*\*Owns:\*\*\s*(.+?)(?:\n|$)', re.IGNORECASE)
-_ARCHIVE_DATE_PATTERN = re.compile(r'\d{4}-\d{2}-\d{2}')
 
 STALE_DAYS = 90
 
 
 def _is_archive_tier(rel_path: str) -> bool:
-    """Return True if doc is archive-tier (contains YYYY-MM-DD date pattern)."""
-    return bool(_ARCHIVE_DATE_PATTERN.search(rel_path))
+    """Return True if doc is archive-tier (dated, not in working override)."""
+    return _shared_is_archive_tier(rel_path)
 
 
 class DocReviewEntry(NamedTuple):

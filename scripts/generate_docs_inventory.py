@@ -7,9 +7,14 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import re
 import sys
 from pathlib import Path
+
+from docs_tier import (
+    WORKING_CURRENT_TRUTH_DOCS,
+    is_archive_tier,
+    is_working_current_truth,
+)
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _DEFAULT_OUTPUT = _REPO_ROOT / 'docs' / 'generated' / 'docs-inventory.md'
@@ -37,13 +42,8 @@ _CONSTITUTION_DOCS = {
     'governance-compliance.md',
 }
 
-# Date pattern for archive-tier docs (any doc with YYYY-MM-DD in filename)
-_ARCHIVE_DATE_PATTERN = re.compile(r'\d{4}-\d{2}-\d{2}')
-
-# Dated docs that remain current truth (not archive despite date in filename).
-_WORKING_CURRENT_TRUTH_DOCS = {
-    'analysis/active-findings-status-ledger-2026-06-06.md',
-}
+# Date pattern and working overrides live in docs_tier.py (shared with report_docs_aging).
+_WORKING_CURRENT_TRUTH_DOCS = WORKING_CURRENT_TRUTH_DOCS
 
 
 def _relative_doc_path(path: Path, docs_root: Path) -> str:
@@ -66,9 +66,9 @@ def _classify_tier(rel_path: str) -> str:
     """
     if rel_path in _CONSTITUTION_DOCS:
         return 'constitution'
-    if rel_path in _WORKING_CURRENT_TRUTH_DOCS:
+    if is_working_current_truth(rel_path):
         return 'working'
-    if _ARCHIVE_DATE_PATTERN.search(rel_path):
+    if is_archive_tier(rel_path):
         return 'archive'
     return 'working'
 
