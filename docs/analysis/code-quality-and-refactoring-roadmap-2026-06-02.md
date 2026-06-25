@@ -3,7 +3,7 @@
 > **Claim class:** Historical audit snapshot + implementation status register.
 >
 > **Current truth for closure status:** [§10 Implementation status](#implementation-status-2026-06-25)
-> (last verified **2026-06-25** @ `04e9aa6`). Sections **§1–§9** preserve the
+> (last verified **2026-06-25** @ `8c311cd`). Sections **§1–§9** preserve the
 > original 2026-06-02 findings as audit evidence. File paths and line numbers in
 > those sections may be stale after package relocations (`chat_repl.py` retired,
 > `consensus/` and `_agent/` package splits, etc.) — do **not** treat them as
@@ -444,7 +444,7 @@ Modules without any module docstring (first non-import line is code):
 
 ## Implementation status (2026-06-25)
 
-**Authoritative closure register** for Tier 0–2 items below. Verified at HEAD `04e9aa6`
+**Authoritative closure register** for Tier 0–2 items below. Verified at HEAD `8c311cd`
 (CG-16 TUI de-mock tail + RISK-1 tool-decision split). Sections §1–§9 are not updated inline.
 
 Tracked against `docs/retrospective/06-action-register.md` (**A-P2-6**, **S-P2-5**) and harness goals in `AGENTS.md` (thin harness, centralized HTTP, governed tests).
