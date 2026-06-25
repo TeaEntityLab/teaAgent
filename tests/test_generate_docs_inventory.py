@@ -62,6 +62,10 @@ def test_classify_tier_working(tmp_path: Path) -> None:
     assert module._classify_tier('USAGE.md') == 'working'
     assert module._classify_tier('cli.md') == 'working'
     assert module._classify_tier('adr/0001-foo.md') == 'working'
+    assert (
+        module._classify_tier('analysis/active-findings-status-ledger-2026-06-06.md')
+        == 'working'
+    )
 
 
 def test_check_docs_inventory_detects_stale_output(tmp_path: Path) -> None:

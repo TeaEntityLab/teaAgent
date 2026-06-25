@@ -212,7 +212,7 @@ def format_pending_approvals(views: list[PendingApprovalView]) -> str:
                 f'{view.selector}. Approve "{view.tool_name}" — {view.path_summary}',
                 f'   Task: {view.task}',
                 f'   Why: {view.reason}',
-                f'   Risk: {view.risk_class} · age {age} · expires {view.expires_at}',
+                f'   Risk: {view.risk_class} · age: {age} · expires: {view.expires_at}',
                 f'   → teaagent approval approve --selector {view.selector}',
                 f'   (advanced call_id: {view.call_id})',
                 '',

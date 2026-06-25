@@ -96,6 +96,11 @@ def safe_urlopen(  # noqa: C901
     _validate_url_scheme(url, allow_http=allow_http)
     allowed_schemes = _allowed_schemes(allow_http=allow_http)
 
+    # POST is the conventional method when a body is supplied; callers may still
+    # override explicitly (e.g. method='PUT').
+    if data is not None and method == 'GET':
+        method = 'POST'
+
     # Create request with headers if provided
     if data is not None:
         req = urllib.request.Request(

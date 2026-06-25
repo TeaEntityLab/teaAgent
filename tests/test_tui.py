@@ -14,8 +14,30 @@ from teaagent.cli import main
 from teaagent.ergonomics._approval_grants import _compute_argument_digest
 from teaagent.graphqlite_store import GraphQLiteRuntimeError
 from teaagent.tui import TeaAgentTUI
-from teaagent.types import PermissionMode
+from teaagent.types import FinalAnswer, PermissionMode, RunResult
 from test_support import can_bind_loopback
+
+
+def _completed_run_result(
+    *,
+    run_id: str = 'test-run',
+    cost_cents: float = 0.0,
+    content: str = 'ok',
+    input_tokens: int = 0,
+    output_tokens: int = 0,
+) -> RunResult:
+    return RunResult(
+        run_id=run_id,
+        status='completed',
+        iterations=1,
+        tool_calls=0,
+        cost_cents=cost_cents,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        final_answer=FinalAnswer(content=content),
+        metadata={},
+        error_message=None,
+    )
 
 
 class CapturingAdapterFactory:
@@ -1376,16 +1398,7 @@ class TUITests(unittest.TestCase):
             patch('teaagent.tui.core.RunStore') as mock_store,
             patch('teaagent.tui.state.create_llm_adapter'),
         ):
-            mock_run.return_value = unittest.mock.MagicMock(
-                run_id='test-run',
-                status='completed',
-                iterations=1,
-                tool_calls=0,
-                cost_cents=0.0,
-                final_answer=unittest.mock.MagicMock(content='ok'),
-                metadata={},
-                error_message=None,
-            )
+            mock_run.return_value = _completed_run_result()
             mock_store.return_value.list_runs.return_value = []
             mock_store.return_value.show_run.return_value = {}
             mock_store.return_value.logger_for_result = lambda *a: None
@@ -1409,16 +1422,7 @@ class TUITests(unittest.TestCase):
             patch('teaagent.tui.core.RunStore') as mock_store,
             patch('teaagent.tui.state.create_llm_adapter'),
         ):
-            mock_run.return_value = unittest.mock.MagicMock(
-                run_id='test-run',
-                status='completed',
-                iterations=1,
-                tool_calls=0,
-                cost_cents=0.0,
-                final_answer=unittest.mock.MagicMock(content='ok'),
-                metadata={},
-                error_message=None,
-            )
+            mock_run.return_value = _completed_run_result()
             mock_store.return_value.list_runs.return_value = []
             mock_store.return_value.show_run.return_value = {}
             mock_store.return_value.logger_for_result = lambda *a: None
@@ -1458,17 +1462,8 @@ class TUITests(unittest.TestCase):
             patch('teaagent.tui.core.RunStore') as mock_store,
             patch('teaagent.tui.state.create_llm_adapter'),
         ):
-            mock_run.return_value = unittest.mock.MagicMock(
-                run_id='test-run',
-                status='completed',
-                iterations=1,
-                tool_calls=0,
-                cost_cents=150.0,  # the value we expect to accumulate
-                input_tokens=100,
-                output_tokens=50,
-                final_answer=unittest.mock.MagicMock(content='ok'),
-                metadata={},
-                error_message=None,
+            mock_run.return_value = _completed_run_result(
+                cost_cents=150.0, input_tokens=100, output_tokens=50
             )
             mock_store.return_value.show_run.return_value = {}
             mock_store.return_value.logger_for_result = lambda *a: None
@@ -1480,7 +1475,7 @@ class TUITests(unittest.TestCase):
             self.assertEqual(tui._session_cost_cents, 150.0)
 
             # Run a second task; total must be additive.
-            mock_run.return_value.cost_cents = 75.0
+            mock_run.return_value = _completed_run_result(cost_cents=75.0)
             tui._run_agent_task('second task')
             self.assertEqual(tui._session_cost_cents, 225.0)
 
@@ -1684,16 +1679,7 @@ class TUITests(unittest.TestCase):
             patch('teaagent.tui.core.RunStore') as mock_store,
             patch('teaagent.tui.state.create_llm_adapter'),
         ):
-            mock_run.return_value = unittest.mock.MagicMock(
-                run_id='test-run',
-                status='completed',
-                iterations=1,
-                tool_calls=0,
-                cost_cents=0.0,
-                final_answer=unittest.mock.MagicMock(content='ok'),
-                metadata={},
-                error_message=None,
-            )
+            mock_run.return_value = _completed_run_result()
             mock_store.return_value.list_runs.return_value = []
             mock_store.return_value.show_run.return_value = {}
             mock_store.return_value.logger_for_result = lambda *a: None

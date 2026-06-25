@@ -7,7 +7,7 @@ CLI surface was retired in U-P2-1, leaving the TUI as the single surface.)
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -60,18 +60,12 @@ def test_cli_chat_vs_tui_same_cost_after_task(tmp_path):
     tui_output: list[str] = []
     tui = _make_tui(tmp_path, output_fn=tui_output.append)
 
-    fake_tui_store = MagicMock()
-    fake_tui_store.audit_logger.return_value = MagicMock(path=None)
-    fake_tui_store.show_run.return_value = []
-
     with (
         patch(
             'teaagent.chat_session_controller.run_chat_agent', return_value=_FAKE_RESULT
         ),
-        patch('teaagent.chat_session_controller.RunStore'),
-        patch('teaagent.tui.core.RunStore', return_value=fake_tui_store),
+        patch('teaagent.tui.core.RunStore.show_run', return_value=[]),
         patch('teaagent.tui.state.create_llm_adapter'),
-        patch('teaagent.tui.core.RunStore', return_value=fake_tui_store),
     ):
         tui._run_agent_task('run some task')
 

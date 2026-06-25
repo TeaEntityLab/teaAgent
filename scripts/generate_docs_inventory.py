@@ -40,6 +40,11 @@ _CONSTITUTION_DOCS = {
 # Date pattern for archive-tier docs (any doc with YYYY-MM-DD in filename)
 _ARCHIVE_DATE_PATTERN = re.compile(r'\d{4}-\d{2}-\d{2}')
 
+# Dated docs that remain current truth (not archive despite date in filename).
+_WORKING_CURRENT_TRUTH_DOCS = {
+    'analysis/active-findings-status-ledger-2026-06-06.md',
+}
+
 
 def _relative_doc_path(path: Path, docs_root: Path) -> str:
     return path.relative_to(docs_root).as_posix()
@@ -55,11 +60,14 @@ def _classify_tier(rel_path: str) -> str:
     """Classify a doc into constitution, archive, or working tier.
 
     - Constitution: exactly the constitution docs listed above.
-    - Archive: any doc with YYYY-MM-DD date pattern in filename.
+    - Working (current truth): explicit override list for dated active ledgers.
+    - Archive: any other doc with YYYY-MM-DD date pattern in filename.
     - Working: everything else.
     """
     if rel_path in _CONSTITUTION_DOCS:
         return 'constitution'
+    if rel_path in _WORKING_CURRENT_TRUTH_DOCS:
+        return 'working'
     if _ARCHIVE_DATE_PATTERN.search(rel_path):
         return 'archive'
     return 'working'
