@@ -95,6 +95,8 @@ def _emit_run_completion_output(
         return
 
     print_json(payload)
+    if sys.stderr.isatty():
+        print(build_run_receipt(store, run_id, args.root), file=sys.stderr)
 
 
 def show_interactive_diff(root: str | Path, sandbox_branch: str) -> bool:

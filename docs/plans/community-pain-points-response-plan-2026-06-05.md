@@ -1,5 +1,11 @@
 # Community Pain Points Response Plan - 2026-06-05
 
+> **Claim class:** Community-survey-derived response plan, not daily-driver
+> current truth. Completion/status rows are owned by `docs/roadmap-status.md`;
+> daily-user trust claims are owned by `docs/daily-driver-current-status.md`.
+> Treat the survey as roadmap input until implementation evidence and tests are
+> linked from those current-truth surfaces.
+
 ## Purpose
 
 This plan turns the community pain-point survey into concrete TeaAgent work. It

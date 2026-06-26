@@ -13,6 +13,7 @@ from typing import Any, Optional
 from teaagent.automations import AutomationSpec
 from teaagent.ergonomics.workspace_defaults import load_workspace_defaults
 from teaagent.http_utils import safe_urlopen
+from teaagent.security_env import env_value
 
 _AUTOMATION_WEBHOOK_ENV = 'TEAAGENT_AUTOMATION_WEBHOOK_URL'
 _AUTOMATION_WEBHOOK_SECRET_ENV = 'TEAAGENT_AUTOMATION_WEBHOOK_SECRET'
@@ -23,9 +24,7 @@ def resolve_automation_webhook_url(root: str | Path = '.') -> Optional[str]:
     defaults = load_workspace_defaults(root)
     url = defaults.get('automation_webhook_url')
     if url is None or not str(url).strip():
-        import os
-
-        url = os.environ.get(_AUTOMATION_WEBHOOK_ENV)
+        url = env_value(_AUTOMATION_WEBHOOK_ENV)
     if url is None or not str(url).strip():
         return None
     return str(url).strip()
@@ -36,9 +35,7 @@ def resolve_automation_webhook_secret(root: str | Path = '.') -> Optional[str]:
     defaults = load_workspace_defaults(root)
     secret = defaults.get('automation_webhook_secret')
     if secret is None or not str(secret).strip():
-        import os
-
-        secret = os.environ.get(_AUTOMATION_WEBHOOK_SECRET_ENV)
+        secret = env_value(_AUTOMATION_WEBHOOK_SECRET_ENV)
     if secret is None or not str(secret).strip():
         return None
     return str(secret).strip()

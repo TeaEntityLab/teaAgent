@@ -143,8 +143,8 @@ bug or that TeaAgent has already fixed the class.
 | Issue | Practical impact | Tracking |
 |-------|------------------|----------|
 | Dynamic generated skills are not yet proven end-to-end. | Treat generated skills as governed candidates until a run proves activation, source preservation, and output verification. Do not rely on RSS/WebSearch skill summaries as fully reliable yet. | DSK-P0-001 through DSK-P0-004 |
-| Seven-control-loop model is not implemented as a runtime contract yet. | Treat it as a planning model until SCL-P0 work adds explicit spec binding, route receipts, review artifacts, gate packets, and goal records. | SCL-P0-001 through SCL-P0-007 |
-| Community pain-point mitigations are mostly planning artifacts today. | Routing, memory, review, cost, long-task, and dynamic asset receipts need implementation and tests before they can be claimed as fixed. | CPP-P0-001 through CPP-P0-008 |
+| Seven-control-loop package is not daily-driver runtime proof by itself. | `docs/roadmap-status.md` owns SCL row status, while DR-006/backlog provenance keep competitor-derived SCL-P0 scheduling on hold unless owner friction evidence, governance-gap proof, or owner override promotes it. Treat completed SCL rows as control-model/docs evidence until runtime receipts prove daily behavior. | SCL-P0-001 through SCL-P0-007; DR-006 |
+| Community pain-point docs are not mitigation proof by themselves. | `docs/roadmap-status.md` owns CPP row status. Daily-driver claims still need implementation receipts and tests before survey-derived pain points can be claimed fixed in user-visible behavior. | CPP-P0-001 through CPP-P0-008 |
 
 ## Recently fixed
 
@@ -177,10 +177,12 @@ bug or that TeaAgent has already fixed the class.
 - Do not treat newly landed stop-gaps as release-ready until the active command path is tested.
 - Do not treat a loaded skill as proof that the skill was used or that the final
   artifact was source-backed.
-- Do not treat the seven-control-loop strategy package as runtime proof. It is
-  a roadmap control model until the SCL work items have tests and audit receipts.
-- Do not treat community pain-point docs as mitigation evidence. They are input
-  to the roadmap until CPP/SCL/DSK rows land with tests.
+- Do not treat the seven-control-loop strategy or work-item package as runtime
+  proof, or as permission to schedule legacy-competitive work without the DR-006
+  gates: owner friction evidence, governance-gap proof, or owner override.
+- Do not treat community pain-point docs as mitigation evidence. Use
+  `docs/roadmap-status.md` for row state, then require implementation/test
+  receipts before claiming daily-driver behavior is fixed.
 
 
 ## 2026-06-25 review note

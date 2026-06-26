@@ -35,6 +35,11 @@ def audit_chain_legacy_compat() -> bool:
     return _env_truthy('TEAAGENT_AUDIT_CHAIN_LEGACY_COMPAT', default=True)
 
 
+def env_value(name: str, default: str | None = None) -> str | None:
+    """Centralized raw environment lookup for audit-ratchet callers."""
+    return os.environ.get(name, default)
+
+
 def _env_truthy(name: str, *, default: bool = False) -> bool:
     raw = os.environ.get(name)
     if raw is None:

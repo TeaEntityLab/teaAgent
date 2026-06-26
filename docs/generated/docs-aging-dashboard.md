@@ -4,7 +4,7 @@
 
 **Stale threshold:** 90 days since `Last reviewed`
 **Current-truth docs scanned:** 17
-**Needs attention (working tier only):** 10
+**Needs attention (working tier only):** 11
 **Archive-tier docs (exempt from staleness):** 0
 
 Regenerate: `python3 scripts/report_docs_aging.py`
@@ -27,6 +27,7 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 
 | Document | Status | Last reviewed | File mtime | Notes |
 | --- | --- | --- | --- | --- |
+| `docs/daily-driver-current-status.md` | stale_by_mtime | 2026-06-25 | 2026-06-26 | File modified after last reviewed date |
 | `docs/USAGE.md` | stale_by_mtime | 2026-06-06 | 2026-06-21 | Missing owner banner; File modified after last reviewed date |
 
 ### docs

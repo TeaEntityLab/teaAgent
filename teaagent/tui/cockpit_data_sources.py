@@ -173,7 +173,7 @@ class CostDataSource:
         summaries = self._run_store.list_runs(limit=1000)
         if tenant_filter and tenant_filter != self.tenant_id:
             return 0.0
-        return sum(s.cost_cents for s in summaries)
+        return float(sum(float(s.cost_cents) for s in summaries))
 
     def get_cost_trends(self, *, days: int = 7) -> list[dict[str, Any]]:
         """Get cost trends over time.
@@ -223,12 +223,12 @@ class CostDataSource:
                 'alert_level': 'none',
             }
 
-        remaining_cents = self.budget_limit_cents - total_cost
-        usage_percentage = (
-            (total_cost / self.budget_limit_cents) * 100
-            if self.budget_limit_cents > 0
-            else 0.0
-        )
+        if self.budget_limit_cents <= 0:
+            usage_percentage = 100.0
+            remaining_cents = self.budget_limit_cents - total_cost
+        else:
+            remaining_cents = self.budget_limit_cents - total_cost
+            usage_percentage = (total_cost / self.budget_limit_cents) * 100
 
         # Determine alert level
         if usage_percentage >= 100:

@@ -1,5 +1,13 @@
 # Seven Control Loops Product Direction - 2026-06-05
 
+> **Claim class:** Competitor-survey-derived strategy package, not current-truth status.
+> Current direction is bounded by
+> `docs/strategy/harness-first-direction-2026-06-13.md` and
+> `docs/strategy/dr-006-owner-decision-2026-06-22.md`: competitor-derived
+> control-loop work remains hypothesis intake until owner validation,
+> governance-gap proof, or an explicit owner override promotes it. Use
+> `docs/roadmap-status.md` for current row status.
+
 ## Purpose
 
 This strategy turns seven current agent-system themes into TeaAgent's product

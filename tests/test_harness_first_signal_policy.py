@@ -44,7 +44,11 @@ def test_operator_friction_log_preserves_owner_evidence_boundary() -> None:
     collapsed = ' '.join(text.split())
 
     assert 'Owner-written entries are evidence.' in text
+    assert 'competitor or community entries are hypotheses' in collapsed
     assert '[hypothesis: source, date]' in text
-    assert 'No owner-written evidence entries are recorded in this scaffold.' in text
-    assert 'Agents must not invent owner friction' in collapsed
+    assert (
+        'Agents may add only competitor-derived or community-derived hypothesis entries.'
+        in text
+    )
+    assert "must not answer them on the owner's behalf" in collapsed
     assert 'Signal-to-Acceptance-Gap Process' in text
