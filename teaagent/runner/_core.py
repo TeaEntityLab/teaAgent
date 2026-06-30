@@ -11,7 +11,7 @@ from uuid import uuid4
 from teaagent.audit import AuditLogger
 from teaagent.auto_mode import AutoModeConfig
 from teaagent.budget import RunBudget
-from teaagent.budget_monitor import BudgetAction, BudgetMonitor
+from teaagent.budget_monitor import BudgetMonitor
 from teaagent.context import ContextCompactor
 from teaagent.errors import (
     AgentHarnessError,
@@ -49,6 +49,12 @@ logger = logging.getLogger(__name__)
 from ._approval_manager import RunnerApprovalCoordinator  # noqa: E402
 from ._auto_mode_manager import AutoModeManager  # noqa: E402
 from ._events import EventSpine, RunEventType, register_audit_consumer  # noqa: E402
+from ._governed_execution import (  # noqa: E402
+    GovernedExecutionContext,
+    enforce_budget_warnings,
+    enforce_cost_budget,
+    enforce_phase_budget,
+)
 from ._plan_validator import PlanGateInterceptor, PlanValidator  # noqa: E402
 from ._types import (  # noqa: E402
     ApprovalHandler,
@@ -166,6 +172,13 @@ class AgentRunner:
         self._budget_warning_levels_emitted: set[int] = set()
         self._budget_prompted = False
         self._compaction_warning_emitted = False
+        self._governed_execution = GovernedExecutionContext(
+            budget=self.budget,
+            phase_tracker=self.phase_tracker,
+            audit=self.audit,
+            budget_monitor=self._budget_monitor,
+            budget_warning_levels_emitted=self._budget_warning_levels_emitted,
+        )
         self.plan_validator = PlanValidator(
             approval_policy=self.approval_policy,
             require_plan=require_plan,
@@ -211,16 +224,7 @@ class AgentRunner:
             self.plan_validator.set_read_only_lint_errors(lint_errors)
 
     def _assert_cost_budget(self, cost_cents: float) -> None:
-        max_cost = self.budget.max_estimated_cost_cents
-        if max_cost is None:
-            return
-        # 0 means zero spend allowed - any positive cost exceeds it
-        if max_cost == 0:
-            if cost_cents > 0:
-                raise BudgetExceededError('cost budget exceeded (zero cap)')
-            return
-        if cost_cents > max_cost:
-            raise BudgetExceededError('cost budget exceeded')
+        enforce_cost_budget(self._governed_execution, cost_cents)
 
     def _read_usage(
         self,
@@ -250,97 +254,18 @@ class AgentRunner:
         cost_cents: float,
         tool_calls: int,
     ) -> None:
-        tracker = self.phase_tracker
-        phase = tracker.current_phase
-        pb = self.budget.phase_budget_for(phase)
-
-        phase_iters = tracker.phase_iterations()
-        if phase_iters > pb.max_iterations:
-            self.audit.record(
-                'phase_budget_warning',
-                run_id,
-                phase=phase.value,
-                metric='iterations',
-                current=phase_iters,
-                limit=pb.max_iterations,
-            )
-            raise BudgetExceededError(f'phase {phase.value} iteration budget exceeded')
-
-        phase_tools = tracker.phase_tool_calls()
-        if phase_tools > pb.max_tool_calls:
-            self.audit.record(
-                'phase_budget_warning',
-                run_id,
-                phase=phase.value,
-                metric='tool_calls',
-                current=phase_tools,
-                limit=pb.max_tool_calls,
-            )
-            raise BudgetExceededError(f'phase {phase.value} tool-call budget exceeded')
-
-        phase_cost = tracker.phase_cost_cents(cost_cents)
-        if (
-            pb.max_estimated_cost_cents is not None
-            and phase_cost > pb.max_estimated_cost_cents
-        ):
-            self.audit.record(
-                'phase_budget_warning',
-                run_id,
-                phase=phase.value,
-                metric='cost',
-                current=phase_cost,
-                limit=pb.max_estimated_cost_cents,
-            )
-            raise BudgetExceededError(f'phase {phase.value} cost budget exceeded')
+        enforce_phase_budget(
+            self._governed_execution,
+            run_id=run_id,
+            cost_cents=cost_cents,
+        )
 
     def _check_budget_warnings(self, *, run_id: str, cost_cents: float) -> None:
-        budget_cap = self.budget.max_estimated_cost_cents
-        if budget_cap is None:
-            return
-        # 0 cap is enforced by _assert_cost_budget; no warnings needed
-        if budget_cap == 0:
-            return
-        max_cost = float(budget_cap)
-        percent = (cost_cents / max_cost) * 100.0
-        for level in (50, 80, 90, 100):
-            if percent < level or level in self._budget_warning_levels_emitted:
-                continue
-            self._budget_warning_levels_emitted.add(level)
-
-            action = self._budget_monitor.check_at_threshold(
-                run_id=run_id,
-                cost_cents=cost_cents,
-                threshold=level,
-            )
-
-            self.audit.record(
-                'budget_warning',
-                run_id,
-                level=level,
-                percent=percent,
-                cost_cents=cost_cents,
-                max_cost_cents=max_cost,
-            )
-
-            if action == BudgetAction.PROMPT_CONFIRM:
-                self.audit.record(
-                    'budget_prompt',
-                    run_id,
-                    percent=percent,
-                    cost_cents=cost_cents,
-                    max_cost_cents=max_cost,
-                    approved=False,
-                )
-                raise RunCancelledError('run cancelled: budget at 90%')
-
-            if action == BudgetAction.SUGGEST_READ_ONLY:
-                self.audit.record(
-                    'budget_read_only_suggested',
-                    run_id,
-                    percent=percent,
-                    cost_cents=cost_cents,
-                    max_cost_cents=max_cost,
-                )
+        enforce_budget_warnings(
+            self._governed_execution,
+            run_id=run_id,
+            cost_cents=cost_cents,
+        )
 
     def _check_compaction_warning(
         self, *, context: RunContext, input_tokens: int, output_tokens: int

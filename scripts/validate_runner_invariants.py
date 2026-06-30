@@ -52,6 +52,18 @@ _BUDGET_CLAMP_IMPORT = 'teaagent.runner._invariants'
 _BUDGET_CLAMP_SYMBOL = 'compute_clamped_budget'
 _BUDGET_CLAMP_FILES: tuple[str, ...] = ('teaagent/subagents/_manager.py',)
 
+# ADR 0041 Phase 1 (G1): the primary runner must delegate per-iteration budget
+# enforcement to the shared governed-execution layer, not re-implement it inline.
+_GOVERNED_EXEC_IMPORTS: frozenset[str] = frozenset(
+    {'_governed_execution', 'teaagent.runner._governed_execution'}
+)
+_GOVERNED_EXEC_SYMBOLS: tuple[str, ...] = (
+    'enforce_cost_budget',
+    'enforce_phase_budget',
+    'enforce_budget_warnings',
+)
+_GOVERNED_EXEC_FILES: tuple[str, ...] = ('teaagent/runner/_core.py',)
+
 
 def _collect_imports(source: str) -> set[str]:
     tree = ast.parse(source)
@@ -113,12 +125,36 @@ def _check_budget_clamp_authority(rel_path: str) -> list[str]:
     return []
 
 
+def _check_governed_execution_authority(rel_path: str) -> list[str]:
+    """ADR 0041 Phase 1 G1: budget enforcement is delegated to the shared layer."""
+    file_path = _REPO_ROOT / rel_path
+    if not file_path.is_file():
+        return [f'{rel_path}: file not found']
+    source = file_path.read_text(encoding='utf-8')
+    imports = _collect_imports(source)
+    if not (imports & _GOVERNED_EXEC_IMPORTS):
+        return [
+            f'{rel_path}: missing governed-execution import — must import '
+            f'teaagent.runner._governed_execution and delegate budget enforcement '
+            f'instead of re-implementing it inline (ADR 0041 Phase 1, G1)'
+        ]
+    missing = [s for s in _GOVERNED_EXEC_SYMBOLS if s not in source]
+    if missing:
+        return [
+            f'{rel_path}: imports the governed-execution layer but does not call '
+            f'{", ".join(missing)} (ADR 0041 Phase 1, G1)'
+        ]
+    return []
+
+
 def validate() -> list[str]:
     errors: list[str] = []
     for rel_path in _SECOND_FRAMEWORK_FILES:
         errors.extend(_check_file(rel_path))
     for rel_path in _BUDGET_CLAMP_FILES:
         errors.extend(_check_budget_clamp_authority(rel_path))
+    for rel_path in _GOVERNED_EXEC_FILES:
+        errors.extend(_check_governed_execution_authority(rel_path))
     return errors
 
 

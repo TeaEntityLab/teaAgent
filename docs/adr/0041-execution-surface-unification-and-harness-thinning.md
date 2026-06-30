@@ -148,7 +148,7 @@ All must pass before Phase 2 starts:
 
 | Gate | Evidence |
 | --- | --- |
-| **G1 — Shared layer exists** | `teaagent/runner/_governed_execution.py` exported; `AgentRunner` delegates budget/approval/audit to it |
+| **G1 — Shared layer exists** | Partial: `teaagent/runner/_governed_execution.py` exported; `AgentRunner` delegates **budget** enforcement (cost/phase/warnings) to it. Approval/authorization (`_authorize_tool_call`) still inline — tracked as a separate slice |
 | **G2 — Subagent path uses layer** | `SubagentManager` constructs context via shared helpers; no parallel `assert_allowed` in `_manager.py` |
 | **G3 — Live differential** | Parametrized test (ADR-0040 §2 follow-up) runs identical tool+budget scenario through `AgentRunner` and `SubagentManager.run_subagent`; `assert_budget_invariant`, `assert_audit_invariant`, `assert_approval_invariant` pass on collected evidence |
 | **G4 — CI green** | `scripts/validate_runner_invariants.py`, full test suite, acceptance tier unchanged |
@@ -181,13 +181,19 @@ Behavior-preserving slices landed (2026-06-30):
   `SubagentManager.run_subagent` (via the `subagent` tool) and asserts
   `assert_audit_invariant`, `assert_audit_events_match`, `assert_approval_invariant`,
   and `assert_budget_invariant` on evidence collected from both surfaces.
+- **G1 budget enforcement extracted.** `runner/_governed_execution.py` now owns
+  per-iteration budget enforcement (`enforce_cost_budget` / `enforce_phase_budget`
+  / `enforce_budget_warnings`), a verbatim behavior-preserving move from `_core.py`;
+  `AgentRunner` delegates to it. The §1.2 import gate in
+  `scripts/validate_runner_invariants.py` requires `_core.py` to use the layer.
+  Risk report: `docs/reviews/a-p1-3-governed-execution-risk.md`; unit tests:
+  `tests/runner/test_governed_execution.py`.
 
-Still open for Phase 1: the `_governed_execution.py` module that unifies
-authorization, approval, audit, and full budget *enforcement* (§1.1) — the G1
-extraction from `_core.py` — plus the §1.2 import check for that module. **G1 is
-unmet** (a high-risk `_core.py` refactor requiring a `docs/reviews/*-risk.md`
-report); G3 is met; G2 is met for the budget invariant. Phase 2 is not yet
-authorized.
+Still open for Phase 1 (G1 remainder): the **authorization** dimension —
+`AgentRunner._authorize_tool_call` reassigns `ApprovalPolicy` and calls
+run-summary emission, a larger blast radius deferred to its own reflective-risk
+slice. **G1 is partial** (budget enforcement delegated; approval still inline);
+**G2 and G3 are met**. Phase 2 is not yet authorized.
 
 ### Phase 2 — Domain reasoning migration (harness thinning)
 
