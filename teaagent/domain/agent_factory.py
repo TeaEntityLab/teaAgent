@@ -21,6 +21,8 @@ from typing import Optional
 from teaagent.llm import LLMAdapter, LLMMessage, LLMRequest
 from teaagent.plugin_system import _USER_PLUGIN_DIR, AgentPlugin, PluginRegistry
 
+from ._prompt_assets import load_prompt_template
+
 logger = logging.getLogger(__name__)
 
 
@@ -151,29 +153,22 @@ You have access to the following tools: {', '.join(spec.required_tools)}
 
     def _generate_llm_prompt(self, spec: AgentSpecification) -> str:
         """Generate system prompt using LLM for higher quality."""
-        generation_prompt = f"""Generate a specialized system prompt for an AI agent.
-
-Agent Name: {spec.name}
-Description: {spec.description}
-Task Domain: {spec.task_domain}
-Specialization Level: {spec.specialization_level}
-Required Tools: {', '.join(spec.required_tools)}
-Personality Traits: {', '.join(spec.personality_traits) if spec.personality_traits else 'professional'}
-Constraints: {', '.join(spec.constraints) if spec.constraints else 'none'}
-
-Generate a comprehensive markdown system prompt that:
-1. Clearly defines the agent's role and expertise
-2. Provides specific instructions for the task domain
-3. Explains how to use the available tools effectively
-4. Includes personality traits and behavioral guidelines
-5. Sets clear constraints and safety guidelines
-
-Respond with the system prompt as markdown (no JSON wrapper).
-"""
-
         try:
             if self._llm_adapter is None:
                 raise RuntimeError('LLM adapter is not configured')
+            generation_prompt = load_prompt_template(
+                'agent-prompt-authoring', 'generation_prompt.md'
+            ).format(
+                name=spec.name,
+                description=spec.description,
+                task_domain=spec.task_domain,
+                specialization_level=spec.specialization_level,
+                required_tools=', '.join(spec.required_tools),
+                personality_traits=', '.join(spec.personality_traits)
+                if spec.personality_traits
+                else 'professional',
+                constraints=', '.join(spec.constraints) if spec.constraints else 'none',
+            )
             request = LLMRequest(
                 messages=[
                     LLMMessage(
@@ -372,30 +367,18 @@ Focus on areas with low success metrics.
         success_metrics: dict[str, float],
     ) -> str:
         """LLM-based prompt evolution."""
-        evolution_prompt = f"""Evolve the following agent system prompt based on performance feedback.
-
-Current Prompt:
-{current_prompt}
-
-Performance Feedback:
-{performance_feedback}
-
-Success Metrics:
-{', '.join(f'{k}: {v}' for k, v in success_metrics.items())}
-
-Instructions:
-1. Analyze the performance feedback and success metrics.
-2. Identify areas where the agent underperforms.
-3. Refine the system prompt to address these weaknesses.
-4. Maintain the core purpose and constraints of the agent.
-5. Return the evolved system prompt as markdown.
-
-Respond with the evolved system prompt as markdown (no JSON wrapper).
-"""
-
         try:
             if self._llm_adapter is None:
                 raise RuntimeError('LLM adapter is not configured')
+            evolution_prompt = load_prompt_template(
+                'agent-prompt-authoring', 'evolution_prompt.md'
+            ).format(
+                current_prompt=current_prompt,
+                performance_feedback=performance_feedback,
+                success_metrics=', '.join(
+                    f'{k}: {v}' for k, v in success_metrics.items()
+                ),
+            )
             request = LLMRequest(
                 messages=[
                     LLMMessage(

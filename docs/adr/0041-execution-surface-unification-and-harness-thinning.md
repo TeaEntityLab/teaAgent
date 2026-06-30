@@ -255,6 +255,49 @@ If D2 or D4 regresses:
 3. Do not migrate the next module until the failing module's gate is green
    again.
 
+#### 2.3 Phase 2 progress (2026-06-30) — behavior-preserving thinning
+
+Investigation before migrating found the Phase 2 targets are **deterministic,
+tested Python**, not LLM reasoning: `intent.py` is pure keyword heuristics (zero
+LLM); `coordinator.py` / `agent_factory.py` are hybrids whose LLM path already
+sits behind an optional adapter with deterministic fallbacks; `workflow_engine.py`
+and `issue_intake.py` are orchestration / parsing. LLM-ifying tested
+deterministic logic regresses behaviour (latency, cost, nondeterminism on
+governance-adjacent paths) and cannot satisfy **D2** ("tests proving the behavior
+previously in the Python module"). The owner therefore chose **behavior-preserving
+thinning**: relocate the reviewable *reasoning assets* (LLM prompt text +
+documented procedures) into skills, while the tested deterministic logic and its
+fallbacks stay in the harness. **D2 is read as requiring retained, tested
+deterministic behaviour**; modules *thin* (prompt ownership leaves Python) rather
+than vanish.
+
+Landed (increment 1):
+
+- **LLM prompt text extracted to reviewed skill assets.** The four LLM-path
+  prompts in `coordinator.py` (classification, planning) and `agent_factory.py`
+  (generation, evolution) now live as templates under
+  `teaagent/skills/builtin/{task-classification,agent-prompt-authoring}/`, loaded
+  lazily via `teaagent/domain/_prompt_assets.load_prompt_template` and rendered
+  with `str.format`. A missing asset degrades through the existing
+  try/except → heuristic path (no new crash surface). `pyproject.toml`
+  package-data ships the assets.
+- **Reviewed procedure docs.** `SKILL.md` authored for all five domain modules
+  (intent-clarification, task-classification, agent-prompt-authoring,
+  workflow-orchestration, issue-intake).
+- **Byte-identity locked.** `tests/test_prompt_assets.py` proves both the
+  standalone template render and the full wired path reproduce the exact
+  pre-refactor prompt bytes (8/8 prompts), plus loader-error and doc-presence
+  checks.
+
+Gate status under the behavior-preserving reading: **D2 met** (skill assets +
+byte-identity tests; the deterministic unit tests — `test_intent.py`,
+`test_phase4_agent_factory.py`, `test_mode1_chaining.py`, `test_issue_intake.py`
+— remain green and authoritative). **D1 / D3 intentionally not pursued by
+deletion**: no shim-and-delete, because that requires the LLM-ification
+regression D2 forbids; the LOC budget is reframed as *prompt reasoning relocated
+to reviewed assets*, not LOC removed. **D4** (compliance-matrix thin-harness row)
+is the remaining bookkeeping.
+
 ### Explicit non-decisions
 
 - **Fold `SubagentManager` into `runner/` now** — remains gated by ADR-0040

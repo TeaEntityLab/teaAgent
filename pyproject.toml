@@ -34,7 +34,7 @@ dependencies = [
 include = ["teaagent*"]
 
 [tool.setuptools.package-data]
-teaagent = ["py.typed"]
+teaagent = ["py.typed", "skills/builtin/**/*.md"]
 
 [project.optional-dependencies]
 config = [

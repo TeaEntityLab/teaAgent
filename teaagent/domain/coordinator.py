@@ -17,6 +17,8 @@ from typing import Optional
 from teaagent.llm import LLMAdapter, LLMMessage, LLMRequest
 from teaagent.plugin_system import PluginRegistry
 
+from ._prompt_assets import load_prompt_template
+
 logger = logging.getLogger(__name__)
 
 
@@ -161,24 +163,12 @@ class TaskCoordinator:
 
     def _classify_task_with_llm(self, task_description: str) -> TaskClassification:
         """Classify task using LLM for better accuracy."""
-        classification_prompt = f"""Classify the following task by type and complexity.
-
-Task: {task_description}
-
-Respond with JSON:
-{{
-    "task_type": "code_review|testing|documentation|refactoring|debugging|feature_implementation|general",
-    "complexity": "simple|moderate|complex",
-    "confidence": 0.0-1.0,
-    "suggested_agent": "agent_name_or_null",
-    "requires_multi_step": true|false,
-    "estimated_steps": integer
-}}
-"""
-
         try:
             if self._llm_adapter is None:
                 raise RuntimeError('LLM adapter is not configured')
+            classification_prompt = load_prompt_template(
+                'task-classification', 'classification_prompt.md'
+            ).format(task_description=task_description)
             request = LLMRequest(
                 messages=[
                     LLMMessage(
@@ -350,33 +340,18 @@ Respond with JSON:
         """Generate workflow plan using LLM for better planning."""
         available_agents = [agent.name for agent in self._plugin_registry.list_agents()]
 
-        planning_prompt = f"""Generate a structured workflow plan for the following task.
-
-Task: {task_description}
-Task Type: {classification.task_type.value}
-Complexity: {classification.complexity.value}
-Estimated Steps: {classification.estimated_steps}
-
-Available Agents: {', '.join(available_agents)}
-
-Respond with JSON:
-{{
-    "steps": [
-        {{
-            "step_id": 1,
-            "description": "Step description",
-            "agent_name": "agent_name",
-            "tools": ["tool1", "tool2"],
-            "dependencies": []
-        }}
-    ],
-    "estimated_duration_seconds": integer
-}}
-"""
-
         try:
             if self._llm_adapter is None:
                 raise RuntimeError('LLM adapter is not configured')
+            planning_prompt = load_prompt_template(
+                'task-classification', 'planning_prompt.md'
+            ).format(
+                task_description=task_description,
+                task_type=classification.task_type.value,
+                complexity=classification.complexity.value,
+                estimated_steps=classification.estimated_steps,
+                available_agents=', '.join(available_agents),
+            )
             request = LLMRequest(
                 messages=[
                     LLMMessage(
