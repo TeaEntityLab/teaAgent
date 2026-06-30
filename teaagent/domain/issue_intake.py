@@ -12,6 +12,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+import shlex
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
@@ -558,26 +559,42 @@ class PlanGenerator:
         )
 
     def explore(self, issue: ParsedIssue, workspace_root: Path) -> dict[str, Any]:
-        """Explore workspace to understand context (uses PlanMode).
+        """Gather workspace context for the issue.
+
+        Returns deterministic, issue-derived context. When a ``context_gatherer``
+        or ``plan_mode`` collaborator is injected and exposes an ``explore`` (or
+        ``gather``) method, richer workspace exploration is delegated to it and
+        merged into the result; otherwise the deterministic context stands alone.
 
         Args:
-            issue: Parsed issue
-            workspace_root: Workspace root directory
+            issue: Parsed issue.
+            workspace_root: Workspace root directory.
 
         Returns:
-            Dictionary with exploration context
+            Dictionary with exploration context.
         """
-        # Placeholder for PlanMode exploration
-        # In a full implementation, this would use PlanMode to explore the workspace
-        # and gather context about affected files, components, etc.
-
-        context = {
+        context: dict[str, Any] = {
             'workspace_root': str(workspace_root),
             'issue_type': issue.issue_type.value,
             'affected_files': issue.affected_files or [],
             'affected_components': issue.affected_components or [],
-            'exploration_enabled': self._plan_mode is not None,
+            'exploration_enabled': self._plan_mode is not None
+            or self._context_gatherer is not None,
         }
+
+        collaborator = self._context_gatherer or self._plan_mode
+        if collaborator is not None:
+            explorer = getattr(collaborator, 'explore', None) or getattr(
+                collaborator, 'gather', None
+            )
+            if callable(explorer):
+                try:
+                    extra = explorer(issue, workspace_root)
+                except (OSError, ValueError, TypeError, RuntimeError) as exc:
+                    logger.warning('Context exploration delegate failed: %s', exc)
+                else:
+                    if isinstance(extra, dict):
+                        context.update(extra)
 
         return context
 
@@ -771,10 +788,11 @@ class CommandSuggester:
         return 'prompt'
 
     def _build_command(self, plan: PlanArtifact, permission_mode: str) -> str:
-        """Build command to execute the plan."""
-        # In a full implementation, this would construct the actual teaagent command
-        # For now, return a placeholder
-        return f'teaagent run --task "{plan.goal}" --permission-mode {permission_mode}'
+        """Build a shell-safe ``teaagent run`` command for the plan."""
+        return (
+            f'teaagent run --task {shlex.quote(plan.goal)} '
+            f'--permission-mode {shlex.quote(permission_mode)}'
+        )
 
     def _build_reasoning(self, plan: PlanArtifact, permission_mode: str) -> str:
         """Build reasoning for the permission mode recommendation."""

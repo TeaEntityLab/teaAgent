@@ -6,6 +6,7 @@ including test discovery, execution, result aggregation, and baseline comparison
 
 from __future__ import annotations
 
+import difflib
 import json
 import time
 from collections.abc import Callable
@@ -541,19 +542,35 @@ class EvalRunner:
     def _compare_with_baseline(
         self, output: str, baseline: dict[str, Any]
     ) -> dict[str, Any]:
-        """Compare test output with baseline.
+        """Compare test output with baseline using a real textual diff.
 
         Args:
             output: Test output.
-            baseline: Baseline data.
+            baseline: Baseline data (the ``output`` key holds the reference text).
 
         Returns:
-            Comparison result.
+            A mapping with ``matches`` (exact equality), ``diff`` (a unified diff,
+            empty when equal), and ``similarity`` (a 0..1 ratio).
         """
-        # Placeholder: simple comparison
+        baseline_output = str(baseline.get('output', ''))
+        matches = output == baseline_output
+        if matches:
+            diff_text = ''
+        else:
+            diff_text = '\n'.join(
+                difflib.unified_diff(
+                    baseline_output.splitlines(),
+                    output.splitlines(),
+                    fromfile='baseline',
+                    tofile='actual',
+                    lineterm='',
+                )
+            )
+        similarity = difflib.SequenceMatcher(None, baseline_output, output).ratio()
         return {
-            'matches': output == baseline.get('output', ''),
-            'diff': 'No diff in placeholder implementation',
+            'matches': matches,
+            'diff': diff_text,
+            'similarity': round(similarity, 4),
         }
 
     def _determine_test_status(

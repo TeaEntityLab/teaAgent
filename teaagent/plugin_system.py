@@ -304,6 +304,14 @@ class PluginRegistry:
     def register_agent(self, agent: AgentPlugin) -> None:
         self._agents[agent.name] = agent
 
+    def unregister_agent(self, name: str) -> bool:
+        """Remove a registered agent by name.
+
+        Returns:
+            True if an agent was removed, False if no agent had that name.
+        """
+        return self._agents.pop(name, None) is not None
+
     def get_command(self, name: str) -> Optional[CommandPlugin]:
         return self._commands.get(name)
 

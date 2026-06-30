@@ -9,6 +9,7 @@ including consensus rules, vote tracking, and consensus decision logic.
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -57,11 +58,19 @@ class ConsensusRule:
     metadata: dict[str, Any] = field(default_factory=dict)
     enabled: bool = True
 
-    def check_consensus(self, votes: dict[str, bool]) -> ConsensusStatus:
+    def check_consensus(
+        self,
+        votes: dict[str, bool],
+        voter_roles: Optional[Mapping[str, str]] = None,
+    ) -> ConsensusStatus:
         """Check if consensus is reached based on votes.
 
         Args:
             votes: Dictionary mapping voter IDs to their vote (True=approve, False=reject).
+            voter_roles: Optional mapping of voter ID -> role name, consulted only
+                for ROLE_BASED rules. When a voter is absent from this mapping (or
+                the mapping is omitted entirely) the voter ID is treated as its own
+                role, which is the documented default contract.
 
         Returns:
             Consensus status.
@@ -106,13 +115,16 @@ class ConsensusRule:
                 return ConsensusStatus.PENDING
 
         elif self.rule_type == ConsensusRuleType.ROLE_BASED:
-            # Check if all required roles have approved
-            approved_roles = set()
+            # Resolve each approving voter to the role it holds. When an explicit
+            # voter->role mapping is supplied the role is looked up; otherwise the
+            # voter_id is treated as its own role. The fallback is the documented
+            # default contract for callers that encode the role directly in the
+            # voter_id (e.g. "security", "architecture").
+            role_map = voter_roles or {}
+            approved_roles: set[str] = set()
             for voter_id, approved in votes.items():
                 if approved:
-                    # In a real implementation, we'd look up the voter's role
-                    # For now, we assume voter_id contains role information
-                    approved_roles.add(voter_id)
+                    approved_roles.add(role_map.get(voter_id, voter_id))
 
             if self.required_roles.issubset(approved_roles):
                 return ConsensusStatus.APPROVED
@@ -162,19 +174,25 @@ class ConsensusRequest:
     requested_by: str
     status: ConsensusStatus = ConsensusStatus.PENDING
     votes: dict[str, bool] = field(default_factory=dict)
+    voter_roles: dict[str, str] = field(default_factory=dict)
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
     expires_at: Optional[str] = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
-    def add_vote(self, voter_id: str, approve: bool) -> None:
+    def add_vote(
+        self, voter_id: str, approve: bool, role: Optional[str] = None
+    ) -> None:
         """Add a vote to the consensus request.
 
         Args:
             voter_id: ID of the voter.
             approve: True for approve, False for reject.
+            role: Optional role held by the voter, used for ROLE_BASED rules.
         """
         self.votes[voter_id] = approve
+        if role is not None:
+            self.voter_roles[voter_id] = role
 
     def is_expired(self) -> bool:
         """Check if the request has expired.
@@ -204,6 +222,7 @@ class ConsensusRequest:
             'requested_by': self.requested_by,
             'status': self.status.value,
             'votes': self.votes,
+            'voter_roles': self.voter_roles,
             'created_at': self.created_at,
             'updated_at': self.updated_at,
             'expires_at': self.expires_at,
@@ -221,6 +240,7 @@ class ConsensusRequest:
             requested_by=data['requested_by'],
             status=ConsensusStatus(data.get('status', 'pending')),
             votes=data.get('votes', {}),
+            voter_roles=data.get('voter_roles', {}),
             created_at=data.get('created_at'),
             updated_at=data.get('updated_at'),
             expires_at=data.get('expires_at'),
@@ -546,6 +566,7 @@ class ConsensusValidator:
         request_id: str,
         voter_id: str,
         approve: bool,
+        role: Optional[str] = None,
     ) -> ConsensusRequest:
         """Cast a vote on a consensus request.
 
@@ -553,6 +574,7 @@ class ConsensusValidator:
             request_id: Request ID to vote on.
             voter_id: ID of the voter.
             approve: True for approve, False for reject.
+            role: Optional role held by the voter, recorded for ROLE_BASED rules.
 
         Returns:
             Updated consensus request.
@@ -569,12 +591,14 @@ class ConsensusValidator:
             self.store.save_request(request)
             return request
 
-        request.add_vote(voter_id, approve)
+        request.add_vote(voter_id, approve, role=role)
 
         # Check if consensus is reached
         rule = self.store.load_rule(request.rule_id)
         if rule:
-            consensus_status = rule.check_consensus(request.votes)
+            consensus_status = rule.check_consensus(
+                request.votes, request.voter_roles or None
+            )
             request.status = consensus_status
 
         self.store.save_request(request)

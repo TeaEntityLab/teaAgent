@@ -407,21 +407,30 @@ Focus on areas with low success metrics.
                 current_prompt, performance_feedback, success_metrics
             )
 
-    def remove_agent(self, agent_name: str) -> None:
-        """Remove a dynamically generated agent.
+    def remove_agent(self, agent_name: str) -> bool:
+        """Remove a dynamically generated agent from the registry and disk.
 
         Args:
             agent_name: Name of the agent to remove.
-        """
-        # Remove from memory (PluginRegistry doesn't have remove, so we'd need to add it)
-        # For now, this is a placeholder
-        logger.warning('Agent removal not fully implemented: %s', agent_name)
 
-        # Remove from disk if persisted
+        Returns:
+            True if the agent was present in memory or on disk, False otherwise.
+        """
+        removed_from_memory = self._plugin_registry.unregister_agent(agent_name)
+
+        removed_from_disk = False
         if self._persist_to_disk:
             agent_dir = self._user_plugin_dir / agent_name
             if agent_dir.exists():
                 import shutil
 
                 shutil.rmtree(agent_dir)
+                removed_from_disk = True
                 logger.info('Removed agent from disk: %s', agent_dir)
+
+        if removed_from_memory or removed_from_disk:
+            logger.info('Removed agent: %s', agent_name)
+        else:
+            logger.warning('Agent not found for removal: %s', agent_name)
+
+        return removed_from_memory or removed_from_disk

@@ -24,20 +24,21 @@ are stubs left from scaffolding and are lower priority.
 
 ---
 
-## Implicit deferrals requiring owner / ticket
+## Implicit deferrals — resolved 2026-06-30
 
-These are not literal `# TODO` comments, so the explicit TODO drift guard does
-not count them. They remain review-needed until each is either ticketed,
-implemented, or explicitly documented as intentional scaffolding.
+These were not literal `# TODO` comments (the explicit drift guard never counted
+them). Each has now been either implemented for real or made explicitly honest
+about being a non-gating simulation. Verified by
+[`tests/test_inline_todo_resolutions.py`](../../../tests/test_inline_todo_resolutions.py).
 
-| Location | Pattern | Action |
-|----------|---------|--------|
-| `teaagent/consensus/consensus_validation.py:113-114` | Voter role is inferred from `voter_id` instead of looked up. | Ticket consensus role source of truth or document why `voter_id` encoding is contractual. |
-| `teaagent/domain/workflow_engine.py:357-358` | Workflow step execution is simulated. | Ticket real agent invocation boundary before treating workflow engine as production execution. |
-| `teaagent/eval_suite.py:410-517` | Eval execution and baseline diffing use placeholder/simulated behavior. | Ticket real executor/diff semantics or label suite as non-gating simulation. |
-| `teaagent/cli/_handlers/_consensus.py:154,177` | Consensus history query and configuration persistence are not implemented. | Ticket persistence/history or hide commands from production-facing flows. |
-| `teaagent/domain/agent_factory.py:434-435` | Agent removal is logged as not fully implemented. | Ticket registry removal support and persisted cleanup semantics. |
-| `teaagent/domain/issue_intake.py:570,776` | Plan exploration and generated command are placeholders. | Ticket PlanMode integration or label issue-intake plan execution as advisory only. |
+| Location | Pattern | Resolution |
+|----------|---------|------------|
+| [`teaagent/consensus/consensus_validation.py`](../../../teaagent/consensus/consensus_validation.py) | Voter role was inferred from `voter_id`. | **Resolved:** `ConsensusRule.check_consensus` / `ConsensusValidator.cast_vote` accept an optional `voter_roles` map and look the role up; absent a mapping, `voter_id` is treated as its own role (documented default contract). |
+| [`teaagent/domain/workflow_engine.py`](../../../teaagent/domain/workflow_engine.py) | Workflow step execution was silently simulated. | **Resolved (honest):** steps are flagged `StepExecution.simulated=True` and the log/docstring state that real agent invocation is a governed-execution (AgentRunner) boundary, deliberately deferred. No synthetic output is presented as real. |
+| [`teaagent/eval_suite.py`](../../../teaagent/eval_suite.py) | Eval execution and baseline diffing were placeholders. | **Resolved:** prompt/conversational tests run via the real `model_runner`/fixture/replay seam; `_compare_with_baseline` produces a real difflib unified diff + similarity ratio; non-prompt categories carry honest `advisory_only=True` / `execution_mode='simulated'` metadata (non-gating). |
+| [`teaagent/cli/_handlers/_consensus.py`](../../../teaagent/cli/_handlers/_consensus.py) | History query / config persistence "not implemented". | **Resolved (stale ref):** `consensus_history_command` and persisted config (`_load_persisted_consensus_config`) are implemented; the prior line refs were stale. |
+| [`teaagent/domain/agent_factory.py`](../../../teaagent/domain/agent_factory.py) | Agent removal logged as not fully implemented. | **Resolved:** `PluginRegistry.unregister_agent` added; `remove_agent` removes from memory + disk and returns an honest bool (warns when absent). |
+| [`teaagent/domain/issue_intake.py`](../../../teaagent/domain/issue_intake.py) | Plan exploration + generated command placeholders. | **Resolved:** `_build_command` uses `shlex.quote` (shell-safe); `explore` delegates to an injected `context_gatherer`/`plan_mode` collaborator when present, else returns deterministic context. |
 
 ---
 
@@ -64,7 +65,8 @@ audit remains traceable without re-opening closed work.
 |----------|-------|
 | Explicit `# TODO` in production (`teaagent/`) | 0 |
 | Explicit `# TODO` in scripts (unfixed stubs) | 0 |
-| Implicit deferrals requiring owner / ticket | 6 review-needed |
+| Implicit deferrals requiring owner / ticket | 0 review-needed |
+| Implicit deferrals resolved (2026-06-30) | 6 |
 | Implicit architectural TODOs (ticketed) | 0 active |
-| **Active total** | **6 review-needed** |
+| **Active total** | **0 review-needed** |
 | Fixed historical entries retained | 11 |

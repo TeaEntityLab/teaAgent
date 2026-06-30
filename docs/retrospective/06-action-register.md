@@ -61,6 +61,7 @@ Legend: ✅ Done (committed) · 🟡 In progress · ⬜ Not started · 🔵 Alre
 | A-P2-4 | Architecture | Populate `tests/skills/` or remove the empty directory. | `tests/skills/` | Directory is non-empty. | 🔵 | Already populated — `test_skill_loading.py` + `fixtures/` |
 | A-P2-5 | Architecture | Reconcile `tests/e2e/` (one file) with 127 acceptance tests by moving it or defining an e2e contract. | `tests/e2e/` | Clear contract or migration. | ✅ | `tests/e2e/README.md` defines the e2e/acceptance boundary and placement contract |
 | A-P2-6 | Architecture | Execute code-quality roadmap Tier-S items: centralise HTTP (`safe_urlopen`), decompose `chat_agent`/`runner`/`tui` command paths, add bandit nosec for intentional SQL/bind. | `docs/analysis/code-quality-and-refactoring-roadmap-2026-06-02.md` (S-01, S-02, S-03, S-05); `teaagent/http_utils.py`; `teaagent/tui/_commands.py` | No direct `urllib.request.urlopen` outside `http_utils`; dispatch table for TUI commands; extracted chat/runner helpers; tests updated; ruff/mypy/bandit clean. | ✅ | `safe_urlopen`/`safe_urlopen_request` + 12 caller migrations; `_COMMAND_DISPATCH` in `tui/_commands.py`; `_resolve_audit_logger`/`_execute_chat_run` in `chat_agent.py`; `_execute_run_loop` in `runner/_core.py`; TUI state-panel TTL cache; `# nosec B608`/`B104`/`B310`; `tests/test_update.py` mocks updated; pre-commit smoke + 105 targeted tests pass |
+| A-P2-7 | Architecture | Resolve the inline-TODO catalog's six implicit deferrals: implement real behavior or explicitly label non-gating simulation (consensus ROLE_BASED role lookup, workflow step simulation, eval baseline diff, consensus CLI history/config, agent removal, issue-intake command/explore). | `docs/plans/ticket-plans/inline-todos.md` (Implicit deferrals section) | Each deferral is implemented or honestly labelled; catalog shows 0 review-needed; tests cover each resolution. | ✅ | This session — optional `voter_roles` lookup; explicit `StepExecution.simulated`; real `difflib` baseline diff + similarity; confirmed CLI history/config already implemented (stale ref); `PluginRegistry.unregister_agent`; `shlex.quote` command + delegating `explore`; `tests/test_inline_todo_resolutions.py` (13 tests) |
 | U-P2-1 | UX | Retire or connect `chat_repl.py`; choose one to avoid divergence between tested and production behavior. | `teaagent/cli/_handlers/chat_repl.py:202-225` | Single code path. | ✅ | **Retired.** Deleted the deprecated `run_chat_repl`/`print_chat_help` REPL (prod-unused; TUI/`ChatSessionController` is the single surface). Relocated the sole live piece, `suspend_to_background` (only writer of `suspension-*.json`), to its documented home `_agent/resume.py` beside the readers. Migrated 4 test files (repointed suspend tests; removed ~24 tests of the dead REPL path — TUI command/help/undo behavior is covered separately). FOLLOW-UP RESOLVED: the TUI `/background` and `/handoff` commands were advertised-but-stubbed (`_handle_background` only printed); now wired to call `suspend_to_background` (with an `output` callback routed through the TUI's `output_fn`), restoring a live producer for the suspension/review read-path. Guard: `test_tui_background_creates_suspension_checkpoint`. |
 | U-P2-2 | UX | Align TUI parser flags with `run`/`chat` (add budget flags; default `--provider` from configuration). | `teaagent/cli/_misc_parsers/tui_parser.py:25` | TUI flags match CLI. | ✅ | TUI exposes matching budget flags and defers provider default resolution to configuration; `tests/test_tui_parser_flags.py` |
 | U-P2-3 | UX | Fix undo-scope divergence and update the known-issues document. | `teaagent/tui/core.py:1063-1079` | Undo scope consistent; known-issues updated. | ✅ | TUI undo is journal-only with no global checkpoint fallback; `tests/tui/test_tui_undo_scope.py`; current operator docs updated |
@@ -73,14 +74,14 @@ Legend: ✅ Done (committed) · 🟡 In progress · ⬜ Not started · 🔵 Alre
 | --- | --- | --- |
 | P0 | 8 | Security 3, Architecture 2, UX 2, Governance 1 |
 | P1 | 17 | Security 3, Governance 3, Architecture 5, UX 6 (including cross-dimensional items) |
-| P2 | 20 | Security 5, Governance 5, Architecture 5, UX 5 |
-| **Total** | **45** | |
+| P2 | 21 | Security 5, Governance 5, Architecture 6, UX 5 |
+| **Total** | **46** | |
 
 ### Status Summary
 
 | Status | Count | Items |
 | --- | --- | --- |
-| ✅ Done (verified) | 43 | S-P0-1, S-P0-2, S-P0-3, A-P0-1, A-P0-2, U-P0-1, U-P0-2, G-P0-1; S-P1-1, S-P1-2, S-P1-3, G-P1-1, G-P1-2, G-P1-3, A-P1-1, A-P1-2, A-P1-3, A-P1-4, A-P1-5, U-P1-1, U-P1-2, U-P1-3, U-P1-4, U-P1-5, U-P1-6; S-P2-1, S-P2-4, S-P2-5, G-P2-1, G-P2-2, G-P2-3, G-P2-5, A-P2-1, A-P2-2, A-P2-3, A-P2-5, A-P2-6, U-P2-1, U-P2-2, U-P2-3, U-P2-4, U-P2-5 |
+| ✅ Done (verified) | 44 | S-P0-1, S-P0-2, S-P0-3, A-P0-1, A-P0-2, U-P0-1, U-P0-2, G-P0-1; S-P1-1, S-P1-2, S-P1-3, G-P1-1, G-P1-2, G-P1-3, A-P1-1, A-P1-2, A-P1-3, A-P1-4, A-P1-5, U-P1-1, U-P1-2, U-P1-3, U-P1-4, U-P1-5, U-P1-6; S-P2-1, S-P2-4, S-P2-5, G-P2-1, G-P2-2, G-P2-3, G-P2-5, A-P2-1, A-P2-2, A-P2-3, A-P2-5, A-P2-6, A-P2-7, U-P2-1, U-P2-2, U-P2-3, U-P2-4, U-P2-5 |
 | 🟡 In progress | 0 | — |
 | ⬜ Not started | 0 | — |
 

@@ -61,6 +61,9 @@ class StepExecution:
     requires_rollback: bool = (
         False  # Flag for automatic rollback on strict validation failure
     )
+    simulated: bool = (
+        False  # True when the step was simulated (no real agent invocation)
+    )
 
 
 @dataclass
@@ -96,6 +99,7 @@ def workflow_execution_to_dict(execution: WorkflowExecution) -> dict[str, Any]:
                 'validation_errors': v.validation_errors,
                 'self_healing_attempts': v.self_healing_attempts,
                 'requires_rollback': v.requires_rollback,
+                'simulated': v.simulated,
             }
             for k, v in execution.step_results.items()
         },
@@ -169,6 +173,7 @@ def workflow_execution_from_dict(d: dict[str, Any]) -> WorkflowExecution:
             validation_errors=v.get('validation_errors', []),
             self_healing_attempts=v.get('self_healing_attempts', 0),
             requires_rollback=v.get('requires_rollback', False),
+            simulated=v.get('simulated', False),
         )
     execution.step_results = step_results
     return execution
@@ -334,6 +339,12 @@ class WorkflowEngine:
     ) -> StepExecution:
         """Execute a single workflow step, preserving self-healing attempt count.
 
+        Execution is currently SIMULATED: the named agent is resolved from the
+        plugin registry but not invoked. Real agent execution is a governed
+        boundary (the AgentRunner path, with budget/audit/approval) tracked as a
+        follow-up; simulated results carry ``StepExecution.simulated=True`` so
+        callers never treat the synthetic output as a real agent run.
+
         Args:
             step: WorkflowStep to execute.
             current_attempt: Current self-healing attempt number (for recursion safety).
@@ -354,10 +365,18 @@ class WorkflowEngine:
                     error=f'Agent not found: {step.agent_name}',
                 )
 
-            # In a real implementation, this would invoke the agent
-            # For now, we simulate execution
+            # NOTE: workflow step execution is SIMULATED. AgentPlugin is a
+            # prompt/tool descriptor, not an executable; real invocation must
+            # route through the governed AgentRunner path (budget/audit/approval)
+            # and is a separate, ticketed integration boundary. Until then steps
+            # are marked simulated=True so downstream consumers never mistake the
+            # synthetic output for a real agent run.
             logger.info(
-                f'Executing step {step.step_id} with agent {step.agent_name} (attempt {current_attempt})'
+                'Simulating step %s with agent %s (attempt %s); real agent '
+                'invocation is a governed-execution boundary (not yet wired)',
+                step.step_id,
+                step.agent_name,
+                current_attempt,
             )
             output = f'Step {step.step_id} executed by {step.agent_name}'
 
@@ -368,6 +387,7 @@ class WorkflowEngine:
                 output=output,
                 execution_time_seconds=execution_time,
                 self_healing_attempts=current_attempt,
+                simulated=True,
             )
 
             # Run post-execution validation if enabled
