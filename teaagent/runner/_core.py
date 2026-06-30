@@ -16,7 +16,6 @@ from teaagent.context import ContextCompactor
 from teaagent.errors import (
     AgentHarnessError,
     BudgetExceededError,
-    DenialReasonCode,
     ErrorCategory,
     InvalidToolDecision,
     RunCancelledError,
@@ -51,6 +50,7 @@ from ._auto_mode_manager import AutoModeManager  # noqa: E402
 from ._events import EventSpine, RunEventType, register_audit_consumer  # noqa: E402
 from ._governed_execution import (  # noqa: E402
     GovernedExecutionContext,
+    authorize_tool_call,
     enforce_budget_warnings,
     enforce_cost_budget,
     enforce_phase_budget,
@@ -551,154 +551,15 @@ class AgentRunner:
         annotations: dict[str, Any],
     ) -> None:
         """Authorize a tool call via spine, auto-mode, and approval policy."""
-        if self.file_policy is not None:
-            self.file_policy.assert_allowed(
-                tool_name=decision.tool_name,
-                arguments=decision.arguments,
-            )
-
-        tcr_payload: dict[str, Any] = {
-            'tool_name': decision.tool_name,
-        }
-        if decision.arguments is not None:
-            tcr_payload['arguments'] = decision.arguments
-        plan_contract = context.get('plan_contract')
-        if plan_contract is not None:
-            tcr_payload['plan_contract'] = plan_contract
-        try:
-            self.event_spine.emit(
-                RunEventType.TOOL_CALL_REQUESTED,
-                run_id,
-                tcr_payload,
-            )
-        except ToolPermissionError as exc:
-            spine_reason_code: DenialReasonCode | None = getattr(
-                exc, 'reason_code', None
-            )
-            reason_code_str = spine_reason_code.value if spine_reason_code else None
-            approval_request = self.approval_manager.create_approval_request(
-                call_id=decision.call_id,
-                tool_name=decision.tool_name,
-                arguments=decision.arguments,
-                reason=str(exc),
-                annotations=annotations,
-                run_id=run_id,
-            )
-            self.approval_manager.record_blocked(
-                approval_request=approval_request,
-                audit=self.audit,
-                run_id=run_id,
-                reason_code=reason_code_str,
-            )
-            raise ToolPermissionError(
-                str(exc),
-                reason_code=spine_reason_code,
-                approval_request=approval_request,
-            ) from None
-
-        self.auto_mode_manager.validate_tool_allowed(decision.tool_name)
-        auto_approval = self.auto_mode_manager.get_auto_approve_policy(
-            parent_policy=self.approval_policy,
-            tool_name=decision.tool_name,
-            arguments=decision.arguments or {},
-            destructive=tool.annotations.destructive,
+        authorize_tool_call(
+            self,
+            decision,
+            context,
+            run_id,
+            cost_cents,
+            tool=tool,
+            annotations=annotations,
         )
-        auto_mode_approved = auto_approval is not None
-        auto_mode_digest: str | None = None
-        if auto_approval is not None:
-            scoped_policy, auto_mode_digest = auto_approval
-            self.approval_policy = scoped_policy
-        try:
-            plan_contract = self.plan_validator.get_plan_contract()
-            preapproved_by_payload_digest = (
-                not auto_mode_approved
-                and tool.annotations.destructive
-                and bool(decision.arguments)
-                and decision.arguments is not None
-                and bool(self.approval_policy.preapproved_payload_digests)
-                and self._check_payload_digest_approval(
-                    decision.tool_name, decision.arguments
-                )
-            )
-
-            self.approval_policy.assert_allowed(
-                tool_name=decision.tool_name,
-                call_id=decision.call_id,
-                destructive=tool.annotations.destructive,
-                arguments=decision.arguments,
-                jit_state=self.approval_manager.jit_state,
-                plan_contract=plan_contract,
-                read_only=tool.annotations.read_only,
-                description=tool.description,
-                handler=tool.handler,
-            )
-            if auto_mode_approved:
-                self.audit.record(
-                    'tool_call_approved',
-                    run_id,
-                    call_id=decision.call_id,
-                    tool_name=decision.tool_name,
-                    arguments=decision.arguments,
-                    authority_type='auto_mode',
-                    scope='payload_digest',
-                    auto_approved=True,
-                    argument_digest=auto_mode_digest,
-                )
-            if preapproved_by_payload_digest:
-                self.audit.record(
-                    'tool_call_approved',
-                    run_id,
-                    call_id=decision.call_id,
-                    tool_name=decision.tool_name,
-                    arguments=decision.arguments,
-                    authority_type='preapproved_payload_digest',
-                    approved_by='cli --approve-scoped',
-                    auto_approved=True,
-                    scope='payload_digest',
-                )
-        except ToolPermissionError as exc:
-            exc_reason_code: DenialReasonCode | None = getattr(exc, 'reason_code', None)
-            reason_code_str = exc_reason_code.value if exc_reason_code else None
-            approval_request = self.approval_manager.create_approval_request(
-                call_id=decision.call_id,
-                tool_name=decision.tool_name,
-                arguments=decision.arguments,
-                reason=str(exc),
-                annotations=annotations,
-                run_id=run_id,
-            )
-            if self.approval_manager.can_request_approval(tool.annotations.destructive):
-                approved = self.approval_manager.handle_approval_request(
-                    approval_request=approval_request,
-                    audit=self.audit,
-                    run_id=run_id,
-                    checkpoint_store=self.checkpoint_store,
-                    context=cast(dict[str, Any], context),
-                    cost_cents=cost_cents,
-                    reason_code=reason_code_str,
-                )
-                if not approved:
-                    if self.approval_manager.approval_handler is None:
-                        self._emit_summary(
-                            run_id=run_id,
-                            cost_cents=cost_cents,
-                            input_tokens=context.get('_input_tokens', 0),
-                            output_tokens=context.get('_output_tokens', 0),
-                        )
-                        raise ToolPermissionError(
-                            f'Tool call pending approval: {decision.tool_name}',
-                            reason_code=exc_reason_code,
-                            approval_request=approval_request,
-                        ) from None
-                    raise
-            else:
-                self.approval_manager.record_blocked(
-                    approval_request=approval_request,
-                    audit=self.audit,
-                    run_id=run_id,
-                    reason_code=reason_code_str,
-                )
-                raise
 
     def _dispatch_tool_call(
         self,

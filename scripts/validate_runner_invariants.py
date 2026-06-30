@@ -53,7 +53,8 @@ _BUDGET_CLAMP_SYMBOL = 'compute_clamped_budget'
 _BUDGET_CLAMP_FILES: tuple[str, ...] = ('teaagent/subagents/_manager.py',)
 
 # ADR 0041 Phase 1 (G1): the primary runner must delegate per-iteration budget
-# enforcement to the shared governed-execution layer, not re-implement it inline.
+# AND authorization enforcement to the shared governed-execution layer, not
+# re-implement either inline.
 _GOVERNED_EXEC_IMPORTS: frozenset[str] = frozenset(
     {'_governed_execution', 'teaagent.runner._governed_execution'}
 )
@@ -61,6 +62,7 @@ _GOVERNED_EXEC_SYMBOLS: tuple[str, ...] = (
     'enforce_cost_budget',
     'enforce_phase_budget',
     'enforce_budget_warnings',
+    'authorize_tool_call',
 )
 _GOVERNED_EXEC_FILES: tuple[str, ...] = ('teaagent/runner/_core.py',)
 
@@ -126,7 +128,7 @@ def _check_budget_clamp_authority(rel_path: str) -> list[str]:
 
 
 def _check_governed_execution_authority(rel_path: str) -> list[str]:
-    """ADR 0041 Phase 1 G1: budget enforcement is delegated to the shared layer."""
+    """ADR 0041 Phase 1 G1: budget + authorization enforcement is delegated to the shared layer."""
     file_path = _REPO_ROOT / rel_path
     if not file_path.is_file():
         return [f'{rel_path}: file not found']
@@ -135,7 +137,7 @@ def _check_governed_execution_authority(rel_path: str) -> list[str]:
     if not (imports & _GOVERNED_EXEC_IMPORTS):
         return [
             f'{rel_path}: missing governed-execution import — must import '
-            f'teaagent.runner._governed_execution and delegate budget enforcement '
+            f'teaagent.runner._governed_execution and delegate budget/authorization '
             f'instead of re-implementing it inline (ADR 0041 Phase 1, G1)'
         ]
     missing = [s for s in _GOVERNED_EXEC_SYMBOLS if s not in source]

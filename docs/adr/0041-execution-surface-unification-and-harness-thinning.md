@@ -148,7 +148,7 @@ All must pass before Phase 2 starts:
 
 | Gate | Evidence |
 | --- | --- |
-| **G1 — Shared layer exists** | Partial: `teaagent/runner/_governed_execution.py` exported; `AgentRunner` delegates **budget** enforcement (cost/phase/warnings) to it. Approval/authorization (`_authorize_tool_call`) still inline — tracked as a separate slice |
+| **G1 — Shared layer exists** | Met: `teaagent/runner/_governed_execution.py` exported; `AgentRunner` delegates **both** budget enforcement (cost/phase/warnings) and **authorization** (`authorize_tool_call`: spine gate, auto-mode scoping, payload-digest preapproval, approval-policy decision) to it |
 | **G2 — Subagent path uses layer** | `SubagentManager` constructs context via shared helpers; no parallel `assert_allowed` in `_manager.py` |
 | **G3 — Live differential** | Parametrized test (ADR-0040 §2 follow-up) runs identical tool+budget scenario through `AgentRunner` and `SubagentManager.run_subagent`; `assert_budget_invariant`, `assert_audit_invariant`, `assert_approval_invariant` pass on collected evidence |
 | **G4 — CI green** | `scripts/validate_runner_invariants.py`, full test suite, acceptance tier unchanged |
@@ -188,12 +188,20 @@ Behavior-preserving slices landed (2026-06-30):
   `scripts/validate_runner_invariants.py` requires `_core.py` to use the layer.
   Risk report: `docs/reviews/a-p1-3-governed-execution-risk.md`; unit tests:
   `tests/runner/test_governed_execution.py`.
+- **G1 authorization extracted.** `runner/_governed_execution.authorize_tool_call`
+  now owns the per-tool-call approval pipeline (file-policy + spine permission
+  gates, auto-mode scoping with `ApprovalPolicy` reassignment, preapproved
+  payload-digest checks, `assert_allowed`, and approval-request handling), a
+  verbatim `self`->`runner` move from `_core.py`; `AgentRunner._authorize_tool_call`
+  delegates to it. The §1.2 G1 gate now also requires `_core.py` to call
+  `authorize_tool_call`. Risk report:
+  `docs/reviews/a-p1-3-authorization-extraction-risk.md`; delegation test:
+  `tests/runner/test_governed_execution.py::test_authorize_tool_call_delegates_to_shared_layer`.
 
-Still open for Phase 1 (G1 remainder): the **authorization** dimension —
-`AgentRunner._authorize_tool_call` reassigns `ApprovalPolicy` and calls
-run-summary emission, a larger blast radius deferred to its own reflective-risk
-slice. **G1 is partial** (budget enforcement delegated; approval still inline);
-**G2 and G3 are met**. Phase 2 is not yet authorized.
+**G1 is met**: the shared governed-execution layer now owns both the budget and
+authorization dimensions, and the static gate locks both delegations. **G2 and
+G3 are met.** Remaining before Phase 2: **G4** (full suite green in CI) and the
+**G5** no-third-framework confirmation. Phase 2 is not yet authorized.
 
 ### Phase 2 — Domain reasoning migration (harness thinning)
 
