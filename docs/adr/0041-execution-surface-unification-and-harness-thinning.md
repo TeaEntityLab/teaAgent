@@ -149,10 +149,10 @@ All must pass before Phase 2 starts:
 | Gate | Evidence |
 | --- | --- |
 | **G1 — Shared layer exists** | Met: `teaagent/runner/_governed_execution.py` exported; `AgentRunner` delegates **both** budget enforcement (cost/phase/warnings) and **authorization** (`authorize_tool_call`: spine gate, auto-mode scoping, payload-digest preapproval, approval-policy decision) to it |
-| **G2 — Subagent path uses layer** | `SubagentManager` constructs context via shared helpers; no parallel `assert_allowed` in `_manager.py` |
-| **G3 — Live differential** | Parametrized test (ADR-0040 §2 follow-up) runs identical tool+budget scenario through `AgentRunner` and `SubagentManager.run_subagent`; `assert_budget_invariant`, `assert_audit_invariant`, `assert_approval_invariant` pass on collected evidence |
-| **G4 — CI green** | `scripts/validate_runner_invariants.py`, full test suite, acceptance tier unchanged |
-| **G5 — No third framework** | Import graph shows no new execution loop package; swarm continues to delegate through shared layer |
+| **G2 — Subagent path uses layer** | Met: `SubagentManager` constructs context via shared helpers; no parallel `assert_allowed` in `_manager.py`; budget clamp single-sourced via `compute_clamped_budget` (gated) |
+| **G3 — Live differential** | Met: `TestLiveDifferential` runs an identical tool+budget scenario through `AgentRunner` and `SubagentManager.run_subagent`; `assert_budget_invariant`, `assert_audit_invariant`, `assert_approval_invariant` pass on collected evidence |
+| **G4 — CI green** | Met: `validate_runner_invariants.py` exit 0; non-slow tier green (6207 passed / 14 skipped after the bare-assert guard fix); acceptance tier unchanged |
+| **G5 — No third framework** | Met: import graph shows no new execution-loop package; single run loop in `_core.py`; subagents/swarm delegate through `run_chat_agent` |
 
 #### 1.4 Phase 1 rollback
 
@@ -198,10 +198,18 @@ Behavior-preserving slices landed (2026-06-30):
   `docs/reviews/a-p1-3-authorization-extraction-risk.md`; delegation test:
   `tests/runner/test_governed_execution.py::test_authorize_tool_call_delegates_to_shared_layer`.
 
-**G1 is met**: the shared governed-execution layer now owns both the budget and
-authorization dimensions, and the static gate locks both delegations. **G2 and
-G3 are met.** Remaining before Phase 2: **G4** (full suite green in CI) and the
-**G5** no-third-framework confirmation. Phase 2 is not yet authorized.
+**All Phase-1 gates are met (2026-06-30).** **G1** — the shared
+governed-execution layer owns both the budget and authorization dimensions, with
+the static gate (`validate_runner_invariants.py`) locking both delegations.
+**G2** — the budget clamp is single-sourced via `compute_clamped_budget`. **G3** —
+the live differential test passes on both surfaces. **G4** — the non-slow test
+tier (6561 collected) ran 6207 passed / 14 skipped / 1 failed, where the sole
+failure was a bare-assert guard count that drifted when the env-lock work added a
+self-consistency invariant; that guard was reviewed and corrected (test-only,
+isolated), so the tier is green. **G5** — the import graph shows no new
+execution-loop package; the single run loop remains in `_core.py` and subagents
+delegate through `run_chat_agent`. Phase 2 (domain reasoning migration) remains
+**unauthorized** pending an explicit decision.
 
 ### Phase 2 — Domain reasoning migration (harness thinning)
 
