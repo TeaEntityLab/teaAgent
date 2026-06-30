@@ -166,19 +166,28 @@ If G3 or G4 fails after partial landing:
 
 #### 1.5 Phase 1 progress (2026-06-30)
 
-First behavior-preserving slice landed: the **budget-clamp** rule is now
-single-sourced. `subagents/_manager._resolve_budget_limits` delegates to the
-canonical `runner/_invariants.compute_clamped_budget` instead of re-implementing
-the `min(child, parent)` math (previously a hand-kept mirror). A delegation test
-(`tests/runner/test_runner_invariants.py::TestBudgetInvariant`
-`::test_resolve_budget_limits_delegates_to_canonical_clamp`) asserts equivalence
-across the input matrix, and `scripts/validate_runner_invariants.py` stays green.
+Behavior-preserving slices landed (2026-06-30):
 
-Still open for Phase 1: the `_governed_execution.py` module (authorization,
-approval, audit, full budget enforcement) per §1.1, the validate-script import
-check per §1.2, and the live differential test (G3). Gates **G1–G5 remain
-unmet** — this slice advances G2 for the budget invariant only and does not
-authorize starting Phase 2.
+- **Budget clamp single-sourced.** `subagents/_manager._resolve_budget_limits`
+  delegates to canonical `runner/_invariants.compute_clamped_budget` instead of a
+  hand-kept `min(child, parent)` mirror. Delegation test:
+  `tests/runner/test_runner_invariants.py::TestBudgetInvariant`
+  `::test_resolve_budget_limits_delegates_to_canonical_clamp`.
+- **G2-budget static gate.** `scripts/validate_runner_invariants.py` now fails if
+  `_manager.py` stops importing/calling `compute_clamped_budget` (regression lock
+  for the slice above), alongside the existing approval/audit import gates.
+- **G3 live differential test landed.** `TestLiveDifferential` runs an
+  identical-shape scenario through `AgentRunner` (direct) and
+  `SubagentManager.run_subagent` (via the `subagent` tool) and asserts
+  `assert_audit_invariant`, `assert_audit_events_match`, `assert_approval_invariant`,
+  and `assert_budget_invariant` on evidence collected from both surfaces.
+
+Still open for Phase 1: the `_governed_execution.py` module that unifies
+authorization, approval, audit, and full budget *enforcement* (§1.1) — the G1
+extraction from `_core.py` — plus the §1.2 import check for that module. **G1 is
+unmet** (a high-risk `_core.py` refactor requiring a `docs/reviews/*-risk.md`
+report); G3 is met; G2 is met for the budget invariant. Phase 2 is not yet
+authorized.
 
 ### Phase 2 — Domain reasoning migration (harness thinning)
 

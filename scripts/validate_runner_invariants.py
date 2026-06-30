@@ -46,6 +46,12 @@ _AUDIT_IMPORT_OPTIONS: frozenset[str] = frozenset(
     }
 )
 
+# ADR 0041 Phase 1 (G2-budget): the subagent path must delegate parent-clamping
+# to the canonical invariant rather than re-implementing min(child, parent).
+_BUDGET_CLAMP_IMPORT = 'teaagent.runner._invariants'
+_BUDGET_CLAMP_SYMBOL = 'compute_clamped_budget'
+_BUDGET_CLAMP_FILES: tuple[str, ...] = ('teaagent/subagents/_manager.py',)
+
 
 def _collect_imports(source: str) -> set[str]:
     tree = ast.parse(source)
@@ -86,10 +92,33 @@ def _check_file(rel_path: str) -> list[str]:
     return errors
 
 
+def _check_budget_clamp_authority(rel_path: str) -> list[str]:
+    """ADR 0041 Phase 1 G2: forbid a re-implemented parent budget clamp."""
+    file_path = _REPO_ROOT / rel_path
+    if not file_path.is_file():
+        return [f'{rel_path}: file not found']
+    source = file_path.read_text(encoding='utf-8')
+    imports = _collect_imports(source)
+    if _BUDGET_CLAMP_IMPORT not in imports:
+        return [
+            f'{rel_path}: missing budget-clamp authority — must import '
+            f'{_BUDGET_CLAMP_IMPORT} and call {_BUDGET_CLAMP_SYMBOL} instead of '
+            f're-implementing parent budget clamping (ADR 0041 Phase 1, G2)'
+        ]
+    if _BUDGET_CLAMP_SYMBOL not in source:
+        return [
+            f'{rel_path}: imports {_BUDGET_CLAMP_IMPORT} but never calls '
+            f'{_BUDGET_CLAMP_SYMBOL} (ADR 0041 Phase 1, G2)'
+        ]
+    return []
+
+
 def validate() -> list[str]:
     errors: list[str] = []
     for rel_path in _SECOND_FRAMEWORK_FILES:
         errors.extend(_check_file(rel_path))
+    for rel_path in _BUDGET_CLAMP_FILES:
+        errors.extend(_check_budget_clamp_authority(rel_path))
     return errors
 
 

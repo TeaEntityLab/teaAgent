@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 from conftest import FakeAdapter
@@ -113,6 +114,14 @@ def _run_primary_path(
         registry=registry,
     )
     return result, audit
+
+
+def _read_jsonl_events(path: Path) -> list[dict[str, Any]]:
+    return [
+        json.loads(line)
+        for line in path.read_text(encoding='utf-8').splitlines()
+        if line.strip()
+    ]
 
 
 class TestBudgetInvariant:
@@ -370,3 +379,81 @@ class TestEvidenceCollectors:
     def test_collect_budget_rejects_bad_type(self) -> None:
         with pytest.raises(TypeError, match='Unsupported runner type'):
             collect_budget_evidence(42)
+
+
+class TestLiveDifferential:
+    """ADR 0040 §2 / ADR 0041 G3: identical-shape scenarios through both
+    execution surfaces must satisfy the shared audit/budget/approval invariants."""
+
+    def test_primary_and_subagent_paths_satisfy_shared_invariants(
+        self, tmp_path: Path
+    ) -> None:
+        from contextlib import redirect_stdout
+        from io import StringIO
+        from unittest.mock import patch
+
+        from teaagent.cli import main
+
+        # secondary path: SubagentManager.run_subagent via the `subagent` tool
+        (tmp_path / 'README.md').write_text('hello', encoding='utf-8')
+        adapter = FakeAdapter(
+            [
+                '{"type":"tool","tool_name":"subagent","arguments":'
+                '{"task":"inspect README"},"call_id":"sub-1"}',
+                '{"type":"final","content":"child done"}',
+                '{"type":"final","content":"parent done"}',
+            ]
+        )
+        out = StringIO()
+        with (
+            patch('teaagent.cli.create_llm_adapter', return_value=adapter),
+            redirect_stdout(out),
+        ):
+            exit_code = main(
+                [
+                    'agent',
+                    'run',
+                    'gpt',
+                    'delegate inspection',
+                    '--subagent',
+                    '--root',
+                    str(tmp_path),
+                    '--permission-mode',
+                    'allow',
+                ]
+            )
+        payload = json.loads(out.getvalue())
+        assert exit_code == 0
+        assert payload['status'] == 'completed'
+
+        runs = tmp_path / '.teaagent' / 'runs'
+        parent_events = _read_jsonl_events(runs / f'{payload["run_id"]}.jsonl')
+        completed = next(
+            e
+            for e in parent_events
+            if e.get('event_type') == 'tool_call_completed'
+            and e.get('payload', {}).get('tool_name') == 'subagent'
+        )
+        child_run_id = completed['payload']['result']['run_id']
+        secondary_events = [
+            str(e['event_type'])
+            for e in _read_jsonl_events(runs / f'{child_run_id}.jsonl')
+        ]
+
+        # primary path: direct AgentRunner run
+        primary_root = tmp_path / 'primary'
+        primary_root.mkdir()
+        _result, audit = _run_primary_path(primary_root)
+        primary_events = [e.event_type for e in audit.events]
+
+        # both surfaces satisfy the ADR 0040 shared invariants on real evidence
+        assert_audit_invariant(primary_events, secondary_events)
+        assert_audit_events_match(primary_events, secondary_events)
+        assert_approval_invariant([], [])
+        secondary_iters = max(1, secondary_events.count('iteration_started'))
+        assert_budget_invariant(
+            RunnerEvidenceBundle(max_iterations=3, max_tool_calls=3),
+            RunnerEvidenceBundle(
+                max_iterations=secondary_iters, max_tool_calls=secondary_iters
+            ),
+        )
