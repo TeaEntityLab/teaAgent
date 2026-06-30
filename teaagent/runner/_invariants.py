@@ -251,7 +251,7 @@ def assert_audit_events_match(
 
 @dataclass(frozen=True)
 class ClampedBudget:
-    """Budget limits after parent clamping (subagents/_manager.py:52-58)."""
+    """Budget limits after parent clamping (canonical: compute_clamped_budget)."""
 
     max_iterations: int
     max_tool_calls: int
@@ -263,11 +263,11 @@ def compute_clamped_budget(
     parent_max_iterations: int,
     parent_max_tool_calls: int,
 ) -> ClampedBudget:
-    """Mirror the clamping performed by ``_resolve_budget_limits``.
+    """Canonical parent-clamp for subagent budgets (ADR 0040 §1, ADR 0041 Phase 1).
 
-    This function encodes the exact clamping behaviour of
-    ``subagents/_manager.py:52-58`` so the invariant tests can verify
-    that subagent budgets never exceed the parent's remaining budget.
+    Single source of truth for the rule that a child's budget never exceeds the
+    parent's. ``subagents/_manager._resolve_budget_limits`` delegates here, so the
+    clamp is defined once and both surfaces invoke the same callable.
     """
     return ClampedBudget(
         max_iterations=min(int(child_max_iterations), int(parent_max_iterations)),

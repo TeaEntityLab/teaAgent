@@ -204,6 +204,81 @@ class CockpitState:
         self.last_updated = time.time()
 
 
+def build_budget_state(
+    *,
+    spent_cents: float,
+    limit_cents: int | None,
+    cost_state: str,
+) -> BudgetState:
+    """Build budget sub-state from session cost inputs."""
+    limit: float | None = float(limit_cents) if limit_cents is not None else None
+
+    if limit_cents is None or cost_state == 'unavailable':
+        return BudgetState(
+            status=BudgetStatus.UNKNOWN,
+            spent_cents=spent_cents,
+            limit_cents=limit,
+            remaining_cents=None,
+            session_cost_cents=spent_cents,
+            cost_state=cost_state,
+        )
+
+    remaining = max(float(limit_cents) - spent_cents, 0.0)
+    if spent_cents >= limit_cents:
+        status = BudgetStatus.EXCEEDED
+    elif spent_cents >= 0.9 * limit_cents:
+        status = BudgetStatus.WARNING
+    else:
+        status = BudgetStatus.OK
+
+    return BudgetState(
+        status=status,
+        spent_cents=spent_cents,
+        limit_cents=limit,
+        remaining_cents=remaining,
+        session_cost_cents=spent_cents,
+        cost_state=cost_state,
+    )
+
+
+def discover_recoverable_state(
+    root: Path | str,
+    *,
+    has_checkpoint: bool = False,
+) -> RecoverableState:
+    """Discover undo, checkpoint, and suspension recoverability from workspace data."""
+    root_path = Path(root).resolve()
+    last_run_id: Optional[str] = None
+    has_undo_journal = False
+
+    try:
+        from teaagent.run_store import RunStore
+        from teaagent.run_undo import UndoJournal
+
+        store = RunStore(root_path)
+        last_run_id = store.latest_run_with_undo()
+        if last_run_id is not None:
+            undo_path = store.undo_path(last_run_id)
+            if undo_path.is_file():
+                journal = UndoJournal(root_path, path=undo_path)
+                has_undo_journal = journal.has_entries
+    except Exception:
+        logger.debug('recoverable undo state unavailable', exc_info=True)
+
+    tea_dir = root_path / '.teaagent'
+    has_suspended_session = (
+        any(tea_dir.glob('suspension-*.json')) if tea_dir.is_dir() else False
+    )
+
+    return RecoverableState(
+        has_undo_journal=has_undo_journal,
+        has_checkpoint=has_checkpoint,
+        has_suspended_session=has_suspended_session,
+        last_run_id=last_run_id,
+        last_run_recoverable=has_undo_journal,
+    )
+
+
 # ── Stale Workspace Assessment ──────────────────────────────────────────────
 
 

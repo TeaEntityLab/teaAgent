@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import re
 import subprocess
 import sys
+import tokenize
 from datetime import datetime, timezone
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
@@ -129,6 +131,77 @@ CATALOG_REQUIRED_FIXTURES = (
     'tests/fixtures/plugin_skill_catalog/sample_plugin/plugin.json',
     'tests/fixtures/plugin_skill_catalog/external_mcp_tools.json',
 )
+
+
+INLINE_TODO_MARKER = re.compile(r'#\s*(?:TODO|FIXME|XXX|HACK)\b', re.IGNORECASE)
+INLINE_TODO_SCAN_SUFFIXES = frozenset({'.py', '.sh'})
+INLINE_TODO_SUMMARY_CATEGORIES = {
+    'Explicit `# TODO` in production (`teaagent/`)': 'teaagent',
+    'Explicit `# TODO` in scripts (unfixed stubs)': 'scripts',
+}
+
+
+def _count_python_todo_comments(text: str) -> int:
+    try:
+        tokens = tokenize.generate_tokens(io.StringIO(text).readline)
+        return sum(
+            1
+            for token in tokens
+            if token.type == tokenize.COMMENT
+            and INLINE_TODO_MARKER.search(token.string)
+        )
+    except tokenize.TokenError:
+        return sum(1 for line in text.splitlines() if INLINE_TODO_MARKER.search(line))
+
+
+def _count_explicit_todo_markers(repo_root: Path, relative_dir: str) -> int:
+    """Count explicit inline TODO/FIXME/XXX/HACK comments under a source dir."""
+    base = repo_root / relative_dir
+    if not base.is_dir():
+        return 0
+
+    count = 0
+    for path in base.rglob('*'):
+        if not path.is_file() or path.suffix not in INLINE_TODO_SCAN_SUFFIXES:
+            continue
+        try:
+            text = path.read_text(encoding='utf-8')
+        except UnicodeDecodeError:
+            continue
+        if path.suffix == '.py':
+            count += _count_python_todo_comments(text)
+        else:
+            count += sum(
+                1 for line in text.splitlines() if INLINE_TODO_MARKER.search(line)
+            )
+    return count
+
+
+def _inline_todo_summary_count(catalog_text: str, category: str) -> int | None:
+    pattern = re.compile(
+        r'^\|\s*' + re.escape(category) + r'\s*\|\s*(\d+)\s*\|',
+        re.MULTILINE,
+    )
+    match = pattern.search(catalog_text)
+    return int(match.group(1)) if match else None
+
+
+def validate_inline_todo_catalog(
+    catalog_text: str, *, repo_root: Path = _REPO_ROOT
+) -> list[str]:
+    """Ensure the inline TODO catalog counts match current source markers."""
+    errors: list[str] = []
+    for category, relative_dir in INLINE_TODO_SUMMARY_CATEGORIES.items():
+        documented = _inline_todo_summary_count(catalog_text, category)
+        actual = _count_explicit_todo_markers(repo_root, relative_dir)
+        if documented is None:
+            errors.append(f'Inline TODO catalog missing summary row: {category}')
+        elif documented != actual:
+            errors.append(
+                f'Inline TODO catalog mismatch for {category}: '
+                f'catalog says {documented}, source scan found {actual}.'
+            )
+    return errors
 
 
 def validate_test_quality(tests_dir: Path, mode: str = 'report') -> list[str]:
@@ -1465,6 +1538,9 @@ def validate_docs_consistency(
     guarded_claims_registry_doc_path = guarded_claims_registry_path or (
         _REPO_ROOT / 'docs' / 'governance' / 'guarded-claims-registry.md'
     )
+    inline_todo_catalog_doc_path = (
+        _REPO_ROOT / 'docs' / 'plans' / 'ticket-plans' / 'inline-todos.md'
+    )
     architecture_text = (
         architecture_path.read_text(encoding='utf-8')
         if architecture_path.is_file()
@@ -1614,6 +1690,23 @@ def validate_docs_consistency(
     errors.extend(validate_doc_cross_references(repo_root=_REPO_ROOT))
 
     if check_repo_governance:
+        if roadmap_status_doc_path.is_file():
+            errors.extend(
+                validate_doc_code_references(roadmap_status_text, repo_root=_REPO_ROOT)
+            )
+
+        if inline_todo_catalog_doc_path.is_file():
+            errors.extend(
+                validate_inline_todo_catalog(
+                    inline_todo_catalog_doc_path.read_text(encoding='utf-8'),
+                    repo_root=_REPO_ROOT,
+                )
+            )
+        else:
+            errors.append(
+                f'Inline TODO catalog not found: {inline_todo_catalog_doc_path}'
+            )
+
         try:
             inventory_module = _load_generate_docs_inventory_module()
             errors.extend(inventory_module.check_docs_inventory())
@@ -1843,6 +1936,48 @@ HISTORICAL_DOC_DIRS = (
     'docs/work-log',
     'docs/plans',
 )
+
+
+_CODE_REF_PATTERN = re.compile(r'([\w./-]+\.py):(\d+)')
+
+
+def _markdown_text_outside_fences(text: str) -> str:
+    kept: list[str] = []
+    in_fence = False
+    for line in text.splitlines():
+        if line.lstrip().startswith(('```', '~~~')):
+            in_fence = not in_fence
+            continue
+        if not in_fence:
+            kept.append(line)
+    return '\n'.join(kept)
+
+
+def validate_doc_code_references(doc_text: str, *, repo_root: Path) -> list[str]:
+    """Validate ``file.py:line`` citations resolve under *repo_root*."""
+    errors: list[str] = []
+    text = _markdown_text_outside_fences(doc_text)
+    seen: set[tuple[str, int]] = set()
+    for match in _CODE_REF_PATTERN.finditer(text):
+        rel_path = match.group(1)
+        line_no = int(match.group(2))
+        key = (rel_path, line_no)
+        if key in seen:
+            continue
+        seen.add(key)
+        file_path = repo_root / rel_path
+        if not file_path.is_file():
+            errors.append(
+                f'Code reference {rel_path}:{line_no} points to missing file {rel_path}'
+            )
+            continue
+        line_count = len(file_path.read_text(encoding='utf-8').splitlines())
+        if line_no < 1 or line_no > line_count:
+            errors.append(
+                f'Code reference {rel_path}:{line_no} exceeds file length '
+                f'({line_count} lines) for {rel_path}'
+            )
+    return errors
 
 
 def validate_doc_cross_references(

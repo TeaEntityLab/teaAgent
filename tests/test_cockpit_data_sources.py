@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from teaagent.run_store import RunSummary
 from teaagent.tui.cockpit_data_sources import (
     ApprovalDataSource,
     BackgroundDataSource,
@@ -61,6 +62,40 @@ def test_cost_data_source_get_costs(root_path):
     source = CostDataSource(root_path)
     costs = source.get_costs(limit=10)
     assert isinstance(costs, list)
+
+
+def test_cost_data_source_get_costs_uses_run_timestamp_period(root_path):
+    """Cost rows should not label every run as today's period."""
+
+    class FakeRunStore:
+        def list_runs(self, *, limit: int):
+            return [
+                RunSummary(
+                    run_id='old-run',
+                    task='old task',
+                    status='completed',
+                    created_at='2026-06-28T01:02:03Z',
+                    updated_at='2026-06-29T04:05:06Z',
+                    path=root_path,
+                    cost_cents=123.0,
+                ),
+                RunSummary(
+                    run_id='unknown-run',
+                    task='unknown task',
+                    status='completed',
+                    created_at='',
+                    updated_at='',
+                    path=root_path,
+                    cost_cents=45.0,
+                ),
+            ]
+
+    source = CostDataSource(root_path)
+    source._run_store = FakeRunStore()
+
+    costs = source.get_costs(limit=10)
+
+    assert [cost.period for cost in costs] == ['2026-06-29', 'unknown']
 
 
 def test_cost_data_source_get_total_cost(root_path):

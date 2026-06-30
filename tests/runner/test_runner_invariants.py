@@ -144,6 +144,32 @@ class TestBudgetInvariant:
         assert c.max_iterations == 5
         assert c.max_tool_calls == 4
 
+    def test_resolve_budget_limits_delegates_to_canonical_clamp(self) -> None:
+        """ADR 0041 Phase 1: subagent clamp delegates to compute_clamped_budget."""
+        from types import SimpleNamespace
+
+        from teaagent.subagents._manager import _resolve_budget_limits
+
+        parent = SimpleNamespace(max_iterations=3, max_tool_calls=4)
+        sub_def = SimpleNamespace(max_iterations=8, max_tool_calls=2)
+        cases = [
+            (None, None, None),
+            (10, 10, None),
+            (2, 1, None),
+            (None, None, sub_def),
+        ]
+        for child_i, child_t, sd in cases:
+            got_i, got_t = _resolve_budget_limits(child_i, child_t, sd, parent)
+            exp_child_i = child_i or (sd.max_iterations if sd else 5)
+            exp_child_t = child_t or (sd.max_tool_calls if sd else 5)
+            expected = compute_clamped_budget(
+                exp_child_i, exp_child_t, parent.max_iterations, parent.max_tool_calls
+            )
+            assert (got_i, got_t) == (
+                expected.max_iterations,
+                expected.max_tool_calls,
+            )
+
 
 class TestAuditInvariant:
     def test_primary_emits_required_lifecycle_events(self, tmp_path: Path) -> None:

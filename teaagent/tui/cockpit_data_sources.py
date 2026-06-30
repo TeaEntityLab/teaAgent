@@ -155,7 +155,11 @@ class CostDataSource:
                 workflow_id=summary.run_id,
                 spent_cents=summary.cost_cents,
                 limit_cents=self.budget_limit_cents,
-                period='today',  # TODO: Calculate actual period from timestamps
+                period=(
+                    summary.updated_at[:10]
+                    if len(summary.updated_at) >= 10
+                    else 'unknown'
+                ),
             )
             costs.append(cost)
 

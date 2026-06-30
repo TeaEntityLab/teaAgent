@@ -1,5 +1,5 @@
 # Inline TODO / FIXME / XXX Catalog
-**Generated:** 2026-06-02 | **Last reviewed:** 2026-06-09 | **Scope:** `teaagent/` and `scripts/`
+**Generated:** 2026-06-02 | **Last reviewed:** 2026-06-30 | **Scope:** `teaagent/` and `scripts/`
 
 ---
 
@@ -7,7 +7,8 @@
 
 | File | Line | Comment | Context | Action |
 |------|------|---------|---------|--------|
-| [`teaagent/issue_intake.py`](../../../teaagent/issue_intake.py) | 195 | GitHub API integration | **Fixed (2026-06-09):** `extract_github_issue()` uses PyGithub with `GITHUB_TOKEN`; raises actionable errors when library/token missing. | None — closed. |
+| [`teaagent/domain/issue_intake.py`](../../../teaagent/domain/issue_intake.py) | 194 | GitHub API integration | **Fixed (2026-06-09):** `extract_github_issue()` uses PyGithub with `GITHUB_TOKEN`; raises actionable errors when library/token missing. | None — closed. |
+| [`teaagent/tui/cockpit_data_sources.py`](../../../teaagent/tui/cockpit_data_sources.py) | 158 | Cost period attribution | **Fixed (2026-06-30):** `CostDataSource.get_costs()` now derives `CostRow.period` from `RunSummary.updated_at` with an `unknown` fallback. | None — closed. |
 
 ---
 
@@ -23,14 +24,27 @@ are stubs left from scaffolding and are lower priority.
 
 ---
 
+## Implicit deferrals requiring owner / ticket
+
+These are not literal `# TODO` comments, so the explicit TODO drift guard does
+not count them. They remain review-needed until each is either ticketed,
+implemented, or explicitly documented as intentional scaffolding.
+
+| Location | Pattern | Action |
+|----------|---------|--------|
+| `teaagent/consensus/consensus_validation.py:113-114` | Voter role is inferred from `voter_id` instead of looked up. | Ticket consensus role source of truth or document why `voter_id` encoding is contractual. |
+| `teaagent/domain/workflow_engine.py:357-358` | Workflow step execution is simulated. | Ticket real agent invocation boundary before treating workflow engine as production execution. |
+| `teaagent/eval_suite.py:410-517` | Eval execution and baseline diffing use placeholder/simulated behavior. | Ticket real executor/diff semantics or label suite as non-gating simulation. |
+| `teaagent/cli/_handlers/_consensus.py:154,177` | Consensus history query and configuration persistence are not implemented. | Ticket persistence/history or hide commands from production-facing flows. |
+| `teaagent/domain/agent_factory.py:434-435` | Agent removal is logged as not fully implemented. | Ticket registry removal support and persisted cleanup semantics. |
+| `teaagent/domain/issue_intake.py:570,776` | Plan exploration and generated command are placeholders. | Ticket PlanMode integration or label issue-intake plan execution as advisory only. |
+
+---
+
 ## Architectural dead-letter items
 
-These are not inline comments but recurring patterns the audit uncovered that
-function as implicit TODOs:
-
-**2026-06-04 update:** Several entries in the original generated catalog are
-now fixed. They are kept below with status so the historical audit remains
-traceable without re-opening closed work.
+These are historical implicit TODOs. They are kept below with status so the
+audit remains traceable without re-opening closed work.
 
 | Location | Pattern | Status / Implicit TODO |
 |----------|---------|------------------------|
@@ -50,6 +64,7 @@ traceable without re-opening closed work.
 |----------|-------|
 | Explicit `# TODO` in production (`teaagent/`) | 0 |
 | Explicit `# TODO` in scripts (unfixed stubs) | 0 |
+| Implicit deferrals requiring owner / ticket | 6 review-needed |
 | Implicit architectural TODOs (ticketed) | 0 active |
-| **Active total** | **0** |
-| Fixed historical entries retained | 9 |
+| **Active total** | **6 review-needed** |
+| Fixed historical entries retained | 11 |

@@ -135,7 +135,7 @@ Each row: **ID · Category · Description · Likelihood (H/M/L) · Impact (H/M/L
 | SEC-09 | Multi-sig | Multi-sig approval hash uses 1-hour time bucket (`int(time.time()/3600)`); captured signature replayable for up to 59:59 within same window; hash logic duplicated in two files | M | M | 4 | security | 2026-07-15 | **Mitigated 2026-06-09** — hash binds `request_id`; stale peer signatures rejected by timeout; test: `test_sec_tier1_hardening.py` | P2 |
 | SEC-10 | Shell | `cat`, `head`, `tail` in `_INSPECT_EXECUTABLES` — classified as read-only inspect but can read `~/.ssh/id_rsa`, `.env`, `/etc/shadow` | H | H | 9 | security | | **FIXED 2026-06-05** — `_INSPECT_EXECUTABLES` contains only `{pwd, ls, rg, grep, wc}`; `cat/head/tail` absent; tests: `test_cat_not_in_inspect_allowlist`, `test_head_not_in_inspect_allowlist`, `test_tail_not_in_inspect_allowlist`, `test_inspect_shell_cannot_read_ssh_keys` | — |
 | SEC-11 | Undo | `UndoJournal._PATH_WRITE_TOOLS` covers file tools only; `workspace_run_shell_mutate` not tracked — UI shows "undo available" but shell side-effects are unrecoverable | H | M | 6 | security | 2026-07-15 | **OPEN** | P2 |
-| SEC-12 | Audit | `os.fsync()` failure caught and silenced; audit degrades to in-memory only with no operator notification; disk-full attack eliminates all log persistence | L | M | 2 | security | 2026-07-15 | **OPEN** | P2 |
+| SEC-12 | Audit | ~~`os.fsync()` failure caught and silenced~~ 3-strike `fsync` failure escalation: stderr `AUDIT CRITICAL` + `AuditDurabilityError` halt; compliance mode raises on first failure | L | M | 2 | security | | **FIXED 2026-06-30** — `teaagent/audit.py:521-533`; tests: `tests/test_audit_health.py`, `tests/integration/test_disk_full_degradation.py:120-124` | — |
 | SEC-13 | Testing | Critical security paths (cost tracking, audit HMAC, approval denial) mocked out in tests — bugs live undetected (confirmed: CG-03 lived months this way) | H | M | 6 | security | 2026-06-20 | **Fixed 2026-06-09** — integration suite: `tests/integration/test_sec13_security_paths.py`, `test_audit_chain.py` (SEC-01), `test_runner_cost_tracking.py`, `test_task005_trust_expiry_enforcement.py`, `test_sec_tier1_hardening.py` | — |
 | SEC-14 | Permission | `preapproved_call_ids` deprecated but still functional — old integrations or adversarial callers can pre-approve arbitrary call IDs without HMAC digest verification | L | L | 1 | security | | **Mitigated 2026-06-09** — opt-in hard-disable via `TEAAGENT_DISABLE_PREAPPROVED_CALL_IDS=1`; test: `test_sec_tier1_hardening.py` | P3 |
 | SEC-15 | Multi-sig | `TEAAGENT_ALLOW_DEV_SIGNATURES=1` accepts SHA-256 of `(message+pubkey)` as valid signature; no runtime guard prevents this in production WAN deployment | L | M | 2 | security | 2026-07-15 | **Mitigated 2026-06-09** — `config_lint` errors when set; `selftest` fails; test: `test_config_lint_flags_dev_signatures_enabled` | P2 |
@@ -223,7 +223,7 @@ Each row: **ID · Category · Description · Likelihood (H/M/L) · Impact (H/M/L
 | Threat | Affected Component | Current Mitigation | Gap | Severity |
 |---|---|---|---|---|
 | D-1: Runaway LLM loop exhausts API budget | `runner/_core.py:142` | `RunBudget` caps per-run; default 500 cents | ~~Default `max_estimated_cost_cents=0` = unlimited~~ — SEC-04 fixed | MEDIUM |
-| D-2: Disk-full attack silences audit writes | `audit.py:298-307` | In-memory fallback | No operator notification; all events lost at process exit (SEC-12) | MEDIUM |
+| D-2: Disk-full attack silences audit writes | `audit.py:521-533` | 3-strike `fsync` escalation: stderr `AUDIT CRITICAL` + `AuditDurabilityError` halt (SEC-12 fixed 2026-06-30) | ~~No operator notification; all events lost at process exit (SEC-12)~~ — run halts after 3 consecutive failures; compliance mode raises immediately | MEDIUM |
 | D-3: UUID-as-task bogus run spends real API budget | `_agent.py:145-146` | None | `agent run --background <uuid>` runs UUID as literal task (DS-09) | MEDIUM |
 | D-4: Zero budget cap interpreted as unlimited | `runner/_core.py:142` | `0`=no-spend, `None`=unlimited (DS-13 fixed) | Resolved — any positive cost raises `BudgetExceededError` when cap=0 | LOW |
 | D-5: Alpha OTel GCP packages break on lock refresh | `uv.lock` | None | Two alpha packages can introduce breaking changes between `uv lock --upgrade` (SC-01) | LOW |
@@ -355,7 +355,7 @@ Boundary violations:
 | **SEC-03** | Fixed in current branch: prompt mode rejects `allow_all_destructive=True`; follow-up is prominent warning/audit ceremony for broad-mode entry | `teaagent/approval_manager.py` | Follow-up XS/S |
 | **SEC-09** | Reduce time bucket from 3600 to 300 seconds; deduplicate hash function to single canonical location | `teaagent/approval_manager.py:393`, `teaagent/policy.py:379-398` | S (1–2 days) |
 | **SEC-11** | When `workspace_run_shell_mutate` is in tool history, display explicit warning: "undo is partial — shell effects not reversed" | `teaagent/run_undo.py:48-55` | XS (2 hours) |
-| **SEC-12** | On consecutive `fsync()` failures, emit stderr warning; after 3 failures, raise `BudgetExceededError` or halt | `teaagent/audit.py:298-307` | S (1 day) |
+| **SEC-12** | ~~On consecutive `fsync()` failures, emit stderr warning; after 3 failures, raise `BudgetExceededError` or halt~~ **Done 2026-06-30**: 3-strike escalation emits `AUDIT CRITICAL` to stderr and raises `AuditDurabilityError`. Tests: `test_three_strikes_raises_audit_durability_error` in `tests/test_audit_health.py`, `test_disk_full_raises_by_default` in `tests/integration/test_disk_full_degradation.py:120-124` | `teaagent/audit.py:521-533` | Done |
 | **SEC-15** | Reject `TEAAGENT_ALLOW_DEV_SIGNATURES=1` when `multi_sig_config.enabled` and relay URL is non-loopback | `teaagent/security_env.py:12-14` | XS (1 hour) |
 | **DS-13** | ~~Use `None` as no-cap sentinel~~ **Done 2026-06-05**: `None`=unlimited, `0`=no-spend. Tests: `test_budget_zero_cents_rejects_any_spend`, `test_budget_none_allows_unlimited` | `teaagent/runner/_core.py:142` | Done |
 | **DS-01** | Fixed in current branch: TUI cost accumulation is covered by runtime-path tests | `teaagent/tui/__init__.py` / `tests/test_tui.py` | Done |
@@ -423,7 +423,7 @@ After all Priority 0–1 mitigations are applied:
 |---|---|---|
 | `pip-audit` in CI | New CVEs in dependency tree | Wire `security` optional group into CI pipeline |
 | HMAC key rotation log | Key lifecycle events | Log `audit_key_created` event at run start after SEC-01 fix |
-| fsync failure alert | Audit persistence degradation | Implement SEC-12 fix — stderr warning + halt |
+| fsync failure alert | Audit persistence degradation | **Implemented (SEC-12 fixed 2026-06-30)** — stderr `AUDIT CRITICAL` + halt after 3 consecutive `fsync` failures (`audit.py:521-533`; `test_three_strikes_raises_audit_durability_error`) |
 | Empty-path grant alert | Accidental global scope widening | Log warning on grant creation after DS-12 fix |
 | Cost anomaly detector | Runaway loops or prompt injection budget abuse | Compare per-run cost to session rolling average; alert >3σ |
 | Docker flag audit | Container created without hardening flags | Assert expected flags in pre-flight check; fail if absent |
@@ -533,7 +533,7 @@ warn_at_pct = 50
 17. **SEC-03** — Fixed in current branch: prompt mode blocks `allow_all_destructive`; follow-up is broad-mode entry ceremony/audit
 18. **SEC-09** — Reduce multi-sig time bucket to 300 s; deduplicate hash function
 19. **SEC-11** — UI warning when undo is partial (shell mutations in run)
-20. **SEC-12** — fsync failure: stderr warning + halt after 3 failures
+20. **SEC-12** — ~~fsync failure: stderr warning + halt after 3 failures~~ **FIXED 2026-06-30**: 3-strike `_consecutive_disk_failures` counter at `teaagent/audit.py:521-533`; `test_three_strikes_raises_audit_durability_error` in `tests/test_audit_health.py`, `test_disk_full_raises_by_default` at `tests/integration/test_disk_full_degradation.py:120-124`.
 21. **SEC-15** — Reject `TEAAGENT_ALLOW_DEV_SIGNATURES=1` on non-loopback relay
 22. **DS-13** — ~~Use `None` as no-cap sentinel; fix zero-cap semantics~~ **FIXED 2026-06-04**: `None` is now the only unlimited sentinel; `0` means zero spend allowed. Test: `test_zero_cost_cap_blocks_positive_cost_run`
 23. **DS-05** — ~~Unified TUI undo via controller~~ **FIXED 2026-06-05**: `_handle_undo()` routes journal-first via `controller.undo_last_run()` at `tui/__init__.py:860`; `test_tui_undo_uses_journal()` passes.
@@ -553,6 +553,9 @@ warn_at_pct = 50
 - **DS-02**: TUI now routes all task execution through `ChatSessionController.execute_task()` at `tui/__init__.py:996`. The controller is lazily initialized via `_get_chat_controller()` (:889) and shared across cost, undo, and task calls. Tests: `test_tui_uses_chat_session_controller_for_cost_tracking()`, `test_tui_handle_undo_calls_controller_first()` in `tests/test_tui.py`.
 - **DS-05**: TUI undo now routes journal-first: `_handle_undo()` at `tui/__init__.py:860` calls `controller.undo_last_run()` first; falls back to `_restore_checkpoint()` only if journal is empty. Tests: `test_tui_undo_uses_journal()`, `test_tui_handle_undo_calls_controller_first()` in `tests/test_tui.py::TUITests`.
 - **DS-09**: `agent run --background <id>` now rejects task args that match known run IDs or suspension IDs, preventing silent launch of a bogus LLM task. Test: `test_agent_run_background_rejects_known_run_or_suspension_id()` in `tests/test_cli_chat.py:167`.
+
+**Fixed (2026-06-30):**
+- **SEC-12**: 3-strike `fsync` failure escalation: `_consecutive_disk_failures` increments on `OSError`; after 3 consecutive failures emits `AUDIT CRITICAL` to stderr and raises `AuditDurabilityError`; compliance mode raises on first failure. Code: `teaagent/audit.py:521-533`. Tests: `test_three_strikes_raises_audit_durability_error`, `test_three_strikes_critical_error_on_stderr` in `tests/test_audit_health.py`; `test_disk_full_raises_by_default` in `tests/integration/test_disk_full_degradation.py:120-124`.
 
 **Still Open — Active (2026-06-09 review):**
 

@@ -9,7 +9,7 @@
 > or historical review reasoning in dated analysis files.
 >
 > **Review trigger:** Roadmap horizon, milestone, or track status changes.
-> **Last reviewed:** 2026-06-14
+> **Last reviewed:** 2026-06-28
 
 **Status:** Canonical roadmap tracking document
 **Last updated:** 2026-06-14 (harness-first alignment: owner-operator is the current validated persona; external adoption and hosted/team expansion remain future hypotheses until real owner friction or explicit external evidence reopens them. Prior acceptance tier snapshot `628 passed` at `85109e4` on 2026-06-10 is historical evidence, not a current collection; full-suite count unverified — see [suite truncation analysis](analysis/suite-truncation-root-cause-2026-06-10.md))
@@ -43,7 +43,7 @@ Provide a single source of truth for roadmap item status, ownership, confidence,
 | M1 | 2-6 weeks | Daily cockpit parity, run evidence summary, guided recovery | TBD | Complete | High | M2 complete | CLI/TUI cockpit parity acceptance, run evidence summary acceptance, guided recovery acceptance |
 | M2 | 4-10 weeks | Long-session context health, hash-bound plans, scope creep measurement | TBD | Complete | High | M3 complete | Long-session context guard acceptance, scope budget acceptance, plan revision acceptance |
 | M3 | 8-14 weeks | Extension activation explain, MCP trust onboarding, subagent review/merge | TBD | Complete | High | M4 complete | Extension activation explain acceptance, MCP trust onboarding acceptance, subagent review/merge acceptance |
-| M4 | 12-22 weeks | Background/cloud durability, gateway task intake, control-plane operator cockpit | TBD | Pending | Low | BG-001 complete | Background full lifecycle acceptance, gateway task intake acceptance, control-plane operator cockpit acceptance |
+| M4 | 12-22 weeks | Background/cloud durability, gateway task intake, control-plane operator cockpit | TBD | Pending (held except DR-006 carve-out) | Low | BG-001 complete | Background full lifecycle acceptance, gateway task intake acceptance, control-plane operator cockpit acceptance. Scheduling: only background lifecycle + operator cockpit may proceed under DR-006 owner-override co-maintainer dogfood; cloud/SaaS/multi-tenant GTM held (see `backlog-priority.md`) |
 | M5 | Ongoing | Prompt/runtime/model/provider gating, repo-map benchmarking, release evidence bundles | TBD | Pending | Low | EVAL-001 complete | Prompt change regression suite, repo-map benchmark corpus, release evidence bundle in release profile |
 | M6 | After M1-M4 | Desktop/client-server packaging for owner-operated trust, update, rollback, session attach | TBD | Pending | Low | PKG-001 complete | Packaged launch smoke, signing/SBOM/update docs, desktop session attach acceptance |
 
@@ -181,17 +181,17 @@ Current evidence package:
 
 | Item | Status | Completion % | Evidence Type | Owner | Notes |
 |------|--------|:---:|---|---|---|
-| SEC-01 Audit HMAC persistence | **Fixed** | 100% | Code + passing tests | — | Key persisted at `audit.py:165`; RISK-01 hardening: key-save OSError now logs warning (no silent pass); `HMACKeySaveTests::test_chain_key_save_failure_logs_warning` |
+| SEC-01 Audit HMAC persistence | **Fixed** | 100% | Code + passing tests | — | Key persisted at `teaagent/audit.py:163`; RISK-01 hardening: key-save OSError now logs warning (no silent pass); `HMACKeySaveTests::test_chain_key_save_failure_logs_warning` |
 | SEC-17 ApprovalPolicy thread leak | **Fixed** | 100% | Code + passing tests | — | ENG-01: `__del__` shuts down executor; `ApprovalPolicyThreadLeakTests` |
 | SEC-18 Zero cost rates (fake/ollama/vllm) | **Fixed** | 100% | Code + passing tests | — | RISK-02: nominal non-zero rates; `ProviderCostRateTests` |
 | SEC-19 JIT approval no timeout | **Fixed** | 100% | Code + passing tests | — | OPS-01: 60s default timeout, auto-deny; `JITApprovalTimeoutTests` |
-| SEC-02 MCP trust expiry | **Fixed** | 100% | Code + passing test | — | `mcp_trust.py:148,168`; `test_server_trust_expiry()` |
+| SEC-02 MCP trust expiry | **Fixed** | 100% | Code + passing test | — | `teaagent/mcp_trust.py:286`, `teaagent/mcp_trust.py:343`; `test_server_trust_expiry()` |
 | SEC-04 Budget default | **Fixed** | 100% | Code + passing tests | — | Default 500 cents; `test_budget_zero_cents_rejects_any_spend()` |
 | SEC-06 JIT isolation | **Fixed** | 100% | Code + passing tests | — | `test_subagent_jit_approval_isolation_sec06()` |
-| SEC-07 Docker hardening | **Fixed** | 100% | Code + passing tests | — | `_isolation.py:234-241`; `test_docker_isolation_*()` |
-| SEC-10 Shell allowlist | **Fixed** | 100% | Code + passing tests | — | `_shell.py:175`; `test_all_inspect_commands_classified_as_inspect()` |
-| DS-02 TUI controller routing | **Fixed** | 100% | Code + passing tests | — | `tui/__init__.py:996`; controller-based cost/undo/task |
-| DS-05 TUI undo via journal | **Fixed** | 100% | Code + passing tests | — | `tui/__init__.py:860`; `test_tui_undo_uses_journal()` |
+| SEC-07 Docker hardening | **Fixed** | 100% | Code + passing tests | — | `teaagent/subagents/_isolation.py:347-365`; `test_docker_isolation_*()` |
+| SEC-10 Shell allowlist | **Fixed** | 100% | Code + passing tests | — | `teaagent/workspace_tools/_shell.py:174`; `test_all_inspect_commands_classified_as_inspect()` |
+| DS-02 TUI controller routing | **Fixed** | 100% | Code + passing tests | — | `teaagent/tui/core.py:996`; controller-based cost/undo/task |
+| DS-05 TUI undo via journal | **Fixed** | 100% | Code + passing tests | — | `teaagent/tui/core.py:1057`; `test_tui_undo_uses_journal()` |
 | DS-09 Background UUID rejection | **Fixed** | 100% | Code + passing test | — | `test_agent_run_background_rejects_known_run_or_suspension_id()` |
 | DS-12 Empty-path approval | **Fixed** | 100% | Code + passing tests | — | `test_empty_path_globs_rejected_ds12()` |
 | DS-13 Budget zero semantics | **Fixed** | 100% | Code + passing tests | — | `None`=unlimited, `0`=no-spend |

@@ -1,3 +1,4 @@
+[README.md#A828]
 # Architecture Decision Records (ADR)
 
 This directory contains all Architecture Decision Records (ADRs) for the TeaAgent project. ADRs document significant architectural decisions, their rationale, and consequences.
@@ -35,6 +36,7 @@ This directory contains all Architecture Decision Records (ADRs) for the TeaAgen
 | 0031 | Shadow Mode Exit Criteria | Proposed | 2026-06-12 | 2026-09-12 (expiry review) |
 | 0032 | Run Event Taxonomy and Event Spine | Accepted and Implemented | 2026-06-13 | 2026-06-17 |
 | 0040 | Reconcile the Second Execution Framework with the Primary Runner | Accepted | 2026-06-20 | - |
+| 0041 | Execution Surface Unification and Harness Thinning | Proposed | 2026-06-30 | - |
 
 ## ADR Categories
 
@@ -49,6 +51,10 @@ This directory contains all Architecture Decision Records (ADRs) for the TeaAgen
 - **0006**: OAuth Store and Key Ring Interfaces - Durable OAuth persistence
 - **0007**: ANP Adapter Boundary - External federation boundary
 - **0008**: P4 Strategic Posture - Storage, TLS, P2P auth posture
+
+### Execution Architecture (0040-0041)
+- **0040**: Reconcile the Second Execution Framework with the Primary Runner - Shared-invariant contract and CI gates
+- **0041**: Execution Surface Unification and Harness Thinning - Shared governed-execution layer; domain migration to skills/model
 
 ### Governance Hardening (0009, 0022-0024, 0029, 0031-0032)
 - **0009**: 5-Loop Governance System - Comprehensive governance loops
@@ -81,7 +87,7 @@ This directory contains all Architecture Decision Records (ADRs) for the TeaAgen
 - **Accepted and Implemented**: Decision accepted and fully implemented
 - **Accepted and Implemented (Beta)**: Decision accepted and implemented in Beta (optional hardening remaining)
 - **Superseded / Archived / Rejected**: Closed decisions with details in respective files
-- ~~**Proposed**~~: No ADRs are currently in Proposed state (all refactoring proposals were resolved June 2026; see DOCOPT-010).
+- **Proposed**: Decision recorded; implementation not yet started or incomplete (see ADR-0031, ADR-0041).
 
 ## Git History
 

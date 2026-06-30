@@ -104,6 +104,53 @@ def test_validate_docs_consistency_detects_mismatch(tmp_path: Path) -> None:
     assert len(errors) == 3  # status, tier sync, uncovered matrix row
 
 
+def test_validate_inline_todo_catalog_detects_source_drift(tmp_path: Path) -> None:
+    repo = tmp_path
+    (repo / 'teaagent').mkdir()
+    (repo / 'scripts').mkdir()
+    (repo / 'teaagent' / 'module.py').write_text(
+        '# TODO: wire the real implementation\n', encoding='utf-8'
+    )
+    (repo / 'scripts' / 'script.py').write_text('print("ok")\n', encoding='utf-8')
+
+    catalog = (
+        '| Category | Count |\n'
+        '|----------|-------|\n'
+        '| Explicit `# TODO` in production (`teaagent/`) | 0 |\n'
+        '| Explicit `# TODO` in scripts (unfixed stubs) | 0 |\n'
+    )
+
+    errors = _VALIDATE_MODULE.validate_inline_todo_catalog(catalog, repo_root=repo)
+
+    assert errors == [
+        'Inline TODO catalog mismatch for Explicit `# TODO` in production (`teaagent/`): '
+        'catalog says 0, source scan found 1.'
+    ]
+
+
+def test_validate_inline_todo_catalog_passes_when_counts_match(tmp_path: Path) -> None:
+    repo = tmp_path
+    (repo / 'teaagent').mkdir()
+    (repo / 'scripts').mkdir()
+    (repo / 'teaagent' / 'module.py').write_text(
+        '# TODO: wire the real implementation\n', encoding='utf-8'
+    )
+    (repo / 'scripts' / 'script.py').write_text(
+        '# FIXME: replace scaffolding\n', encoding='utf-8'
+    )
+
+    catalog = (
+        '| Category | Count |\n'
+        '|----------|-------|\n'
+        '| Explicit `# TODO` in production (`teaagent/`) | 1 |\n'
+        '| Explicit `# TODO` in scripts (unfixed stubs) | 1 |\n'
+    )
+
+    errors = _VALIDATE_MODULE.validate_inline_todo_catalog(catalog, repo_root=repo)
+
+    assert errors == []
+
+
 def test_validate_provider_docs_consistency_passes_for_repo_docs() -> None:
     root = Path(__file__).resolve().parents[1]
     readme = (root / 'README.md').read_text(encoding='utf-8')
@@ -611,3 +658,26 @@ def test_open_partial_planned_gap_count_matches_use_cases_section() -> None:
     build_matrix = _VALIDATE_MODULE._load_build_use_case_matrix_module()
     count = build_matrix._open_backlog_gap_count(root / 'docs' / 'use-cases.md')
     assert count == 3
+
+
+def test_validate_doc_code_references_flags_missing_file(tmp_path: Path) -> None:
+    doc = 'Evidence at `foo.py:99999` for the fix.'
+    errors = _VALIDATE_MODULE.validate_doc_code_references(doc, repo_root=tmp_path)
+    assert any('foo.py:99999' in err and 'missing file' in err for err in errors)
+
+
+def test_validate_doc_code_references_passes_for_valid_refs(tmp_path: Path) -> None:
+    repo = tmp_path
+    target = repo / 'teaagent' / 'sample.py'
+    target.parent.mkdir(parents=True)
+    target.write_text('line1\nline2\nline3\n', encoding='utf-8')
+    doc = 'Fixed in `teaagent/sample.py:2`.'
+    errors = _VALIDATE_MODULE.validate_doc_code_references(doc, repo_root=repo)
+    assert errors == []
+
+
+def test_roadmap_status_code_references_pass_for_repo_doc() -> None:
+    root = Path(__file__).resolve().parents[1]
+    roadmap = (root / 'docs' / 'roadmap-status.md').read_text(encoding='utf-8')
+    errors = _VALIDATE_MODULE.validate_doc_code_references(roadmap, repo_root=root)
+    assert errors == []

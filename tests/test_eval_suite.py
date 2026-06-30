@@ -284,6 +284,10 @@ def test_eval_runner_run_suite(eval_runner):
 
     assert len(results) == 2
     assert all(r.status in [EvalStatus.PASSED, EvalStatus.ERROR] for r in results)
+    simulated = [r for r in results if r.metrics.get('execution_mode') == 'simulated']
+    assert simulated, 'expected at least one simulated execution metadata stamp'
+    assert simulated[0].metrics['executor'] == 'placeholder'
+    assert simulated[0].metrics['advisory_only'] is True
 
 
 def test_eval_runner_run_suite_with_category_filter(eval_runner):

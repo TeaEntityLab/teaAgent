@@ -14,7 +14,19 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from teaagent.eval_suite import EvalRunner, EvalStatus, EvalStore
+from teaagent.eval_suite import (
+    EvalCategory,
+    EvalRunner,
+    EvalStatus,
+    EvalStore,
+    EvalSuite,
+    ModelRunner,
+)
+
+EVAL_EXECUTION_ADVISORY_NOTE = (
+    'NOTE: eval execution is simulated (placeholder) — advisory only, '
+    'not a real regression signal.'
+)
 
 
 class ReleaseDecision(str, Enum):
@@ -77,6 +89,8 @@ class ReleaseGateResult:
     warnings: list[str] = field(default_factory=list)
     summary: str = ''
     details: dict[str, Any] = field(default_factory=dict)
+    simulated: bool = False
+    advisory_only: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
@@ -91,6 +105,8 @@ class ReleaseGateResult:
             'warnings': self.warnings,
             'summary': self.summary,
             'details': self.details,
+            'simulated': self.simulated,
+            'advisory_only': self.advisory_only,
         }
 
     @classmethod
@@ -107,20 +123,25 @@ class ReleaseGateResult:
             warnings=data.get('warnings', []),
             summary=data.get('summary', ''),
             details=data.get('details', {}),
+            simulated=data.get('simulated', False),
+            advisory_only=data.get('advisory_only', False),
         )
 
 
 class ReleaseGate:
     """Gate for release pipeline integration."""
 
-    def __init__(self, store: EvalStore) -> None:
+    def __init__(
+        self, store: EvalStore, *, model_runner: ModelRunner | None = None
+    ) -> None:
         """Initialize the release gate.
 
         Args:
             store: Eval store to use.
+            model_runner: Optional callable that runs a prompt and returns model output.
         """
         self.store = store
-        self.runner = EvalRunner(store)
+        self.runner = EvalRunner(store, model_runner=model_runner)
 
     def evaluate_gate(
         self,
@@ -237,7 +258,45 @@ class ReleaseGate:
         self.runner.run_suite(suite)
 
         # Evaluate gate
-        return self.evaluate_gate(config, suite_id)
+        result = self.evaluate_gate(config, suite_id)
+        self._apply_execution_disclosure(result, suite)
+        return result
+
+    def _apply_execution_disclosure(
+        self, result: ReleaseGateResult, suite: EvalSuite
+    ) -> None:
+        """Derive simulated/advisory flags from per-test execution metadata."""
+        prompt_conv_tests = [
+            test
+            for test in suite.get_enabled_tests()
+            if test.category
+            in (EvalCategory.PROMPT_REGRESSION, EvalCategory.CONVERSATIONAL)
+        ]
+        real_execution = False
+        if prompt_conv_tests:
+            modes: list[str | None] = []
+            for test in prompt_conv_tests:
+                test_result = self.store.load_result(test.test_id)
+                mode = (
+                    test_result.metrics.get('execution_mode')
+                    if test_result is not None
+                    else None
+                )
+                modes.append(mode if isinstance(mode, str) else None)
+            real_execution = bool(modes) and all(
+                mode in ('real', 'fixture') for mode in modes
+            )
+
+        if real_execution:
+            result.simulated = False
+            result.advisory_only = False
+            result.details['execution_mode'] = 'real'
+            result.details.pop('advisory_note', None)
+        else:
+            result.simulated = True
+            result.advisory_only = True
+            result.details['execution_mode'] = 'simulated'
+            result.details['advisory_note'] = EVAL_EXECUTION_ADVISORY_NOTE
 
     def create_default_gate_config(self) -> ReleaseGateConfig:
         """Create default gate configuration.
@@ -272,10 +331,12 @@ class ReleaseGate:
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        report = {
+        report: dict[str, Any] = {
             'gate_result': result.to_dict(),
             'generated_at': result.details.get('generated_at', ''),
         }
+        if result.simulated or result.advisory_only:
+            report['advisory_note'] = EVAL_EXECUTION_ADVISORY_NOTE
 
         output_path.write_text(json.dumps(report, indent=2), encoding='utf-8')
 

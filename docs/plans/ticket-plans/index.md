@@ -105,8 +105,7 @@ only the daily-driver fixes:
 See [inline-todos.md](inline-todos.md) for the full catalog of `# TODO`,
 `# FIXME`, and implicit architectural TODOs across the codebase.
 
-**TL;DR:** 1 production `TODO` (`issue_intake.py:195` — GitHub API stub), 9 in
-monitoring scripts, 7 implicit architectural items (all ticketed above).
+**Current TL;DR:** See [inline-todos.md](inline-todos.md) for the current explicit-marker counts (guarded against source drift by `validate_inline_todo_catalog` in `scripts/validate_docs_consistency.py`) and the list of implicit deferrals awaiting owner/ticket review. This index no longer restates the counts so it cannot drift out of sync.
 
 ---
 

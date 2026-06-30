@@ -8,11 +8,15 @@ from __future__ import annotations
 
 import json
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Any, Optional
 from uuid import uuid4
+
+# Callable seam: takes a prompt, returns model output text.
+ModelRunner = Callable[[str], str]
 
 
 class EvalStatus(str, Enum):
@@ -336,13 +340,17 @@ class EvalStore:
 class EvalRunner:
     """Runner for executing eval suites."""
 
-    def __init__(self, store: EvalStore) -> None:
+    def __init__(
+        self, store: EvalStore, *, model_runner: ModelRunner | None = None
+    ) -> None:
         """Initialize the eval runner.
 
         Args:
             store: Eval store to use.
+            model_runner: Optional callable that runs a prompt and returns model output.
         """
         self.store = store
+        self._model_runner = model_runner
 
     def run_suite(
         self,
@@ -407,9 +415,7 @@ class EvalRunner:
             if test.baseline_path:
                 baseline_data = self.store.load_baseline(test.baseline_path)
 
-            # Execute test (placeholder - in production, this would call the actual test)
-            # For now, we'll simulate test execution
-            test_output = self._execute_test(test, fixture_data)
+            test_output, execution_metadata = self._execute_test(test, fixture_data)
 
             # Compare with baseline if available
             baseline_comparison = None
@@ -425,6 +431,7 @@ class EvalRunner:
             result.output = test_output
             result.baseline_comparison = baseline_comparison
             result.metrics = self._extract_metrics(test_output)
+            result.metrics.update(execution_metadata)
 
         except Exception as e:
             result.status = EvalStatus.ERROR
@@ -436,47 +443,79 @@ class EvalRunner:
         self.store.save_result(result)
         return result
 
+    def _simulated_execution_metadata(self, test: EvalTest) -> dict[str, Any]:
+        """Metadata stamped on every placeholder execution result."""
+        return {
+            'execution_mode': 'simulated',
+            'executor': 'placeholder',
+            'advisory_only': True,
+            'category': test.category.value,
+        }
+
+    def _prompt_execution_metadata(self, test: EvalTest, mode: str) -> dict[str, Any]:
+        """Metadata for prompt/conversational execution modes."""
+        if mode in ('real', 'fixture'):
+            return {
+                'execution_mode': mode,
+                'executor': 'model' if mode == 'real' else 'fixture',
+                'advisory_only': False,
+                'category': test.category.value,
+            }
+        return {
+            'execution_mode': mode,
+            'executor': 'placeholder',
+            'advisory_only': True,
+            'category': test.category.value,
+        }
+
     def _execute_test(
         self, test: EvalTest, fixture_data: Optional[dict[str, Any]]
-    ) -> str:
-        """Execute a test (placeholder implementation).
+    ) -> tuple[str, dict[str, Any]]:
+        """Execute a test and return output with execution metadata.
 
         Args:
             test: Test to execute.
             fixture_data: Fixture data for the test.
 
         Returns:
-            Test output.
+            Tuple of test output and execution metadata.
         """
-        # Placeholder implementation
-        # In production, this would dispatch to the actual test executor
-        # based on the test category
-
         if test.category in (
             EvalCategory.PROMPT_REGRESSION,
             EvalCategory.CONVERSATIONAL,
         ):
-            return self._execute_prompt_regression_test(test, fixture_data)
-        elif test.category == EvalCategory.REPO_MAP_BENCHMARK:
-            return self._execute_repo_map_benchmark(test, fixture_data)
-        elif test.category == EvalCategory.LONG_SESSION:
-            return self._execute_long_session_test(test, fixture_data)
-        elif test.category == EvalCategory.SCOPE_CREEP:
-            return self._execute_scope_creep_test(test, fixture_data)
+            output, mode = self._execute_prompt_regression_test(test, fixture_data)
+            metadata = self._prompt_execution_metadata(test, mode)
         else:
-            return f'Test {test.test_id} executed (category: {test.category})'
+            metadata = self._simulated_execution_metadata(test)
+            if test.category == EvalCategory.REPO_MAP_BENCHMARK:
+                output = self._execute_repo_map_benchmark(test, fixture_data)
+            elif test.category == EvalCategory.LONG_SESSION:
+                output = self._execute_long_session_test(test, fixture_data)
+            elif test.category == EvalCategory.SCOPE_CREEP:
+                output = self._execute_scope_creep_test(test, fixture_data)
+            else:
+                output = f'Test {test.test_id} executed (category: {test.category})'
+
+        return output, metadata
 
     def _execute_prompt_regression_test(
         self, test: EvalTest, fixture_data: Optional[dict[str, Any]]
-    ) -> str:
-        """Return actual output for offline prompt/conversational regression scoring."""
+    ) -> tuple[str, str]:
+        """Return actual output and execution mode for prompt/conversational tests."""
         import os
 
         if fixture_data and 'actual_output' in fixture_data:
-            return str(fixture_data['actual_output'])
+            return str(fixture_data['actual_output']), 'fixture'
         if os.environ.get('TEAAGENT_EVAL_SEED_FAILURE') == '1':
-            return 'intentionally wrong output for release gate failure'
-        return str(test.metadata.get('expected_output', ''))
+            return (
+                'intentionally wrong output for release gate failure',
+                'seeded_failure',
+            )
+        if self._model_runner is not None:
+            prompt = str(test.metadata.get('prompt', ''))
+            return self._model_runner(prompt), 'real'
+        return str(test.metadata.get('expected_output', '')), 'replay_baseline'
 
     def _execute_repo_map_benchmark(
         self, test: EvalTest, fixture_data: Optional[dict[str, Any]]

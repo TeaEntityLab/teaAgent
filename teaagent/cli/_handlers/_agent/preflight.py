@@ -11,6 +11,7 @@ from teaagent.approval import parse_permission_mode
 from teaagent.cli._output import print_json
 from teaagent.ergonomics.human_output import format_preflight_summary
 from teaagent.preflight import preflight
+from teaagent.run_undo import audit_events_used_shell_mutate
 from teaagent.types import PermissionMode
 
 logger = logging.getLogger(__name__)
@@ -198,6 +199,14 @@ def agent_undo_command(args: argparse.Namespace) -> int:  # noqa: C901
             )
         print(''.join(out) if out else '(no undo diff available)')
         return 0
+
+    events = store.show_run(run_id)
+    if audit_events_used_shell_mutate(events):
+        import sys as _sys
+
+        from teaagent.run_undo import PARTIAL_UNDO_SHELL_WARNING
+
+        print(PARTIAL_UNDO_SHELL_WARNING, file=_sys.stderr)
 
     result = journal.restore()
     status = 'restored' if result.ok else 'partial'

@@ -423,7 +423,9 @@ def _env(
     env_parser = subparsers.add_parser(
         'env', help='Hermetic environment provisioning and verification'
     )
-    subs = env_parser.add_subparsers(dest='env_command', required=True)
+    subs = env_parser.add_subparsers(
+        dest='env_command', required=True, metavar='{provision,verify,lock}'
+    )
 
     provision_cmd = subs.add_parser(
         'provision', help='Provision hermetic environment from teaagent.toml'
@@ -438,7 +440,8 @@ def _env(
     verify_cmd.set_defaults(func=verify_handler)
 
     lock_cmd = subs.add_parser(
-        'lock', help='Generate lockfile from current environment'
+        'lock',
+        help='Generate lockfile from currently installed packages in teaagent.toml',
     )
     lock_cmd.add_argument('--root', default='.', help='Workspace root.')
     lock_cmd.set_defaults(func=lock_handler)

@@ -113,7 +113,6 @@ Aligned with harness-first §7 TASK sequencing and debate gaps.
 
 | ID | Action | Owner | Agent-executable | Acceptance |
 | --- | --- | --- | --- | --- |
-| **DR-001** | Seed friction log with ≥5 **owner-written** evidence entries | **Owner** | No | TASK-007 acceptance met |
 | **DR-002** | Reconcile `AGENTS.md` with permission modes + thin-harness target | Agent | **Done in this batch** | Rules match `approval/manager.py` behavior |
 | **DR-003** | Stale compliance matrix refresh | Agent | **Done (2026-06-22)** | [05-compliance-matrix.md](../retrospective/05-compliance-matrix.md) — 0 Violated, 2 Partial |
 | **DR-001** | Seed friction log with ≥5 **owner-written** evidence entries | **Owner** | **Done (2026-06-22)** — 5 entries (F2/F3/F6/F7/F8) |

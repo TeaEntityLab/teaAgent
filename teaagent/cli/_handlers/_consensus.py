@@ -20,6 +20,12 @@ from teaagent.consensus import (
     parse_vote_import_payload,
     peer_vote_signature,
 )
+from teaagent.consensus.types import (
+    ConsensusState,
+    consensus_config_path_from_storage,
+    load_consensus_config,
+    save_consensus_config,
+)
 
 
 def consensus_peers_list_command(args: argparse.Namespace) -> int:
@@ -115,16 +121,44 @@ def consensus_peers_deactivate_command(args: argparse.Namespace) -> int:
         return 1
 
 
+_FINISHED_CONSENSUS_STATUSES = frozenset(
+    {
+        ConsensusStatus.APPROVED,
+        ConsensusStatus.REJECTED,
+        ConsensusStatus.TIMEOUT,
+        ConsensusStatus.CANCELLED,
+    }
+)
+
+
+def _consensus_config_path(args: argparse.Namespace) -> Path:
+    config_path = getattr(args, 'config_path', None)
+    if config_path:
+        return Path(config_path)
+    consensus_storage = (
+        Path(args.consensus_storage)
+        if getattr(args, 'consensus_storage', None)
+        else None
+    )
+    return consensus_config_path_from_storage(consensus_storage)
+
+
+def _load_persisted_consensus_config(args: argparse.Namespace) -> ConsensusConfig:
+    return load_consensus_config(_consensus_config_path(args))
+
+
+def _format_vote_tally(state: ConsensusState) -> str:
+    return (
+        f'approve={state.get_vote_count(VoteDecision.APPROVE)} '
+        f'reject={state.get_vote_count(VoteDecision.REJECT)} '
+        f'abstain={state.get_vote_count(VoteDecision.ABSTAIN)}'
+    )
+
+
 def consensus_status_command(args: argparse.Namespace) -> int:
     """Show consensus status."""
-    peer_storage = Path(args.peer_storage) if args.peer_storage else None
-    consensus_storage = Path(args.consensus_storage) if args.consensus_storage else None
-
-    registry = PeerRegistry(storage_path=peer_storage)
-    config = ConsensusConfig()
-    engine = ConsensusEngine(
-        peer_registry=registry, config=config, storage_path=consensus_storage
-    )
+    engine = _consensus_engine_from_args(args)
+    registry = engine.peer_registry
 
     # Show peer status
     peers = registry.list_active()
@@ -148,47 +182,50 @@ def consensus_status_command(args: argparse.Namespace) -> int:
 
 def consensus_history_command(args: argparse.Namespace) -> int:
     """Show consensus voting history."""
-    # Get all consensus states (including completed)
-    # This is a simplified version - in production, would query from storage
-    print('Consensus history:')
-    print('(Full history query not yet implemented)')
-    print()
+    engine = _consensus_engine_from_args(args)
+    finished = [
+        state
+        for state in engine.list_all_consensus()
+        if state.status in _FINISHED_CONSENSUS_STATUSES
+    ]
+    finished.sort(
+        key=lambda state: state.completed_at or state.proposal.created_at,
+        reverse=True,
+    )
 
+    print(f'Completed consensus proposals: {len(finished)}')
+    for state in finished:
+        completed = state.completed_at.isoformat() if state.completed_at else 'n/a'
+        print(f'  - {state.proposal.id}: {state.proposal.task_description}')
+        print(f'    Status: {state.status.value}')
+        print(f'    Completed: {completed}')
+        print(f'    Votes: {_format_vote_tally(state)}')
+    print()
     return 0
 
 
 def consensus_config_set_command(args: argparse.Namespace) -> int:
     """Set consensus configuration."""
-    config = ConsensusConfig()
+    config_path = _consensus_config_path(args)
+    config = load_consensus_config(config_path)
 
-    if args.voting_threshold:
+    if getattr(args, 'voting_threshold', None) is not None:
         config.default_voting_threshold = VotingThreshold(args.voting_threshold)
-    if args.timeout:
+    if getattr(args, 'timeout', None) is not None:
         config.consensus_timeout_seconds = args.timeout
-    if args.require_all:
+    if getattr(args, 'require_all', False):
         config.require_all_peers = True
-    if args.allow_abstain is not None:
+    if getattr(args, 'allow_abstain', None) is not None:
         config.allow_abstain = args.allow_abstain
 
-    # In production, this would save to a config file
-    print('Consensus configuration updated:')
+    save_consensus_config(config, config_path)
     print(json.dumps(config.to_dict(), indent=2))
-    print()
-    print('(Note: Configuration persistence not yet implemented)')
-
     return 0
 
 
 def consensus_request_command(args: argparse.Namespace) -> int:
     """Request consensus for a task."""
-    peer_storage = Path(args.peer_storage) if args.peer_storage else None
-    consensus_storage = Path(args.consensus_storage) if args.consensus_storage else None
-
-    registry = PeerRegistry(storage_path=peer_storage)
-    config = ConsensusConfig()
-    engine = ConsensusEngine(
-        peer_registry=registry, config=config, storage_path=consensus_storage
-    )
+    engine = _consensus_engine_from_args(args)
 
     try:
         state = engine.request_consensus(
@@ -237,7 +274,7 @@ def _consensus_engine_from_args(args: argparse.Namespace) -> ConsensusEngine:
     peer_storage = Path(args.peer_storage) if args.peer_storage else None
     consensus_storage = Path(args.consensus_storage) if args.consensus_storage else None
     registry = PeerRegistry(storage_path=peer_storage)
-    config = ConsensusConfig()
+    config = _load_persisted_consensus_config(args)
     return ConsensusEngine(
         peer_registry=registry, config=config, storage_path=consensus_storage
     )

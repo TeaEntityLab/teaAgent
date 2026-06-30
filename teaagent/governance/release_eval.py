@@ -8,8 +8,9 @@ from pathlib import Path
 from typing import Any
 
 from teaagent.eval_corpus import register_release_eval_suite
-from teaagent.eval_suite import EvalStore
+from teaagent.eval_suite import EvalStore, ModelRunner
 from teaagent.governance.release_gate import (
+    EVAL_EXECUTION_ADVISORY_NOTE,
     ReleaseDecision,
     ReleaseGate,
     ReleaseGateResult,
@@ -34,6 +35,7 @@ def run_release_eval_gate(
     *,
     seed_failure: bool = False,
     report_path: str | Path | None = None,
+    model_runner: ModelRunner | None = None,
 ) -> ReleaseGateResult:
     """Run prompt + conversational corpora and evaluate the release gate."""
     root = Path(workspace_root).resolve()
@@ -49,7 +51,7 @@ def run_release_eval_gate(
     try:
         store = EvalStore(store_dir)
         suite_id = register_release_eval_suite(store)
-        gate = ReleaseGate(store)
+        gate = ReleaseGate(store, model_runner=model_runner)
         config = build_release_gate_config(gate)
         result = gate.run_and_evaluate(config, suite_id)
         if report_path is not None:
@@ -72,4 +74,7 @@ def should_block_release(result: ReleaseGateResult) -> bool:
 
 def format_gate_summary(result: ReleaseGateResult) -> str:
     payload = gate_result_to_dict(result)
-    return json.dumps(payload, indent=2)
+    body = json.dumps(payload, indent=2)
+    if result.simulated or result.advisory_only:
+        return f'{EVAL_EXECUTION_ADVISORY_NOTE}\n{body}'
+    return body

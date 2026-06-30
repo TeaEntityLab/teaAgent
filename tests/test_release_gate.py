@@ -5,6 +5,7 @@ from tempfile import TemporaryDirectory
 
 import pytest
 from teaagent.release_gate import (
+    EVAL_EXECUTION_ADVISORY_NOTE,
     ReleaseDecision,
     ReleaseGate,
     ReleaseGateConfig,
@@ -38,6 +39,8 @@ def test_release_gate_result_to_dict_and_from_dict():
         success_rate=0.95,
         passed_tests=19,
         failed_tests=1,
+        simulated=True,
+        advisory_only=True,
     )
 
     data = result.to_dict()
@@ -46,6 +49,8 @@ def test_release_gate_result_to_dict_and_from_dict():
     assert restored.gate_id == result.gate_id
     assert restored.decision == result.decision
     assert restored.success_rate == result.success_rate
+    assert restored.simulated is True
+    assert restored.advisory_only is True
 
 
 @pytest.fixture
@@ -243,6 +248,10 @@ def test_release_gate_run_and_evaluate(release_gate):
     result = gate.run_and_evaluate(config, suite.suite_id)
 
     assert result.decision in [ReleaseDecision.APPROVE, ReleaseDecision.WARN]
+    assert result.simulated is True
+    assert result.advisory_only is True
+    assert result.details['execution_mode'] == 'simulated'
+    assert result.details['advisory_note'] == EVAL_EXECUTION_ADVISORY_NOTE
 
 
 def test_release_gate_create_default_gate_config(release_gate):

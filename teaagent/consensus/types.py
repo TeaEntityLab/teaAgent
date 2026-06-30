@@ -7,11 +7,16 @@ and consensus state tracking.
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
+import json
 import logging
+import os
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
+from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import Dict, List, Optional, Set
 
 logger = logging.getLogger(__name__)
@@ -337,3 +342,56 @@ class ConsensusConfig:
             async_vote_collection=data.get('async_vote_collection', False),
             vote_poll_timeout_seconds=float(data.get('vote_poll_timeout_seconds', 2.0)),
         )
+
+
+DEFAULT_CONSENSUS_CONFIG_PATH = Path('.teaagent/consensus-config.json')
+
+
+def consensus_config_path_from_storage(
+    consensus_storage: Optional[Path] = None,
+) -> Path:
+    """Derive the persisted consensus config path from consensus state storage."""
+    if consensus_storage is not None:
+        return consensus_storage.parent / 'consensus-config.json'
+    return DEFAULT_CONSENSUS_CONFIG_PATH
+
+
+def load_consensus_config(path: Optional[Path] = None) -> ConsensusConfig:
+    """Load consensus config from disk, returning defaults when missing."""
+    config_path = path or DEFAULT_CONSENSUS_CONFIG_PATH
+    if not config_path.exists():
+        return ConsensusConfig()
+
+    try:
+        data = json.loads(config_path.read_text(encoding='utf-8'))
+        return ConsensusConfig.from_dict(data)
+    except (OSError, json.JSONDecodeError, KeyError, ValueError, TypeError) as exc:
+        logger.warning('Failed to load consensus config from %s: %s', config_path, exc)
+        return ConsensusConfig()
+
+
+def save_consensus_config(
+    config: ConsensusConfig,
+    path: Optional[Path] = None,
+) -> Path:
+    """Persist consensus config to disk atomically."""
+    config_path = path or DEFAULT_CONSENSUS_CONFIG_PATH
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with NamedTemporaryFile(
+        'w',
+        dir=str(config_path.parent),
+        delete=False,
+        suffix='.tmp',
+    ) as tmp:
+        try:
+            json.dump(config.to_dict(), tmp, indent=2)
+            tmp.flush()
+            os.fsync(tmp.fileno())
+            os.replace(tmp.name, config_path)
+        except (OSError, json.JSONDecodeError):
+            with contextlib.suppress(OSError):
+                os.unlink(tmp.name)
+            raise
+
+    return config_path

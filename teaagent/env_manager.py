@@ -16,6 +16,7 @@ from teaagent.env_config import (
     generate_lockfile,
     parse_teaagent_toml,
     read_lockfile,
+    verify_installed_entry,
     verify_lockfile_integrity,
     write_lockfile,
 )
@@ -257,10 +258,18 @@ class EnvironmentManager:
 
         # Check installed packages against lockfile
         print('[Verifying...] Checking installed packages...')
+        all_valid = True
         for entry in lockfile.entries:
-            # In a real implementation, this would check actual installed versions
-            # For now, we just verify the entry exists
-            print(f'  [✓] {entry.name} ({entry.version})')
+            ok, reason = verify_installed_entry(entry)
+            if ok:
+                print(f'  [✓] {entry.name} ({entry.version})')
+            else:
+                print(f'  [✗] {entry.name}: {reason}')
+                all_valid = False
+
+        if not all_valid:
+            print('[✗] Environment compliance: INVALID')
+            return False
 
         print('[✓] Environment compliance: VALID')
         return True

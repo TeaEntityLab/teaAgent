@@ -77,7 +77,13 @@ def _consensus_config(
     set_cmd.add_argument(
         '--require-all', action='store_true', help='Require all peers to vote'
     )
-    set_cmd.add_argument('--allow-abstain', type=bool, help='Allow abstain votes')
+    set_cmd.add_argument(
+        '--allow-abstain',
+        action=argparse.BooleanOptionalAction,
+        help='Allow abstain votes',
+    )
+    set_cmd.add_argument('--consensus-storage', help='Path to consensus state storage')
+    set_cmd.add_argument('--config-path', help='Explicit path to consensus config JSON')
     set_cmd.set_defaults(func=set_handler)
 
 
@@ -128,7 +134,8 @@ def _consensus(
     consensus_parser = subparsers.add_parser('consensus', help='Consensus management')
 
     consensus_subs = consensus_parser.add_subparsers(
-        dest='consensus_command', help='Consensus commands'
+        dest='consensus_command',
+        help='Consensus commands',
     )
 
     # Peers subcommands

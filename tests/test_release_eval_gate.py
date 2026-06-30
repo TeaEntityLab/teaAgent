@@ -13,9 +13,11 @@ from teaagent.eval_corpus import (
 )
 from teaagent.eval_suite import EvalCategory, EvalStore
 from teaagent.governance.release_eval import (
+    format_gate_summary,
     run_release_eval_gate,
     should_block_release,
 )
+from teaagent.governance.release_gate import EVAL_EXECUTION_ADVISORY_NOTE
 
 
 def test_conversational_corpus_covers_four_axes() -> None:
@@ -76,3 +78,14 @@ def test_seeded_regression_fixture_blocks_release() -> None:
     assert not os.path.exists(tmp_path), (
         f'Temporary directory {tmp_path} was not cleaned up'
     )
+
+
+def test_release_gate_summary_discloses_simulated_execution() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        result = run_release_eval_gate(tmp, seed_failure=False)
+    summary = format_gate_summary(result)
+    assert EVAL_EXECUTION_ADVISORY_NOTE in summary
+    assert result.simulated is True
+    assert result.advisory_only is True
+    assert '"simulated": true' in summary
+    assert '"advisory_only": true' in summary

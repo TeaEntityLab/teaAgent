@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
+import hashlib
+import importlib.metadata
+import io
+import json
 import tempfile
+from contextlib import redirect_stdout
 from pathlib import Path
 
 import pytest
 
 from teaagent.env_config import (
     EnvironmentSpec,
+    EnvLockResolutionError,
     LockEntry,
     Lockfile,
     PackageSpec,
@@ -17,9 +23,12 @@ from teaagent.env_config import (
     lockfile_to_dict,
     parse_teaagent_toml,
     read_lockfile,
+    resolve_installed_entry,
+    verify_installed_entry,
     verify_lockfile_integrity,
     write_lockfile,
 )
+from teaagent.env_manager import EnvironmentManager
 
 
 def test_package_spec_defaults() -> None:
@@ -115,14 +124,73 @@ version = "1.10.0"
         assert spec.tools == ['ripgrep']
 
 
-def test_lockfile_generation() -> None:
-    spec = EnvironmentSpec(packages=[PackageSpec(name='ruff', version='0.4.0')])
+def test_generate_lockfile_installed_pytest() -> None:
+    spec = EnvironmentSpec(packages=[PackageSpec(name='pytest')])
     lockfile = generate_lockfile(spec, '3.11')
-    assert lockfile.python_version == '3.11'
     assert len(lockfile.entries) == 1
-    assert lockfile.entries[0].name == 'ruff'
-    assert lockfile.entries[0].version == '0.4.0'
-    assert len(lockfile.lockfile_hash) > 0
+    entry = lockfile.entries[0]
+    assert entry.name == 'pytest'
+    assert entry.version == importlib.metadata.version('pytest')
+    assert entry.hash
+    assert entry.source == 'installed'
+    assert verify_lockfile_integrity(lockfile)
+
+
+def test_generate_lockfile_missing_package_raises() -> None:
+    spec = EnvironmentSpec(
+        packages=[PackageSpec(name='teaagent-nonexistent-package-xyz123')]
+    )
+    with pytest.raises(
+        EnvLockResolutionError,
+        match="cannot lock 'teaagent-nonexistent-package-xyz123'",
+    ):
+        generate_lockfile(spec, '3.11')
+
+
+def test_resolve_installed_entry_includes_extras() -> None:
+    entry = resolve_installed_entry(PackageSpec(name='pytest', extras=['dev']))
+    assert entry.extras == ['dev']
+
+
+def test_verify_installed_entry_round_trip() -> None:
+    entry = resolve_installed_entry(PackageSpec(name='pytest'))
+    ok, reason = verify_installed_entry(entry)
+    assert ok is True
+    assert reason == ''
+
+
+def test_env_lock_round_trip_verify_and_tamper(tmp_path: Path) -> None:
+    config = tmp_path / 'teaagent.toml'
+    config.write_text(
+        """
+[env]
+packages = ["pytest"]
+""",
+        encoding='utf-8',
+    )
+    manager = EnvironmentManager(tmp_path)
+    spec = manager.load_spec()
+    lockfile = generate_lockfile(spec, '3.11')
+    write_lockfile(lockfile, manager._lockfile_path)
+
+    assert manager.verify() is True
+
+    tampered = Lockfile(
+        python_version=lockfile.python_version,
+        environment_type=lockfile.environment_type,
+        entries=[
+            LockEntry(
+                name=lockfile.entries[0].name,
+                version=lockfile.entries[0].version,
+                hash='deadbeef',
+                source=lockfile.entries[0].source,
+                extras=lockfile.entries[0].extras,
+            )
+        ],
+        lockfile_hash=lockfile.lockfile_hash,
+    )
+    write_lockfile(tampered, manager._lockfile_path)
+    assert manager.verify() is False
 
 
 def test_lockfile_serialization() -> None:
@@ -200,8 +268,29 @@ def test_read_missing_lockfile() -> None:
 
 
 def test_lockfile_integrity_verification() -> None:
-    spec = EnvironmentSpec(packages=[PackageSpec(name='ruff', version='0.4.0')])
-    lockfile = generate_lockfile(spec, '3.11')
+    lockfile = Lockfile(
+        python_version='3.11',
+        environment_type='uv',
+        entries=[
+            LockEntry(
+                name='ruff',
+                version='0.4.0',
+                hash='abc123',
+                source='pypi',
+            )
+        ],
+    )
+    lockfile_dict = lockfile_to_dict(lockfile)
+    lockfile_dict['lockfile_hash'] = ''
+    lockfile_hash = hashlib.sha256(
+        json.dumps(lockfile_dict, sort_keys=True).encode()
+    ).hexdigest()
+    lockfile = Lockfile(
+        python_version=lockfile.python_version,
+        environment_type=lockfile.environment_type,
+        entries=lockfile.entries,
+        lockfile_hash=lockfile_hash,
+    )
     assert verify_lockfile_integrity(lockfile)
 
 
@@ -220,3 +309,86 @@ def test_lockfile_integrity_tampered() -> None:
         lockfile_hash='wrong_hash',
     )
     assert not verify_lockfile_integrity(lockfile)
+
+
+def test_env_lock_command_writes_lockfile(tmp_path: Path) -> None:
+    from teaagent.cli import main
+
+    config = tmp_path / 'teaagent.toml'
+    config.write_text(
+        """
+[env]
+packages = ["pytest"]
+""",
+        encoding='utf-8',
+    )
+    lock_path = tmp_path / 'teaagent.lock'
+    output = io.StringIO()
+
+    with redirect_stdout(output):
+        exit_code = main(['env', 'lock', '--root', str(tmp_path)])
+
+    payload = json.loads(output.getvalue())
+    assert exit_code == 0
+    assert payload['status'] == 'success'
+    assert payload['packages_count'] == 1
+    assert lock_path.exists()
+
+
+def test_env_lock_command_missing_package_returns_error(tmp_path: Path) -> None:
+    from teaagent.cli import main
+
+    config = tmp_path / 'teaagent.toml'
+    config.write_text(
+        """
+[env]
+packages = ["teaagent-nonexistent-package-xyz123"]
+""",
+        encoding='utf-8',
+    )
+    lock_path = tmp_path / 'teaagent.lock'
+    output = io.StringIO()
+
+    with redirect_stdout(output):
+        exit_code = main(['env', 'lock', '--root', str(tmp_path)])
+
+    payload = json.loads(output.getvalue())
+    assert exit_code == 1
+    assert payload['status'] == 'error'
+    assert 'cannot lock' in payload['message']
+    assert not lock_path.exists()
+
+
+def test_env_lock_command_missing_config_returns_error(tmp_path: Path) -> None:
+    from teaagent.cli import main
+
+    output = io.StringIO()
+    with redirect_stdout(output):
+        exit_code = main(['env', 'lock', '--root', str(tmp_path)])
+
+    payload = json.loads(output.getvalue())
+    assert exit_code == 1
+    assert payload['status'] == 'error'
+    assert 'teaagent.toml not found' in payload['message']
+
+
+def test_env_lock_subcommand_visible_in_help() -> None:
+    import argparse
+
+    from teaagent.cli import build_parser
+
+    parser = build_parser()
+    env_parser = None
+    for action in parser._actions:
+        if isinstance(action, argparse._SubParsersAction):
+            env_parser = action.choices.get('env')
+            if env_parser is not None:
+                break
+    assert env_parser is not None
+
+    help_text = env_parser.format_help()
+    assert 'Generate lockfile from currently installed packages' in help_text
+    assert 'lock' in help_text.lower()
+    assert 'provision' in help_text.lower()
+    assert 'verify' in help_text.lower()
+    assert '==SUPPRESS==' not in help_text

@@ -14,7 +14,13 @@ if TYPE_CHECKING:
 from teaagent import __version__
 from teaagent.chat_agent import ChatAgentConfig
 from teaagent.chat_session_controller import ChatSessionController, SessionState
-from teaagent.cockpit import CockpitState, ControlCockpitState, build_control_cockpit
+from teaagent.cockpit import (
+    CockpitState,
+    ControlCockpitState,
+    build_budget_state,
+    build_control_cockpit,
+    discover_recoverable_state,
+)
 from teaagent.context import ContextCompactor as _ContextCompactor
 from teaagent.context_health import ContextHealthScore, compute_context_health
 from teaagent.context_pressure import (
@@ -190,10 +196,21 @@ class TeaAgentTUI:
             ctx_health: ContextHealthScore | None = compute_context_health(
                 workspace_root=str(self.root),
             )
+            spent_cents = self._get_session_cost_cents()
+            cost_state = self._determine_cost_state()
             self._cockpit_state = CockpitState(
                 workspace_root=str(self.root),
                 approval_scope=' '.join(approval_scope_parts),
                 context_health=ctx_health.to_dict() if ctx_health else None,
+                budget=build_budget_state(
+                    spent_cents=spent_cents,
+                    limit_cents=self._max_cost_budget_cents,
+                    cost_state=cost_state,
+                ),
+                recoverable=discover_recoverable_state(
+                    self.root,
+                    has_checkpoint=self._checkpoint_created,
+                ),
             )
         except Exception:
             logger.debug('cockpit state unavailable', exc_info=True)
@@ -1063,9 +1080,27 @@ class TeaAgentTUI:
         paths but is intentionally not invoked here (guarded by
         tests/tui/test_tui_undo_scope.py).
         """
+        from teaagent.run_undo import (
+            PARTIAL_UNDO_SHELL_WARNING,
+            audit_events_used_shell_mutate,
+        )
+
+        store = RunStore(self.root)
+        run_id = store.latest_run_with_undo()
+        shell_partial_undo = False
+        if run_id is not None:
+            try:
+                shell_partial_undo = audit_events_used_shell_mutate(
+                    store.show_run(run_id)
+                )
+            except FileNotFoundError:
+                shell_partial_undo = False
+
         controller = self._get_chat_controller()
         if controller.undo_last_run():
             self.output_fn('undo: journal undo completed (file-level restore)')
+            if shell_partial_undo:
+                self.output_fn(PARTIAL_UNDO_SHELL_WARNING)
             return
         self.output_fn(
             'undo: nothing to undo — no undo journal found. Try running a task first.'

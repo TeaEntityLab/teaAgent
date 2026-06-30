@@ -7,6 +7,7 @@ required linters, compilers, and library runtimes for reproducible agent executi
 from __future__ import annotations
 
 import hashlib
+import importlib.metadata
 import json
 import sys
 from dataclasses import dataclass, field
@@ -60,6 +61,20 @@ class LockEntry:
     hash: str  # SHA256 hash of the package/binary
     source: str
     extras: list[str] = field(default_factory=list)
+
+
+ENV_LOCK_NOT_IMPLEMENTED_MSG = (
+    'env lock cannot produce verifiable checksums yet; '
+    'real package resolution is not implemented'
+)
+
+
+class EnvLockNotImplementedError(NotImplementedError):
+    """Raised when lockfile generation cannot produce verifiable package checksums."""
+
+
+class EnvLockResolutionError(LookupError):
+    """Raised when a declared package cannot be resolved from the current environment."""
 
 
 @dataclass(frozen=True)
@@ -124,6 +139,69 @@ def parse_teaagent_toml(path: Path) -> EnvironmentSpec:
     )
 
 
+def _installed_distribution_hash(name: str) -> str:
+    """Compute a stable content hash for an installed distribution."""
+    dist = importlib.metadata.distribution(name)
+    files = dist.files
+    if files is not None:
+        hashed_lines = sorted(
+            f'{path} {file_hash}'
+            for path in files
+            if (file_hash := path.hash) is not None
+        )
+        if hashed_lines:
+            return hashlib.sha256('\n'.join(hashed_lines).encode()).hexdigest()
+
+    try:
+        metadata = dist.read_text('METADATA')
+    except (FileNotFoundError, KeyError, OSError):
+        metadata = None
+    if metadata is not None:
+        return hashlib.sha256(metadata.encode()).hexdigest()
+
+    version = importlib.metadata.version(name)
+    return hashlib.sha256(f'{name}{version}'.encode()).hexdigest()
+
+
+def resolve_installed_entry(pkg: PackageSpec) -> LockEntry:
+    """Build a lock entry from the package as installed in the current interpreter."""
+    try:
+        version = importlib.metadata.version(pkg.name)
+    except importlib.metadata.PackageNotFoundError as exc:
+        raise EnvLockResolutionError(
+            f"cannot lock '{pkg.name}': not installed in the current environment; "
+            'run env provision first'
+        ) from exc
+
+    return LockEntry(
+        name=pkg.name,
+        version=version,
+        hash=_installed_distribution_hash(pkg.name),
+        source='installed',
+        extras=list(pkg.extras),
+    )
+
+
+def verify_installed_entry(entry: LockEntry) -> tuple[bool, str]:
+    """Verify a lock entry against the currently installed package."""
+    try:
+        installed_version = importlib.metadata.version(entry.name)
+    except importlib.metadata.PackageNotFoundError:
+        return False, 'not installed in the current environment'
+
+    if installed_version != entry.version:
+        return (
+            False,
+            f'version mismatch (installed {installed_version}, locked {entry.version})',
+        )
+
+    installed_hash = _installed_distribution_hash(entry.name)
+    if installed_hash != entry.hash:
+        return False, 'content hash mismatch'
+
+    return True, ''
+
+
 def generate_lockfile(spec: EnvironmentSpec, python_version: str) -> Lockfile:
     """Generate a lockfile from environment specification.
 
@@ -133,45 +211,33 @@ def generate_lockfile(spec: EnvironmentSpec, python_version: str) -> Lockfile:
 
     Returns:
         Lockfile with resolved dependencies.
+
+    Raises:
+        EnvLockResolutionError: If a declared package is not installed.
     """
-    # In a real implementation, this would resolve package versions
-    # and compute actual hashes. For now, we create placeholder entries.
-    entries = []
-    for pkg in spec.packages:
-        # Placeholder hash - in production, compute actual package hash
-        hash_value = hashlib.sha256(
-            f'{pkg.name}:{pkg.version or "latest"}'.encode()
-        ).hexdigest()
-
-        entries.append(
-            LockEntry(
-                name=pkg.name,
-                version=pkg.version or 'latest',
-                hash=hash_value,
-                source=pkg.source or 'pypi',
-                extras=pkg.extras,
-            )
-        )
-
-    lockfile = Lockfile(
+    entries = sorted(
+        [resolve_installed_entry(pkg) for pkg in spec.packages],
+        key=lambda entry: entry.name,
+    )
+    lockfile_without_hash = Lockfile(
         python_version=python_version,
         environment_type=spec.environment_type,
         entries=entries,
+        lockfile_hash='',
     )
-
-    # Compute lockfile integrity hash
-    lockfile_dict = lockfile_to_dict(lockfile)
+    lockfile_dict = lockfile_to_dict(lockfile_without_hash)
     lockfile_dict['lockfile_hash'] = ''
     lockfile_hash = hashlib.sha256(
         json.dumps(lockfile_dict, sort_keys=True).encode()
     ).hexdigest()
-
-    return Lockfile(
-        python_version=lockfile.python_version,
-        environment_type=lockfile.environment_type,
-        entries=lockfile.entries,
+    result = Lockfile(
+        python_version=python_version,
+        environment_type=spec.environment_type,
+        entries=entries,
         lockfile_hash=lockfile_hash,
     )
+    assert verify_lockfile_integrity(result)
+    return result
 
 
 def lockfile_to_dict(lockfile: Lockfile) -> dict[str, Any]:

@@ -33,7 +33,7 @@ Not Option C (contradicts 2026-06-13 ratification).
 - Competitor surveys → **hypothesis intake only** until owner validates (harness-first §5.1).
 - `legacy-competitive` items (CP-4 escalation, CP-6, SCL-P0, full M4 cloud/SaaS) stay **on hold** without friction evidence or `owner-override`.
 - **Carve-out:** M4 **background lifecycle + operator cockpit** may proceed under `owner-override: co-maintainer dogfood` (harness-first §1) — not enterprise multi-tenant GTM.
-- **TASK-007 / DR-001:** Scaffold done (7a); ≥5 owner evidence entries (7b) still required; agents must not simulate evidence.
+- **TASK-007 / DR-001:** Scaffold done (7a); ≥5 owner evidence entries (7b) **met 2026-06-22** (F2/F3/F6/F7/F8 in operator-friction-log). Agents must not simulate further evidence.
 
 ### T5 — Release gates: **Option C (split gate)**
 

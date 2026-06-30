@@ -35,7 +35,7 @@ from __future__ import annotations
 import base64
 import json
 import logging
-from collections.abc import Generator
+from collections.abc import Generator, Iterable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
@@ -61,6 +61,32 @@ _DISCARD_PENDING_EVENTS = frozenset(
         'tool_call_denied',
     }
 )
+
+# Shell tools that mutate the workspace but are not captured by the undo journal.
+_SHELL_MUTATE_TOOLS = frozenset(
+    {
+        'workspace_run_shell_mutate',
+        'workspace_run_shell',
+    }
+)
+
+PARTIAL_UNDO_SHELL_WARNING = 'Undo is partial — shell mutations are not reversed.'
+
+
+def audit_events_used_shell_mutate(
+    events: Iterable[Mapping[str, Any]],
+) -> bool:
+    """Return True if *events* include a completed shell-mutating tool call."""
+    for event in events:
+        if event.get('event_type') != 'tool_call_completed':
+            continue
+        payload = event.get('payload')
+        if not isinstance(payload, dict):
+            continue
+        tool_name = payload.get('tool_name')
+        if isinstance(tool_name, str) and tool_name in _SHELL_MUTATE_TOOLS:
+            return True
+    return False
 
 
 @dataclass(frozen=True)

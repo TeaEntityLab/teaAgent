@@ -1,6 +1,6 @@
 # Backlog Priority
 
-> **Last reviewed:** 2026-06-06
+> **Last reviewed:** 2026-06-28
 > **Review trigger:** Backlog priorities or shipped/beta status claims change.
 > **Scheduling gate (2026-06-22):** DR-001 met — 5 owner evidence entries in
 > [Operator Friction Log](work-log/operator-friction-log.md). New UX work should cite
@@ -30,14 +30,14 @@ DR-001 (owner friction evidence) completes.
 | --- | --- | --- |
 | CP-4 OpenCode Gap Watch | `legacy-competitive` | Monitoring only; escalation → feature sprint **blocked** without friction evidence |
 | CP-6 Community Presence | `legacy-competitive` | **Hold** — external acquisition non-goal |
-| M4 cloud/background/control-plane cockpit | `legacy-competitive` | **Hold** — T4 owner decision |
+| M4 cloud/background/control-plane cockpit | `legacy-competitive` | **Hold except DR-006 carve-out** — background lifecycle + operator cockpit may proceed under owner-override co-maintainer dogfood; cloud/SaaS/multi-tenant GTM held (T4 owner decision) |
 | RBAC enforce flip (ADR 0031, 2026-09-12) | `governance-gap` | **Hold** until owner demand signal |
 | TASK-006 RunEvent taxonomy + M0 | `harness-migration` | **Promote** |
 | TASK-001 constitution repositioning | `owner-override` | **Promote** (harness-first ratified) |
 | TASK-002 docs tiering | `harness-migration` | **Promote** |
 | TASK-003 test typing pass | `harness-migration` | **Promote** |
 | TASK-004 flagship tests off deprecated approval | `governance-gap` | **Promote** |
-| TASK-007 friction log bootstrap | `friction-driven` | **Owner-blocking** — 0/5 evidence entries |
+| TASK-007 friction log bootstrap | `friction-driven` | **Met (2026-06-22)** — 5/5 owner evidence entries (F2/F3/F6/F7/F8); DR-001 7b satisfied |
 | Phase 4–6 Beta (consensus, sandbox, control plane) | `owner-override` | Shipped; **freeze** new platform surface per T3/T4 |
 | Competitive refresh release gate | `legacy-competitive` | **Resolved (DR-006 T5):** split gate — CI blocks on `main`; manual survey quarterly |
 | Seven-control-loops SCL-P0 tickets | `legacy-competitive` | **Hold** until owner validates in friction log |

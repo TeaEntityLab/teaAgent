@@ -43,21 +43,21 @@ def _resolve_budget_limits(
     sub_def: SubagentDef | None,
     parent_config: Any,
 ) -> tuple[int, int]:
-    resolved_max_iterations = max_iterations or (
-        sub_def.max_iterations if sub_def else 5
-    )
-    resolved_max_tool_calls = max_tool_calls or (
-        sub_def.max_tool_calls if sub_def else 5
-    )
-    resolved_max_iterations = min(
-        int(resolved_max_iterations),
+    # ADR 0040/0041 Phase 1: clamp child budgets via the canonical shared
+    # invariant so the parent-clamp rule is defined once and both the parent
+    # contract and this subagent path invoke it (no hand-kept mirror). Imported
+    # locally to avoid a runner<->subagents import cycle at module load.
+    from teaagent.runner._invariants import compute_clamped_budget
+
+    child_max_iterations = max_iterations or (sub_def.max_iterations if sub_def else 5)
+    child_max_tool_calls = max_tool_calls or (sub_def.max_tool_calls if sub_def else 5)
+    clamped = compute_clamped_budget(
+        child_max_iterations,
+        child_max_tool_calls,
         int(parent_config.max_iterations),
-    )
-    resolved_max_tool_calls = min(
-        int(resolved_max_tool_calls),
         int(parent_config.max_tool_calls),
     )
-    return resolved_max_iterations, resolved_max_tool_calls
+    return clamped.max_iterations, clamped.max_tool_calls
 
 
 def _resolve_subagent_isolation(

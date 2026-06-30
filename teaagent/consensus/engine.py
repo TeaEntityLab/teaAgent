@@ -428,6 +428,15 @@ class ConsensusEngine:
         """
         return self.voting_mechanism.list_active_votings()
 
+    def list_all_consensus(self) -> List[ConsensusState]:
+        """List every persisted consensus state (active and completed).
+
+        Reads directly from ``self.voting_mechanism._active_votes``, which is
+        the in-memory store hydrated by ``_load_state`` and updated on each
+        consensus mutation until ``cleanup_old_consensus`` removes entries.
+        """
+        return list(self.voting_mechanism._active_votes.values())
+
     def cleanup_old_consensus(self, older_than_seconds: int = 3600) -> int:
         """Clean up old consensus states.
 

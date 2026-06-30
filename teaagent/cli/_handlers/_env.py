@@ -89,7 +89,11 @@ def env_lock_command(args: argparse.Namespace) -> int:
         manager = EnvironmentManager(args.root)
         spec = manager.load_spec()
 
-        from teaagent.env_config import generate_lockfile, write_lockfile
+        from teaagent.env_config import (
+            EnvLockResolutionError,
+            generate_lockfile,
+            write_lockfile,
+        )
 
         lockfile = generate_lockfile(
             spec, f'{sys.version_info.major}.{sys.version_info.minor}'
@@ -105,6 +109,14 @@ def env_lock_command(args: argparse.Namespace) -> int:
         )
         return 0
     except FileNotFoundError as exc:
+        print_json(
+            {
+                'status': 'error',
+                'message': str(exc),
+            }
+        )
+        return 1
+    except EnvLockResolutionError as exc:
         print_json(
             {
                 'status': 'error',

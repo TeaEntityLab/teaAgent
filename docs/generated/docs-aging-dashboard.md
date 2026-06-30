@@ -4,7 +4,7 @@
 
 **Stale threshold:** 90 days since `Last reviewed`
 **Current-truth docs scanned:** 17
-**Needs attention (working tier only):** 11
+**Needs attention (working tier only):** 12
 **Archive-tier docs (exempt from staleness):** 0
 
 Regenerate: `python3 scripts/report_docs_aging.py`
@@ -28,13 +28,14 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 | Document | Status | Last reviewed | File mtime | Notes |
 | --- | --- | --- | --- | --- |
 | `docs/daily-driver-current-status.md` | stale_by_mtime | 2026-06-25 | 2026-06-26 | File modified after last reviewed date |
+| `docs/plans/ticket-plans/index.md` | stale_by_mtime | 2026-06-18 | 2026-06-30 | File modified after last reviewed date |
 | `docs/USAGE.md` | stale_by_mtime | 2026-06-06 | 2026-06-21 | Missing owner banner; File modified after last reviewed date |
 
 ### docs
 
 | Document | Status | Last reviewed | File mtime | Notes |
 | --- | --- | --- | --- | --- |
-| `docs/INDEX.md` | stale_by_mtime | 2026-06-17 | 2026-06-22 | Missing owner banner; File modified after last reviewed date |
+| `docs/INDEX.md` | stale_by_mtime | 2026-06-17 | 2026-06-28 | Missing owner banner; File modified after last reviewed date |
 
 ### governance
 
@@ -55,11 +56,11 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 | --- | --- | --- | --- | --- |
 | `docs/release-checklist.md` | stale_by_mtime | 2026-06-07 | 2026-06-22 | Missing owner banner; File modified after last reviewed date |
 
-### strategy
+### roadmap
 
 | Document | Status | Last reviewed | File mtime | Notes |
 | --- | --- | --- | --- | --- |
-| `docs/backlog-priority.md` | stale_by_mtime | 2026-06-06 | 2026-06-22 | Missing owner banner; File modified after last reviewed date |
+| `docs/roadmap-status.md` | stale_by_mtime | 2026-06-28 | 2026-06-30 | File modified after last reviewed date |
 
 ### verification
 

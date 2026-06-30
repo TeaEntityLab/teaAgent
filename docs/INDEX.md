@@ -117,7 +117,7 @@ Use this short list instead of scanning every dated analysis file.
 
 | Plan | Use it for |
 | --- | --- |
-| [Work Direction Decomposition](plans/work-direction-decomposition-2026-06-10.md) | Full WD-A … WD-H backlog with acceptance gates. |
+| [Work Direction Decomposition](plans/work-direction-decomposition-2026-06-10.md) | WD-A … WD-H backlog with acceptance gates; **execution closed except WDH-002 partial** — see [Work Direction Execution Index](plans/work-direction-execution-index-2026-06-10.md) for current closure status. |
 | [Documentation Optimization Master Plan](plans/documentation-optimization-master-plan-2026-06-04.md) | Prioritizing documentation work by stability, UX, risk, and ROI. |
 | [Documentation Optimization Work Items](work-log/documentation-optimization-work-items-2026-06-04.md) | Concrete task execution ledger. |
 | [Daily-Driver Complete Work Plan](plans/daily-driver-complete-work-plan-risk-roi-2026-06-04.md) | Historical daily-driver risk, feasibility, ROI, and sequence; use harness-first direction for current persona claims. |
