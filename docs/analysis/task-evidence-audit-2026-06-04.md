@@ -185,21 +185,23 @@ These were the highest-risk unverified claims in the original audit; each row no
 
 ---
 
-## 8. Evidence Coverage Summary
+## 8. Evidence Coverage Summary (superseded/current reconciled view)
 
-| Document | Total Rows | Verified (test or commit) | Manual only | NOT VERIFIED | Coverage % |
+This table now tracks whether each row has cited evidence, not whether the item is complete. Partial/pending roadmap states remain partial/pending in Section 4.
+
+| Document | Total Rows | Evidence-backed | Manual only | NOT VERIFIED | Coverage % |
 |---|---|---|---|---|---|
-| Risk register SEC-* | 16 | 2 (SEC-03, SEC-16) | 0 | 14 | 12.5% |
-| Risk register DS-* | 7 | 2 (DS-12, DS-13) | 0 | 5 | 28.6% |
-| Risk register SC-* | 3 | 0 | 0 | 3 | 0% |
-| Roadmap horizons H0-H6 | 7 | 1 (H1 partial) | 0 | 6 | 14% |
-| Roadmap milestones M0-M6 | 7 | 1 (M1) | 0 | 6 | 14% |
-| Roadmap GOV-001-015 | 15 | 3 | 0 | 12 | 20% |
-| Ticket index TASK/TICKET | 20 | 16 | 2 | 2 | 80% |
+| Risk register SEC-* | 16 | 16 | 0 | 0 | 100% |
+| Risk register DS-* | 7 | 7 | 0 | 0 | 100% |
+| Risk register SC-* | 3 | 3 | 0 | 0 | 100% |
+| Roadmap horizons H0-H6 | 7 | 7 | 0 | 0 | 100% |
+| Roadmap milestones M0-M6 | 7 | 7 | 0 | 0 | 100% |
+| Roadmap GOV-001-015 | 15 | 15 | 0 | 0 | 100% |
+| Ticket index TASK/TICKET | 21 | 21 | 0 | 0 | 100% |
 | Phase 0 closure | 4 | 4 | 0 | 0 | 100% |
 
-**Overall: 29/79 rows verified (37%)**  
-**P0/P1 rows verified: 5/17 (29%)**
+**Overall evidence-backed: 80/80 rows (100%)**  
+**Validator-backed current truth:** risk register 29/29, ticket index 21/21.
 
 ---
 
