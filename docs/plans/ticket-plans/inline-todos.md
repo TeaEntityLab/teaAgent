@@ -1,5 +1,5 @@
 # Inline TODO / FIXME / XXX Catalog
-**Generated:** 2026-06-02 | **Last reviewed:** 2026-06-30 | **Scope:** `teaagent/` and `scripts/`
+**Generated:** 2026-06-02 | **Last reviewed:** 2026-07-01 | **Scope:** `teaagent/` and `scripts/`
 
 ---
 
@@ -56,6 +56,8 @@ audit remains traceable without re-opening closed work.
 | `run_store.py:143-149` | `task_for_run` raises on REPL suspensions | Fixed: TICKET-16 Phase 2 writes `run_started` at suspend time |
 | `_chat.py:538-586` | `chat_command` ignores `args.task` | Fixed: TASK-DD2-001 forwards positional task to `run_tui` |
 | `tui/__init__.py:1107` | `_load_tui_state` unconditionally overwrites `self.root` | Fixed: TASK-DD2-002 guards with `_root_explicit` flag |
+| `swarm.py::_review_subagent` | returned a hardcoded mock review (`score=0.8`, `findings=['Mock code review finding']`) presented as a real review | Fixed 2026-07-01: deterministic evidence-based review scoring observed result facts (success, output, test results, relative runtime); no fabricated findings; `tests/test_swarm.py`, `tests/test_inline_todo_resolutions.py` |
+| `governance/repo_map_benchmark.py::_execute_repo_map_query` | "placeholder" content grep with a false "in production, this would call the actual repo-map" claim; module still labeled `experimental — unwired` after the M5 release-gate wiring | Fixed 2026-07-01: deterministic symbol-aware AST scan (the real query the benchmark measures); module docstring now states its wired status; `tests/test_repo_map_benchmark.py` |
 
 ---
 
@@ -69,4 +71,4 @@ audit remains traceable without re-opening closed work.
 | Implicit deferrals resolved (2026-06-30) | 6 |
 | Implicit architectural TODOs (ticketed) | 0 active |
 | **Active total** | **0 review-needed** |
-| Fixed historical entries retained | 11 |
+| Fixed historical entries retained | 13 |

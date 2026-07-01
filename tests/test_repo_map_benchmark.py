@@ -185,3 +185,50 @@ def test_convert_to_eval_test(benchmark_runner):
     assert eval_test.name == benchmark.name
     assert 'query' in eval_test.metadata
     assert 'codebase_path' in eval_test.metadata
+
+
+def test_query_tokens_drops_stop_words():
+    """Generic stop words are dropped; meaningful tokens (with underscores) kept."""
+    assert RepoMapBenchmarkRunner._query_tokens('find authentication functions') == [
+        'authentication',
+        'functions',
+    ]
+    assert RepoMapBenchmarkRunner._query_tokens('release_eval_repo_map_anchor') == [
+        'release_eval_repo_map_anchor'
+    ]
+
+
+def test_defined_symbols_extracts_defs_classes_assignments():
+    """AST symbol extraction returns lowercased functions, classes, and assignments."""
+    symbols = RepoMapBenchmarkRunner._defined_symbols(
+        'def Foo():\n    x = 1\n\nclass Bar:\n    pass\n'
+    )
+    assert {'foo', 'bar', 'x'} <= symbols
+
+
+def test_query_matches_by_symbol_not_only_content(benchmark_runner):
+    """The query maps to files that DEFINE a matching symbol, not merely mention it."""
+    runner, codebase_root, _ = benchmark_runner
+    (codebase_root / 'defines.py').write_text('def payment_gateway():\n    return 1\n')
+    (codebase_root / 'mentions.py').write_text(
+        '# payment_gateway is referenced only in this comment\nVALUE = 2\n'
+    )
+    files = runner._execute_repo_map_query(codebase_root, 'payment_gateway', {})
+    assert 'defines.py' in files
+    assert 'mentions.py' not in files
+
+
+def test_query_is_deterministic(benchmark_runner):
+    """Repeated queries over the same corpus return identical results."""
+    runner, codebase_root, _ = benchmark_runner
+    first = runner._execute_repo_map_query(codebase_root, 'test', {})
+    second = runner._execute_repo_map_query(codebase_root, 'test', {})
+    assert first == second
+
+
+def test_unparseable_module_falls_back_to_content(benchmark_runner):
+    """A file that is not valid Python still matches via raw-content fallback."""
+    runner, codebase_root, _ = benchmark_runner
+    (codebase_root / 'broken.py').write_text('def (:\n    zzmarker\n')
+    files = runner._execute_repo_map_query(codebase_root, 'zzmarker', {})
+    assert 'broken.py' in files

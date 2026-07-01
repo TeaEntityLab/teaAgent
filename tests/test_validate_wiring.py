@@ -30,6 +30,19 @@ def test_analyze_wiring_finds_unwired_watch_modules() -> None:
     assert 'teaagent.eval_suite' not in report.unwired_watch
 
 
+def test_repo_map_benchmark_is_wired_after_release_gate_integration() -> None:
+    """repo_map_benchmark must stay wired after M5 release-gate integration.
+
+    If this fails, either the release-gate wiring was removed or the module
+    regained the ``experimental — unwired`` label without cause.
+    """
+    report = analyze_wiring()
+    module = 'teaagent.governance.repo_map_benchmark'
+    assert module in WATCH_MODULES
+    assert module in report.reachable
+    assert module not in report.unwired_watch
+
+
 def test_unlabeled_fixture_fails_validation() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)

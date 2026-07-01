@@ -1006,21 +1006,66 @@ class SwarmManager:
     def _review_subagent(
         self, reviewer: SubagentResult, target: SubagentResult
     ) -> CodeReview:
-        """Review target subagent result from reviewer's perspective."""
-        # Placeholder for actual code review logic
-        # In production, this would:
-        # 1. Compare the code changes between branches
-        # 2. Run tests on both branches
-        # 3. Use LLM to generate review comments
-        # 4. Score based on test results and code quality
+        """Produce a deterministic, evidence-based review of ``target``.
 
-        # For now, return a mock review
+        This is a heuristic review over the facts the swarm actually observes for
+        a subagent run — success/failure, produced output, reported test results,
+        and execution time relative to the reviewer. It is not a semantic diff or
+        LLM code review; it never fabricates findings, and every finding cites an
+        observed fact so ``select_best_result`` scores on real signal.
+        """
+        findings: list[str] = []
+        score = 0.0
+
+        if target.success:
+            score += 0.5
+            findings.append(f'target {target.task_id} completed successfully')
+        else:
+            detail = f': {target.error}' if target.error else ''
+            findings.append(f'target {target.task_id} failed{detail}')
+
+        if target.output:
+            score += 0.2
+            findings.append(f'produced {len(target.output)} output field(s)')
+        else:
+            findings.append('produced no output')
+
+        passed = int(target.test_results.get('passed', 0) or 0)
+        failed = int(target.test_results.get('failed', 0) or 0)
+        if passed or failed:
+            total = passed + failed
+            score += 0.2 * (passed / total if total else 0.0)
+            findings.append(f'tests: {passed} passed / {failed} failed')
+
+        if target.execution_time_ms > 0 and reviewer.execution_time_ms > 0:
+            if target.execution_time_ms <= reviewer.execution_time_ms:
+                score += 0.1
+                findings.append(
+                    f'faster than reviewer {reviewer.task_id} '
+                    f'({target.execution_time_ms:.0f}ms <= '
+                    f'{reviewer.execution_time_ms:.0f}ms)'
+                )
+            else:
+                findings.append(
+                    f'slower than reviewer {reviewer.task_id} '
+                    f'({target.execution_time_ms:.0f}ms > '
+                    f'{reviewer.execution_time_ms:.0f}ms)'
+                )
+
+        score = max(0.0, min(1.0, score))
+        if not target.success:
+            recommendation = 'reject'
+        elif score >= 0.7:
+            recommendation = 'approve'
+        else:
+            recommendation = 'request_changes'
+
         return CodeReview(
             reviewer_task_id=reviewer.task_id,
             target_task_id=target.task_id,
-            score=0.8,  # Mock score
-            findings=['Mock code review finding'],
-            recommendation='approve',
+            score=round(score, 4),
+            findings=findings,
+            recommendation=recommendation,
         )
 
     def select_best_result(

@@ -1,5 +1,6 @@
 """Tests for eval suite framework (TASK-H5-001-01)."""
 
+from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import pytest
@@ -275,7 +276,7 @@ def test_eval_runner_run_suite(eval_runner):
     runner.add_test_to_suite(
         suite.suite_id,
         'Test 2',
-        EvalCategory.REPO_MAP_BENCHMARK,
+        EvalCategory.LONG_SESSION,
     )
 
     # Reload suite to get the updated tests
@@ -288,6 +289,40 @@ def test_eval_runner_run_suite(eval_runner):
     assert simulated, 'expected at least one simulated execution metadata stamp'
     assert simulated[0].metrics['executor'] == 'placeholder'
     assert simulated[0].metrics['advisory_only'] is True
+
+
+def test_eval_runner_repo_map_benchmark_executes_real_fixture(eval_runner):
+    """M5: a repo-map benchmark runs a real deterministic fixture, not a sim.
+
+    Regression guard for the release-gate wiring: the repo_map_benchmark
+    category must produce non-advisory ``fixture`` execution metadata and pass
+    when its expected symbols are actually defined in the target corpus.
+    """
+    runner, store = eval_runner
+    corpus = Path(store.root) / 'rmb-corpus'
+    corpus.mkdir(parents=True, exist_ok=True)
+    (corpus / 'anchor.py').write_text(
+        'def eval_suite_repo_map_anchor() -> int:\n    return 1\n', encoding='utf-8'
+    )
+    suite = runner.create_suite('Repo Map Suite')
+    runner.add_test_to_suite(
+        suite.suite_id,
+        'Repo Map',
+        EvalCategory.REPO_MAP_BENCHMARK,
+        metadata={
+            'codebase_path': str(corpus),
+            'query': 'eval_suite_repo_map_anchor',
+            'expected_files': ['anchor.py'],
+            'expected_functions': ['eval_suite_repo_map_anchor'],
+        },
+    )
+    suite = store.load_suite(suite.suite_id)
+    (result,) = runner.run_suite(suite)
+
+    assert result.status == EvalStatus.PASSED
+    assert result.metrics['execution_mode'] == 'fixture'
+    assert result.metrics['executor'] == 'repo_map_benchmark'
+    assert result.metrics['advisory_only'] is False
 
 
 def test_eval_runner_run_suite_with_category_filter(eval_runner):

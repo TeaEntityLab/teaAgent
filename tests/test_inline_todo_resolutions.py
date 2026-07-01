@@ -30,6 +30,7 @@ from teaagent.domain.workflow_engine import (
 )
 from teaagent.eval_suite import EvalRunner, EvalStore
 from teaagent.plugin_system import AgentPlugin, PluginRegistry
+from teaagent.swarm import CodeReview, SubagentResult, SwarmManager
 
 
 def _role_rule() -> ConsensusRule:
@@ -229,3 +230,47 @@ def test_explore_without_collaborator_returns_deterministic_context(tmp_path) ->
     assert context['exploration_enabled'] is False
     assert context['affected_files'] == ['auth.py']
     assert context['issue_type'] == 'bug'
+
+
+# --- #7 swarm review is evidence-based, not a hardcoded mock ------------------
+
+
+def test_swarm_review_scores_success_and_output(tmp_path) -> None:
+    """A successful, output-producing target scores on real signal, not 0.8 mock."""
+    manager = SwarmManager(root=tmp_path)
+    reviewer = SubagentResult(task_id='r', success=True, output={'a': 1})
+    target = SubagentResult(task_id='t', success=True, output={'a': 1, 'b': 2})
+    review = manager._review_subagent(reviewer, target)
+
+    assert isinstance(review, CodeReview)
+    assert review.target_task_id == 't'
+    assert review.recommendation == 'approve'
+    # Findings cite observed facts; the old mock string must be gone.
+    assert 'Mock code review finding' not in review.findings
+    assert any('completed successfully' in f for f in review.findings)
+    assert any('output field' in f for f in review.findings)
+
+
+def test_swarm_review_rejects_failed_target(tmp_path) -> None:
+    """A failed target is rejected with a lower score and an error-citing finding."""
+    manager = SwarmManager(root=tmp_path)
+    reviewer = SubagentResult(task_id='r', success=True, output={'a': 1})
+    target = SubagentResult(task_id='t', success=False, error='boom')
+    review = manager._review_subagent(reviewer, target)
+
+    assert review.recommendation == 'reject'
+    assert review.score < 0.7
+    assert any('boom' in f for f in review.findings)
+
+
+def test_swarm_review_is_deterministic(tmp_path) -> None:
+    """Identical inputs produce identical reviews (no randomness)."""
+    manager = SwarmManager(root=tmp_path)
+    reviewer = SubagentResult(task_id='r', success=True, execution_time_ms=100.0)
+    target = SubagentResult(
+        task_id='t', success=True, output={'x': 1}, execution_time_ms=50.0
+    )
+    first = manager._review_subagent(reviewer, target)
+    second = manager._review_subagent(reviewer, target)
+    assert first == second
+    assert any('faster than reviewer' in f for f in first.findings)

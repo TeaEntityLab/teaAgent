@@ -1,14 +1,18 @@
 """Repo-map benchmark automation for testing codebase understanding (TASK-H5-001-03).
 
-experimental — unwired
-
-This module provides automated benchmarking for repo-map functionality to ensure
-it works correctly across different codebase structures and sizes.
+Wired into the release eval gate (M5): ``teaagent.eval_corpus`` registers a
+deterministic repo-map fixture corpus in the release suite, and
+``teaagent.governance.release_gate`` blocks a release if the
+``repo_map_benchmark`` critical category has zero enabled tests. This module
+provides the benchmark harness (query, symbol extraction, F1 accuracy scoring)
+used to detect regressions in repo-map codebase understanding.
 """
 
 from __future__ import annotations
 
+import ast
 import logging
+import re
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -247,37 +251,75 @@ class RepoMapBenchmarkRunner:
 
         return result
 
+    _QUERY_STOP_WORDS = frozenset(
+        {'find', 'all', 'the', 'a', 'an', 'and', 'or', 'of', 'in', 'for', 'to', 'with'}
+    )
+
+    @classmethod
+    def _query_tokens(cls, query: str) -> list[str]:
+        """Split a query into meaningful lowercase tokens (drops generic stop words)."""
+        raw = re.split(r'[^A-Za-z0-9_]+', query.lower())
+        return [token for token in raw if token and token not in cls._QUERY_STOP_WORDS]
+
+    @staticmethod
+    def _defined_symbols(content: str) -> set[str]:
+        """Return lowercased names of functions, classes, and assignment targets.
+
+        Raises ``SyntaxError``/``ValueError`` when ``content`` is not parseable
+        Python; callers fall back to raw-content matching in that case.
+        """
+        tree = ast.parse(content)
+        names: set[str] = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef):
+                names.add(node.name.lower())
+            elif isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store):
+                names.add(node.id.lower())
+        return names
+
     def _execute_repo_map_query(
         self,
         root: Path,
         query: str,
         metadata: dict[str, Any],
     ) -> set[str]:
-        """Execute a repo-map query (placeholder implementation).
+        """Map a query to relevant files via a deterministic symbol-aware scan.
+
+        This is the repo-map query implementation the benchmark measures: it
+        parses each Python module with :mod:`ast`, collects defined symbol names
+        (functions, classes, assignment targets), and returns files whose defined
+        symbols or module path match any query token. Unparseable modules fall
+        back to raw-content matching. Iteration is sorted so results are
+        deterministic across runs.
 
         Args:
             root: Codebase root directory.
             query: Query to execute.
-            metadata: Additional metadata.
+            metadata: Additional metadata (reserved for future ranking).
 
         Returns:
-            Set of file paths.
+            Set of repo-relative file paths.
         """
-        # Placeholder: simulate repo-map query by searching for files
-        # In production, this would call the actual repo-map implementation
+        del metadata  # reserved; symbol/path matching is deterministic without it
+        tokens = self._query_tokens(query)
+        if not tokens:
+            return set()
 
-        # Simple file search based on query keywords
-        keywords = query.lower().split()
-        matching_files = set()
-
-        for file_path in root.rglob('*.py'):
+        matching_files: set[str] = set()
+        for file_path in sorted(root.rglob('*.py')):
             try:
-                content = file_path.read_text(encoding='utf-8').lower()
-                if any(keyword in content for keyword in keywords):
-                    matching_files.add(str(file_path.relative_to(root)))
-            except Exception:
-                logger.exception('repo-map query failed')
+                content = file_path.read_text(encoding='utf-8')
+            except OSError:
+                logger.exception('repo-map query read failed')
                 continue
+            relative = str(file_path.relative_to(root))
+            haystacks = {relative.lower()}
+            try:
+                haystacks |= self._defined_symbols(content)
+            except (SyntaxError, ValueError):
+                haystacks.add(content.lower())
+            if any(token in hay for token in tokens for hay in haystacks):
+                matching_files.add(relative)
 
         return matching_files
 
@@ -291,8 +333,6 @@ class RepoMapBenchmarkRunner:
         Returns:
             Set of function names.
         """
-        import re
-
         functions = set()
 
         for file_path in file_paths:
@@ -318,8 +358,6 @@ class RepoMapBenchmarkRunner:
         Returns:
             Set of class names.
         """
-        import re
-
         classes = set()
 
         for file_path in file_paths:
