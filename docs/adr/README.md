@@ -37,6 +37,7 @@ This directory contains all Architecture Decision Records (ADRs) for the TeaAgen
 | 0032 | Run Event Taxonomy and Event Spine | Accepted and Implemented | 2026-06-13 | 2026-06-17 |
 | 0040 | Reconcile the Second Execution Framework with the Primary Runner | Accepted | 2026-06-20 | - |
 | 0041 | Execution Surface Unification and Harness Thinning | Accepted | 2026-06-30 | 2026-06-30 |
+| 0042 | Shell-Mutation Reversibility Boundary (SEC-11) | Accepted | 2026-07-01 | 2027-01-01 (expiry review) |
 
 ## ADR Categories
 
@@ -56,7 +57,7 @@ This directory contains all Architecture Decision Records (ADRs) for the TeaAgen
 - **0040**: Reconcile the Second Execution Framework with the Primary Runner - Shared-invariant contract and CI gates
 - **0041**: Execution Surface Unification and Harness Thinning - Shared governed-execution layer; domain migration to skills/model
 
-### Governance Hardening (0009, 0022-0024, 0029, 0031-0032)
+### Governance Hardening (0009, 0022-0024, 0029, 0031-0032, 0042)
 - **0009**: 5-Loop Governance System - Comprehensive governance loops
 - **0022**: Centralized Approval Queue for Subagents - Batch approval management
 - **0023**: Strict Plan-Before-Write Enforcement - Plan validation
@@ -64,6 +65,7 @@ This directory contains all Architecture Decision Records (ADRs) for the TeaAgen
 - **0029**: Consensus Validation Deferred Behind Approval Queue - Consensus gate deferral
 - **0031**: Shadow Mode Exit Criteria - Policy/RBAC shadow→enforce promotion path
 - **0032**: Run Event Taxonomy and Event Spine - Unified run-lifecycle event contract
+- **0042**: Shell-Mutation Reversibility Boundary (SEC-11) - Two-tier undo (git-sandbox transactional rollback + disclosed journal fallback); external effects out of scope by design
 
 ### Multi-Agent & Swarm (0019)
 - **0019**: Phase 4 - Federated Swarm Consensus & Peer Attestations - Swarm coordination

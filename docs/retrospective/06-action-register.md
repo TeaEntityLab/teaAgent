@@ -62,6 +62,7 @@ Legend: ✅ Done (committed) · 🟡 In progress · ⬜ Not started · 🔵 Alre
 | G-P2-3 | Governance | Add iteration and tool-call warnings alongside `BudgetMonitor`'s existing cost monitoring. | `teaagent/budget_monitor.py:74-106` | Warnings added. | ✅ | Iteration and tool-call threshold warnings are implemented; `tests/test_budget_monitor_warnings.py` |
 | G-P2-4 | Governance | Document the `scope` field taxonomy (`call_id`/`payload_digest`/`session`/`preset`). | `teaagent/runner/_core.py:730,742` | Taxonomy documented in `docs/governance/scope-taxonomy.md`. | 🔵 | Already existed — `docs/governance/scope-taxonomy.md` with full taxonomy, blast radius, revocation, and implementation status |
 | G-P2-5 | Governance | Make `max_skill_md_lines` an error for installed (candidate-provenance) skills; keep it a warning during development. | `teaagent/skill_review.py:187-193` | Error/warning split by provenance. | ✅ | Candidate-provenance installed skills receive an error; development skills receive a warning; `tests/test_skill_review_installed_strictness.py` |
+| G-P2-6 | Governance | Ratify the shell-mutation reversibility boundary for SEC-11 in an ADR: decide the two-tier undo model and the explicit out-of-scope external-effect non-goal. | `docs/adr/0042-shell-mutation-reversibility-boundary.md`; `docs/adr/README.md` | ADR-0042 accepted; SEC-11 register row cites it; two-tier model (`GitBranchSandbox` transactional rollback for in-worktree; disclosed `UndoJournal` fallback) documented; external effects declared out of scope by design. | ✅ | This session — ADR-0042 authored; SEC-11 boundary decided and cross-referenced; no code change (decision record). |
 | A-P2-1 | Architecture | Consolidate optional-extra aliases: fold `crypto`/`oauth`/`audit-encryption` into a single `crypto` extra. | `pyproject.toml:60-68` | Single `crypto` extra, aliases removed. | ✅ | `pyproject.toml` exposes one `crypto` extra; obsolete aliases are absent |
 | A-P2-2 | Architecture | Split CLI handler god modules: `_ergonomics.py:1407`, `_doctor.py:1022`, `_agent/run.py:999`, `chat_repl.py:894`. | As listed | Each module under 800 lines. | ✅ | `_doctor`/`_ergonomics`/`_agent/run.py` split; `chat_repl.py` (906) eliminated by retiring it (U-P2-1); `_ergonomics/approval.py` (1,014) split — extracted `approval_doctor_command`→`_approval_doctor.py` (306) and `approval_preset_command`→`_approval_preset.py` (168), leaving `approval.py` at 567. `check_god_modules` clean at threshold 800. |
 | A-P2-3 | Architecture | Expand property-based testing with Hypothesis strategies for permission-mode transitions, budget enforcement, approval-hash exactness, and audit-chain invariants. | `tests/` | Hypothesis tests exist for the four areas. | ✅ | All four invariant families are covered in `tests/test_hypothesis_invariants.py` |
@@ -81,14 +82,14 @@ Legend: ✅ Done (committed) · 🟡 In progress · ⬜ Not started · 🔵 Alre
 | --- | --- | --- |
 | P0 | 8 | Security 3, Architecture 2, UX 2, Governance 1 |
 | P1 | 18 | Security 4, Governance 3, Architecture 5, UX 6 (including cross-dimensional items) |
-| P2 | 28 | Security 11, Governance 5, Architecture 7, UX 5 |
-| **Total** | **54** | |
+| P2 | 29 | Security 11, Governance 6, Architecture 7, UX 5 |
+| **Total** | **55** | |
 
 ### Status Summary
 
 | Status | Count | Items |
 | --- | --- | --- |
-| ✅ Done (verified) | 50 | S-P0-1, S-P0-2, S-P0-3, A-P0-1, A-P0-2, U-P0-1, U-P0-2, G-P0-1; S-P1-1, S-P1-2, S-P1-3, S-P1-4, G-P1-1, G-P1-2, G-P1-3, A-P1-1, A-P1-2, A-P1-3, A-P1-4, A-P1-5, U-P1-1, U-P1-2, U-P1-3, U-P1-4, U-P1-5, U-P1-6; S-P2-1, S-P2-4, S-P2-5, S-P2-6, S-P2-7, S-P2-8, S-P2-9, S-P2-10, S-P2-11, G-P2-1, G-P2-2, G-P2-3, G-P2-5, A-P2-1, A-P2-2, A-P2-3, A-P2-5, A-P2-6, A-P2-7, U-P2-1, U-P2-2, U-P2-3, U-P2-4, U-P2-5 |
+| ✅ Done (verified) | 51 | S-P0-1, S-P0-2, S-P0-3, A-P0-1, A-P0-2, U-P0-1, U-P0-2, G-P0-1; S-P1-1, S-P1-2, S-P1-3, S-P1-4, G-P1-1, G-P1-2, G-P1-3, A-P1-1, A-P1-2, A-P1-3, A-P1-4, A-P1-5, U-P1-1, U-P1-2, U-P1-3, U-P1-4, U-P1-5, U-P1-6; S-P2-1, S-P2-4, S-P2-5, S-P2-6, S-P2-7, S-P2-8, S-P2-9, S-P2-10, S-P2-11, G-P2-1, G-P2-2, G-P2-3, G-P2-5, G-P2-6, A-P2-1, A-P2-2, A-P2-3, A-P2-5, A-P2-6, A-P2-7, U-P2-1, U-P2-2, U-P2-3, U-P2-4, U-P2-5 |
 | 🟡 In progress | 0 | — |
 | ⬜ Not started | 0 | — |
 | 🔵 Already existed | 4 | S-P2-2, S-P2-3, G-P2-4, A-P2-4 |
