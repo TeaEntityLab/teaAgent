@@ -56,9 +56,11 @@ def isolation_for_sandbox_type(sandbox_type: SandboxType) -> str:
     """Map sandbox router output to ``prepare_subagent_isolation`` mode."""
     if sandbox_type == SandboxType.DOCKER:
         return 'docker'
-    if sandbox_type in {SandboxType.DIRECTORY_SNAPSHOT, SandboxType.WASM}:
+    if sandbox_type in {SandboxType.DIRECTORY_SNAPSHOT}:
         return 'directory-snapshot'
-    return 'directory-snapshot'
+    # Subagent isolation does not support a WASM process boundary; use Docker
+    # when a router decision needs an OS-isolated runtime wrapper.
+    return 'docker'
 
 
 def plan_skill_isolation(
@@ -148,8 +150,8 @@ class SkillRouter:
         if preferred_sandbox == SandboxType.WASM:
             if not is_wasm_available():
                 return RoutingDecision(
-                    sandbox_type=SandboxType.DIRECTORY_SNAPSHOT,
-                    reason='WASM not available, falling back to directory-snapshot',
+                    sandbox_type=SandboxType.DOCKER,
+                    reason='WASM not available, falling back to Docker isolation',
                     fallback_available=True,
                     warnings=['WASM runtime not installed'],
                 )
@@ -161,8 +163,8 @@ class SkillRouter:
 
                 if not compat_result['compatible']:
                     return RoutingDecision(
-                        sandbox_type=SandboxType.DIRECTORY_SNAPSHOT,
-                        reason='Skill not compatible with WASM, falling back to directory-snapshot',
+                        sandbox_type=SandboxType.DOCKER,
+                        reason='Skill not compatible with WASM, falling back to Docker isolation',
                         fallback_available=True,
                         warnings=compat_result['issues'],
                     )
@@ -207,11 +209,12 @@ class SkillRouter:
         Returns:
             Routing decision
         """
-        # Low risk: directory-snapshot (fastest)
+        # Low risk still needs an OS boundary by default: SEC-08 showed that
+        # directory-snapshot is only a file copy, not process isolation.
         if risk_level == RiskLevel.LOW:
             return RoutingDecision(
-                sandbox_type=SandboxType.DIRECTORY_SNAPSHOT,
-                reason='Low risk: using directory-snapshot for speed',
+                sandbox_type=SandboxType.DOCKER,
+                reason='Low risk: using Docker to avoid directory-snapshot process-isolation gap',
                 fallback_available=True,
             )
 
@@ -253,10 +256,11 @@ class SkillRouter:
                     warnings=['WASM runtime not installed'],
                 )
 
-        # Default fallback
+        # Default fallback: prefer an OS boundary. Directory-snapshot remains
+        # available only as an explicit, ack-gated compatibility mode.
         return RoutingDecision(
-            sandbox_type=SandboxType.DIRECTORY_SNAPSHOT,
-            reason='Default: using directory-snapshot',
+            sandbox_type=SandboxType.DOCKER,
+            reason='Default: using Docker to avoid directory-snapshot process-isolation gap',
             fallback_available=True,
         )
 

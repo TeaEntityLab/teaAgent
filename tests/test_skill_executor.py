@@ -19,7 +19,8 @@ def test_execute_skill_low_risk_code_mode(tmp_path: Path) -> None:
 
     result = execute_skill(skill_dir, {'x': 1}, risk_level=RiskLevel.LOW)
     assert result.success is True
-    assert result.sandbox_type == SandboxType.DIRECTORY_SNAPSHOT
+    assert result.sandbox_type == SandboxType.DOCKER
+    assert result.execution_backend in {'docker', 'docker_fallback_subprocess'}
     assert result.output == {'echo': 1}
 
 

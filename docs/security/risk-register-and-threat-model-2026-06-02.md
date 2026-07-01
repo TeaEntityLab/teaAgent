@@ -1,6 +1,6 @@
 # Risk Register & Threat Model — teaagent
 **Date:** 2026-06-02  
-**Last updated:** 2026-07-01 (SEC-09 and SEC-15 moved to Fixed — multi-sig replay hash consolidated + request_id-bound, dev-signature loopback guard added; earlier reconciliations: SEC-11/SEC-12, SC-02, SEC-14 — see Part 2 Status cells)  
+**Last updated:** 2026-07-01 (SEC-08 automatic directory-snapshot routing reduced to Docker-by-default; SEC-09 and SEC-15 moved to Fixed — multi-sig replay hash consolidated + request_id-bound, dev-signature loopback guard added; earlier reconciliations: SEC-11/SEC-12, SC-02, SEC-14 — see Part 2 Status cells)  
 **Branch:** fix/task-dd2-001-initial-task-passthrough  
 **Scope:** Full system — CLI, TUI, REPL, MCP, subagents, Docker, audit, OAuth, approval, budget  
 **Sources:** security-risk-assessment-2026-06-02.md · defeat-scenarios-and-cascade-effects-2026-06-02.md · dependency-audit-and-security-2026-06-02.md · agent-enterprise-security-risks-2026-05-31.md · docs/threat-model.md · static source analysis
@@ -80,13 +80,10 @@ All Status cells must use a canonical state defined in `docs/governance/document
 5. **Fixed rows require evidence**: Any row marked `Fixed` / `FIXED` must include either a test name (e.g. `test_*`) or a commit reference inline in the Status cell.
 6. **Priority consistency**: Priority must match the tier defined in Part 5 §5.2 for open risks. Fixed risks use `—`.
 
-### Schema Compliance in CI
-
 The `_parse_risk_register_rows()` function in `scripts/validate_docs_consistency.py` parses every risk register row against this schema. CI runs `validate_docs_consistency.py --check-all` as part of the `use-case-matrix` job. Rows that fail ID pattern matching are silently skipped by the parser; missing or malformed rows should be caught by manual review during the risk register update process.
 
 ---
 
-## Part 1 — Risk Heat Matrix
 
 ```
          IMPACT
@@ -96,10 +93,10 @@ The `_parse_risk_register_rows()` function in `scripts/validate_docs_consistency
  L       │        │ SEC-13 │SEC-06 │
  I       │ SEC-16 │ DS-04  │DS-12  │
  K       │        │        │SEC-02 │
- E       │ SEC-14 │ SEC-09 │SEC-04 │
+E       │ SEC-14 │SEC-09/08│SEC-04 │
  L       │        │        │SEC-05 │
  I       │        │        │SEC-03 │
- H       │        │ SEC-08 │SEC-10 │
+H       │        │        │SEC-10 │
  O       │        │ DS-13  │DS-05  │
  O       │        │ DS-06  │DS-08  │
  D       │ SEC-15 │ DS-09  │DS-11  │
@@ -130,7 +127,7 @@ Each row: **ID · Category · Description · Likelihood (H/M/L) · Impact (H/M/L
 | SEC-05 | Budget | Cost accounting reads `context['_cost_cents']` written by the LLM adapter — injectable by malicious adapter or prompt-injected response | L | H | 3 | security | 2026-07-15 | **Mitigated 2026-06-09** — runner uses authoritative `usage_reader` from `ModelDecisionEngine`; residual: malicious adapter can still report `estimated_cost_cents=0`; tests: `test_sec_tier1_hardening.py`, `test_sec13_security_paths.py` | P2 |
 | SEC-06 | Permission | Bidirectional JIT session approval sync leaks parent-approved tools to subagents via shared `jit_state`; subagent inherits `workspace_run_shell_mutate` without fresh approval | M | H | 6 | security | | **FIXED 2026-06-05** | — |
 | SEC-07 | Isolation | Docker subagent runs as root, no `--network none`, no `--cap-drop ALL`, no seccomp — allows exfiltration and container escape | H | H | 9 | security | | **FIXED 2026-06-05** — all flags present in `_isolation.py:223-242`: `--user 65534:65534 --network none --cap-drop ALL --read-only --security-opt no-new-privileges`; test: `test_subagent_docker_container_hardened`; documented in `docs/ops/security-hardening.md` | — |
-| SEC-08 | Isolation | `directory-snapshot` mode provides only filesystem isolation, not process isolation — agent reads `/etc/`, `/proc/`, `~/.ssh/`, spawns host processes | H | M | 6 | security | | **DOCUMENTED 2026-06-05** — `logger.warning()` emitted at every `directory-snapshot` selection (`_isolation.py:181`); isolation modes table and dev-vs-production guidance added to `docs/ops/security-hardening.md` | P1 |
+| SEC-08 | Isolation | `directory-snapshot` mode provides only filesystem isolation, not process isolation — agent reads `/etc/`, `/proc/`, `~/.ssh/`, spawns host processes | M | M | 4 | security | | **MITIGATED / DOCUMENTED 2026-07-01** — automatic skill/subagent routing no longer selects `directory-snapshot`: low-risk/default/WASM-fallback skill isolation now routes to Docker (`skill_router.py`), while explicit `directory-snapshot` remains compatibility-only and is still blocked unless `acknowledge_no_os_isolation=True` (`_isolation.py:288-298`); warnings remain at selection time; tests: `test_plan_skill_isolation_low_risk_uses_docker`, `test_route_skill_low_risk`, `test_isolation_for_sandbox_type_mapping`, `test_directory_snapshot_without_acknowledgment_is_rejected` | P2 |
 | SEC-09 | Multi-sig | Multi-sig approval hash uses 1-hour time bucket (`int(time.time()/3600)`); captured signature replayable for up to 59:59 within same window; hash logic duplicated in two files | M | M | 4 | security | | **FIXED 2026-07-01** — the two duplicated hashes are consolidated into one canonical helper (`teaagent/approval/_multisig_crypto.py::generate_approval_hash`); the signed request hash now binds the unique per-request `request_id` and includes no wall-clock time bucket, so a captured peer signature cannot be replayed onto a different request; `policy.py` and `approval/manager.py` both delegate to the helper; tests: `test_policy_approval_hash_binds_request_id`, `test_approval_hash_is_single_source_of_truth`, `test_approval_hash_has_no_wallclock_time_bucket`, `test_multisig_hash_binds_unique_request_id` (`tests/test_sec_tier1_hardening.py`) | — |
 | SEC-10 | Shell | `cat`, `head`, `tail` in `_INSPECT_EXECUTABLES` — classified as read-only inspect but can read `~/.ssh/id_rsa`, `.env`, `/etc/shadow` | H | H | 9 | security | | **FIXED 2026-06-05** — `_INSPECT_EXECUTABLES` contains only `{pwd, ls, rg, grep, wc}`; `cat/head/tail` absent; tests: `test_cat_not_in_inspect_allowlist`, `test_head_not_in_inspect_allowlist`, `test_tail_not_in_inspect_allowlist`, `test_inspect_shell_cannot_read_ssh_keys` | — |
 | SEC-11 | Undo | `UndoJournal._PATH_WRITE_TOOLS` covers file tools only; `workspace_run_shell_mutate` not tracked — UI shows "undo available" but shell side-effects are unrecoverable | H | M | 6 | security | 2026-07-15 | **DOCUMENTED 2026-06-30** — undo now warns when the run used shell-mutating tools since file-level restore cannot reverse them: `run_undo.py:73` `PARTIAL_UNDO_SHELL_WARNING` + `audit_events_used_shell_mutate` (detects `workspace_run_shell*`), wired in CLI (`cli/_handlers/_agent/preflight.py:204-209`) and TUI (`tui/core.py:1102-1103`); shell side-effects remain non-recoverable by design; commit `c5f4130`; tests: `tests/integration/test_run_undo_shell_warning.py` (`test_agent_undo_warns_when_run_used_shell_mutate`, `test_tui_undo_warns_when_run_used_shell_mutate`, +3) | P2 |
@@ -346,7 +343,7 @@ The tables below preserve the original remediation roadmap for traceability. Row
 | **DS-12** | Validate path-scoped approval has non-empty path; reject or default-fill to CWD with explicit confirmation; log scope expansion warnings | `teaagent/approval_manager.py` (path rule creation) | S (1–2 days) |
 | **DS-09** | Fixed in current branch: remove the stale direct resume hint from REPL suspend output; print only the supported interactive-review path | `teaagent/cli/_handlers/chat_repl.py` (suspend output) | Done |
 | **DS-06** | Fixed in current branch: TUI cost/session tests exercise runtime paths instead of only direct attribute injection | `tests/test_tui.py` | Done |
-| **SEC-08** | Add runtime warning when `directory-snapshot` mode is selected: "No process isolation — not for untrusted content" | `teaagent/subagents/_isolation.py:181-200` | XS (30 min) |
+| **SEC-08** | ~~Add runtime warning when `directory-snapshot` mode is selected: "No process isolation — not for untrusted content"~~ **Done 2026-07-01**: warning + explicit `acknowledge_no_os_isolation` gate remain; automatic skill routing now chooses Docker for low/default/WASM-fallback paths so directory-snapshot is explicit-only compatibility | `teaagent/subagents/_isolation.py`, `teaagent/skill_router.py` | Done |
 | **SC-02** | ~~Declare `anthropic>=0.40` in `[project.optional-dependencies]`; declare `pyyaml>=6.0` in `dependencies`~~ **Done 2026-07-01**: `anthropic`/`pyyaml` declared as optional extras and guarded by tested actionable install hints (`teaagent[anthropic]`, `teaagent[yaml]`) | `pyproject.toml`, `teaagent/managed_runtime.py`, `teaagent/okf.py`, `tests/test_optional_dependency_contract.py` | Done |
 
 #### Priority 2 — Fix within cycle
@@ -390,8 +387,9 @@ After all Priority 0–1 mitigations are applied:
 | **Docker isolation** | Root→UID 65534, no network, no caps, no new privs | Acceptable for code execution workloads; requires minimal image (python:3.11-slim still has a large surface) |
 | **JIT approval inheritance** | One-way parent→child sync; no child→parent escalation | Acceptable |
 | **Shell credential read** | `cat`/`head`/`tail` removed from inspect; `workspace_read_file` restricted to workspace root | Acceptable |
-| **Subagent process isolation** | `directory-snapshot` deprecated/warned; Docker hardened | Acceptable with warnings |
-| **Multi-sig replay** | 5-minute window; deduplicated hash | Acceptable for most deployments |
+| **Subagent process isolation** | `directory-snapshot` is explicit-only and ack-gated; automatic skill/subagent routing uses Docker by default; Docker remains hardened | Acceptable with warnings for explicit compatibility mode |
+| **Multi-sig replay** | Request hash binds unique `request_id`; no time bucket remains | Acceptable for most deployments |
+
 | **Audit disk failure** | Operator notified on fsync failure; halt after 3 | Acceptable |
 | **Prompt injection** | No formal detection layer (SEC-NEW2 backlog) | **Not acceptable for high-security deployments** — mitigated by approval gates but not detected |
 | **Agent identity** | String `agent_id` (SEC-NEW1 backlog) | **Not acceptable for federated/WAN deployments** |
@@ -525,7 +523,7 @@ warn_at_pct = 50
 11. **SEC-13** — ~~Integration tests~~ **FIXED 2026-06-09**: `tests/integration/test_sec13_security_paths.py` + existing `test_runner_cost_tracking.py`, `test_audit_chain.py`, `test_task005_trust_expiry_enforcement.py`.
 12. **DS-06** — Fixed in current branch: TUI cost test exercises runtime path
 13. **DS-01** — Fixed in current branch: TUI cost accumulation stop-gap is covered
-14. **SEC-08** — Add runtime warning for `directory-snapshot` mode
+14. **SEC-08** — ~~Add runtime warning for `directory-snapshot` mode~~ **MITIGATED 2026-07-01**: directory-snapshot stays explicit/ack-gated; automatic low/default/WASM-fallback routing uses Docker; tests in `tests/test_skill_router.py`, `tests/acceptance/test_sandbox_enhancement_flow.py`, `tests/test_isolation_acknowledgment_flag.py`
 15. **SC-01** — ~~Freeze alpha GCP OTel packages with `==` overrides in `[tool.uv]`~~ **FIXED**: `[tool.uv]` overrides pin stable `>=1.12.0,<2.0.0`; no `1.12.0a0` in `uv.lock` (commit `bad05d1`)
 16. **SC-03** — ~~`uv remove aiohttp mcp` (or declare intentional)~~ **FIXED**: `aiohttp`/`mcp` absent from `uv.lock`; not imported in `teaagent/` (commit `bad05d1`)
 

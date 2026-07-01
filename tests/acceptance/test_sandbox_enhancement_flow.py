@@ -2,21 +2,21 @@
 
 This module tests the skill sandbox system, which provides isolation for skill
 execution based on risk level. Skills can be executed in different sandbox types
-(directory-snapshot, docker, or none) depending on their assessed risk, providing
-a defense-in-depth approach to skill security.
+(Docker, WASM, or explicit directory-snapshot) depending on their assessed risk,
+providing a defense-in-depth approach to skill security.
 
 Key concepts tested:
-- Auto Isolation Mode: The 'auto' isolation mode is supported for skill execution
-- Risk-Based Isolation: Low risk uses directory-snapshot, medium risk uses docker
+- Auto Isolation Mode: the 'auto' isolation mode is supported for skill execution
+- Risk-Based Isolation: low and medium risk use Docker by default; directory-snapshot is explicit-only
 - Sandbox Type Mapping: SandboxType enum maps to isolation configuration strings
-- Docker Configuration: CPU quota and memory limits can be configured for docker
+- Docker Configuration: CPU quota and memory limits can be configured for Docker
 - Skill Execution: Skills can be executed with appropriate isolation based on risk
 - Skill Router: SkillRouter manages isolation planning and execution
 
 Acceptance Criteria:
 - AC1: Auto isolation mode is supported and normalized correctly
-- AC2: Low risk skills use directory-snapshot isolation
-- AC3: Medium risk skills use docker isolation
+- AC2: Low risk skills use Docker isolation by default
+- AC3: Medium risk skills use Docker isolation
 - AC4: SandboxType enum maps correctly to isolation strings
 - AC5: Docker configuration (cpu_quota, memory_limit) is applied to isolation plan
 - AC6: Skills can be executed with risk-based isolation and return results
@@ -24,9 +24,9 @@ Acceptance Criteria:
 Technical Details:
 - normalize_subagent_isolation normalizes isolation mode strings
 - plan_skill_isolation determines isolation based on RiskLevel
-- SandboxType enum defines isolation types (DOCKER, DIRECTORY_SNAPSHOT, NONE)
-- isolation_for_sandbox_type maps SandboxType to isolation configuration
-- SkillRouter applies docker configuration (cpu_quota, memory_limit)
+- SandboxType enum defines isolation types (DOCKER, DIRECTORY_SNAPSHOT, WASM)
+- isolation_for_sandbox_type maps SandboxType to subagent isolation strings
+- SkillRouter applies Docker configuration (cpu_quota, memory_limit)
 - execute_skill runs skills with appropriate isolation based on risk_level
 
 References:
@@ -63,12 +63,13 @@ def test_plan_skill_isolation_low_risk_uses_directory_snapshot() -> None:
         skill_path = Path(tmp)
         (skill_path / 'SKILL.md').write_text('# helper\n', encoding='utf-8')
         plan = plan_skill_isolation(skill_path, RiskLevel.LOW)
-        # Verify low risk skills use directory-snapshot isolation
-        assert plan.isolation == 'directory-snapshot', (
-            f'Expected isolation "directory-snapshot" for low risk, got {plan.isolation!r}'
+        # SEC-08: low-risk auto-routing must not silently select directory-snapshot
+        # because it is only a file copy, not process isolation.
+        assert plan.isolation == 'docker', (
+            f'Expected isolation "docker" for low risk, got {plan.isolation!r}'
         )
-        assert plan.sandbox_type == SandboxType.DIRECTORY_SNAPSHOT, (
-            f'Expected sandbox_type DIRECTORY_SNAPSHOT for low risk, got {plan.sandbox_type!r}'
+        assert plan.sandbox_type == SandboxType.DOCKER, (
+            f'Expected sandbox_type DOCKER for low risk, got {plan.sandbox_type!r}'
         )
 
 
@@ -87,14 +88,17 @@ def test_plan_skill_isolation_medium_risk_uses_docker() -> None:
 
 
 def test_isolation_for_sandbox_type_mapping() -> None:
-    # Verify SandboxType enum maps to correct isolation strings
+    # Verify SandboxType enum maps to supported subagent isolation strings.
     assert isolation_for_sandbox_type(SandboxType.DOCKER) == 'docker', (
         'Expected DOCKER to map to "docker"'
+    )
+    assert isolation_for_sandbox_type(SandboxType.WASM) == 'docker', (
+        'Expected WASM wrapper to map to "docker" for subagent isolation'
     )
     assert (
         isolation_for_sandbox_type(SandboxType.DIRECTORY_SNAPSHOT)
         == 'directory-snapshot'
-    ), 'Expected DIRECTORY_SNAPSHOT to map to "directory-snapshot"'
+    ), 'Expected explicit DIRECTORY_SNAPSHOT to map to "directory-snapshot"'
 
 
 def test_skill_router_docker_config_applied_to_plan() -> None:
@@ -121,10 +125,14 @@ def test_execute_skill_routes_and_runs_low_risk_tool() -> None:
             encoding='utf-8',
         )
         result = execute_skill(skill_path, {'n': 7}, risk_level=RiskLevel.LOW)
-        # Verify skill execution succeeds with correct output
+        # Verify skill execution succeeds with correct output. On machines without
+        # Docker, LOW risk keeps the existing fallback but no longer labels that
+        # path as directory-snapshot isolation.
         assert result.success is True, (
             f'Expected skill execution to succeed, got success={result.success}'
         )
+        assert result.sandbox_type == SandboxType.DOCKER
+        assert result.execution_backend in {'docker', 'docker_fallback_subprocess'}
         assert result.output == {'value': 7}, (
             f'Expected output {{"value": 7}}, got {result.output}'
         )

@@ -40,8 +40,9 @@ def test_route_skill_low_risk():
         router = SkillRouter()
         decision = router.route_skill(skill_path, RiskLevel.LOW)
 
-        assert decision.sandbox_type == SandboxType.DIRECTORY_SNAPSHOT
+        assert decision.sandbox_type == SandboxType.DOCKER
         assert 'Low risk' in decision.reason
+        assert 'directory-snapshot' in decision.reason
 
 
 def test_route_skill_medium_risk():
@@ -107,11 +108,8 @@ def test_route_skill_wasm_incompatible():
             skill_path, RiskLevel.HIGH, preferred_sandbox=SandboxType.WASM
         )
 
-        # Should fall back to directory-snapshot if WASM unavailable or incompatible
-        assert decision.sandbox_type in (
-            SandboxType.DIRECTORY_SNAPSHOT,
-            SandboxType.DOCKER,
-        )
+        # SEC-08: WASM fallback must not silently choose directory-snapshot.
+        assert decision.sandbox_type == SandboxType.DOCKER
         assert len(decision.warnings) > 0 or 'incompatible' in decision.reason.lower()
 
 
