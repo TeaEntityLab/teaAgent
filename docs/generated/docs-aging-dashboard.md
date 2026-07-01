@@ -4,7 +4,7 @@
 
 **Stale threshold:** 90 days since `Last reviewed`
 **Current-truth docs scanned:** 17
-**Needs attention (working tier only):** 12
+**Needs attention (working tier only):** 13
 **Archive-tier docs (exempt from staleness):** 0
 
 Regenerate: `python3 scripts/report_docs_aging.py`
@@ -29,7 +29,8 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 | --- | --- | --- | --- | --- |
 | `docs/daily-driver-current-status.md` | stale_by_mtime | 2026-06-25 | 2026-06-26 | File modified after last reviewed date |
 | `docs/plans/ticket-plans/index.md` | stale_by_mtime | 2026-06-18 | 2026-06-30 | File modified after last reviewed date |
-| `docs/USAGE.md` | stale_by_mtime | 2026-06-06 | 2026-06-21 | Missing owner banner; File modified after last reviewed date |
+| `docs/tui-daily-driver-guide.md` | stale_by_mtime | 2026-06-21 | 2026-07-01 | File modified after last reviewed date |
+| `docs/USAGE.md` | stale_by_mtime | 2026-06-06 | 2026-07-01 | Missing owner banner; File modified after last reviewed date |
 
 ### docs
 
