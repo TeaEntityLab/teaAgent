@@ -7,6 +7,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from teaagent.approval._multisig_crypto import (
+    generate_approval_hash,
+    resolve_allow_dev_signatures,
+)
 from teaagent.approval_manager import (
     ApprovalManager,
     MultiSigQuorumConfig,
@@ -14,7 +18,8 @@ from teaagent.approval_manager import (
 )
 from teaagent.audit import AuditLogger
 from teaagent.budget import RunBudget
-from teaagent.errors import DenialReasonCode, ToolPermissionError
+from teaagent.errors import ConfigError, DenialReasonCode, ToolPermissionError
+from teaagent.policy import ApprovalPolicy
 from teaagent.runner import AgentRunner, FinalAnswer
 from teaagent.tools import ToolRegistry
 
@@ -116,3 +121,117 @@ def test_preapproved_call_ids_blocked_when_disabled(
             arguments={'path': 'x.txt', 'content': 'hi'},
         )
     assert exc.value.reason_code == DenialReasonCode.JIT_NO_APPROVAL
+
+
+# --- SEC-09: single-source approval hash eliminates the replay window ---
+
+
+def test_policy_approval_hash_binds_request_id() -> None:
+    """SEC-09: the ApprovalPolicy hash (previously a replayable 1-hour bucket)
+    now binds the unique request_id, so a captured signature cannot be replayed.
+    """
+    policy = ApprovalPolicy(agent_id='agent-a')
+    hash_a = policy._generate_approval_hash(
+        'workspace_write_file', 'call-1', {'path': 'a.txt'}, request_id='req-a'
+    )
+    hash_b = policy._generate_approval_hash(
+        'workspace_write_file', 'call-1', {'path': 'a.txt'}, request_id='req-b'
+    )
+    assert hash_a != hash_b
+
+
+def test_approval_hash_is_single_source_of_truth() -> None:
+    """SEC-09: policy, manager, and the canonical helper agree — no drift."""
+    args = {'path': 'a.txt'}
+    canonical = generate_approval_hash(
+        'workspace_write_file', 'call-1', args, request_id='req-1'
+    )
+    policy = ApprovalPolicy(agent_id='agent-a')
+    manager = MultiSigQuorumManager(
+        config=MultiSigQuorumConfig(enabled=True), agent_id='agent-a'
+    )
+    assert (
+        policy._generate_approval_hash(
+            'workspace_write_file', 'call-1', args, request_id='req-1'
+        )
+        == canonical
+    )
+    assert (
+        manager._generate_approval_hash(
+            'workspace_write_file', 'call-1', args, request_id='req-1'
+        )
+        == canonical
+    )
+
+
+def test_approval_hash_has_no_wallclock_time_bucket(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """SEC-09: hash for a fixed request_id is stable across wall-clock time
+    (the old 1-hour time bucket that created the replay window is gone).
+    """
+    monkeypatch.setattr('time.time', lambda: 0.0)
+    first = generate_approval_hash(
+        'workspace_write_file', 'call-1', {'path': 'a.txt'}, request_id='req-1'
+    )
+    monkeypatch.setattr('time.time', lambda: 10_000.0)
+    second = generate_approval_hash(
+        'workspace_write_file', 'call-1', {'path': 'a.txt'}, request_id='req-1'
+    )
+    assert first == second
+
+
+# --- SEC-15: dev-hash signatures fail closed over a non-loopback relay ---
+
+
+def test_dev_signatures_allowed_only_on_loopback_relay() -> None:
+    """SEC-15: dev signatures are honored when the relay is loopback."""
+    cfg = MultiSigQuorumConfig(
+        enabled=True,
+        allow_dev_signatures=True,
+        local_relay_base_url='http://127.0.0.1:8791',
+    )
+    assert resolve_allow_dev_signatures(cfg, env_enabled=False) is True
+
+
+def test_dev_signatures_rejected_on_non_loopback_relay() -> None:
+    """SEC-15: dev signatures over a WAN relay raise instead of accepting forgeries."""
+    cfg = MultiSigQuorumConfig(
+        enabled=True,
+        allow_dev_signatures=True,
+        peer_relay_urls={'peer': 'https://peer.example:8791'},
+    )
+    with pytest.raises(ConfigError) as exc:
+        resolve_allow_dev_signatures(cfg, env_enabled=False)
+    assert 'loopback' in str(exc.value).lower()
+
+
+def test_env_dev_signatures_rejected_on_non_loopback_relay() -> None:
+    """SEC-15: the env flag is guarded the same way as the config flag."""
+    cfg = MultiSigQuorumConfig(
+        enabled=True, local_relay_base_url='https://collector.example:8791'
+    )
+    with pytest.raises(ConfigError):
+        resolve_allow_dev_signatures(cfg, env_enabled=True)
+
+
+def test_dev_signatures_not_requested_allows_real_ssh_over_wan() -> None:
+    """SEC-15: without dev signatures, a WAN relay is fine (real SSH enforced)."""
+    cfg = MultiSigQuorumConfig(
+        enabled=True, peer_relay_urls={'peer': 'https://peer.example:8791'}
+    )
+    assert resolve_allow_dev_signatures(cfg, env_enabled=False) is False
+
+
+def test_collect_peer_signatures_fails_closed_before_wan_broadcast() -> None:
+    """SEC-15: the live quorum path raises before broadcasting to a WAN relay."""
+    manager = MultiSigQuorumManager(
+        config=MultiSigQuorumConfig(
+            enabled=True,
+            allow_dev_signatures=True,
+            peer_relay_urls={'peer': 'https://peer.example:8791'},
+        ),
+        agent_id='agent-a',
+    )
+    with pytest.raises(ConfigError):
+        manager._collect_peer_signatures(MagicMock())

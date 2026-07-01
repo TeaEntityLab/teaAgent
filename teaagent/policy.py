@@ -247,12 +247,16 @@ class ApprovalPolicy:
             )
             return False
 
-        # Create approval request
-        request_hash = self._generate_approval_hash(tool_name, call_id, arguments)
+        # Create approval request — bind the unique request_id into the signed
+        # hash so a captured peer signature cannot be replayed (SEC-09).
+        request_id = hashlib.sha256(
+            f'{self.agent_id}{call_id}{time.time()}'.encode()
+        ).hexdigest()[:16]
+        request_hash = self._generate_approval_hash(
+            tool_name, call_id, arguments, request_id=request_id
+        )
         request = ApprovalRequest(
-            request_id=hashlib.sha256(
-                f'{self.agent_id}{call_id}{time.time()}'.encode()
-            ).hexdigest()[:16],
+            request_id=request_id,
             tool_name=tool_name,
             call_id=call_id,
             arguments=arguments or {},
@@ -294,20 +298,15 @@ class ApprovalPolicy:
         call_id: str,
         arguments: dict[str, Any] | None,
         *,
+        request_id: str = '',
         run_id: str = '',
     ) -> str:
-        """Generate cryptographic hash for approval request."""
-        content = json.dumps(
-            {
-                'tool_name': tool_name,
-                'call_id': call_id,
-                'arguments': arguments or {},
-                'run_id': run_id,
-                'time_window': int(time.time() / 3600),
-            },
-            sort_keys=True,
+        """Generate the canonical approval-request hash (see _multisig_crypto)."""
+        from teaagent.approval._multisig_crypto import generate_approval_hash
+
+        return generate_approval_hash(
+            tool_name, call_id, arguments, request_id=request_id, run_id=run_id
         )
-        return hashlib.sha256(content.encode()).hexdigest()
 
     def _collect_peer_signatures(self, request: ApprovalRequest) -> list[PeerSignature]:
         """Collect peer signatures for approval request.
@@ -317,6 +316,14 @@ class ApprovalPolicy:
         2. Wait for peers to sign with their SSH keys
         3. Collect and verify signatures
         """
+        from teaagent.approval._multisig_crypto import resolve_allow_dev_signatures
+        from teaagent.security_env import allow_dev_signatures as env_allow_dev
+
+        # SEC-15: fail closed before any broadcast when dev-hash signatures
+        # would be honored over a non-loopback relay (they bypass SSH auth).
+        allow_dev = resolve_allow_dev_signatures(
+            self.multi_sig_config, env_enabled=env_allow_dev()
+        )
         try:
             from teaagent.federated_sync import (
                 ApprovalRequestMessage,
@@ -370,18 +377,13 @@ class ApprovalPolicy:
         # Convert signature messages to PeerSignature objects with verification
         peer_signatures = []
         for sig_msg in signature_messages:
-            # Verify the signature before accepting it
             message_to_verify = request.request_hash
-            from teaagent.security_env import allow_dev_signatures as env_allow_dev
-
             is_valid = _verify_ssh_signature(
                 signature=sig_msg.signature,
                 message=message_to_verify,
                 ssh_key_id=sig_msg.peer_id,
                 peer_public_keys=self.multi_sig_config.peer_public_keys,
-                allow_dev_signatures=(
-                    self.multi_sig_config.allow_dev_signatures or env_allow_dev()
-                ),
+                allow_dev_signatures=allow_dev,
             )
 
             if not is_valid:

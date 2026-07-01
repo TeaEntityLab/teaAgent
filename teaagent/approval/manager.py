@@ -10,7 +10,6 @@ from __future__ import annotations
 import asyncio
 import concurrent.futures
 import hashlib
-import json
 import logging
 import os
 import re
@@ -546,18 +545,12 @@ class MultiSigQuorumManager:
         request_id: str = '',
         run_id: str = '',
     ) -> str:
-        """Generate cryptographic hash for approval request."""
-        content = json.dumps(
-            {
-                'tool_name': tool_name,
-                'call_id': call_id,
-                'arguments': arguments or {},
-                'run_id': run_id,
-                'request_id': request_id,
-            },
-            sort_keys=True,
+        """Generate the canonical approval-request hash (see _multisig_crypto)."""
+        from teaagent.approval._multisig_crypto import generate_approval_hash
+
+        return generate_approval_hash(
+            tool_name, call_id, arguments, request_id=request_id, run_id=run_id
         )
-        return hashlib.sha256(content.encode()).hexdigest()
 
     def _collect_peer_signatures(self, request: ApprovalRequest) -> list[PeerSignature]:
         """Collect peer signatures for approval request.
@@ -565,6 +558,15 @@ class MultiSigQuorumManager:
         Integrates with federated_sync to broadcast the request via P2P sync,
         wait for peers to sign with their SSH keys, and verify signatures.
         """
+        from teaagent.approval._multisig_crypto import resolve_allow_dev_signatures
+        from teaagent.security_env import allow_dev_signatures as env_allow_dev
+
+        # SEC-15: fail closed before any broadcast when dev-hash signatures
+        # would be honored over a non-loopback relay (they bypass SSH auth).
+        allow_dev = resolve_allow_dev_signatures(
+            self.config, env_enabled=env_allow_dev()
+        )
+
         try:
             from teaagent.federated_sync import (
                 ApprovalRequestMessage,
@@ -620,18 +622,12 @@ class MultiSigQuorumManager:
                     f'(age={sig_age:.0f}s > timeout={self.config.timeout_seconds}s)'
                 )
                 continue
-            from teaagent.security_env import (
-                allow_dev_signatures as env_allow_dev,
-            )
-
             is_valid = _verify_ssh_signature(
                 signature=sig_msg.signature,
                 message=message_to_verify,
                 ssh_key_id=sig_msg.peer_id,
                 peer_public_keys=self.config.peer_public_keys,
-                allow_dev_signatures=(
-                    self.config.allow_dev_signatures or env_allow_dev()
-                ),
+                allow_dev_signatures=allow_dev,
             )
 
             if not is_valid:
