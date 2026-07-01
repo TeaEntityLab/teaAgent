@@ -325,6 +325,28 @@ def test_eval_runner_repo_map_benchmark_executes_real_fixture(eval_runner):
     assert result.metrics['advisory_only'] is False
 
 
+def test_prompt_regression_missing_expected_output_is_actionable(eval_runner):
+    """A prompt-regression test without expected_output errors with a clear message.
+
+    Guards the actionable/classified-error rule: a misconfigured eval test must
+    not crash with a bare KeyError('expected_output').
+    """
+    runner, store = eval_runner
+    suite = runner.create_suite('Bad Suite')
+    runner.add_test_to_suite(
+        suite.suite_id,
+        'No Baseline',
+        EvalCategory.PROMPT_REGRESSION,
+        metadata={'prompt': 'hello'},
+    )
+    suite = store.load_suite(suite.suite_id)
+    (result,) = runner.run_suite(suite)
+
+    assert result.status == EvalStatus.ERROR
+    assert 'expected_output' in (result.error_message or '')
+    assert 'KeyError' not in (result.error_message or '')
+
+
 def test_eval_runner_run_suite_with_category_filter(eval_runner):
     """Test running a suite with category filter."""
     runner, store = eval_runner

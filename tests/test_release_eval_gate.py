@@ -11,7 +11,7 @@ from teaagent.eval_corpus import (
     create_conversational_quality_tests,
     register_release_eval_suite,
 )
-from teaagent.eval_suite import EvalCategory, EvalStore
+from teaagent.eval_suite import EvalCategory, EvalStore, EvalSuite, EvalTest
 from teaagent.governance.release_eval import (
     format_gate_summary,
     run_release_eval_gate,
@@ -49,6 +49,36 @@ def test_register_release_eval_suite_includes_conversational_category() -> None:
     assert not os.path.exists(tmp_path), (
         f'Temporary directory {tmp_path} was not cleaned up'
     )
+
+
+def test_register_reconciles_stale_suite_missing_repo_map() -> None:
+    """A suite persisted before the repo-map corpus gains it on re-register.
+
+    Regression guard: registration must not return a stale persisted suite that
+    omits a newer critical category. The stale-suite early-return made the gate
+    vacuously block on 'missing-category:repo_map_benchmark' even though the
+    corpus defines a repo-map test.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        store = EvalStore(tmp)
+        stale = EvalSuite(
+            suite_id=RELEASE_EVAL_SUITE_ID, name='stale', description='pre-M5'
+        )
+        stale.add_test(
+            EvalTest(
+                test_id='old-1', name='old', category=EvalCategory.PROMPT_REGRESSION
+            )
+        )
+        store.save_suite(stale)
+        assert not store.load_suite(RELEASE_EVAL_SUITE_ID).get_tests_by_category(
+            EvalCategory.REPO_MAP_BENCHMARK
+        )
+
+        register_release_eval_suite(store)
+
+        refreshed = store.load_suite(RELEASE_EVAL_SUITE_ID)
+        repo_map = refreshed.get_tests_by_category(EvalCategory.REPO_MAP_BENCHMARK)
+        assert [test.test_id for test in repo_map] == ['repo-map-release-eval-corpus']
 
 
 def test_release_gate_passes_on_green_corpus() -> None:

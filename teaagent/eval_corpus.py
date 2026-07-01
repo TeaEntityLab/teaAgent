@@ -126,12 +126,16 @@ def create_release_repo_map_benchmarks(
 
 
 def register_release_eval_suite(store: EvalStore) -> str:
-    """Register prompt, conversational, and repo-map tests in the release eval suite."""
+    """Register (or refresh) the release eval suite from the current corpus.
+
+    Rebuilds the suite definition every call so corpus changes (e.g. the M5
+    repo-map benchmark or any new critical category) always propagate to a
+    persisted store. Test ids are stable, so this is deterministic and never
+    orphans results; without it, a suite persisted before a corpus change would
+    silently omit the new tests and the gate would block on a missing category.
+    """
     evaluator = PromptRegressionEvaluator()
     corpus_root = _ensure_release_repo_map_corpus(store)
-    existing = store.load_suite(RELEASE_EVAL_SUITE_ID)
-    if existing is not None:
-        return RELEASE_EVAL_SUITE_ID
 
     suite = EvalSuite(
         suite_id=RELEASE_EVAL_SUITE_ID,

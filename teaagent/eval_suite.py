@@ -16,6 +16,8 @@ from pathlib import Path
 from typing import Any, Optional
 from uuid import uuid4
 
+from teaagent.errors import ConfigError
+
 # Callable seam: takes a prompt, returns model output text.
 ModelRunner = Callable[[str], str]
 
@@ -619,6 +621,13 @@ class EvalRunner:
         )
 
         metadata = test.metadata
+        if 'expected_output' not in metadata:
+            raise ConfigError(
+                f'eval test {test.test_id!r} (category={test.category.value}) is '
+                "missing required metadata key 'expected_output'",
+                hint="Add metadata['expected_output'] to the prompt/conversational "
+                'eval test so its output can be compared against a baseline.',
+            )
         regression = PromptRegressionTest(
             test_id=test.test_id,
             name=test.name,
