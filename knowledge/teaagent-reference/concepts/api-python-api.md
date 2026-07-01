@@ -6,7 +6,7 @@ resource: "urn:teaagent:doc:docs/api/python-api.md"
 tags: ["teaagent", "api", "python", "reference"]
 teaagent:
   source_path: "docs/api/python-api.md"
-  source_sha256: "b9ac9cd4e9e6b90b85981bfae0cde5a2fe1df3dbfe7958039540a7e9c2adc8cc"
+  source_sha256: "c74af18ca68a8a9f9192f86a9fca4a42ad09d5269d7f3686a62b05fd90cf619e"
   docs_tier: "working"
   authority: "canonical"
   lifecycle: "current"

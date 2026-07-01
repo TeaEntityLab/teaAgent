@@ -60,7 +60,7 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 
 | Document | Status | Last reviewed | File mtime | Notes |
 | --- | --- | --- | --- | --- |
-| `docs/roadmap-status.md` | stale_by_mtime | 2026-06-28 | 2026-06-30 | File modified after last reviewed date |
+| `docs/roadmap-status.md` | stale_by_mtime | 2026-06-28 | 2026-07-01 | File modified after last reviewed date |
 
 ### verification
 

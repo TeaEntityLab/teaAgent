@@ -43,7 +43,8 @@ class ApprovalPolicy:
     Maintained for backward compatibility.
     """
 
-    # CLI/TUI ``--approve-call-id`` / ``approve <call_id>`` — binds scoped approval at execute time.
+    # Backward-compatible inert field for removed ``--approve-call-id`` preapproval.
+    # Live one-call approval is JIT state, not this pre-run field.
     preapproved_call_ids: frozenset[str] = field(default_factory=frozenset)
     # CLI ``--approve-scoped`` — preapproved payload digests (tool+args hash)
     preapproved_payload_digests: frozenset[str] = field(default_factory=frozenset)

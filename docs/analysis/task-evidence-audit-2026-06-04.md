@@ -96,7 +96,7 @@ For each status claim in the source documents:
 | H2 | Multi-surface continuity | Partially fixed | Test evidence | M2 acceptance complete; full IDE/dashboard/cloud surface parity remains open | 🟡 MEDIUM |
 | H3 | Ecosystem trust | Partially fixed | Test evidence | M3 acceptance complete; owner-operator trust onboarding simplification remains open | 🟡 MEDIUM |
 | H4 | Durable team operations | Partially fixed | ADR/code evidence | Policy/RBAC shadow wired; ADR-0031 defines exit criteria; consensus deferred by ADR-0029 | 🟢 LOW |
-| H5 | Quality and eval loop | Partially fixed | Code evidence | Release eval gate wired in CI; offline conversational corpus exists | 🟢 LOW |
+| H5 | Quality and eval loop | Partially fixed | Code evidence | Release eval gate wired in CI; offline conversational corpus and deterministic repo-map fixture corpus exist; default no-model gate remains advisory | 🟢 LOW |
 | H6 | Packaging and adoption | Partially fixed | Code evidence | `update/*` package implemented but unwired; owner-platform proof remains open | 🟢 LOW |
 
 ### 4.2 Milestone Items
@@ -106,7 +106,7 @@ For each status claim in the source documents:
 | M0 | Complete | Code + docs evidence | All 3 M0 checks pass: `validate_docs_consistency.py`, `refresh_competitive_docs.py --check`, `teaagent tool lint --root .` | 🟢 LOW |
 | M1 | Complete | Test evidence | CLI/TUI cockpit acceptance, approval acceptance (`tests/acceptance/test_approval_root_cli_flow.py`, `test_headless_tui.py`) | 🟢 LOW |
 | M2–M3 | Complete | Test evidence | M2/M3 acceptance complete per canonical roadmap (`docs/roadmap-status.md`) | 🟢 LOW |
-| M4–M6 | Pending / partially wired | Partial code evidence | M4 held except DR-006 carve-out; M5 release gate foundation exists; M6 update package implemented but unwired | 🟡 MEDIUM |
+| M4–M6 | Pending / partially wired | Partial code evidence | M4 held except DR-006 carve-out; M5 release gate foundation includes repo-map corpus/critical-category guard but non-advisory release evidence remains pending; M6 update package implemented but unwired | 🟡 MEDIUM |
 
 ### 4.3 Track A — Governance Work Items
 

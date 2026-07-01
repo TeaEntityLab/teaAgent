@@ -73,7 +73,7 @@ See the [Backwards Compatibility](integration-guide.md#backwards-compatibility) 
 
 **Permission modes** — control which tool calls are allowed without an interactive prompt. From most to least restrictive: `read-only` → `workspace-write` → `prompt` → `allow` → `danger-full-access`. See [cli-api.md § Permission Modes](cli-api.md#permission-modes).
 
-**Approval policy** — the rule engine that decides whether a tool call is allowed. Combines permission mode, pre-approved call IDs, named presets, and optional multi-sig quorum. See [python-api.md § ApprovalPolicy](python-api.md#approvalpolicy) and [integration-guide.md § Defining Approval Policies](integration-guide.md#defining-approval-policies).
+**Approval policy** — the rule engine that decides whether a tool call is allowed. Combines permission mode, JIT/session approvals, scoped approval grants, payload-digest preapproval, named presets, and optional multi-sig quorum. See [python-api.md § ApprovalPolicy](python-api.md#approvalpolicy) and [integration-guide.md § Defining Approval Policies](integration-guide.md#defining-approval-policies).
 
 **Audit log** — an append-only JSONL file (`.teaagent/runs/<run_id>.jsonl`) recording every tool call, model request, approval decision, and cost checkpoint. HMAC-chained for tamper detection. See [data-formats.md § Audit Log Format](data-formats.md#audit-log-format).
 

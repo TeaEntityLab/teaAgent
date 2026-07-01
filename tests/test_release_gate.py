@@ -5,7 +5,6 @@ from tempfile import TemporaryDirectory
 
 import pytest
 from teaagent.release_gate import (
-    EVAL_EXECUTION_ADVISORY_NOTE,
     ReleaseDecision,
     ReleaseGate,
     ReleaseGateConfig,
@@ -184,6 +183,39 @@ def test_release_gate_evaluate_gate_block_critical_failure(release_gate):
     assert len(result.critical_failures) == 1
 
 
+def test_release_gate_blocks_empty_critical_category(release_gate):
+    """Test gate blocks when a critical category has no enabled tests."""
+    gate, store = release_gate
+    config = ReleaseGateConfig(
+        gate_id='gate-001',
+        name='Test Gate',
+        required_success_rate=0.5,
+        critical_test_categories={'repo_map_benchmark'},
+        block_on_critical_failure=True,
+    )
+
+    suite = gate.runner.create_suite('Test Suite')
+    gate.runner.add_test_to_suite(
+        suite.suite_id,
+        'Test 1',
+        EvalCategory.PROMPT_REGRESSION,
+    )
+    suite = store.load_suite(suite.suite_id)
+    assert suite is not None
+    store.save_result(
+        EvalResult(
+            test_id=suite.tests[0].test_id,
+            status=EvalStatus.PASSED,
+        )
+    )
+
+    result = gate.evaluate_gate(config, suite.suite_id)
+
+    assert result.decision == ReleaseDecision.BLOCK
+    assert result.critical_failures == ['missing-category:repo_map_benchmark']
+    assert 'missing critical categories' in result.summary
+
+
 def test_release_gate_evaluate_gate_warn(release_gate):
     """Test gate evaluation with warnings."""
     gate, store = release_gate
@@ -247,11 +279,11 @@ def test_release_gate_run_and_evaluate(release_gate):
     # Run and evaluate
     result = gate.run_and_evaluate(config, suite.suite_id)
 
-    assert result.decision in [ReleaseDecision.APPROVE, ReleaseDecision.WARN]
-    assert result.simulated is True
-    assert result.advisory_only is True
-    assert result.details['execution_mode'] == 'simulated'
-    assert result.details['advisory_note'] == EVAL_EXECUTION_ADVISORY_NOTE
+    assert result.decision == ReleaseDecision.APPROVE
+    assert result.simulated is False
+    assert result.advisory_only is False
+    assert result.details['execution_mode'] == 'real'
+    assert 'advisory_note' not in result.details
 
 
 def test_release_gate_create_default_gate_config(release_gate):

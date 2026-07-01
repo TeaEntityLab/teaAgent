@@ -15,7 +15,6 @@ from pathlib import Path
 from typing import Any
 
 from teaagent.eval_suite import (
-    EvalCategory,
     EvalRunner,
     EvalStatus,
     EvalStore,
@@ -166,20 +165,30 @@ class ReleaseGate:
             result.summary = f'Suite not found: {suite_id}'
             return result
 
-        # Get all test results
+        # Get all test results and require every configured critical category
+        # to be represented by at least one enabled test. Otherwise a critical
+        # category can pass vacuously.
         tests = suite.get_enabled_tests()
         result.total_tests = len(tests)
+        enabled_categories = {test.category.value for test in tests if test.category}
+        missing_critical_categories = sorted(
+            config.critical_test_categories - enabled_categories
+        )
 
         passed = 0
         failed = 0
-        critical_failures = []
+        critical_failures = [
+            f'missing-category:{category}' for category in missing_critical_categories
+        ]
         warnings = []
 
         for test in tests:
             test_result = self.store.load_result(test.test_id)
             if not test_result:
-                # No result, count as failed
+                # No result, count as failed.
                 failed += 1
+                if test.category.value in config.critical_test_categories:
+                    critical_failures.append(test.test_id)
                 continue
 
             if test_result.status == EvalStatus.PASSED:
@@ -193,18 +202,24 @@ class ReleaseGate:
             elif test_result.status == EvalStatus.ERROR:
                 failed += 1
                 warnings.append(f'Test {test.test_id} encountered an error')
-
+                if test.category.value in config.critical_test_categories:
+                    critical_failures.append(test.test_id)
         result.passed_tests = passed
         result.failed_tests = failed
         result.success_rate = (
             passed / result.total_tests if result.total_tests > 0 else 0.0
         )
 
-        # Make decision
         if config.block_on_critical_failure and critical_failures:
             result.decision = ReleaseDecision.BLOCK
             result.critical_failures = critical_failures
-            result.summary = f'Release blocked due to {len(critical_failures)} critical test failures'
+            if missing_critical_categories:
+                result.summary = (
+                    'Release blocked due to missing critical categories: '
+                    + ', '.join(missing_critical_categories)
+                )
+            else:
+                result.summary = f'Release blocked due to {len(critical_failures)} critical test failures'
         elif result.success_rate < config.required_success_rate:
             result.decision = ReleaseDecision.BLOCK
             result.summary = f'Release blocked: success rate {result.success_rate:.2%} below required {config.required_success_rate:.2%}'
@@ -228,6 +243,7 @@ class ReleaseGate:
             'suite_name': suite.name,
             'required_success_rate': config.required_success_rate,
             'critical_categories': list(config.critical_test_categories),
+            'missing_critical_categories': missing_critical_categories,
         }
 
         return result
@@ -266,16 +282,17 @@ class ReleaseGate:
         self, result: ReleaseGateResult, suite: EvalSuite
     ) -> None:
         """Derive simulated/advisory flags from per-test execution metadata."""
-        prompt_conv_tests = [
+        critical_categories = set(result.details.get('critical_categories', []))
+        enabled_tests = suite.get_enabled_tests()
+        disclosure_tests = [
             test
-            for test in suite.get_enabled_tests()
-            if test.category
-            in (EvalCategory.PROMPT_REGRESSION, EvalCategory.CONVERSATIONAL)
+            for test in enabled_tests
+            if not critical_categories or test.category.value in critical_categories
         ]
         real_execution = False
-        if prompt_conv_tests:
+        if disclosure_tests:
             modes: list[str | None] = []
-            for test in prompt_conv_tests:
+            for test in disclosure_tests:
                 test_result = self.store.load_result(test.test_id)
                 mode = (
                     test_result.metrics.get('execution_mode')

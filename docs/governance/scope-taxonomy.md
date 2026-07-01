@@ -30,8 +30,8 @@ Each `tool_call_approved` event MUST include exactly one `scope` value:
   "run_id": "<run_id>",
   "call_id": "<call_id>",
   "tool_name": "<tool_name>",
-  "authority_type": "preapproved_call_id | preapproved_payload_digest | jit_prompt | session_grant",
-  "approved_by": "cli --approve-call-id | cli --approve-scoped | user | session",
+  "authority_type": "preapproved_payload_digest | jit_prompt | session_grant",
+  "approved_by": "cli --approve-scoped | user | session",
   "scope": "call_id | payload_digest | session | preset",
   "auto_approved": true
 }

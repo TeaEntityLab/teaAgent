@@ -58,7 +58,7 @@ Alias: `run` and `ask` are identical.
 | `--parallel N` | int | — | Run N parallel approaches (tournament) |
 | `--approach HINT` | string | — | Hint for parallel approach (repeatable) |
 | `--no-benchmark` | flag | false | Skip performance benchmarking |
-| `--approve-call-id ID` | string | — | Pre-approve tool call ID (repeatable) |
+| `--approve-call-id ID` | string | — | Deprecated/inert compatibility flag; grants nothing. Use `--approve-scoped TOOL:SHA256` |
 | `--hitl-approval` | flag | false | Prompt before every destructive tool |
 | `--permission-mode MODE` | enum | `prompt` | See [Permission Modes](#permission-modes) |
 | `--subagent` | flag | false | Expose `subagent` delegation tool |
@@ -226,7 +226,7 @@ teaagent approval <subcommand>
 |-----------|-----------|-------------|
 | `list` | — | List approval presets |
 | `pending` | — | Show pending approval requests |
-| `approve <call_id>` | call ID | Approve a specific pending call |
+| `approve <call_id>` | call ID | Approve one in-flight pending call via JIT/session state |
 | `deny <call_id>` | call ID | Deny a specific pending call |
 | `next` | — | Show the next pending request |
 | `audit` | — | Show full approval audit log |

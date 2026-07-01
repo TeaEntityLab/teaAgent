@@ -469,6 +469,11 @@ class EvalRunner:
             'category': test.category.value,
         }
 
+    def _repo_map_execution_metadata(self, test: EvalTest) -> dict[str, Any]:
+        from teaagent.eval_repo_map_executor import RepoMapBenchmarkExecutor
+
+        return RepoMapBenchmarkExecutor.execution_metadata(test)
+
     def _execute_test(
         self, test: EvalTest, fixture_data: Optional[dict[str, Any]]
     ) -> tuple[str, dict[str, Any]]:
@@ -488,15 +493,17 @@ class EvalRunner:
             output, mode = self._execute_prompt_regression_test(test, fixture_data)
             metadata = self._prompt_execution_metadata(test, mode)
         else:
-            metadata = self._simulated_execution_metadata(test)
             if test.category == EvalCategory.REPO_MAP_BENCHMARK:
                 output = self._execute_repo_map_benchmark(test, fixture_data)
-            elif test.category == EvalCategory.LONG_SESSION:
-                output = self._execute_long_session_test(test, fixture_data)
-            elif test.category == EvalCategory.SCOPE_CREEP:
-                output = self._execute_scope_creep_test(test, fixture_data)
+                metadata = self._repo_map_execution_metadata(test)
             else:
-                output = f'Test {test.test_id} executed (category: {test.category})'
+                metadata = self._simulated_execution_metadata(test)
+                if test.category == EvalCategory.LONG_SESSION:
+                    output = self._execute_long_session_test(test, fixture_data)
+                elif test.category == EvalCategory.SCOPE_CREEP:
+                    output = self._execute_scope_creep_test(test, fixture_data)
+                else:
+                    output = f'Test {test.test_id} executed (category: {test.category})'
 
         return output, metadata
 
@@ -521,9 +528,9 @@ class EvalRunner:
     def _execute_repo_map_benchmark(
         self, test: EvalTest, fixture_data: Optional[dict[str, Any]]
     ) -> str:
-        """Execute a repo-map benchmark test (placeholder)."""
-        # Placeholder: simulate repo-map benchmark
-        return f'Repo-map benchmark {test.test_id} completed'
+        from teaagent.eval_repo_map_executor import RepoMapBenchmarkExecutor
+
+        return RepoMapBenchmarkExecutor.execute(test, fixture_data)
 
     def _execute_long_session_test(
         self, test: EvalTest, fixture_data: Optional[dict[str, Any]]
@@ -594,7 +601,14 @@ class EvalRunner:
             EvalCategory.CONVERSATIONAL,
         ):
             return self._determine_prompt_regression_status(test, output)
+        if test.category == EvalCategory.REPO_MAP_BENCHMARK:
+            return self._determine_repo_map_benchmark_status(output)
         return EvalStatus.PASSED
+
+    def _determine_repo_map_benchmark_status(self, output: str) -> EvalStatus:
+        from teaagent.eval_repo_map_executor import RepoMapBenchmarkExecutor
+
+        return RepoMapBenchmarkExecutor.determine_status(output)
 
     def _determine_prompt_regression_status(
         self, test: EvalTest, output: str

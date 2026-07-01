@@ -54,7 +54,7 @@ The TUI tracks the following mutable state during a session:
 | `chat` | `bool` | Multi-turn chat mode active |
 | `session_id` | `Optional[str]` | Active session ID |
 | `pinned_files` | `list[Path]` | Files injected on every run |
-| `approved_call_ids` | `set[str]` | Pre-approved call IDs |
+| `approved_call_ids` | `set[str]` | In-flight JIT/session-approved call IDs |
 | `heartbeat` | `int` | Heartbeat interval (seconds) |
 | `effort` | `str` | Effort level (low/normal/high/unlimited) |
 

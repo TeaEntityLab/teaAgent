@@ -323,7 +323,7 @@ See [Permission Modes](cli-api.md#permission-modes) in the CLI spec for mode des
 
 #### `approve <call_id>`
 
-Pre-approve a specific tool call by its call ID.
+Approve one in-flight pending tool call by its call ID. This is live JIT/session approval, not the removed `--approve-call-id` pre-run flag.
 
 ```
 approve call_abc123
@@ -333,7 +333,7 @@ approve call_abc123
 
 #### `unapprove <call_id>`
 
-Remove a pre-approval for a tool call.
+Remove an in-memory JIT/session approval for a pending call.
 
 ```
 unapprove call_abc123
@@ -343,7 +343,7 @@ unapprove call_abc123
 
 #### `approvals`
 
-List all pre-approved call IDs for this session.
+List call IDs approved in the current JIT/session state.
 
 ```
 approvals

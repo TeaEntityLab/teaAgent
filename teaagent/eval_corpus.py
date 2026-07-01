@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from teaagent.eval_suite import EvalCategory, EvalStore, EvalSuite, EvalTest
+from teaagent.governance.repo_map_benchmark import (
+    RepoMapBenchmark,
+    RepoMapBenchmarkRunner,
+)
 from teaagent.prompt_regression import PromptRegressionEvaluator, PromptRegressionTest
 
 RELEASE_EVAL_SUITE_ID = 'release-eval-corpus'
@@ -86,9 +92,43 @@ def _to_eval_test(
     )
 
 
+def _ensure_release_repo_map_corpus(store: EvalStore) -> Path:
+    """Create the deterministic repo-map release corpus fixture."""
+    corpus_root = store.root / 'repo-map-corpus'
+    corpus_root.mkdir(parents=True, exist_ok=True)
+    (corpus_root / 'release_eval_fixture.py').write_text(
+        '"""Fixture for the release eval repo-map corpus.\n\n'
+        'Contains release_eval_repo_map_anchor so the benchmark has a stable target.\n'
+        '"""\n\n'
+        'def release_eval_repo_map_anchor() -> str:\n'
+        '    return "release-eval-repo-map-anchor"\n',
+        encoding='utf-8',
+    )
+    return corpus_root
+
+
+def create_release_repo_map_benchmarks(
+    corpus_root: str | Path,
+) -> list[RepoMapBenchmark]:
+    """Repo-map corpus used by the release gate."""
+    return [
+        RepoMapBenchmark(
+            benchmark_id='repo-map-release-eval-corpus',
+            name='Release Eval Corpus Fixture Lookup',
+            codebase_path=str(corpus_root),
+            query='release_eval_repo_map_anchor',
+            expected_files={'release_eval_fixture.py'},
+            expected_functions={'release_eval_repo_map_anchor'},
+            max_duration_seconds=5.0,
+            metadata={'release_corpus': True},
+        )
+    ]
+
+
 def register_release_eval_suite(store: EvalStore) -> str:
-    """Register prompt + conversational tests in the release eval suite."""
+    """Register prompt, conversational, and repo-map tests in the release eval suite."""
     evaluator = PromptRegressionEvaluator()
+    corpus_root = _ensure_release_repo_map_corpus(store)
     existing = store.load_suite(RELEASE_EVAL_SUITE_ID)
     if existing is not None:
         return RELEASE_EVAL_SUITE_ID
@@ -96,7 +136,7 @@ def register_release_eval_suite(store: EvalStore) -> str:
     suite = EvalSuite(
         suite_id=RELEASE_EVAL_SUITE_ID,
         name=RELEASE_EVAL_SUITE_NAME,
-        description='Prompt regression + conversational quality corpus (WDD-001).',
+        description='Prompt regression + conversational quality + repo-map benchmark corpus (WDD-001/M5).',
     )
     for regression_test in (
         *evaluator.create_default_regression_tests(),
@@ -108,5 +148,8 @@ def register_release_eval_suite(store: EvalStore) -> str:
             else EvalCategory.PROMPT_REGRESSION
         )
         suite.add_test(_to_eval_test(regression_test, category=category))
+    repo_map_runner = RepoMapBenchmarkRunner()
+    for benchmark in create_release_repo_map_benchmarks(corpus_root):
+        suite.add_test(repo_map_runner.convert_to_eval_test(benchmark))
     store.save_suite(suite)
     return suite.suite_id

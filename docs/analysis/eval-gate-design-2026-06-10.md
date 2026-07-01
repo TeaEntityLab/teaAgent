@@ -6,8 +6,8 @@
 ## Claim
 
 Agent behavior changes that ship in a release must pass an offline eval gate
-covering prompt regression and conversational-quality corpora before the
-release workflow proceeds.
+covering prompt regression, conversational-quality, and repo-map benchmark
+corpora before the release workflow proceeds.
 
 ## Corpora
 
@@ -15,6 +15,7 @@ release workflow proceeds.
 | --- | --- | --- |
 | Prompt regression | `teaagent.prompt_regression` | 3 default cases |
 | Conversational quality | `teaagent.eval_corpus` | 4 axes: clarification, interruption, correction, long-context recall |
+| Repo-map benchmark | `teaagent.eval_corpus` + `teaagent.governance.repo_map_benchmark` | 1 deterministic fixture corpus case; critical-category coverage is required |
 
 ## Commands
 
@@ -24,6 +25,9 @@ python scripts/run_release_eval_gate.py --root .
 
 # Verify gate blocks on seeded failure (should exit 1)
 python scripts/run_release_eval_gate.py --root . --seed-failure
+
+# Verify repo-map critical failure blocks the gate (should exit 1)
+TEAAGENT_EVAL_SEED_REPO_MAP_FAILURE=1 python scripts/run_release_eval_gate.py --root .
 
 # Unit tests
 python -m pytest tests/test_release_eval_gate.py -q
@@ -41,5 +45,5 @@ python -m pytest tests/test_release_eval_gate.py -q
 
 ## Limits
 
-- Offline similarity scoring only (no live model calls in gate).
-- `repo_map_benchmark` remains in default critical categories but is not in the release corpus yet.
+- The default CLI/release workflow path still uses offline replay for prompt and conversational tests unless a `model_runner` is injected; those runs are disclosed as simulated/advisory.
+- `repo_map_benchmark` is now in the release corpus through a deterministic fixture benchmark, and release gating blocks if any configured critical category has zero enabled tests.

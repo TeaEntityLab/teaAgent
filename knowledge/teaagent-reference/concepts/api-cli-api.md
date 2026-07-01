@@ -6,7 +6,7 @@ resource: "urn:teaagent:doc:docs/api/cli-api.md"
 tags: ["teaagent", "api", "cli", "reference"]
 teaagent:
   source_path: "docs/api/cli-api.md"
-  source_sha256: "05c34ee3e08ab72269bbdda9f21a101b6427ddafedadbe495d605107a8dfb27d"
+  source_sha256: "024709a9633a8c29d8ae16f2a578600855e0a6f4535fd408394ad166174c92ab"
   docs_tier: "working"
   authority: "canonical"
   lifecycle: "current"

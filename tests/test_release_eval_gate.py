@@ -43,6 +43,8 @@ def test_register_release_eval_suite_includes_conversational_category() -> None:
         assert suite is not None
         conversational = suite.get_tests_by_category(EvalCategory.CONVERSATIONAL)
         assert len(conversational) == 4
+        repo_map = suite.get_tests_by_category(EvalCategory.REPO_MAP_BENCHMARK)
+        assert [test.test_id for test in repo_map] == ['repo-map-release-eval-corpus']
     # Verify cleanup
     assert not os.path.exists(tmp_path), (
         f'Temporary directory {tmp_path} was not cleaned up'
@@ -75,6 +77,22 @@ def test_seeded_regression_fixture_blocks_release() -> None:
     assert should_block_release(result)
     assert result.failed_tests > 0
     # Verify cleanup
+    assert not os.path.exists(tmp_path), (
+        f'Temporary directory {tmp_path} was not cleaned up'
+    )
+
+
+def test_seeded_repo_map_fixture_blocks_release(monkeypatch) -> None:
+    import os
+
+    tmp_path = None
+    monkeypatch.setenv('TEAAGENT_EVAL_SEED_REPO_MAP_FAILURE', '1')
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = tmp
+        result = run_release_eval_gate(tmp, seed_failure=False)
+    assert result.decision == ReleaseDecision.BLOCK
+    assert should_block_release(result)
+    assert 'repo-map-release-eval-corpus' in result.critical_failures
     assert not os.path.exists(tmp_path), (
         f'Temporary directory {tmp_path} was not cleaned up'
     )

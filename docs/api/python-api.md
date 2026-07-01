@@ -87,7 +87,10 @@ Immutable policy object. Constructed once per run; shared across tool calls.
 ```python
 @dataclass(frozen=True)
 class ApprovalPolicy:
+    # Deprecated/inert compatibility field for removed call-ID preapproval.
     preapproved_call_ids: frozenset[str]
+    # Active pre-run payload approval: digest of tool name + arguments.
+    preapproved_payload_digests: frozenset[str]
     allow_all_destructive: bool
     permission_mode: PermissionMode
     approval_store: Optional[ApprovalPresetStore]
@@ -96,7 +99,6 @@ class ApprovalPolicy:
     multi_sig_config: MultiSigQuorumConfig
     agent_id: str
     workspace_root: str
-
     def assert_allowed(
         self,
         tool_name: str,
@@ -125,13 +127,13 @@ class JITApprovalState:
     session_approved_tools: set[str]
 
     def approve_once(self, call_id: str) -> None:
-        """Approve a specific call ID for the next invocation only."""
+        """Approve one in-flight call ID via JIT/session state."""
 
     def approve_session(self, tool_name: str) -> None:
         """Approve all calls to a tool for the current session."""
 
     def is_call_approved(self, call_id: str) -> bool:
-        """Return True if this call ID has been pre-approved."""
+        """Return True if this in-flight call ID has a live JIT/session approval."""
 ```
 
 ---

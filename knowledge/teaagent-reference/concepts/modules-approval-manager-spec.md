@@ -6,7 +6,7 @@ resource: "urn:teaagent:doc:docs/modules/approval_manager/spec.md"
 tags: ["teaagent", "approval", "module", "specification"]
 teaagent:
   source_path: "docs/modules/approval_manager/spec.md"
-  source_sha256: "5eef91a8a6258ef5b8246adb3f3d6e07dd7903edf460344e5df918746b7e5522"
+  source_sha256: "8570a53135f23f5cbe75df5418e86bcc07c8c2bf1ade3dba23b60098765233d1"
   docs_tier: "working"
   authority: "canonical"
   lifecycle: "current"

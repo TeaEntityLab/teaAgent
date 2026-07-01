@@ -1,6 +1,6 @@
 # Risk Register & Threat Model — teaagent
 **Date:** 2026-06-02  
-**Last updated:** 2026-06-09 (SEC-01 verified/closed; SEC-05/09/13/14/15 mitigated — see Fix Status §9)
+**Last updated:** 2026-07-01 (executive summary/count reconciled after SEC-11/SEC-12, SC-02, and SEC-14 current-truth updates — see Part 2 Status cells)
 **Branch:** fix/task-dd2-001-initial-task-passthrough  
 **Scope:** Full system — CLI, TUI, REPL, MCP, subagents, Docker, audit, OAuth, approval, budget  
 **Sources:** security-risk-assessment-2026-06-02.md · defeat-scenarios-and-cascade-effects-2026-06-02.md · dependency-audit-and-security-2026-06-02.md · agent-enterprise-security-risks-2026-05-31.md · docs/threat-model.md · static source analysis
@@ -9,15 +9,14 @@
 
 ## Executive Summary
 
-teaagent is a governance-first AI agent harness with strong policy enforcement, a 5-loop governance architecture, and a comprehensive approval system. The security posture is solid at the policy layer; most high-severity gaps have been closed. **No P0 findings remain open.** **Fixed 2026-06-04/05:** SEC-02 (MCP trust expiry), SEC-04 (budget default), SEC-06 (JIT isolation), SEC-07 (Docker hardening), SEC-10 (shell allowlist), DS-02 (TUI controller routing), DS-05 (TUI undo via journal), DS-09 (background UUID rejection), DS-12 (empty-path approval), DS-13 (budget semantics). **Verified 2026-06-09:** SEC-01 (HMAC key persist + verify), SEC-13 (non-mocked integration tests). See §9 Fix Status for test evidence on each.
+teaagent is a governance-first AI agent harness with strong policy enforcement, a 5-loop governance architecture, and a comprehensive approval system. The security posture is solid at the policy layer; most high-severity gaps have been closed. **No P0 findings remain open.** As of 2026-07-01, the Part 2 Status column is the current source of truth: 22 rows are fixed/closed, and 7 rows remain residual watch/mitigated/documented items (`SEC-03`, `SEC-05`, `SEC-08`, `SEC-09`, `SEC-11`, `SEC-14`, `SEC-15`). These residual rows do not block local owner-operator use, but they do block broad production/enterprise claims unless their row text says otherwise.
 
-| Severity | Count | Immediately Blocking |
-|---|---|---|
-| Critical | 0 | No (SEC-01 verified/closed) |
-| High | 5 | Partial (SEC-02) |
-| Medium | 10 | No |
-| Low | 5 | No |
-| **Total** | **20 open** | |
+| Current Part 2 status group | Count | Immediately Blocking |
+|---|---:|---|
+| Fixed / closed | 22 | No |
+| Watch / mitigated / documented residual | 7 | No for local owner-operator use; yes for broad production/enterprise claims |
+| Open P0 | 0 | No |
+| **Total Part 2 rows** | **29** | |
 
 ---
 
@@ -137,7 +136,7 @@ Each row: **ID · Category · Description · Likelihood (H/M/L) · Impact (H/M/L
 | SEC-11 | Undo | `UndoJournal._PATH_WRITE_TOOLS` covers file tools only; `workspace_run_shell_mutate` not tracked — UI shows "undo available" but shell side-effects are unrecoverable | H | M | 6 | security | 2026-07-15 | **DOCUMENTED 2026-06-30** — undo now warns when the run used shell-mutating tools since file-level restore cannot reverse them: `run_undo.py:73` `PARTIAL_UNDO_SHELL_WARNING` + `audit_events_used_shell_mutate` (detects `workspace_run_shell*`), wired in CLI (`cli/_handlers/_agent/preflight.py:204-209`) and TUI (`tui/core.py:1102-1103`); shell side-effects remain non-recoverable by design; commit `c5f4130`; tests: `tests/integration/test_run_undo_shell_warning.py` (`test_agent_undo_warns_when_run_used_shell_mutate`, `test_tui_undo_warns_when_run_used_shell_mutate`, +3) | P2 |
 | SEC-12 | Audit | ~~`os.fsync()` failure caught and silenced~~ 3-strike `fsync` failure escalation: stderr `AUDIT CRITICAL` + `AuditDurabilityError` halt; compliance mode raises on first failure | L | M | 2 | security | | **FIXED 2026-06-30** — `teaagent/audit.py:521-533`; tests: `tests/test_audit_health.py`, `tests/integration/test_disk_full_degradation.py:120-124` | — |
 | SEC-13 | Testing | Critical security paths (cost tracking, audit HMAC, approval denial) mocked out in tests — bugs live undetected (confirmed: CG-03 lived months this way) | H | M | 6 | security | 2026-06-20 | **Fixed 2026-06-09** — integration suite: `tests/integration/test_sec13_security_paths.py`, `test_audit_chain.py` (SEC-01), `test_runner_cost_tracking.py`, `test_task005_trust_expiry_enforcement.py`, `test_sec_tier1_hardening.py` | — |
-| SEC-14 | Permission | `preapproved_call_ids` deprecated but still functional — old integrations or adversarial callers can pre-approve arbitrary call IDs without HMAC digest verification | L | L | 1 | security | | **Mitigated 2026-06-09** — opt-in hard-disable via `TEAAGENT_DISABLE_PREAPPROVED_CALL_IDS=1`; test: `test_sec_tier1_hardening.py` | P3 |
+| SEC-14 | Permission | Historical: `preapproved_call_ids` allowed pre-run approval by predictable call IDs. Current code keeps the field for compatibility but does not consume it in the approval decision path; `--approve-call-id` is deprecated/inert and payload-digest preapproval is the live pre-run path. | L | L | 1 | security | | **Mitigated 2026-07-01** — CLI emits a deprecation notice and ignores `--approve-call-id`; resume paths pass no call IDs; `ApprovalManager.assert_allowed()` checks JIT state, store grants, scoped grants, and `preapproved_payload_digests`, not `preapproved_call_ids`; tests: `test_cli_agent_run_approve_call_id_is_deprecated_and_does_not_grant`, `test_prompt_mode_preapproved_without_store_still_blocks`, `test_preapproved_call_id_without_store_blocked_in_prompt_mode` | P3 |
 | SEC-15 | Multi-sig | `TEAAGENT_ALLOW_DEV_SIGNATURES=1` accepts SHA-256 of `(message+pubkey)` as valid signature; no runtime guard prevents this in production WAN deployment | L | M | 2 | security | 2026-07-15 | **Mitigated 2026-06-09** — `config_lint` errors when set; `selftest` fails; test: `test_config_lint_flags_dev_signatures_enabled` | P2 |
 | SEC-16 | Code Quality | Dead code at `budget_monitor.py:104-119` after early return — maintenance hazard that could accidentally activate on refactor | H | L | 3 | security | | **Fixed** — dead loop removed in prior refactor | QW |
 | SEC-17 | Engineering | `ApprovalPolicy` creates a `ThreadPoolExecutor` in `__post_init__` with no shutdown — every policy instance leaks threads (`policy.py:70`) | M | M | 4 | engineering | | **FIXED 2026-06-06 (ENG-01)** — `__del__` added to call `shutdown(wait=False, cancel_futures=True)`; tests: `ApprovalPolicyThreadLeakTests::test_del_shuts_down_signature_executor`, `test_del_is_safe_to_call_twice` | — |
@@ -324,9 +323,11 @@ Boundary violations:
 | Workflow rollback not executed | `teaagent/runner/` | `requires_rollback` flag now consumed; triggers `UndoJournal.restore()` |
 | MCP loopback auth (with env flag) | `teaagent/mcp_http/_oauth.py` | Bearer auth enforced when `TEAAGENT_STRICT_LOCAL=1` |
 
-### 5.2 Open Risks by Priority
+### 5.2 Historical Remediation Roadmap / Current Residual Tracking
 
-#### Priority 0 — No-go for production expansion (fix this sprint)
+The tables below preserve the original remediation roadmap for traceability. Rows marked Done/Fixed in Part 2 are historical closure records, not current open work. Current residual Part 2 rows are `SEC-03`, `SEC-05`, `SEC-08`, `SEC-09`, `SEC-11`, `SEC-14`, and `SEC-15`; `SEC-NEW*` items remain backlog proposals for broader production/compliance deployments.
+
+#### Original Priority 0 — No-go for production expansion (fix this sprint)
 
 | Risk ID | Fix Description | File:Line | Effort |
 |---|---|---|---|
@@ -368,7 +369,7 @@ Boundary violations:
 | Risk ID | Fix Description | File:Line | Effort |
 |---|---|---|---|
 | **SEC-05** | Architecture: move cost tracking out of adapter context dict to side-channel (API response headers or tamper-resistant accounting layer) | `teaagent/runner/_core.py:322-325` | L (design decision required) |
-| **SEC-14** | Remove `preapproved_call_ids` functionality in next major version; raise `ValueError` instead of `DeprecationWarning` | `teaagent/policy.py:101-107` | S (next major) |
+| **SEC-14** | Remove inert `preapproved_call_ids` compatibility plumbing in the next major version; until then, keep docs explicit that `--approve-call-id` is ignored and payload-digest/JIT approval are the live paths | `teaagent/policy.py`, `teaagent/approval/manager.py`, `teaagent/cli/_handlers/_agent/config.py` | S (next major) |
 | **SEC-16** | Delete dead code at `budget_monitor.py:104-119` | `teaagent/budget_monitor.py:104-119` | XS (10 min) |
 | **DS-04** | ~~Remove stale `audit_trail` dict from suspension JSON~~ **Done 2026-06-22**: removed; RunStore authoritative (`resume.py:56-82,416`); tests `test_suspension_data_no_audit_trail`, `test_suspension_data_has_no_audit_trail_field` | `teaagent/cli/_handlers/_agent/resume.py:56-82` | Done |
 | **SEC-NEW1** | Per-session Ed25519 key pair for agent identity; sign all outbound approval requests | New module required | L (2–3 weeks) |
@@ -568,7 +569,7 @@ See [`active-findings-status-ledger-2026-06-06.md`](../analysis/active-findings-
 | SEC-05 | Mitigated (2026-06-09) | Runner reads authoritative usage via `usage_reader`; engine tracks `DecisionUsage` |
 | SEC-09 | Mitigated (2026-06-09) | Multisig hash binds `request_id`; stale signatures rejected by timeout |
 | SEC-13 | Fixed (2026-06-09) | Non-mocked integration suite — `test_sec13_security_paths.py` |
-| SEC-14 | Mitigated (2026-06-09) | Set `TEAAGENT_DISABLE_PREAPPROVED_CALL_IDS=1` in production; deprecation warning retained |
+| SEC-14 | Mitigated (2026-07-01) | `--approve-call-id` is deprecated/inert and grants nothing; live pre-run approval is payload-digest based, while JIT `approve <call_id>` remains in-flight/session state |
 | SEC-15 | Mitigated (2026-06-09) | `config_lint` + `selftest` reject dev signatures |
 | SEC-16 | Fixed | Dead code removed from `budget_monitor.py` (prior refactor) |
 | WS3-001 | Implemented | Compliance mode fatal audit — `test_ws3_compliance_audit.py` |

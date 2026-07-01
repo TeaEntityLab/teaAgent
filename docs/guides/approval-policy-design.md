@@ -46,13 +46,14 @@ policy = ApprovalPolicy(permission_mode=PermissionMode.PROMPT)
 Approval is checked in this order. The first match wins:
 
 ```
-1. READ_ONLY gate          — block all destructive tools immediately
-2. Session-approved tools  — tool approved for the full session (approve-session)
-3. Call-ID approved        — this exact call was pre-approved by digest
-4. Approval store grants   — path-scoped or command-prefix grants from approval grant
-5. Multi-sig quorum        — peer signatures from other agents
-6. JIT prompt              — interactive TTY prompt (PROMPT mode only)
-7. Deny                    — raise ToolPermissionError
+1. READ_ONLY gate              — block all destructive tools immediately
+2. JIT/session approval        — one in-flight call or tool approved for the session
+3. Approval store presets      — configured approval presets
+4. Scoped approval grants      — persisted path/tool grants for resumed runs
+5. Payload-digest preapproval  — exact tool+arguments digest (`--approve-scoped`)
+6. Multi-sig quorum            — peer signatures from other agents
+7. JIT prompt                  — interactive TTY prompt (PROMPT mode only)
+8. Deny                        — raise ToolPermissionError
 ```
 
 ---

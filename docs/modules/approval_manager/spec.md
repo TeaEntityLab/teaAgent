@@ -14,7 +14,7 @@ The `teaagent.approval` package provides all approval-related concerns: permissi
    There is no partial approval state — a call either passes all checks or is rejected.
 
 2. **Permission mode is checked first, JIT state is checked second, store presets third.**  
-   The evaluation order is: `PermissionModeEnforcer` → JIT session/call approval → store preset → store scoped approval → preapproved call IDs → multi-sig quorum → JIT TTY prompt → raise.
+   The evaluation order is: `PermissionModeEnforcer` → JIT session/call approval → store preset → store scoped approval → preapproved payload digest → multi-sig quorum → JIT TTY prompt → raise.
 
 3. **`once`-scoped grants are atomically consumed on first use.**  
    `is_allowed()` removes the grant from the store under a file lock before returning `True`.

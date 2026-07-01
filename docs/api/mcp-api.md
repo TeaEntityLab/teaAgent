@@ -313,11 +313,11 @@ When the rate limit is exceeded, `tools/call` returns JSON-RPC error code `-3200
 
 ## Trust Model
 
-The MCP server applies teaagent's approval policy to all `tools/call` requests. Tools marked `destructive: true` require:
+The MCP server applies teaagent's approval policy to all `tools/call` requests. Tools marked `destructive: true` require one of:
 
-1. `permission_mode` to be `allow` or `danger-full-access`, **or**
-2. A pre-approved `call_id` matching the request, **or**
-3. An interactive approval prompt (if `permission_mode` is `prompt`).
+1. `permission_mode` set to `allow` or `danger-full-access`, **or**
+2. a live JIT/session approval, scoped approval grant, or payload-digest preapproval matching the exact tool call, **or**
+3. an interactive approval prompt (if `permission_mode` is `prompt`). `--approve-call-id` preapproval is deprecated/inert and does not satisfy this boundary.
 
 Denied calls return JSON-RPC error `-32001` with details on which rule blocked the call.
 

@@ -80,7 +80,7 @@ def assert_allowed(
 - **Pre**: none
 - **Post**: Returns silently if tool is allowed.
 - **Raises**: `ToolPermissionError` with a `DenialReasonCode` if not allowed.
-- **Evaluation order**: permission mode → JIT call_id → JIT session → store preset → store scoped → pre-approved call IDs → multi-sig quorum → JIT TTY prompt → raise
+- **Evaluation order**: permission mode → JIT call/session approval → store preset → store scoped approval → pre-approved payload digest → multi-sig quorum → JIT TTY prompt → raise
 
 ### `is_allowed`
 ```python

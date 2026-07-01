@@ -178,7 +178,7 @@ from teaagent.policy import ApprovalPolicy, PermissionMode, MultiSigQuorumConfig
 
 policy = ApprovalPolicy(
     permission_mode=PermissionMode.WORKSPACE_WRITE,
-    preapproved_call_ids=frozenset(),
+    preapproved_payload_digests=frozenset(),
     allow_all_destructive=False,
     approval_store=None,
     approval_origin_run_id=None,
@@ -189,12 +189,20 @@ policy = ApprovalPolicy(
 )
 ```
 
-### Pre-approving specific calls
+### Pre-approving a specific payload
+
+Call-ID preapproval (`preapproved_call_ids` / `--approve-call-id`) is deprecated and inert. Pre-run approval is payload-based: compute the digest for the exact tool name + arguments, persist the scoped approval for the originating run, and pass the digest through `preapproved_payload_digests` (CLI: `--approve-scoped TOOL:SHA256`).
 
 ```python
+from teaagent.policy import ApprovalPolicy, PermissionMode, compute_scoped_payload_digest
+
+payload_digest = compute_scoped_payload_digest('write_file', {'path': 'src/auth.py', 'content': '...'})
+
 policy = ApprovalPolicy(
     permission_mode=PermissionMode.PROMPT,
-    preapproved_call_ids=frozenset(['call_abc123', 'call_def456']),
+    preapproved_payload_digests=frozenset({payload_digest}),
+    approval_store=store,
+    approval_origin_run_id=run_id,
     ...
 )
 ```
@@ -402,7 +410,7 @@ registry = ToolRegistry()
 
 policy = ApprovalPolicy(
     permission_mode=PermissionMode.ALLOW,
-    preapproved_call_ids=frozenset(),
+    preapproved_payload_digests=frozenset(),
     allow_all_destructive=True,
     approval_store=None,
     approval_origin_run_id=None,
