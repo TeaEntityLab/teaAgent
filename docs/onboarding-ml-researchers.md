@@ -170,7 +170,7 @@ teaagent run "Train model and log metrics" \
 
 **Reproducibility checks:**
 ```bash
-teaagent audit verify --audit-log experiment-001-audit.jsonl
+teaagent audit verify --root .
 ```
 
 ## Best Practices for ML Research

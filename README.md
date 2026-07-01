@@ -130,23 +130,22 @@ TeaAgent includes persistent memory features to learn from past mistakes and syn
 
 **Failure Experience Loop:**
 - Background tasks that fail automatically create "failure cards" capturing error context
-- Future similar tasks automatically receive warnings about past failures
+- Review those failure cards before retrying similar work via `teaagent memory failures` (surfaced on demand, not auto-injected into new runs)
 - Automated invalidation rules prevent memory corruption (file signature changes, test refactors, dependency updates)
 - Commands: `teaagent memory failures` (list), `teaagent memory failures auto-invalidate` (apply rules), `teaagent memory failures prune` (cleanup)
 
 **Live Context Anchors:**
 - Pin files with `/pin <file>` to watch for changes in your IDE
-- CLI automatically refreshes context when you save pinned files
+- The interactive TUI refreshes context when you save pinned files (the file watch runs in the TUI session)
 - Commands: `/pin <file>`, `/unpin <file>`, `/pinned` (list)
-- Visual indicator in prompt shows pinned file count (e.g., `teaagent📌2>`)
 
 ### 8. Self-Healing Validation (Beta)
 
-LSP/static analysis validation is integrated with the agent runner and workflow engine:
+Static analysis validation (ruff, mypy, tsc, eslint) is integrated with the agent runner and workflow engine:
 
 **Validation Tools:**
 - Auto-detects available tools (ruff, mypy, tsc, eslint)
-- Validates code before committing changes
+- Runs the configured validation profile after an agent run (post-run; it does not gate commits)
 - Supports Python, TypeScript, and JavaScript projects
 - Enable with `--validate` on `agent run` or via workflow self-healing steps
 
@@ -177,7 +176,7 @@ Self-healing validation is described in [section 8](#8-self-healing-validation-b
 - Real-time Delta sharing between parallel agents via WAL-mode SQLite (per-thread connections; see `docs/context-bus-and-federated-sync.md`)
 - Delta cards for code changes, discoveries, errors, and context updates
 - Filtered subscriptions by agent, type, and timestamp
-- Automatic RAG archive after workflow completion
+- RAG archival helper (`ContextBus.archive_to_rag`) is available for callers; it is not auto-invoked after runs
 
 **Evolutionary Prompt Tuning:**
 - Performance-based agent prompt evolution

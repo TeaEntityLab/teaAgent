@@ -924,7 +924,7 @@ teaagent agent show <run_id> --root /path/to/repo
 Export a compliance audit bundle with hash-chain verification for a completed run:
 
 ```bash
-teaagent audit export --audit-log <run_id> --output compliance.json
+teaagent audit export <run_id> --output compliance.json
 ```
 
 The compliance bundle includes a signed digest of all audit events, chain verification

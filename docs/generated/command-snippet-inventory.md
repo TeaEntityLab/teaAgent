@@ -10,19 +10,19 @@ Regenerate: `python3 scripts/generate_command_snippet_inventory.py`
 | --- | --- | --- | --- |
 | `teaagent --config .teaagent/config.json model smoke gpt` | `docs/cli.md:31` (0de72469) | manual | Alternate config path smoke |
 | `teaagent --help` | `docs/cli.md:25` (d09b09bd) | manual | CLI help smoke |
-| `teaagent agent daily gpt "Summarize the tests" --permission-mode read-only` | `README.md:367` (05bc391c) | smoke | tests/acceptance/test_daily_cli.py |
+| `teaagent agent daily gpt "Summarize the tests" --permission-mode read-only` | `README.md:366` (05bc391c) | smoke | tests/acceptance/test_daily_cli.py |
 | `teaagent agent daily gpt "map subsystem boundaries" --context-profile deep` | `docs/USAGE.md:371` (3ac367a2) | smoke | tests/acceptance/test_daily_cli.py |
 | `teaagent agent daily gpt "plan test fix" --context-profile balanced` | `docs/USAGE.md:370` (291ea4fe) | smoke | tests/acceptance/test_daily_cli.py |
 | `teaagent agent daily gpt "review auth flow" --context-profile lean` | `docs/USAGE.md:369` (efe69395) | smoke | tests/acceptance/test_daily_cli.py |
 | `teaagent agent daily gpt "what I want to do today" --permission-mode read-only --root .` | `docs/USAGE.md:330` (41b8128d) | smoke | tests/acceptance/test_daily_cli.py |
 | `teaagent agent preflight gpt "fix tests/test_foo.py" --route-model` | `docs/USAGE.md:372` (d6336bc5) | manual | Preflight smoke with configured provider |
-| `teaagent agent run gpt "Analyze this codebase" --permission-mode read-only` | `README.md:336` (a8e6903c) | manual | Agent run smoke with configured provider |
-| `teaagent agent run gpt "Improve this project" --clarify` | `README.md:361` (d2ccc65c) | manual | Agent run smoke with configured provider |
-| `teaagent agent run gpt "Inspect this repo and summarize the test suite"` | `README.md:355` (528345e2) | manual | Agent run smoke with configured provider |
-| `teaagent agent run gpt "Update README" --permission-mode workspace-write --route-model` | `README.md:358` (5ef6ae13) | manual | Agent run smoke with configured provider |
+| `teaagent agent run gpt "Analyze this codebase" --permission-mode read-only` | `README.md:335` (a8e6903c) | manual | Agent run smoke with configured provider |
+| `teaagent agent run gpt "Improve this project" --clarify` | `README.md:360` (d2ccc65c) | manual | Agent run smoke with configured provider |
+| `teaagent agent run gpt "Inspect this repo and summarize the test suite"` | `README.md:354` (528345e2) | manual | Agent run smoke with configured provider |
+| `teaagent agent run gpt "Update README" --permission-mode workspace-write --route-model` | `README.md:357` (5ef6ae13) | manual | Agent run smoke with configured provider |
 | `teaagent agent run gpt "fix tests/test_foo.py" --permission-mode workspace-write` | `docs/USAGE.md:373` (76f03456) | manual | Agent run smoke with configured provider |
-| `teaagent agent run gpt "inspect src/app.py" --code-analysis` | `README.md:378` (153bc54d) | manual | Agent run smoke with configured provider |
-| `teaagent agent runs` | `README.md:364` (0493189b) | manual | Run list smoke |
+| `teaagent agent run gpt "inspect src/app.py" --code-analysis` | `README.md:377` (153bc54d) | manual | Agent run smoke with configured provider |
+| `teaagent agent runs` | `README.md:363` (0493189b) | manual | Run list smoke |
 | `teaagent agent undo --last --root .` | `docs/USAGE.md:34` (6dc512e7) | manual | Undo smoke after mutating run |
 | `teaagent approval check workspace_write_file --path src/foo.py --root .` | `docs/USAGE.md:67` (a85952bb) | manual | Scoped grant check smoke |
 | `teaagent approval grant workspace_run_shell_mutate --command-prefix 'pytest ' --root .` | `docs/USAGE.md:65` (f0759ae5) | manual | Scoped grant smoke in prompt mode |

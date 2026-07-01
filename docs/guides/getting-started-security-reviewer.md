@@ -17,7 +17,7 @@ Enterprise NIST mapping detail: [Security Whitepaper](../security-whitepaper.md)
 
 1. Sample run audit log: `.teaagent/runs/<run_id>.jsonl`
 2. Chain verification output: `teaagent audit verify --root .`
-3. Compliance export: `teaagent audit export --audit-log <run_id> --output bundle.json`
+3. Compliance export: `teaagent audit export <run_id> --output bundle.json`
 4. Config lint: `teaagent doctor config-lint --root .`
 5. Permission policy: `teaagent approval list --root .`
 

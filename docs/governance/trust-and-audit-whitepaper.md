@@ -79,7 +79,7 @@ teaagent doctor config-lint --root .
 teaagent audit verify --root .
 
 # Compliance bundle export (signed digest)
-teaagent audit export --audit-log <run_id> --output /tmp/bundle.json --root .
+teaagent audit export <run_id> --output /tmp/bundle.json --root .
 
 # Observability on a completed run
 teaagent audit tail <run_id> --human --limit 20 --root .

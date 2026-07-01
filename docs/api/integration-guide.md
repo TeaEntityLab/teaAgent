@@ -283,32 +283,47 @@ from teaagent.cli._handlers.my_command import handle_my_command
 
 ## Registering Hook Handlers
 
-Hooks fire at key points in the agent lifecycle. Register with `hook_registry`:
+Hooks fire at key points in the agent lifecycle. Build a `HookRegistry`, register
+handlers, and attach it to your agent config:
 
 ```python
-from teaagent.hooks import hook_registry
+from teaagent.hooks import HookRegistry, HookError
 
-@hook_registry.register('before_tool_call')
-def my_before_hook(context: dict) -> None:
-    print(f"About to call: {context['tool_name']}")
+registry = HookRegistry()
 
-@hook_registry.register('after_tool_call')
-def my_after_hook(context: dict) -> None:
-    print(f"Tool returned: {context['result']}")
+def my_pre_hook(tool_name: str, arguments: dict) -> dict | None:
+    # Return modified arguments, None to allow unchanged, or raise HookError to veto.
+    print(f"About to call: {tool_name}")
+    return None
+
+def my_post_hook(tool_name: str, arguments: dict, result: dict) -> dict | None:
+    # Return a modified result, or None to keep the original.
+    print(f"Tool returned: {result}")
+    return None
+
+registry.register_pre_hook(my_pre_hook)
+registry.register_post_hook(my_post_hook)
 ```
+
+Attach the registry when you construct the agent —
+`ChatAgentConfig(hook_registry=registry)` — and it is wired into the tool registry at
+run start.
 
 ### Available hook events
 
-| Event | Context keys | Description |
-|-------|-------------|-------------|
-| `before_tool_call` | `tool_name`, `call_id`, `arguments` | Before dispatching a tool |
-| `after_tool_call` | `tool_name`, `call_id`, `result`, `elapsed_ms` | After tool returns |
-| `on_tool_error` | `tool_name`, `call_id`, `error` | When tool raises |
-| `before_model_call` | `messages`, `model`, `iteration` | Before sending to LLM |
-| `after_model_call` | `response`, `cost_cents`, `tokens` | After LLM responds |
-| `on_run_start` | `run_id`, `task`, `config` | Run begins |
-| `on_run_end` | `run_id`, `result` | Run completes |
-| `on_approval_request` | `approval_request` | Approval prompt triggered |
+The lifecycle is Claude Code-compatible (`teaagent.hooks.HookEvent`); register each via
+the matching `HookRegistry` method:
+
+| Event (`HookEvent`) | Register with | Handler signature |
+|---------------------|---------------|-------------------|
+| `SessionStart` | `register_session_start_hook` | `(session_id, context)` |
+| `UserPromptSubmit` | `register_user_prompt_submit_hook` | `(session_id, context)` |
+| `PreToolUse` | `register_pre_hook` | `(tool_name, arguments)` -> modified args or None; raise `HookError` to veto |
+| `PostToolUse` | `register_post_hook` | `(tool_name, arguments, result)` -> modified result or None |
+| `PreCompact` | `register_pre_compact_hook` | `(context)` -> modified context or None |
+| `Stop` | `register_stop_hook` | `(session_id, context)` |
+| `SubagentStop` | `register_subagent_stop_hook` | `(session_id, context)` |
+| `SessionEnd` | `register_session_end_hook` | `(session_id, context)` |
 
 ---
 

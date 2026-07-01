@@ -35,7 +35,7 @@ Review `doctor config-lint` findings before enabling destructive modes in CI.
 ```bash
 teaagent approval pending --human --root .
 teaagent audit verify --root .
-teaagent audit export --audit-log <run_id> --output evidence.json --root .
+teaagent audit export <run_id> --output evidence.json --root .
 teaagent doctor config-lint --root .
 ```
 

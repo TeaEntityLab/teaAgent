@@ -58,7 +58,7 @@ All agent actions are logged to an audit chain:
 
 **Audit Verification:**
 ```bash
-teaagent audit verify --audit-log audit.jsonl
+teaagent audit verify --root .
 ```
 
 ### 4. Parallel Experiment Isolation
@@ -119,16 +119,18 @@ teaagent approval preset create --name "safe-experiments" \
 **Regular audit verification:**
 ```bash
 # Verify audit chain integrity
-teaagent audit verify --audit-log audit.jsonl
+teaagent audit verify --root .
 
-# Check for suspicious activity
-teaagent audit analyze --audit-log audit.jsonl --lookback 24h
+# Review recent runs and inspect their events
+teaagent audit list --limit 20 --root .
+teaagent audit tail <run_id> --human --root .
 ```
 
 **Backup audit logs:**
 ```bash
-# Archive old audit logs
-teaagent audit archive --audit-log audit.jsonl --output archive/
+# Audit logs are JSONL under .teaagent/runs/<run_id>/ — back them up with your normal tooling.
+# To enforce local retention (delete runs older than N days, keep the latest M):
+teaagent audit prune --days 90 --keep 20 --root .
 ```
 
 ### 4. CI/CD Integration
@@ -176,7 +178,7 @@ teaagent skill verify-tsb vendor-skill.tsb \
   --issuer "https://accounts.google.com"
 
 # 2. Review audit chain
-teaagent audit verify --audit-log vendor-skill-audit.jsonl
+teaagent audit verify --root .
 
 # 3. Test in isolated environment
 teaagent run --permission-mode read-only \
@@ -192,9 +194,7 @@ A skill performed unexpected actions:
 
 ```bash
 # 1. Check audit log for the incident
-teaagent audit analyze --audit-log audit.jsonl \
-  --lookback 1h \
-  --filter "tool_name=workspace_write_file"
+teaagent audit tail <run_id> --human --root .
 
 # 2. Verify skill provenance
 teaagent skill verify-tsb suspicious-skill.tsb
@@ -203,7 +203,7 @@ teaagent skill verify-tsb suspicious-skill.tsb
 teaagent undo --last
 
 # 4. Report incident with audit evidence
-teaagent audit export --audit-log audit.jsonl \
+teaagent audit export <run_id> \
   --output incident-report.json
 ```
 
