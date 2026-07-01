@@ -43,6 +43,7 @@ class RunEvidenceSummary:
     cost_state: str = 'unavailable'
     budget_cap_cents: int | None = None
     rollback_available: bool = False
+    rollback_shell_partial: bool = False
     started_at: str = ''
     finished_at: str | None = None
     evidence_categories: dict[str, int] = field(default_factory=dict)
@@ -60,6 +61,7 @@ class RunEvidenceSummary:
             'cost_state': self.cost_state,
             'budget_cap_cents': self.budget_cap_cents,
             'rollback_available': self.rollback_available,
+            'rollback_shell_partial': self.rollback_shell_partial,
             'started_at': self.started_at,
             'finished_at': self.finished_at,
             'evidence_categories': self.evidence_categories,
@@ -382,6 +384,14 @@ def build_evidence_summary(
         except Exception:
             rollback_available = False
 
+    from teaagent.run_undo import audit_events_used_shell_mutate
+
+    # SEC-11: a rollback may exist yet not reverse shell mutations. Disclose the
+    # partial nature so no surface claims unqualified undo availability.
+    rollback_shell_partial = rollback_available and audit_events_used_shell_mutate(
+        events
+    )
+
     return RunEvidenceSummary(
         run_id=run_id,
         status=summary['status'],
@@ -393,6 +403,7 @@ def build_evidence_summary(
         cost_state=cost_state,
         budget_cap_cents=budget_cap_cents,
         rollback_available=rollback_available,
+        rollback_shell_partial=rollback_shell_partial,
         started_at=summary['started_at'],
         finished_at=summary['finished_at'],
         evidence_categories=summary['evidence_categories'],

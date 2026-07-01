@@ -151,6 +151,69 @@ class TestRunEvidenceSummary:
             summary = build_evidence_summary(store, 'test-rollback', tmpdir)
             assert summary.rollback_available is True
 
+    def test_summary_rollback_shell_partial_true(self):
+        events = [
+            {
+                'run_id': 'shell-partial',
+                'event_type': 'run_started',
+                'timestamp': '2026-06-01T10:00:00Z',
+            },
+            {
+                'run_id': 'shell-partial',
+                'event_type': 'tool_call_completed',
+                'timestamp': '2026-06-01T10:01:00Z',
+                'payload': {
+                    'call_id': 'c1',
+                    'tool_name': 'workspace_run_shell_mutate',
+                    'arguments': {'command': 'echo hi >> f.txt'},
+                },
+            },
+            {
+                'run_id': 'shell-partial',
+                'event_type': 'run_completed',
+                'timestamp': '2026-06-01T10:05:00Z',
+            },
+        ]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            write_run_events(tmpdir, 'shell-partial', events)
+            write_undo_journal(tmpdir, 'shell-partial')
+            store = RunStore(tmpdir)
+            summary = build_evidence_summary(store, 'shell-partial', tmpdir)
+            assert summary.rollback_available is True
+            assert summary.rollback_shell_partial is True
+            assert summary.to_dict()['rollback_shell_partial'] is True
+
+    def test_summary_rollback_shell_partial_false_for_file_only(self):
+        events = [
+            {
+                'run_id': 'file-only',
+                'event_type': 'run_started',
+                'timestamp': '2026-06-01T10:00:00Z',
+            },
+            {
+                'run_id': 'file-only',
+                'event_type': 'tool_call_completed',
+                'timestamp': '2026-06-01T10:01:00Z',
+                'payload': {
+                    'call_id': 'c1',
+                    'tool_name': 'workspace_write_file',
+                    'arguments': {'path': 'f.txt'},
+                },
+            },
+            {
+                'run_id': 'file-only',
+                'event_type': 'run_completed',
+                'timestamp': '2026-06-01T10:05:00Z',
+            },
+        ]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            write_run_events(tmpdir, 'file-only', events)
+            write_undo_journal(tmpdir, 'file-only')
+            store = RunStore(tmpdir)
+            summary = build_evidence_summary(store, 'file-only', tmpdir)
+            assert summary.rollback_available is True
+            assert summary.rollback_shell_partial is False
+
     def test_summary_failure_status(self):
         events = [
             {

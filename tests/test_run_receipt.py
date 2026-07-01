@@ -221,6 +221,46 @@ def test_derive_resume_state_none():
     assert _derive_resume_state(events, summary=summary) == 'none'
 
 
+def test_run_receipt_discloses_partial_rollback_for_shell_mutation():
+    events = [
+        {
+            'event_type': 'run_started',
+            'timestamp': '2026-06-06T10:00:00Z',
+            'payload': {
+                'task': 't',
+                'provider': 'anthropic',
+                'model': 'm',
+                'permission_mode': 'workspace-write',
+            },
+        },
+        {
+            'event_type': 'tool_call_completed',
+            'timestamp': '2026-06-06T10:01:00Z',
+            'payload': {
+                'call_id': 'c1',
+                'tool_name': 'workspace_run_shell_mutate',
+                'arguments': {'command': 'echo hi >> f.txt'},
+            },
+        },
+        {
+            'event_type': 'run_completed',
+            'timestamp': '2026-06-06T10:05:00Z',
+            'payload': {'answer': 'ok'},
+        },
+    ]
+    with tempfile.TemporaryDirectory() as tmpdir:
+        _write_run(tmpdir, 'shell-receipt', events)
+        store = RunStore(tmpdir)
+        undo_path = store.undo_path('shell-receipt')
+        undo_path.parent.mkdir(parents=True, exist_ok=True)
+        undo_path.write_text('{}\n', encoding='utf-8')
+        receipt = build_run_receipt(store, 'shell-receipt', tmpdir)
+        assert (
+            'Rollback/undo: available (partial — shell mutations not reversed)'
+            in receipt
+        )
+
+
 def test_format_cost_unlimited_budget():
     from teaagent.evidence_summary import RunEvidenceSummary
     from teaagent.run_receipt import _format_cost

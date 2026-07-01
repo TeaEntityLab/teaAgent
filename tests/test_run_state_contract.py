@@ -82,6 +82,45 @@ def test_build_run_state_includes_git_sandbox_and_cost() -> None:
     assert payload['git_sandbox']['resolution'] == 'merge'
 
 
+def test_build_run_state_discloses_undo_shell_partial() -> None:
+    shell_events = [
+        {'event_type': 'run_started', 'payload': {'task': 't'}},
+        {
+            'event_type': 'tool_call_completed',
+            'payload': {
+                'call_id': 'c1',
+                'tool_name': 'workspace_run_shell_mutate',
+                'arguments': {'command': 'echo hi >> f.txt'},
+            },
+        },
+        {'event_type': 'run_completed', 'payload': {'answer': 'ok'}},
+    ]
+    shell = build_run_state_snapshot(
+        shell_events, 'run1', undo_available=True
+    ).to_dict()
+    assert shell['undo_available'] is True
+    assert shell['undo_shell_partial'] is True
+
+    file_events = [
+        {'event_type': 'run_started', 'payload': {'task': 't'}},
+        {
+            'event_type': 'tool_call_completed',
+            'payload': {
+                'call_id': 'c1',
+                'tool_name': 'workspace_write_file',
+                'arguments': {'path': 'f.txt'},
+            },
+        },
+        {'event_type': 'run_completed', 'payload': {'answer': 'ok'}},
+    ]
+    file_only = build_run_state_snapshot(
+        file_events, 'run2', undo_available=True
+    ).to_dict()
+    assert file_only['undo_available'] is True
+    # Conditional key: absent (not falsely present) when no shell mutation occurred.
+    assert 'undo_shell_partial' not in file_only
+
+
 def test_build_attach_snapshot_exposes_run_state_contract() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         store = RunStore(tmp)

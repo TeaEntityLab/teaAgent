@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from teaagent.run_evidence import extract_git_sandbox
+from teaagent.run_undo import audit_events_used_shell_mutate
 
 RUN_STATE_SCHEMA_VERSION = '1'
 
@@ -26,6 +27,7 @@ class RunStateSnapshot:
     cost_cents: float = 0.0
     permission_mode: str | None = None
     undo_available: bool = False
+    undo_shell_partial: bool = False
     git_sandbox: dict[str, Any] | None = None
     liveness_updated_at: str | None = None
     liveness_age_seconds: float | None = None
@@ -56,6 +58,8 @@ class RunStateSnapshot:
             payload['liveness_age_seconds'] = self.liveness_age_seconds
         if self.liveness_stale is not None:
             payload['liveness_stale'] = self.liveness_stale
+        if self.undo_shell_partial:
+            payload['undo_shell_partial'] = True
         return payload
 
 
@@ -163,6 +167,7 @@ def build_run_state_snapshot(
             raw_tick = hb_payload.get('tick')
             tick = int(raw_tick) if raw_tick is not None else None
 
+    undo_shell_partial = undo_available and audit_events_used_shell_mutate(events)
     return RunStateSnapshot(
         run_id=run_id,
         status=terminal_status or 'running',
@@ -171,6 +176,7 @@ def build_run_state_snapshot(
         cost_cents=cost_cents,
         permission_mode=permission_mode,
         undo_available=undo_available,
+        undo_shell_partial=undo_shell_partial,
         git_sandbox=git_sandbox,
         liveness_updated_at=(
             str(liveness['updated_at'])

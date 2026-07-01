@@ -314,7 +314,14 @@ def format_run_receipt(  # noqa: C901
             f'({route.routing_reason or "no reason recorded"})'
         )
 
-    rollback = 'available' if summary.rollback_available else 'not available'
+    if summary.rollback_available:
+        rollback = (
+            'available (partial — shell mutations not reversed)'
+            if summary.rollback_shell_partial
+            else 'available'
+        )
+    else:
+        rollback = 'not available'
     lines.append(f'Rollback/undo: {rollback}')
 
     metrics = summarize_run_latencies(events or [])
