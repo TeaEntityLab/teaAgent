@@ -153,16 +153,16 @@ Each row: **ID · Category · Description · Likelihood (H/M/L) · Impact (H/M/L
 | DS-01 | Budget | Historical: TUI `_session_cost_cents` never incremented — `/cost` and budget bar always showed `$0.00`; per-run cap still fired but cumulative cap never triggered | H | M | 6 | infrastructure | | **FIXED 2026-06-05** — runtime-path TUI tests in `tests/test_tui.py`; see TICKET-12 | — |
 | DS-05 | Undo | TUI `/undo` calls `git stash pop` (broadcast restore); REPL `/undo` calls `UndoJournal.restore()` (surgical) — same command word, different blast radius; TUI can destroy manual edits irreversibly | M | H | 6 | infrastructure | | **Fixed** (2026-06-05) — TUI undo routes journal-first via `ChatSessionController.undo_last_run()` at `tui/__init__.py:860`; checkpoint fallback retained; `test_tui_undo_uses_journal()`, `test_tui_handle_undo_calls_controller_first()` in `tests/test_tui.py` | — |
 | DS-09 | UX/Security | `agent run --background <uuid>` silently runs the UUID as a literal task string, spawning a real LLM call that spends money on nonsense | H | M | 6 | infrastructure | | **Fixed** (2026-06-05) — known run/suspension IDs rejected before dispatch; `test_agent_run_background_rejects_known_run_or_suspension_id()` in `tests/test_cli_chat.py:167` | — |
-| DS-04 | Audit | Stale `audit_trail` dict in suspension JSON predates CG-10 fix; forensic tooling may prefer the stale copy over the real RunStore events | M | L | 2 | infrastructure | | **OPEN** | P3 |
+| DS-04 | Audit | Stale `audit_trail` dict in suspension JSON predates CG-10 fix; forensic tooling may prefer the stale copy over the real RunStore events | M | L | 2 | infrastructure | | **FIXED 2026-06-22** — `audit_trail` placeholder removed from suspension + review JSON; RunStore is the authoritative governance record (`resume.py:56-82,416`); the old `chat_repl.py` writer was retired (commit `08cda72`, U-P2-1); tests: `test_suspension_data_no_audit_trail`, `test_suspension_data_has_no_audit_trail_field` | — |
 | DS-06 | Testing | Historical: TUI cost test injected `_session_cost_cents` directly and tested formatter only, masking CG-11 from CI | H | M | 6 | infrastructure | | **FIXED 2026-06-05** — active-path TUI cost/session tests in `tests/test_tui.py`; see TICKET-14 | — |
 
 ### 2.3 Supply Chain Findings (SC-*)
 
 | ID | Category | Description | L | I | Score | Owner | Due | Status | Priority |
 |---|---|---|---|---|---|---|---|---|---|
-| SC-01 | Dependencies | Two alpha packages in production lock (`opentelemetry-exporter-gcp-logging==1.12.0a0`, `opentelemetry-resourcedetector-gcp==1.12.0a0`) can break between lock refreshes | M | L | 2 | architecture | 2026-07-15 | **OPEN** | P2 |
+| SC-01 | Dependencies | Two alpha packages in production lock (`opentelemetry-exporter-gcp-logging==1.12.0a0`, `opentelemetry-resourcedetector-gcp==1.12.0a0`) can break between lock refreshes | M | L | 2 | architecture | | **FIXED** — alpha pins gone from `uv.lock`; `opentelemetry-exporter-gcp-logging` constrained to stable `>=1.12.0,<2.0.0` via `[tool.uv]` overrides; `opentelemetry-resourcedetector-gcp` no longer resolved; no `1.12.0a0` remains in the lock (commit `bad05d1`) | — |
 | SC-02 | Dependencies | `anthropic` SDK and `pyyaml` imported at runtime but undeclared in `pyproject.toml` — silent `ImportError` on installs without `google-cloud-aiplatform` or `pre-commit` | H | M | 6 | architecture | 2026-06-20 | **OPEN** — TASK-DD2-015 dependency declaration/import-check follow-up; fix target: `pyproject.toml` | P1 |
-| SC-03 | Dependencies | `aiohttp` and `mcp` SDK in lock as orphans — not declared, not imported in core; add 22 transitive packages to attack surface unnecessarily | H | L | 3 | architecture | 2026-07-15 | **OPEN** | P2 |
+| SC-03 | Dependencies | `aiohttp` and `mcp` SDK in lock as orphans — not declared, not imported in core; add 22 transitive packages to attack surface unnecessarily | H | L | 3 | architecture | | **FIXED** — `aiohttp` and `mcp` are no longer `[[package]]` entries in `uv.lock` and are not imported in `teaagent/` (only the `mcp` CLI subcommand name + string literals); orphan transitive surface removed (commit `bad05d1`) | — |
 
 ---
 
@@ -226,7 +226,7 @@ Each row: **ID · Category · Description · Likelihood (H/M/L) · Impact (H/M/L
 | D-2: Disk-full attack silences audit writes | `audit.py:521-533` | 3-strike `fsync` escalation: stderr `AUDIT CRITICAL` + `AuditDurabilityError` halt (SEC-12 fixed 2026-06-30) | ~~No operator notification; all events lost at process exit (SEC-12)~~ — run halts after 3 consecutive failures; compliance mode raises immediately | MEDIUM |
 | D-3: UUID-as-task bogus run spends real API budget | `_agent.py:145-146` | None | `agent run --background <uuid>` runs UUID as literal task (DS-09) | MEDIUM |
 | D-4: Zero budget cap interpreted as unlimited | `runner/_core.py:142` | `0`=no-spend, `None`=unlimited (DS-13 fixed) | Resolved — any positive cost raises `BudgetExceededError` when cap=0 | LOW |
-| D-5: Alpha OTel GCP packages break on lock refresh | `uv.lock` | None | Two alpha packages can introduce breaking changes between `uv lock --upgrade` (SC-01) | LOW |
+| D-5: Alpha OTel GCP packages break on lock refresh | `uv.lock` | `[tool.uv]` overrides pin `opentelemetry-exporter-gcp-logging>=1.12.0,<2.0.0`; alpha pins removed | Resolved — no `1.12.0a0` in lock (SC-01 fixed) | LOW |
 
 #### E — Elevation of Privilege
 
@@ -360,8 +360,8 @@ Boundary violations:
 | **DS-13** | ~~Use `None` as no-cap sentinel~~ **Done 2026-06-05**: `None`=unlimited, `0`=no-spend. Tests: `test_budget_zero_cents_rejects_any_spend`, `test_budget_none_allows_unlimited` | `teaagent/runner/_core.py:142` | Done |
 | **DS-01** | Fixed in current branch: TUI cost accumulation is covered by runtime-path tests | `teaagent/tui/__init__.py` / `tests/test_tui.py` | Done |
 | **DS-05** | After DS-02 (TUI controller migration): unified undo via controller | `teaagent/tui/__init__.py:641` | M (pending DS-02) |
-| **SC-01** | Add `==` overrides to freeze two alpha GCP OTel packages in `[tool.uv]` | `pyproject.toml` | XS (15 min) |
-| **SC-03** | Run `uv remove aiohttp mcp`; or declare `mcp` in `[project.optional-dependencies]` if intended | `uv.lock`, `pyproject.toml` | XS (30 min) |
+| **SC-01** | ~~Add `==` overrides to freeze two alpha GCP OTel packages in `[tool.uv]`~~ **Done**: `[tool.uv]` overrides constrain to stable `>=1.12.0,<2.0.0`; alpha pins removed from `uv.lock` (commit `bad05d1`) | `pyproject.toml` | Done |
+| **SC-03** | ~~Run `uv remove aiohttp mcp`; or declare `mcp` in `[project.optional-dependencies]` if intended~~ **Done**: `aiohttp`/`mcp` removed from `uv.lock` (commit `bad05d1`) | `uv.lock`, `pyproject.toml` | Done |
 
 #### Priority 3 — Backlog
 
@@ -370,7 +370,7 @@ Boundary violations:
 | **SEC-05** | Architecture: move cost tracking out of adapter context dict to side-channel (API response headers or tamper-resistant accounting layer) | `teaagent/runner/_core.py:322-325` | L (design decision required) |
 | **SEC-14** | Remove `preapproved_call_ids` functionality in next major version; raise `ValueError` instead of `DeprecationWarning` | `teaagent/policy.py:101-107` | S (next major) |
 | **SEC-16** | Delete dead code at `budget_monitor.py:104-119` | `teaagent/budget_monitor.py:104-119` | XS (10 min) |
-| **DS-04** | Remove stale `audit_trail` dict from suspension JSON | `teaagent/cli/_handlers/chat_repl.py:89-93` | XS (10 min) |
+| **DS-04** | ~~Remove stale `audit_trail` dict from suspension JSON~~ **Done 2026-06-22**: removed; RunStore authoritative (`resume.py:56-82,416`); tests `test_suspension_data_no_audit_trail`, `test_suspension_data_has_no_audit_trail_field` | `teaagent/cli/_handlers/_agent/resume.py:56-82` | Done |
 | **SEC-NEW1** | Per-session Ed25519 key pair for agent identity; sign all outbound approval requests | New module required | L (2–3 weeks) |
 | **SEC-NEW2** | Prompt injection detection layer: pattern-based + anomaly detection on tool call sequences | New module required | L (2–4 weeks) |
 | **SEC-NEW3** | Behavioral contract document per deployment (YAML, human + machine readable, signed and stored with audit log) | New module required | L (3–4 weeks) |
@@ -464,7 +464,7 @@ After all Priority 0–1 mitigations are applied:
 | Network transmission security | CC6.6 | ✅ MCP HTTP auth, DPoP, TLS | Loopback MCP no-auth default (AS-4) |
 | Encryption at rest | CC6.7 | ⚠️ L0/L1/L2 redaction | L3 claims encryption, writes plaintext (AS-6) |
 | System monitoring | CC7.2 | ⚠️ Audit chain exists | Chain forgeable (SEC-01) |
-| Vendor / third-party risk | CC9.2 | ⚠️ 0 CVEs, clean licenses | Alpha packages (SC-01); no model provider docs |
+| Vendor / third-party risk | CC9.2 | ⚠️ 0 CVEs, clean licenses | Alpha OTel pins removed (SC-01 fixed); no model provider docs |
 
 ### 8.3 OWASP Top 10 (LLM Applications — 2025)
 
@@ -474,7 +474,7 @@ After all Priority 0–1 mitigations are applied:
 | LLM02 — Insecure Output Handling | MEDIUM — shell mutations, file writes | Destructive approval required; plan-before-write mode |
 | LLM03 — Training Data Poisoning | LOW — not a training context | N/A |
 | LLM04 — Model DoS | MEDIUM — runaway loops | Budget cap; default cap=0 gap (SEC-04) |
-| LLM05 — Supply Chain Vulnerabilities | MEDIUM — plugin system, 197 deps | Plugin gates; 0 CVEs; alpha packages (SC-01) |
+| LLM05 — Supply Chain Vulnerabilities | MEDIUM — plugin system, 197 deps | Plugin gates; 0 CVEs; alpha OTel pins removed (SC-01 fixed) |
 | LLM06 — Sensitive Info Disclosure | HIGH — workspace file access, inspect tools | `cat`/`head`/`tail` gap (SEC-10); audit L3 plaintext (AS-6) |
 | LLM07 — Insecure Plugin Design | MEDIUM — plugin tool manifest | Capability manifest "in progress" |
 | LLM08 — Excessive Agency | HIGH — shell mutation, Docker, network | Permission modes; Docker no network isolation (SEC-07) |
@@ -525,8 +525,8 @@ warn_at_pct = 50
 12. **DS-06** — Fixed in current branch: TUI cost test exercises runtime path
 13. **DS-01** — Fixed in current branch: TUI cost accumulation stop-gap is covered
 14. **SEC-08** — Add runtime warning for `directory-snapshot` mode
-15. **SC-01** — Freeze alpha GCP OTel packages with `==` overrides in `[tool.uv]`
-16. **SC-03** — `uv remove aiohttp mcp` (or declare intentional)
+15. **SC-01** — ~~Freeze alpha GCP OTel packages with `==` overrides in `[tool.uv]`~~ **FIXED**: `[tool.uv]` overrides pin stable `>=1.12.0,<2.0.0`; no `1.12.0a0` in `uv.lock` (commit `bad05d1`)
+16. **SC-03** — ~~`uv remove aiohttp mcp` (or declare intentional)~~ **FIXED**: `aiohttp`/`mcp` absent from `uv.lock`; not imported in `teaagent/` (commit `bad05d1`)
 
 ### Sprint 3 — Medium priority
 
@@ -582,7 +582,7 @@ See [`active-findings-status-ledger-2026-06-06.md`](../analysis/active-findings-
 26. **SEC-NEW2** — Prompt injection detection layer
 27. **SEC-NEW3** — Behavioral contract per deployment
 28. **SEC-14** — Remove `preapproved_call_ids` in next major version
-29. **DS-04** — Remove stale `audit_trail` field from suspension JSON
+29. **DS-04** — ~~Remove stale `audit_trail` field from suspension JSON~~ **FIXED 2026-06-22**: removed; RunStore authoritative; test `test_suspension_data_no_audit_trail`
 
 ---
 

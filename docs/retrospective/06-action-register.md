@@ -51,6 +51,7 @@ Legend: ✅ Done (committed) · 🟡 In progress · ⬜ Not started · 🔵 Alre
 | S-P2-4 | Security | Make the Bandit step in `ci.yml` blocking by removing the `\|\| echo` fallback. | `.github/workflows/ci.yml:201-203` | Bandit exits non-zero on Medium+ findings; no `|| echo` fallback. | ✅ | This session — removed `|| echo "::warning::..."` fallback |
 | S-P2-5 | Security | Correct the `notify.py:42` docstring (`shell=True` -> `shell=False`); make `config_lint` warn about `allow_dev_signatures` outside development workspaces. | `teaagent/notify.py:42,138-141`; `teaagent/config_lint.py:102-108` | Docstring corrected; `config_lint` warns on `allow_dev_signatures` outside dev. | ✅ | `notify.py` documents `subprocess.run(shell=False)`; `config_lint` warns (not errors) when env or `multi_sig.allow_dev_signatures` is enabled outside a marked dev workspace (`TEAAGENT_DEVELOPMENT_WORKSPACE` or `.teaagent/development`); `tests/test_ws4_observability.py` |
 | S-P2-6 | Security | Reconcile the SEC-11 risk-register row with the landed partial-undo shell-mutation disclosure: mark it DOCUMENTED with inline test/code evidence instead of a bare `OPEN`. | `docs/security/risk-register-and-threat-model-2026-06-02.md:137,357,457,535` | Register shows the disclosure mitigation with test/code evidence; `validate_docs_consistency.py` risk-register coverage rises to 26/29; all four SEC-11 references are consistent. | ✅ | This session — SEC-11 row → `**DOCUMENTED 2026-06-30**` citing `run_undo.py:73` `PARTIAL_UNDO_SHELL_WARNING`, CLI (`preflight.py:204-209`) + TUI (`core.py:1102-1103`) wiring, and `tests/integration/test_run_undo_shell_warning.py` (5 tests, commit `c5f4130`); remediation table/list rows struck through; incident-response note refined; coverage 25/29 → 26/29 |
+| S-P2-7 | Security | Reconcile the remaining resolved-but-`OPEN` risk-register rows (DS-04, SC-01, SC-03) with current code/lock state. | `docs/security/risk-register-and-threat-model-2026-06-02.md:156,163,165` (+ remediation/sprint/compliance cross-refs) | The three rows and all their cross-references show FIXED with test/code/lock evidence; `validate_docs_consistency.py` risk-register coverage rises to 29/29. | ✅ | This session — DS-04 → FIXED (`audit_trail` placeholder removed; RunStore authoritative; `resume.py:56-82,416`; tests `test_suspension_data_no_audit_trail`, `test_suspension_data_has_no_audit_trail_field`; commit `08cda72`); SC-01 → FIXED (alpha OTel pins gone from `uv.lock`; `[tool.uv]` overrides force stable `>=1.12.0,<2.0.0`; commit `bad05d1`); SC-03 → FIXED (`aiohttp`/`mcp` absent from `uv.lock`, not imported in `teaagent/`; commit `bad05d1`); coverage 26/29 → 29/29 |
 | G-P2-1 | Governance | Gate use of `directory-snapshot` isolation for untrusted content behind an `--acknowledge-no-os-isolation` flag. | `teaagent/subagents/_isolation.py:287-298` | Flag exists; isolation gated. | ✅ | `acknowledge_no_os_isolation` is required for untrusted directory-snapshot isolation; `tests/test_subagent_isolation.py` |
 | G-P2-2 | Governance | Remove `preapproved_call_ids` after the deprecation window and standardize on payload digest. | `teaagent/policy.py:115-121`; `teaagent/approval_manager.py:953-968` | No `preapproved_call_ids` references remain in approval/decision paths; CLI `--approve-call-id` ignored. | ✅ | `25a234e` — `--approve-call-id` deprecated/ignored; docs updated; `--approve-scoped TOOL:SHA256` is the standard |
 | G-P2-3 | Governance | Add iteration and tool-call warnings alongside `BudgetMonitor`'s existing cost monitoring. | `teaagent/budget_monitor.py:74-106` | Warnings added. | ✅ | Iteration and tool-call threshold warnings are implemented; `tests/test_budget_monitor_warnings.py` |
@@ -75,14 +76,14 @@ Legend: ✅ Done (committed) · 🟡 In progress · ⬜ Not started · 🔵 Alre
 | --- | --- | --- |
 | P0 | 8 | Security 3, Architecture 2, UX 2, Governance 1 |
 | P1 | 17 | Security 3, Governance 3, Architecture 5, UX 6 (including cross-dimensional items) |
-| P2 | 23 | Security 6, Governance 5, Architecture 7, UX 5 |
-| **Total** | **48** | |
+| P2 | 24 | Security 7, Governance 5, Architecture 7, UX 5 |
+| **Total** | **49** | |
 
 ### Status Summary
 
 | Status | Count | Items |
 | --- | --- | --- |
-| ✅ Done (verified) | 44 | S-P0-1, S-P0-2, S-P0-3, A-P0-1, A-P0-2, U-P0-1, U-P0-2, G-P0-1; S-P1-1, S-P1-2, S-P1-3, G-P1-1, G-P1-2, G-P1-3, A-P1-1, A-P1-2, A-P1-3, A-P1-4, A-P1-5, U-P1-1, U-P1-2, U-P1-3, U-P1-4, U-P1-5, U-P1-6; S-P2-1, S-P2-4, S-P2-5, S-P2-6, G-P2-1, G-P2-2, G-P2-3, G-P2-5, A-P2-1, A-P2-2, A-P2-3, A-P2-5, A-P2-6, A-P2-7, U-P2-1, U-P2-2, U-P2-3, U-P2-4, U-P2-5 |
+| ✅ Done (verified) | 45 | S-P0-1, S-P0-2, S-P0-3, A-P0-1, A-P0-2, U-P0-1, U-P0-2, G-P0-1; S-P1-1, S-P1-2, S-P1-3, G-P1-1, G-P1-2, G-P1-3, A-P1-1, A-P1-2, A-P1-3, A-P1-4, A-P1-5, U-P1-1, U-P1-2, U-P1-3, U-P1-4, U-P1-5, U-P1-6; S-P2-1, S-P2-4, S-P2-5, S-P2-6, S-P2-7, G-P2-1, G-P2-2, G-P2-3, G-P2-5, A-P2-1, A-P2-2, A-P2-3, A-P2-5, A-P2-6, A-P2-7, U-P2-1, U-P2-2, U-P2-3, U-P2-4, U-P2-5 |
 | 🟡 In progress | 0 | — |
 | ⬜ Not started | 0 | — |
 | 🔵 Already existed | 4 | S-P2-2, S-P2-3, G-P2-4, A-P2-4 |
