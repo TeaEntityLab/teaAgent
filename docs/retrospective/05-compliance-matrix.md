@@ -1,6 +1,6 @@
 # 05 - AGENTS.md Rule Compliance Matrix
 
-> **Last reviewed:** 2026-06-22 (DR-003 refresh after intent debate + `AGENTS.md` reconciliation).
+> **Last reviewed:** 2026-06-30 (targeted: ADR-0041 Phase 2 D4 thin-harness row; last full DR-003 refresh 2026-06-22).
 > Rule-by-rule comparison of `AGENTS.md` against evidence from the four audit dimensions.
 > Ratings: **Compliant / Partial / Violated**. Every row includes evidence as `file_path:line_number`.
 
@@ -8,7 +8,7 @@
 
 | Rule | Rating | Evidence |
 | --- | --- | --- |
-| "Keep the harness thin: orchestration, tool governance, state boundaries, audit, and validation belong here; domain reasoning belongs in the model or skills." | **Partial** | Governance spine is in-repo (`runner/_core.py`, `approval/`, `audit.py`). Domain reasoning remains in `teaagent/domain/` (~2,761 LOC across `issue_intake.py`, `workflow_engine.py`, `coordinator.py`, `agent_factory.py`, `intent.py`). `swarm.py` (~1,010 LOC) and decomposed approval hybrid store (`subagents/_hybrid_store_*.py`, ~4,888 LOC total) add product surface. Self-audit: [system-interrogation-map-2026-06-06.md](../analysis/system-interrogation-map-2026-06-06.md) — thin harness is a **target invariant**, not current truth. |
+| "Keep the harness thin: orchestration, tool governance, state boundaries, audit, and validation belong here; domain reasoning belongs in the model or skills." | **Partial** | Governance spine is in-repo (`runner/_core.py`, `approval/`, `audit.py`). Domain reasoning remains in `teaagent/domain/` (**2,781 LOC** measured 2026-06-30: `issue_intake.py` 961, `workflow_engine.py` 768, `agent_factory.py` 436, `coordinator.py` 409, `intent.py` 207); `swarm.py` (~1,059 LOC) and the decomposed approval hybrid store (`subagents/_hybrid_store_*.py`) add product surface. **ADR-0041 Phase 2 (behavior-preserving thinning, increment 1)** relocated the LLM-path *prompt reasoning* out of Python into reviewed skill assets under `teaagent/skills/builtin/` (`task-classification/`, `agent-prompt-authoring/`), loaded via `teaagent/domain/_prompt_assets.py`, with byte-identity tests (`tests/test_prompt_assets.py`); the tested deterministic heuristics and their fallbacks deliberately stay in the harness (LLM-ifying them would regress behavior and fail gate D2), so measured LOC is roughly flat and the rating remains **Partial**. See [ADR-0041 §2.3](../adr/0041-execution-surface-unification-and-harness-thinning.md) and [harness-first-direction-2026-06-13.md](../strategy/harness-first-direction-2026-06-13.md) — thin harness is a **target invariant**, not current truth. |
 | "Treat thin harness as a **target invariant for new work**, not a claim about current code size." | **Compliant** | Stated in `AGENTS.md` (2026-06-22) and ratified in [harness-first-direction-2026-06-13.md](../strategy/harness-first-direction-2026-06-13.md) §6. Event-spine migration (TASK-006) is the planned remediation path. |
 | "Prefer protocol assets over vendor-specific assets: MCP-style tool metadata, Skills, and portable run records." | **Compliant** | MCP: `mcp_server.py:PROTOCOL_VERSION='2024-11-05'`; `mcp_tool_adapter.py` consumes MCP manifests as `ToolDefinition`. Skills: `skill_loader.py` + provenance via `skill_review.py`. Run records: hash-chained `audit.py`, `run_receipt.py`, `run_evidence.py`. Vendor adapters isolated in `llm/_adapters.py` and optional `managed_runtime.py`. |
 | "Do not add a second agent framework without an ADR." | **Compliant (literally)** | ADRs 0019, 0022, 0028, 0029, and **0040** cover swarm/subagents/tournament and shared budget/audit/approval invariants across `AgentRunner` and `SubagentManager`. Dual execution loops remain a **maintainability debt** despite ADR coverage. |
@@ -59,7 +59,7 @@
 
 - **No rules are Violated** after `AGENTS.md` reconciliation and verification against current tests.
 - **Two Partial ratings remain systemic**:
-  1. **Thin harness** — domain/swarm/hybrid-store surface exceeds target invariant; migration tracked via harness-first §6 and TASK-006.
+  1. **Thin harness** — domain/swarm/hybrid-store surface exceeds target invariant; migration tracked via ADR-0041 (Phase 2 increment 1 relocated LLM prompt reasoning to reviewed skill assets; tested deterministic logic retained), harness-first §6, and TASK-006.
   2. **Governed path** — approval is enforced at `AgentRunner`, not inside `ToolRegistry.execute()`; defense-in-depth gap for direct registry callers.
 - **Prior P0 auto-mode violation is closed** — update [01-security-risk.md](01-security-risk.md) G1 status when that chapter is next refreshed.
 - **Prior library-audit partial is closed** — `chat_agent` durable audit default verified by `tests/test_chat_agent_library_audit.py`.
@@ -68,5 +68,6 @@
 
 | Date | Change |
 | --- | --- |
+| 2026-06-30 | ADR-0041 Phase 2 D4: thin-harness row updated with measured domain LOC (2,781) and the behavior-preserving prompt-asset relocation (increment 1); rating stays Partial. |
 | 2026-06-22 | DR-003: Re-rated destructive-tool rule (mode-relative); added thin-harness target + governed-path rows; closed auto-mode and library-audit gaps per current code/tests. |
 | (prior) | Original matrix rated auto-mode Violated and library audit Partial. |

@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed — 2026-06-30
+Accepted — 2026-06-30 (Phase 1 implemented; Phase 2 in progress — increment 1 landed, gate D4 recorded)
 
 **Target architecture decision.** This ADR defines a phased migration with
 acceptance gates at each step. It is **not** authorization for a single
@@ -210,8 +210,9 @@ count that drifted when the env-lock work added a self-consistency invariant;
 that guard was reviewed and corrected (test-only, isolated). **G5** — the import
 graph shows no new execution-loop package; the single run loop remains in
 `_core.py` and subagents delegate through `run_chat_agent`. Phase 2 (domain
-reasoning migration) remains
-**unauthorized** pending an explicit decision.
+reasoning migration) was authorized (2026-06-30) and is underway as
+**behavior-preserving thinning** — see §2.3 for the landed increment and gate
+status.
 
 ### Phase 2 — Domain reasoning migration (harness thinning)
 
@@ -295,8 +296,11 @@ byte-identity tests; the deterministic unit tests — `test_intent.py`,
 — remain green and authoritative). **D1 / D3 intentionally not pursued by
 deletion**: no shim-and-delete, because that requires the LLM-ification
 regression D2 forbids; the LOC budget is reframed as *prompt reasoning relocated
-to reviewed assets*, not LOC removed. **D4** (compliance-matrix thin-harness row)
-is the remaining bookkeeping.
+to reviewed assets*, not LOC removed. **D4 met (2026-06-30)**: the
+`docs/retrospective/05-compliance-matrix.md` thin-harness row now records the
+measured domain LOC (2,781) and the increment-1 prompt-asset relocation; the
+rating stays **Partial** because the tested deterministic logic is deliberately
+retained.
 
 ### Explicit non-decisions
 
