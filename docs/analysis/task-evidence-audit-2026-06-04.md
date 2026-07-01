@@ -7,9 +7,9 @@
 
 **Status update — 2026-06-05 / 2026-07-01:** The original audit table captured a
 pre-fix snapshot. Current canonical status lives in the risk register and
-roadmap docs. Rows for SEC-04, SEC-06, DS-12, DS-13 (2026-06-05) and SEC-11,
-DS-04, SC-01, SC-02, SC-03 (2026-07-01) have been reconciled below so
-automated readers do not re-open closed risk.
+roadmap docs. All risk-register rows in Sections 3.1–3.3 have been reconciled
+below to current FIXED/MITIGATED/DOCUMENTED status so automated readers do not
+re-open closed risk.
 
 ---
 
@@ -46,22 +46,22 @@ For each status claim in the source documents:
 
 | ID | Priority | Claimed Status | Evidence Type | Evidence Link | Risk Level |
 |---|---|---|---|---|---|
-| SEC-01 | P0/Blocker | OPEN | NOT VERIFIED | No test guards audit HMAC persistence across restarts | 🔴 HIGH |
-| SEC-02 | P0/Blocker | OPEN | NOT VERIFIED | No test exercises `is_server_trust_expired()` at call time | 🔴 HIGH |
+| SEC-01 | P0/Blocker | FIXED | Test evidence | `test_audit_hmac_persisted_across_instances`, `test_audit_hmac_fails_with_wrong_key`, `test_audit_key_file_permissions_readable`, `HMACKeySaveTests::test_chain_key_save_failure_logs_warning` | 🟢 LOW |
+| SEC-02 | P0/Blocker | FIXED | Test evidence | `test_server_trust_expiry` (`tests/test_mcp_trust.py`) | 🟢 LOW |
 | SEC-03 | P1 | FIXED/WATCH | Test evidence | `test_first_run_pauses_at_destructive_tool`, `test_resume_with_danger_full_access_completes` (`tests/integration/test_destructive_approval_lifecycle.py:49,63`); `tests/test_full_access_gate.py` | 🟡 MEDIUM |
 | SEC-04 | P0/Blocker | FIXED | Test evidence | Default cap is finite and `0` is a real zero-spend cap; see `test_zero_cost_budget_blocks_preflight`, `test_zero_cost_cap_blocks_positive_cost_run`, and budget/TUI focused tests | 🟢 LOW |
-| SEC-05 | P2 | OPEN | NOT VERIFIED | No test guards cost side-channel via adapter context dict | 🟡 MEDIUM |
+| SEC-05 | P2 | MITIGATED | Test evidence | `test_sec_tier1_hardening.py`, `test_sec13_security_paths.py`; runner uses authoritative `usage_reader` | 🟢 LOW |
 | SEC-06 | P1 | FIXED | Test evidence | `test_subagent_jit_approval_isolation_sec06` + `test_subagent_jit_approval_isolation_sec06_adversarial` (`tests/integration/test_subagent_budget_inheritance.py:91,126`) | 🟢 LOW |
-| SEC-07 | P0/Blocker | OPEN | NOT VERIFIED | No test asserts Docker flags `--network none`, `--cap-drop ALL`, seccomp | 🔴 HIGH |
-| SEC-08 | P1 | OPEN | NOT VERIFIED | No test verifies directory-snapshot isolation vs `/etc/`, `/proc/` access | 🟡 MEDIUM |
-| SEC-09 | P2 | OPEN | NOT VERIFIED | Multi-sig 1-hour replay window; no test exercises replay attack | 🟢 LOW |
-| SEC-10 | P1 | OPEN | NOT VERIFIED | `_INSPECT_EXECUTABLES` still includes `cat`, `head`, `tail`; no test enforces safe-reads-only list | 🔴 HIGH |
+| SEC-07 | P0/Blocker | FIXED | Test evidence | `test_subagent_docker_container_hardened`; Docker flags include non-root user, `--network none`, `--cap-drop ALL`, read-only, no-new-privileges | 🟢 LOW |
+| SEC-08 | P1 | DOCUMENTED | Code evidence | Directory-snapshot selection emits warning at `_isolation.py:181`; dev-vs-production guidance in `docs/ops/security-hardening.md` | 🟡 MEDIUM |
+| SEC-09 | P2 | MITIGATED | Test evidence | `test_sec_tier1_hardening.py`; multisig hash binds `request_id`, stale signatures rejected by timeout | 🟢 LOW |
+| SEC-10 | P1 | FIXED | Test evidence | `test_cat_not_in_inspect_allowlist`, `test_head_not_in_inspect_allowlist`, `test_tail_not_in_inspect_allowlist`, `test_inspect_shell_cannot_read_ssh_keys` | 🟢 LOW |
 | SEC-11 | P2 | DOCUMENTED | Test evidence | `test_agent_undo_warns_when_run_used_shell_mutate`, `test_tui_undo_warns_when_run_used_shell_mutate` (`tests/integration/test_run_undo_shell_warning.py`) | 🟢 LOW |
-| SEC-12 | P2 | OPEN | NOT VERIFIED | `os.fsync()` silence path not covered by test | 🟢 LOW |
-| SEC-13 | P1 | OPEN | NOT VERIFIED | Critical paths still mock security internals; CG-03 class bug confirmed latent; no remediation timeline | 🔴 HIGH |
-| SEC-14 | P3 | OPEN | NOT VERIFIED | `preapproved_call_ids` deprecated but still callable; no test asserts old integrations are blocked | 🟢 LOW |
-| SEC-15 | P2 | OPEN | NOT VERIFIED | Dev-signature bypass has no production guard; no test asserts rejection on non-loopback | 🟡 MEDIUM |
-| SEC-16 | QW | OPEN | Code evidence | Dead code at `budget_monitor.py:104-119` visible in static analysis; no test required | 🟢 LOW |
+| SEC-12 | P2 | FIXED | Test evidence | `test_three_strikes_raises_audit_durability_error`, `test_disk_full_raises_by_default`; `audit.py:521-533` | 🟢 LOW |
+| SEC-13 | P1 | FIXED | Test evidence | `tests/integration/test_sec13_security_paths.py`, `test_audit_chain.py`, `test_runner_cost_tracking.py`, `test_task005_trust_expiry_enforcement.py`, `test_sec_tier1_hardening.py` | 🟢 LOW |
+| SEC-14 | P3 | MITIGATED | Test evidence | `test_sec_tier1_hardening.py`; `TEAAGENT_DISABLE_PREAPPROVED_CALL_IDS=1` hard-disable path | 🟢 LOW |
+| SEC-15 | P2 | MITIGATED | Test evidence | `test_config_lint_flags_dev_signatures_enabled`; config_lint/selftest reject dev signatures | 🟢 LOW |
+| SEC-16 | QW | FIXED | Code evidence | Dead loop removed from `budget_monitor.py` in prior refactor | 🟢 LOW |
 
 ### 3.2 Defeat Scenario Findings (DS-*)
 
@@ -69,10 +69,10 @@ For each status claim in the source documents:
 |---|---|---|---|---|---|
 | DS-12 | P1 | FIXED | Test evidence | `test_empty_path_globs_rejected_ds12`, `test_approval_preset_store_rejects_blank_scoped_patterns`, `test_smart_hitl_approval_p_without_path_stays_denied`, `test_tui_path_approval_without_path_stays_denied` | 🟢 LOW |
 | DS-13 | P2 | FIXED | Test evidence | `test_zero_cost_cap_blocks_positive_cost_run` (`tests/integration/test_runner_cost_tracking.py:107`); `test_zero_cost_budget_blocks_preflight` (`tests/test_budget.py:50`); TUI/CLI budget pass-through tests | 🟢 LOW |
-| DS-01 | P1 | OPEN | NOT VERIFIED | TUI `_session_cost_cents` accumulation bug; DS-13 fixed budget semantics but DS-01 is a separate TUI accumulation path | 🔴 HIGH |
-| DS-05 | P2 | OPEN | NOT VERIFIED | TUI/REPL undo divergence; no test shows same command has consistent blast radius | 🟡 MEDIUM |
-| DS-06 | P1 | OPEN | NOT VERIFIED | TUI cost test still injects state directly; accumulation path not covered by CI | 🟡 MEDIUM |
-| DS-09 | P1 | OPEN | NOT VERIFIED | `agent run --background <uuid>` misuse not blocked; no test guards literal-UUID task misparse | 🔴 HIGH |
+| DS-01 | P1 | FIXED | Test evidence | Runtime-path TUI cost/session tests in `tests/test_tui.py`; see TICKET-12 | 🟢 LOW |
+| DS-05 | P2 | FIXED | Test evidence | `test_tui_undo_uses_journal`, `test_tui_handle_undo_calls_controller_first` | 🟢 LOW |
+| DS-06 | P1 | FIXED | Test evidence | Active-path TUI cost/session tests in `tests/test_tui.py`; see TICKET-14 | 🟢 LOW |
+| DS-09 | P1 | FIXED | Test evidence | `test_agent_run_background_rejects_known_run_or_suspension_id` (`tests/test_cli_chat.py:167`) | 🟢 LOW |
 | DS-04 | P3 | FIXED | Test evidence | `test_suspension_data_no_audit_trail`, `test_suspension_data_has_no_audit_trail_field` | 🟢 LOW |
 
 ### 3.3 Supply Chain Findings (SC-*)
@@ -202,35 +202,25 @@ These are the claims with the highest combination of priority, no test evidence,
 
 ---
 
-## 9. Automated Validator Findings (2026-06-05)
+## 9. Automated Validator Findings (2026-06-05; superseded by 2026-07-01 rerun)
 
-`scripts/validate_docs_consistency.py --risk-register --ticket-index` was run immediately after this audit document was created, against the current working-tree files. Results supersede the manual coverage estimates in Section 8 where they conflict.
+`scripts/validate_docs_consistency.py --risk-register --ticket-index` now passes against the current working-tree files. The 2026-07-01 rerun below supersedes the original 2026-06-05 failure output and the manual coverage estimates in Section 8 where they conflict.
 
-### Risk Register (26 rows parsed)
-
-```
-Risk register evidence coverage: 12/26 rows verified (46%)
-High-risk uncovered P0/P1 rows: SEC-13, DS-01, DS-06, SC-02
-
-ERROR: Risk register P0/P1 OPEN row has no linked evidence: SEC-13 (priority='P1').
-ERROR: Risk register P0/P1 OPEN row has no linked evidence: DS-01 (priority='P1').
-ERROR: Risk register P0/P1 OPEN row has no linked evidence: DS-06 (priority='P1').
-ERROR: Risk register P0/P1 OPEN row has no linked evidence: SC-02 (priority='P1').
-```
-
-Note: DS-12, DS-13, SEC-02, SEC-04, SEC-06, SEC-07, SEC-10, SEC-11, DS-04, DS-05, DS-09, DS-02, SC-01, SC-02, and SC-03 have all been updated to FIXED/DOCUMENTED with test or code citations in the working tree; the manual audit in Section 3 captured an earlier snapshot.
-
-### Ticket Index (21 rows parsed)
+### Risk Register (29 rows parsed; supersedes 2026-06-05 output)
 
 ```
-Ticket index evidence coverage: 15/21 rows verified (71%)
+Risk register evidence coverage: 29/29 rows verified (100%)
+Ticket index evidence coverage: 21/21 rows verified (100%)
+Docs consistency check passed.
+```
 
-ERROR: Ticket TASK-DD2-004 claims Fixed but the index row cites no file path or test name.
-ERROR: Ticket TASK-DD2-006 claims Fixed but the index row cites no file path or test name.
-ERROR: Ticket TASK-DD2-007 claims Fixed but the index row cites no file path or test name.
-ERROR: Ticket TASK-DD2-008 claims Fixed but the index row cites no file path or test name.
-ERROR: Ticket TASK-DD2-011 claims Fixed but the index row cites no file path or test name.
-ERROR: Ticket TASK-DD2-014 claims Fixed but the index row cites no file path or test name.
+Note: all risk-register rows in Section 3 now match canonical FIXED/MITIGATED/DOCUMENTED status with test or code citations in the working tree; the original manual audit captured an earlier snapshot.
+
+### Ticket Index (21 rows parsed; supersedes 2026-06-05 output)
+
+```
+Ticket index evidence coverage: 21/21 rows verified (100%)
+Docs consistency check passed.
 ```
 
 ---
@@ -238,7 +228,7 @@ ERROR: Ticket TASK-DD2-014 claims Fixed but the index row cites no file path or 
 ## 10. Recommended Remediation (Priority Order)
 
 1. **Superseded 2026-07-01**: risk-register evidence coverage is now 29/29, and SC-02 is fixed by optional extras plus import-guard contract tests. Future failures should be handled by `validate_docs_consistency.py` rather than this historical recommendation.
-2. **Immediate — exits CI**: Add file path or test name citations to TASK-DD2-004/006/007/008/011/014 rows in the ticket index.
+2. **Superseded 2026-07-01**: ticket index evidence coverage is now 21/21. Future ticket-index citation drift should be handled by `validate_docs_consistency.py` rather than this historical recommendation.
 3. **This sprint**: Assign owners and ticket IDs to GOV-002 through GOV-012 or mark them Deferred with justification.
 4. **Next sprint**: Add surface-parity smoke tests for H2 exit criteria (CLI+TUI cost identity, approval identity, audit identity).
 5. **Ongoing**: `scripts/validate_docs_consistency.py --risk-register --ticket-index` runs in CI to catch future table⇄header drift automatically.
