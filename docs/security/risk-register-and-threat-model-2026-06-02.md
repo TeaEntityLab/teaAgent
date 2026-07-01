@@ -161,7 +161,7 @@ Each row: **ID · Category · Description · Likelihood (H/M/L) · Impact (H/M/L
 | ID | Category | Description | L | I | Score | Owner | Due | Status | Priority |
 |---|---|---|---|---|---|---|---|---|---|
 | SC-01 | Dependencies | Two alpha packages in production lock (`opentelemetry-exporter-gcp-logging==1.12.0a0`, `opentelemetry-resourcedetector-gcp==1.12.0a0`) can break between lock refreshes | M | L | 2 | architecture | | **FIXED** — alpha pins gone from `uv.lock`; `opentelemetry-exporter-gcp-logging` constrained to stable `>=1.12.0,<2.0.0` via `[tool.uv]` overrides; `opentelemetry-resourcedetector-gcp` no longer resolved; no `1.12.0a0` remains in the lock (commit `bad05d1`) | — |
-| SC-02 | Dependencies | `anthropic` SDK and `pyyaml` imported at runtime but undeclared in `pyproject.toml` — silent `ImportError` on installs without `google-cloud-aiplatform` or `pre-commit` | H | M | 6 | architecture | 2026-06-20 | **OPEN** — TASK-DD2-015 dependency declaration/import-check follow-up; fix target: `pyproject.toml` | P1 |
+| SC-02 | Dependencies | `anthropic` SDK and `pyyaml` imported at runtime but undeclared in `pyproject.toml` — silent `ImportError` on installs without `google-cloud-aiplatform` or `pre-commit` | H | M | 6 | architecture | | **FIXED 2026-07-01** — `anthropic` and `pyyaml` are declared as optional extras (`pyproject.toml:74-79`) to preserve the zero-dependency core; runtime guards now have enforced actionable install hints (`teaagent[anthropic]`, `teaagent[yaml]`); test: `tests/test_optional_dependency_contract.py` | — |
 | SC-03 | Dependencies | `aiohttp` and `mcp` SDK in lock as orphans — not declared, not imported in core; add 22 transitive packages to attack surface unnecessarily | H | L | 3 | architecture | | **FIXED** — `aiohttp` and `mcp` are no longer `[[package]]` entries in `uv.lock` and are not imported in `teaagent/` (only the `mcp` CLI subcommand name + string literals); orphan transitive surface removed (commit `bad05d1`) | — |
 
 ---
@@ -346,7 +346,7 @@ Boundary violations:
 | **DS-09** | Fixed in current branch: remove the stale direct resume hint from REPL suspend output; print only the supported interactive-review path | `teaagent/cli/_handlers/chat_repl.py` (suspend output) | Done |
 | **DS-06** | Fixed in current branch: TUI cost/session tests exercise runtime paths instead of only direct attribute injection | `tests/test_tui.py` | Done |
 | **SEC-08** | Add runtime warning when `directory-snapshot` mode is selected: "No process isolation — not for untrusted content" | `teaagent/subagents/_isolation.py:181-200` | XS (30 min) |
-| **SC-02** | Declare `anthropic>=0.40` in `[project.optional-dependencies]`; declare `pyyaml>=6.0` in `dependencies` | `pyproject.toml` | XS (30 min) |
+| **SC-02** | ~~Declare `anthropic>=0.40` in `[project.optional-dependencies]`; declare `pyyaml>=6.0` in `dependencies`~~ **Done 2026-07-01**: `anthropic`/`pyyaml` declared as optional extras and guarded by tested actionable install hints (`teaagent[anthropic]`, `teaagent[yaml]`) | `pyproject.toml`, `teaagent/managed_runtime.py`, `teaagent/okf.py`, `tests/test_optional_dependency_contract.py` | Done |
 
 #### Priority 2 — Fix within cycle
 
@@ -515,7 +515,7 @@ warn_at_pct = 50
 5. **SEC-10** — ~~Remove `cat/head/tail`~~ **FIXED 2026-06-05**: `_INSPECT_EXECUTABLES` = `{pwd, ls, rg, grep, wc}` at `_shell.py:175`.
 6. **SEC-16** — Delete dead loop at `budget_monitor.py:104-119` (QW — 10 min)
 7. **DS-09** — ~~Stale hint removed~~ **FIXED 2026-06-05 (full fix)**: UUID-shaped task args rejected before LLM dispatch; `test_agent_run_background_rejects_known_run_or_suspension_id()` passes.
-8. **SC-02** — Declare `anthropic` and `pyyaml` in `pyproject.toml` (XS — 30 min)
+8. **SC-02** — ~~Declare `anthropic` and `pyyaml` in `pyproject.toml`~~ **FIXED 2026-07-01**: optional extras + import-guard contract test (`tests/test_optional_dependency_contract.py`)
 
 ### Sprint 2 — High priority
 

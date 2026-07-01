@@ -145,7 +145,7 @@ class ManagedAgentRunner:
 # required optional SDK is absent, matching the zero-dependency posture.
 # ---------------------------------------------------------------------------
 
-_INSTALL_ANTHROPIC = 'pip install anthropic'
+_INSTALL_ANTHROPIC = "pip install 'teaagent[anthropic]'"
 _INSTALL_OPENAI = 'pip install openai'
 _INSTALL_ADK = 'pip install google-adk'
 _INSTALL_VERTEX = 'pip install google-cloud-aiplatform'

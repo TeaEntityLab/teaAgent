@@ -5,11 +5,11 @@
 **Method:** grep test names in `tests/`, check commit SHAs in `git log`, cross-reference doc claims  
 **Canonical evidence bar:** "Fixed" requires a test function name or commit hash; "Active/In Progress" requires a ticket ID or code ref
 
-**Status update — 2026-06-05:** The original audit table captured a pre-fix
-snapshot for SEC-04, SEC-06, DS-12, and DS-13. Current canonical status lives in
-`docs/roadmap-status.md`: all four are fixed with regression evidence. This file
-preserves the audit trail below, but rows that previously said "table row not
-updated" have been reconciled so automated readers do not re-open closed risk.
+**Status update — 2026-06-05 / 2026-07-01:** The original audit table captured a
+pre-fix snapshot. Current canonical status lives in the risk register and
+roadmap docs. Rows for SEC-04, SEC-06, DS-12, DS-13 (2026-06-05) and SEC-11,
+DS-04, SC-01, SC-02, SC-03 (2026-07-01) have been reconciled below so
+automated readers do not re-open closed risk.
 
 ---
 
@@ -56,7 +56,7 @@ For each status claim in the source documents:
 | SEC-08 | P1 | OPEN | NOT VERIFIED | No test verifies directory-snapshot isolation vs `/etc/`, `/proc/` access | 🟡 MEDIUM |
 | SEC-09 | P2 | OPEN | NOT VERIFIED | Multi-sig 1-hour replay window; no test exercises replay attack | 🟢 LOW |
 | SEC-10 | P1 | OPEN | NOT VERIFIED | `_INSPECT_EXECUTABLES` still includes `cat`, `head`, `tail`; no test enforces safe-reads-only list | 🔴 HIGH |
-| SEC-11 | P2 | OPEN | NOT VERIFIED | UndoJournal coverage gap for shell mutations; no test verifies UI warning when undo is partial | 🟡 MEDIUM |
+| SEC-11 | P2 | DOCUMENTED | Test evidence | `test_agent_undo_warns_when_run_used_shell_mutate`, `test_tui_undo_warns_when_run_used_shell_mutate` (`tests/integration/test_run_undo_shell_warning.py`) | 🟢 LOW |
 | SEC-12 | P2 | OPEN | NOT VERIFIED | `os.fsync()` silence path not covered by test | 🟢 LOW |
 | SEC-13 | P1 | OPEN | NOT VERIFIED | Critical paths still mock security internals; CG-03 class bug confirmed latent; no remediation timeline | 🔴 HIGH |
 | SEC-14 | P3 | OPEN | NOT VERIFIED | `preapproved_call_ids` deprecated but still callable; no test asserts old integrations are blocked | 🟢 LOW |
@@ -73,15 +73,15 @@ For each status claim in the source documents:
 | DS-05 | P2 | OPEN | NOT VERIFIED | TUI/REPL undo divergence; no test shows same command has consistent blast radius | 🟡 MEDIUM |
 | DS-06 | P1 | OPEN | NOT VERIFIED | TUI cost test still injects state directly; accumulation path not covered by CI | 🟡 MEDIUM |
 | DS-09 | P1 | OPEN | NOT VERIFIED | `agent run --background <uuid>` misuse not blocked; no test guards literal-UUID task misparse | 🔴 HIGH |
-| DS-04 | P3 | OPEN | NOT VERIFIED | Stale `audit_trail` in suspension JSON; no test compares suspension JSON vs RunStore | 🟢 LOW |
+| DS-04 | P3 | FIXED | Test evidence | `test_suspension_data_no_audit_trail`, `test_suspension_data_has_no_audit_trail_field` | 🟢 LOW |
 
 ### 3.3 Supply Chain Findings (SC-*)
 
 | ID | Priority | Claimed Status | Evidence Type | Evidence Link | Risk Level |
 |---|---|---|---|---|---|
-| SC-01 | P2 | OPEN | NOT VERIFIED | Alpha GCP OTel packages in lock; no test guards breaking change on refresh | 🟡 MEDIUM |
-| SC-02 | P1 | OPEN | NOT VERIFIED | `anthropic`, `pyyaml` imported but undeclared in `pyproject.toml`; no import-check test | 🔴 HIGH |
-| SC-03 | P2 | OPEN | NOT VERIFIED | `aiohttp`, `mcp` SDK orphans in lock; no test or plan to remove | 🟡 MEDIUM |
+| SC-01 | P2 | FIXED | Code evidence | `uv.lock` has no `1.12.0a0`; `[tool.uv]` override constrains `opentelemetry-exporter-gcp-logging>=1.12.0,<2.0.0` | 🟢 LOW |
+| SC-02 | P1 | FIXED | Test evidence | `tests/test_optional_dependency_contract.py` verifies optional-extra declarations and actionable import guards (`teaagent[anthropic]`, `teaagent[yaml]`) | 🟢 LOW |
+| SC-03 | P2 | FIXED | Code evidence | `uv.lock` has no `aiohttp`/`mcp` package entries; no core imports remain | 🟢 LOW |
 
 ---
 
@@ -174,7 +174,7 @@ These are the claims with the highest combination of priority, no test evidence,
 | 5 | **SEC-13** | Risk register | Security paths mocked in tests — P1 | Confirmed to have hidden bugs before; no remediation date |
 | 6 | **DS-01** | Risk register | TUI cost bar always $0.00 — P1 | Different from DS-13 (semantics); the TUI accumulation path still open |
 | 7 | **DS-09** | Risk register | `agent run --background <uuid>` misuse — P1 | No guard, no test |
-| 8 | **SC-02** | Risk register | `anthropic`/`pyyaml` undeclared — P1 | Silent ImportError risk; no test guards importability |
+| 8 | **SC-02** | Risk register | ~~`anthropic`/`pyyaml` undeclared — P1~~ FIXED 2026-07-01 | Optional extras + import-guard contract test now cover the risk |
 | 9 | **M0 Pending** | Roadmap | Risk register operational gate — listed as Pending despite `validate_docs_consistency.py` existing | GOV-002 through GOV-012 all still Pending; M0 conditions not fully met |
 | 10 | **GOV-002 through GOV-012** | Roadmap | All Pending, no owners, no ticket IDs | 11 consecutive governance items with zero evidence |
 | 11 | **H2 Pending** | Roadmap | Multi-surface continuity — no surface-parity tests | Identity/cost/recovery continuity across CLI+TUI+IDE unverified |
@@ -218,7 +218,7 @@ ERROR: Risk register P0/P1 OPEN row has no linked evidence: DS-06 (priority='P1'
 ERROR: Risk register P0/P1 OPEN row has no linked evidence: SC-02 (priority='P1').
 ```
 
-Note: DS-12, DS-13, SEC-02, SEC-04, SEC-06, SEC-07, SEC-10, DS-05, DS-09, DS-02 have all been updated to FIXED with test citations in the working tree; the manual audit in Section 3 captured an earlier snapshot.
+Note: DS-12, DS-13, SEC-02, SEC-04, SEC-06, SEC-07, SEC-10, SEC-11, DS-04, DS-05, DS-09, DS-02, SC-01, SC-02, and SC-03 have all been updated to FIXED/DOCUMENTED with test or code citations in the working tree; the manual audit in Section 3 captured an earlier snapshot.
 
 ### Ticket Index (21 rows parsed)
 
@@ -237,7 +237,7 @@ ERROR: Ticket TASK-DD2-014 claims Fixed but the index row cites no file path or 
 
 ## 10. Recommended Remediation (Priority Order)
 
-1. **Immediate — exits CI**: Add a ticket ID, test name, or code reference to the status cell for SEC-13, DS-01, DS-06, SC-02 in the risk register. These are P1 OPEN rows with no linked evidence and will cause `validate_docs_consistency.py` to exit 1.
+1. **Superseded 2026-07-01**: risk-register evidence coverage is now 29/29, and SC-02 is fixed by optional extras plus import-guard contract tests. Future failures should be handled by `validate_docs_consistency.py` rather than this historical recommendation.
 2. **Immediate — exits CI**: Add file path or test name citations to TASK-DD2-004/006/007/008/011/014 rows in the ticket index.
 3. **This sprint**: Assign owners and ticket IDs to GOV-002 through GOV-012 or mark them Deferred with justification.
 4. **Next sprint**: Add surface-parity smoke tests for H2 exit criteria (CLI+TUI cost identity, approval identity, audit identity).

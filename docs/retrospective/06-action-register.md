@@ -26,6 +26,7 @@ Legend: ✅ Done (committed) · 🟡 In progress · ⬜ Not started · 🔵 Alre
 | S-P1-1 | Security | Make `check_scope_budget` fail closed: when the enforcer raises, return a denial reason or re-raise unless `TEAAGENT_SCOPE_FAIL_OPEN=1`. | `teaagent/tool_permissions.py:219-228` | Exceptions no longer return `None`; a new test verifies fail-closed behavior. | ✅ | `check_scope_budget` denies on enforcer failure unless `TEAAGENT_SCOPE_FAIL_OPEN=1`; `tests/test_scope_budget_fail_closed.py` |
 | S-P1-2 | Security | Require authentication/TLS for a non-loopback Redis approval queue, following `require_signature_relay_bind_auth`. | `teaagent/coordination/approval_backend.py:278-325` | A non-loopback connection without a password/SSL raises; add a test. | ✅ | `require_redis_bind_auth` rejects non-loopback Redis without password or SSL; `tests/test_redis_approval_auth.py` |
 | S-P1-3 | Security | Replace the line hash in `edit_at_hash` with full SHA-256 hex (or at least `& 0xFFFFFFFF`); gate the wire-format change and provide migration support. | `teaagent/workspace_tools/_helpers.py:90-94` | Hash is at least 32 bits; a migration flag exists; old anchors remain readable; add tests. | ✅ | Full SHA-256 anchors with CRC32 and legacy CRC8 read compatibility; `tests/test_edit_at_hash_sha256.py` |
+| S-P1-4 | Security | Close SC-02 by enforcing the optional-dependency declaration/import-guard contract for `anthropic` and `pyyaml`. | `pyproject.toml:74-79`; `teaagent/managed_runtime.py:148,287-293`; `teaagent/okf.py:93-99`; `tests/test_optional_dependency_contract.py` | `anthropic` and `pyyaml` are declared as extras; Anthropic/YAML import guards emit actionable `teaagent[...]` install hints; targeted tests fail if declarations or guard hints drift. | ✅ | This session — added `tests/test_optional_dependency_contract.py` (declares extras + simulated missing-module guard checks); Anthropic install hint now uses `teaagent[anthropic]`; SC-02 risk-register row and sprint/remediation refs marked FIXED 2026-07-01 |
 | G-P1-1 | Governance | Extend `teaagent/schema.py` to support `enum/pattern/additionalProperties/oneOf/anyOf`. | `teaagent/schema.py:7-14`; `teaagent/subagents/_tools.py:398-414` | Declared and runtime contracts match; new tests verify that enum/pattern reject invalid input. | ✅ | Runtime validator supports all five keywords; `tests/test_schema_validator_extensions.py` |
 | G-P1-2 | Governance | Decide whether `register_github_tools` should auto-load or be explicitly opt-in; add `config.enable_github_tools` or remove the lazy export. | `teaagent/github_integration.py:154`; `teaagent/chat_agent.py:500-535` | All four GitHub tools are reachable or explicitly removed; documentation is consistent. | ✅ | Decided opt-in (mirrors `enable_git_tools`, not auto-load): new `ChatAgentConfig.enable_github_tools` (default False) + workspace profile key `github_tools_enabled`; `_setup_tool_registry` registers all four GitHub tools when enabled. Per-call approval gate already covers PR-mutation risk. Docs: `chat_agent/api.md` config-key table; tests `test_github_tools_reachable_when_enabled` / `_absent_by_default`. |
 | G-P1-3 | Governance | Emit a `multisig_fallback` audit event when multisig falls back because `agent_id` is missing. | `teaagent/approval_manager.py:449-454` | Fallback emits an audit event; a misconfigured session is detectable afterward. | ✅ | `79cfe2e` — audit event emitted with `keyword-default` through approval layer |
@@ -75,15 +76,15 @@ Legend: ✅ Done (committed) · 🟡 In progress · ⬜ Not started · 🔵 Alre
 | Priority | Count | Distribution by Dimension |
 | --- | --- | --- |
 | P0 | 8 | Security 3, Architecture 2, UX 2, Governance 1 |
-| P1 | 17 | Security 3, Governance 3, Architecture 5, UX 6 (including cross-dimensional items) |
+| P1 | 18 | Security 4, Governance 3, Architecture 5, UX 6 (including cross-dimensional items) |
 | P2 | 24 | Security 7, Governance 5, Architecture 7, UX 5 |
-| **Total** | **49** | |
+| **Total** | **50** | |
 
 ### Status Summary
 
 | Status | Count | Items |
 | --- | --- | --- |
-| ✅ Done (verified) | 45 | S-P0-1, S-P0-2, S-P0-3, A-P0-1, A-P0-2, U-P0-1, U-P0-2, G-P0-1; S-P1-1, S-P1-2, S-P1-3, G-P1-1, G-P1-2, G-P1-3, A-P1-1, A-P1-2, A-P1-3, A-P1-4, A-P1-5, U-P1-1, U-P1-2, U-P1-3, U-P1-4, U-P1-5, U-P1-6; S-P2-1, S-P2-4, S-P2-5, S-P2-6, S-P2-7, G-P2-1, G-P2-2, G-P2-3, G-P2-5, A-P2-1, A-P2-2, A-P2-3, A-P2-5, A-P2-6, A-P2-7, U-P2-1, U-P2-2, U-P2-3, U-P2-4, U-P2-5 |
+| ✅ Done (verified) | 46 | S-P0-1, S-P0-2, S-P0-3, A-P0-1, A-P0-2, U-P0-1, U-P0-2, G-P0-1; S-P1-1, S-P1-2, S-P1-3, S-P1-4, G-P1-1, G-P1-2, G-P1-3, A-P1-1, A-P1-2, A-P1-3, A-P1-4, A-P1-5, U-P1-1, U-P1-2, U-P1-3, U-P1-4, U-P1-5, U-P1-6; S-P2-1, S-P2-4, S-P2-5, S-P2-6, S-P2-7, G-P2-1, G-P2-2, G-P2-3, G-P2-5, A-P2-1, A-P2-2, A-P2-3, A-P2-5, A-P2-6, A-P2-7, U-P2-1, U-P2-2, U-P2-3, U-P2-4, U-P2-5 |
 | 🟡 In progress | 0 | — |
 | ⬜ Not started | 0 | — |
 | 🔵 Already existed | 4 | S-P2-2, S-P2-3, G-P2-4, A-P2-4 |
