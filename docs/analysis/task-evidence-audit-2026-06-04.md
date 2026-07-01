@@ -91,33 +91,34 @@ For each status claim in the source documents:
 
 | ID | Name | Claimed Status | Evidence Type | Evidence Link | Risk Level |
 |---|---|---|---|---|---|
-| H0 | Claim and risk hygiene | In Progress | Partial code evidence | `validate_docs_consistency.py` exists; `docs/governance/guarded-claims-registry.md` exists; but DOCOPT-012 still open | 🟡 MEDIUM |
-| H1 | Daily operator loop | In Progress | Manual verification | M1 marked Complete with High confidence; acceptance tests exist for approval/TUI flows | 🟡 MEDIUM |
-| H2 | Multi-surface continuity | Pending | NOT VERIFIED | No surface-parity tests for identity/cost/recovery across CLI+TUI+IDE | 🔴 HIGH |
-| H3 | Ecosystem trust | Pending | NOT VERIFIED | No activation-explain or MCP trust-onboarding acceptance tests | 🔴 HIGH |
-| H4 | Durable team operations | Pending | NOT VERIFIED | Background/cloud/team lifecycle tests do not exist | 🟡 MEDIUM |
-| H5 | Quality and eval loop | Pending | NOT VERIFIED | Eval-gate infrastructure not built | 🟡 MEDIUM |
-| H6 | Packaging and adoption | Pending | NOT VERIFIED | SBOM/signing/update docs not started | 🟡 MEDIUM |
+| H0 | Claim and risk hygiene | Complete | Code + docs evidence | M0 checks pass: docs consistency, competitive-doc freshness, tool lint | 🟢 LOW |
+| H1 | Daily operator loop | Complete | Test evidence | CLI/TUI cockpit parity, run evidence summary, guided recovery acceptance; acceptance tier snapshot recorded in roadmap | 🟢 LOW |
+| H2 | Multi-surface continuity | Partially fixed | Test evidence | M2 acceptance complete; full IDE/dashboard/cloud surface parity remains open | 🟡 MEDIUM |
+| H3 | Ecosystem trust | Partially fixed | Test evidence | M3 acceptance complete; owner-operator trust onboarding simplification remains open | 🟡 MEDIUM |
+| H4 | Durable team operations | Partially fixed | ADR/code evidence | Policy/RBAC shadow wired; ADR-0031 defines exit criteria; consensus deferred by ADR-0029 | 🟢 LOW |
+| H5 | Quality and eval loop | Partially fixed | Code evidence | Release eval gate wired in CI; offline conversational corpus exists | 🟢 LOW |
+| H6 | Packaging and adoption | Partially fixed | Code evidence | `update/*` package implemented but unwired; owner-platform proof remains open | 🟢 LOW |
 
 ### 4.2 Milestone Items
 
 | ID | Status | Evidence Type | Evidence Link | Risk Level |
 |---|---|---|---|---|
-| M0 | Pending | NOT VERIFIED | `validate_docs_consistency.py` exists (a gate) but M0 itself still Pending; GOV-002 through GOV-012 all Pending | 🔴 HIGH |
-| M1 | Complete | Test evidence | CLI/TUI cockpit acceptance, approval acceptance (`tests/acceptance/test_approval_root_cli_flow.py`, `test_headless_tui.py`) | 🟡 MEDIUM |
-| M2–M6 | Pending | NOT VERIFIED | No acceptance suites for long-session, federation, eval, or packaging | 🟡 MEDIUM |
+| M0 | Complete | Code + docs evidence | All 3 M0 checks pass: `validate_docs_consistency.py`, `refresh_competitive_docs.py --check`, `teaagent tool lint --root .` | 🟢 LOW |
+| M1 | Complete | Test evidence | CLI/TUI cockpit acceptance, approval acceptance (`tests/acceptance/test_approval_root_cli_flow.py`, `test_headless_tui.py`) | 🟢 LOW |
+| M2–M3 | Complete | Test evidence | M2/M3 acceptance complete per canonical roadmap (`docs/roadmap-status.md`) | 🟢 LOW |
+| M4–M6 | Pending / partially wired | Partial code evidence | M4 held except DR-006 carve-out; M5 release gate foundation exists; M6 update package implemented but unwired | 🟡 MEDIUM |
 
 ### 4.3 Track A — Governance Work Items
 
 | ID | Status | Evidence Type | Evidence Link | Risk Level |
 |---|---|---|---|---|
 | GOV-001 | Complete | Code evidence | `docs/roadmap-status.md` exists | 🟢 LOW |
-| GOV-002 | Pending | NOT VERIFIED | No risk-register schema validator; row format is unstructured prose | 🔴 HIGH |
-| GOV-003 | Pending | NOT VERIFIED | No claim-to-evidence matrix tool | 🔴 HIGH |
-| GOV-004–012 | Pending | NOT VERIFIED | No owner, no ticket IDs, no exit criteria evidence | 🔴 HIGH |
+| GOV-002 | Complete | Code evidence | Risk-register schema/evidence validation is covered by `validate_docs_consistency.py` | 🟢 LOW |
+| GOV-003 | Complete | Docs evidence | Claim-to-evidence matrix work marked Complete in canonical roadmap | 🟢 LOW |
+| GOV-004–012 | Complete | Docs/code evidence | Verification profiles, warning-budget ownership, release source of truth, survey freshness, ADR expiry dates, roadmap issue templates, journey tags, do-not-claim list, and residual-risk summary are marked Complete in canonical roadmap | 🟢 LOW |
 | GOV-013 | Complete | Code evidence | `docs/INDEX.md` exists as front door | 🟢 LOW |
-| GOV-014 | In Progress | Partial code evidence | `docs/governance/guarded-claims-registry.md` + `validate_guarded_claims()` in validator; DOCOPT-012 still open | 🟡 MEDIUM |
-| GOV-015 | Pending | NOT VERIFIED | Module risk files lack central owner/ticket links for High/Critical rows | 🟡 MEDIUM |
+| GOV-014 | Complete | Code evidence | `docs/governance/guarded-claims-registry.md` + `validate_guarded_claims()` in validator | 🟢 LOW |
+| GOV-015 | Complete | Docs evidence | High/Critical module-risk upward-link audit marked Complete in canonical roadmap | 🟢 LOW |
 
 ---
 
@@ -131,7 +132,7 @@ All TASK-DD2-* and TICKET-* rows in the ticket index claim "Fixed." Below are th
 | TASK-DD2-002 | `_load_tui_state` respects CLI root flag | Test evidence | `tests/test_tui.py` headless path tests | 🟢 LOW |
 | TASK-DD2-003 | TUI cost ledger authoritative | Test evidence | `test_cost_fields_populated_after_run` (`tests/integration/test_runner_cost_tracking.py:77`) | 🟢 LOW |
 | TASK-DD2-004 | Path-scoped approvals hardened | Test evidence | `test_empty_path_globs_rejected_ds12` + workspace normalization in `tests/integration/test_destructive_approval_lifecycle.py` | 🟢 LOW |
-| TASK-DD2-005 | Git sandbox lifecycle preserves object — "core fix" only; broader ACs partially addressed | Manual verification | "Broader ACs partially addressed — see plan file" is the only note; no test names listed for the partial ACs | 🟡 MEDIUM |
+| TASK-DD2-005 | Git sandbox lifecycle preserves object | Test evidence | `tests/test_git_tools.py`, `tests/test_cli_execution.py` sandbox tests | 🟢 LOW |
 | TASK-DD2-006 | Lifecycle wording made honest | Code evidence | Commit `4cc6c51` touches chat handlers; docs grep shows wording updated | 🟢 LOW |
 | TASK-DD2-007 | Stale chat code removed | Code evidence | `4cc6c51` + `df31010` | 🟢 LOW |
 | TASK-DD2-008 | Read-only/dry-run side-effect contract enforced | Test evidence | `tests/test_context_pack.py`; dry_run path in `tests/test_cli_ergonomics_handlers.py` | 🟢 LOW |
@@ -146,7 +147,7 @@ All TASK-DD2-* and TICKET-* rows in the ticket index claim "Fixed." Below are th
 | TICKET-14 | Cost accumulation test replaces masking test | Test evidence | `test_cost_fields_populated_after_run` | 🟢 LOW |
 | TICKET-15 | Stale audit_trail field removed | Code evidence | Commit `4cc6c51` | 🟢 LOW |
 | TICKET-16 Phase 1 | Honest lifecycle wording | Code evidence | `4cc6c51` | 🟢 LOW |
-| TICKET-16 Phase 2 | Real suspend→resume round-trip | Manual verification | Claimed Fixed but no dedicated test name cited for the suspend→resume round-trip path | 🟡 MEDIUM |
+| TICKET-16 Phase 2 | Real suspend→resume round-trip | Test evidence | `test_repl_suspend_resume_roundtrip`; current status also cited in `docs/daily-driver-current-status.md` | 🟢 LOW |
 
 ---
 
@@ -161,26 +162,26 @@ All TASK-DD2-* and TICKET-* rows in the ticket index claim "Fixed." Below are th
 
 ---
 
-## 7. Highest-Risk Unverified Claims (Top 18)
+## 7. Former Highest-Risk Claims (superseded status)
 
-These are the claims with the highest combination of priority, no test evidence, and no remediation timeline.
+These were the highest-risk unverified claims in the original audit; each row now carries its superseded current status.
 
 | Rank | ID | Source | Claim | Why High Risk |
 |---|---|---|---|---|
-| 1 | **SEC-01** | Risk register | Audit chain forgeable (HMAC ephemeral) — P0 blocker | No test, no commit, no timeline; still blocking production expansion |
-| 2 | **SEC-02** | Risk register | MCP trust expiry not checked — P0 blocker | No test exercises the expired-trust call path |
-| 3 | **SEC-07** | Risk register | Docker runs as root, no network isolation — P0 blocker | No test, no remediation plan |
-| 4 | **SEC-10** | Risk register | `cat`/`head`/`tail` in inspect executables — P1 | Can read sensitive local files; no fix plan, no test |
-| 5 | **SEC-13** | Risk register | Security paths mocked in tests — P1 | Confirmed to have hidden bugs before; no remediation date |
-| 6 | **DS-01** | Risk register | TUI cost bar always $0.00 — P1 | Different from DS-13 (semantics); the TUI accumulation path still open |
-| 7 | **DS-09** | Risk register | `agent run --background <uuid>` misuse — P1 | No guard, no test |
+| 1 | **SEC-01** | Risk register | ~~Audit chain forgeable (HMAC ephemeral) — P0 blocker~~ FIXED | HMAC persistence tests + key-save warning test now cover the path |
+| 2 | **SEC-02** | Risk register | ~~MCP trust expiry not checked — P0 blocker~~ FIXED | `test_server_trust_expiry` covers the call path |
+| 3 | **SEC-07** | Risk register | ~~Docker runs as root, no network isolation — P0 blocker~~ FIXED | `test_subagent_docker_container_hardened` + hardened flags |
+| 4 | **SEC-10** | Risk register | ~~`cat`/`head`/`tail` in inspect executables — P1~~ FIXED | inspect allowlist tests cover removal |
+| 5 | **SEC-13** | Risk register | ~~Security paths mocked in tests — P1~~ FIXED | non-mocked integration suite now cited |
+| 6 | **DS-01** | Risk register | ~~TUI cost bar always $0.00 — P1~~ FIXED | runtime-path TUI cost/session tests now cited |
+| 7 | **DS-09** | Risk register | ~~`agent run --background <uuid>` misuse — P1~~ FIXED | UUID-shaped run/suspension IDs rejected before dispatch |
 | 8 | **SC-02** | Risk register | ~~`anthropic`/`pyyaml` undeclared — P1~~ FIXED 2026-07-01 | Optional extras + import-guard contract test now cover the risk |
-| 9 | **M0 Pending** | Roadmap | Risk register operational gate — listed as Pending despite `validate_docs_consistency.py` existing | GOV-002 through GOV-012 all still Pending; M0 conditions not fully met |
-| 10 | **GOV-002 through GOV-012** | Roadmap | All Pending, no owners, no ticket IDs | 11 consecutive governance items with zero evidence |
-| 11 | **H2 Pending** | Roadmap | Multi-surface continuity — no surface-parity tests | Identity/cost/recovery continuity across CLI+TUI+IDE unverified |
-| 12 | **H3 Pending** | Roadmap | Ecosystem trust — no MCP trust-onboarding tests | Extension activation explain not implemented |
-| 13 | **TASK-DD2-005 partial** | Ticket index | Broader ACs partially addressed | No test names listed for the un-addressed ACs |
-| 14 | **TICKET-16 Phase 2** | Ticket index | Real suspend→resume round-trip claimed Fixed | No dedicated integration test name cited for the round-trip path |
+| 9 | **M0 Pending** | Roadmap | ~~Risk register operational gate Pending~~ COMPLETE | All M0 checks pass in canonical roadmap |
+| 10 | **GOV-002 through GOV-012** | Roadmap | ~~All Pending~~ COMPLETE | Governance rows now Complete in canonical roadmap |
+| 11 | **H2 Pending** | Roadmap | ~~Multi-surface continuity Pending~~ PARTIALLY FIXED | M2 acceptance complete; full parity remains open |
+| 12 | **H3 Pending** | Roadmap | ~~Ecosystem trust Pending~~ PARTIALLY FIXED | M3 acceptance complete; trust onboarding simplification remains open |
+| 13 | **TASK-DD2-005 partial** | Ticket index | ~~Broader ACs partially addressed~~ FIXED | sandbox tests now cited |
+| 14 | **TICKET-16 Phase 2** | Ticket index | ~~No dedicated integration test name cited~~ FIXED | `test_repl_suspend_resume_roundtrip` now cited |
 
 ---
 
