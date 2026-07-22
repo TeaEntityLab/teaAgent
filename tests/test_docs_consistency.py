@@ -354,6 +354,41 @@ def test_intent_review_candidate_adoption_state() -> None:
     assert 'a new strategy doc, separate execution-plan doc' in review
 
 
+def test_durable_effect_review_candidate_adoption_state() -> None:
+    root = Path(__file__).resolve().parents[1]
+    review = (
+        root
+        / 'docs'
+        / 'analysis'
+        / 'durable-effect-roadmap-socratic-review-2026-08-25.md'
+    ).read_text(encoding='utf-8')
+    roadmap = (root / 'docs' / 'roadmap-status.md').read_text(encoding='utf-8')
+    backlog = (root / 'docs' / 'backlog-priority.md').read_text(encoding='utf-8')
+    held = (
+        root / 'docs' / 'specs' / 'held-roadmap-forward-spec-index-2026-07-11.md'
+    ).read_text(encoding='utf-8')
+    daily = (root / 'docs' / 'daily-driver-current-status.md').read_text(
+        encoding='utf-8'
+    )
+    recovery = (root / 'docs' / 'recovery-and-continuity-guide.md').read_text(
+        encoding='utf-8'
+    )
+
+    assert '## Candidate Adoption Ledger' in review
+    for candidate_id in ('C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9'):
+        assert f'| {candidate_id} |' in review
+
+    assert 'durable run-state continuity' in roadmap
+    assert 'Run continuity does not imply exactly-once tool execution' in roadmap
+    for item_id in ('EFX-001', 'EFX-002', 'EFX-003', 'EFX-FUTURE'):
+        assert item_id in roadmap
+        assert item_id in backlog
+    assert 'generic effect service, outbox daemon' in held
+    assert 'historical evidence, not an active scheduling authority' in daily
+    assert '## Interrupted mutating tool execution' in recovery
+    assert 'Blindly rerunning the same logical mutation' in recovery
+
+
 def test_consensus_validation_deletion_preserves_recovery_record() -> None:
     root = Path(__file__).resolve().parents[1]
     spec = (

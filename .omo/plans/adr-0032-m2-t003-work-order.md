@@ -11,10 +11,12 @@ Switch `build_run_receipt()` to consume event-derived evidence (via `build_run_e
 Synthetic fixtures that construct receipt test data from hardcoded audit event dicts mask real-path gaps. Once the event stream can produce byte-equivalent evidence, those fixtures become liabilities — they test a path that no longer matches production. M2-T003 eliminates this gap.
 
 **2026-07-22 execution note:** the safe local implementation added
-`build_run_receipt(..., use_event_stream=True|False)`, receipt parity coverage,
-and a best-effort `receipt_event_derived_mismatch` audit warning when the
-event-derived receipt diverges from the legacy receipt. The synthetic-fixture
-retirement remains Human Review work; no fixture was deleted by the agent.
+`build_run_receipt(..., use_event_stream=True|False, shadow_parity=False)` and
+receipt parity coverage. The `receipt_event_derived_mismatch` audit warning and
+the legacy shadow rendering are gated behind the opt-in `shadow_parity` flag so
+the default receipt path renders once (FR-02 called the shallow gate temporary;
+it is off by default rather than always-on). The synthetic-fixture retirement
+remains Human Review work; no fixture was deleted by the agent.
 
 ## 3. Scope
 

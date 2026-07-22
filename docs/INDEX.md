@@ -1,8 +1,8 @@
 # TeaAgent Documentation Index
-# 2026-06-17
+# 2026-08-25
 
-> **Last reviewed:** 2026-06-17
-> **Review trigger:** New front-door docs, supersession links, or validation command changes.
+> **Last reviewed:** 2026-08-25
+> **Review trigger:** New front-door docs, supersession links, roadmap evidence, or validation command changes.
 
 This is the curated front door for TeaAgent documentation. It is intentionally
 not an exhaustive file list. Use it to find the current source of truth, then
@@ -28,7 +28,7 @@ No historical file is deleted or moved by this model. The generated
 | What can the owner-operator trust today? | [Daily-Driver Current Status](daily-driver-current-status.md) | Current truth for owner-operated daily use; update whenever TUI, chat, agent mode, approval, cost, undo, or resume behavior changes. |
 | Which docs should I read, skip, or treat as history? | [Historical Evidence Index](archive/INDEX.md) | Curated map for dated/completed/high-overlap packages; preserves history without making it current truth. |
 | What is the documentation operating model? | [Documentation Operating Model](governance/documentation-operating-model-2026-06-04.md) | Governance rulebook for claim types, TTL, owners, supersession, and CI guard targets. |
-| What should guide the next change? | [Operator Friction Log](work-log/operator-friction-log.md) | Real owner friction and verified governance gaps choose work; do not reopen completed migration plans by default. |
+| What should guide the next change? | [Roadmap Status](roadmap-status.md), [Backlog Priority](backlog-priority.md), and [Operator Friction Log](work-log/operator-friction-log.md) | Real owner friction and independently proved governance gaps choose work; do not reopen completed migration plans by default. |
 | What is the event-spine contract? | [ADR 0032: Run Event Taxonomy And Event Spine](adr/0032-run-event-taxonomy.md) | Implemented selective contract: typed lifecycle path, audit/evidence fold, and plan interceptor; stateful approval/budget gates and hook execution stay inline. |
 | Exhaustive docs inventory (generated) | [Docs Inventory](generated/docs-inventory.md) | Deterministic catalog; not current truth — use this index table first. |
 | Documentation aging dashboard (generated) | [Docs Aging Dashboard](generated/docs-aging-dashboard.md) | Current-truth review freshness grouped by owner surface. |
@@ -62,6 +62,7 @@ governance ledgers should prefer the canonical set above.
 | Current owner-operated daily behavior | [Daily-Driver Current Status](daily-driver-current-status.md) |
 | Acceptance flow inventory | [Acceptance Coverage](acceptance.md) |
 | Roadmap state | [Roadmap Status](roadmap-status.md) |
+| Roadmap scheduling and provenance | [Backlog Priority](backlog-priority.md) |
 | Module ownership and inspection paths | [Module Documentation Index](modules/INDEX.md) |
 | Release gates | [Release Checklist](release-checklist.md) and [Daily-Driver Release Gates](governance/daily-driver-release-gates-2026-06-02.md) |
 | Permission and approval behavior | [Permission And Approval Playbook](permission-and-approval-playbook.md) |
@@ -81,6 +82,7 @@ Use this short list instead of scanning every dated analysis file.
 | Latest broad review package | [System Critical Review Package 2026-06-10](analysis/system-critical-review-2026-06-10-INDEX.md) | Current dated evidence package; not timeless truth. |
 | Reflective intent review | [Intent Critical Review And Worklist](analysis/intent-critical-review-and-worklist-2026-06-12.md) | Historical input to harness-first direction. |
 | 2026-07-22 intent and roadmap Socratic survey | [Intent and Roadmap Socratic Survey](analysis/intent-roadmap-socratic-survey-2026-07-22.md) | Dated evidence snapshot with panel consensus, adoption ledger, and 30/60/90 plan; not current truth. |
+| 2026-08-25 durable-effect roadmap review | [Durable-Effect Roadmap Socratic Review](analysis/durable-effect-roadmap-socratic-review-2026-08-25.md) | Dated evidence with seven-lens consensus, three providerless probes, EFX-001–003 acceptance contracts, and Candidate Adoption Ledger; not current truth. |
 | Documentation system review | [Historical Evidence Index](archive/INDEX.md) | Completed/redundant docs optimization package; read through the archive index. |
 | Older review packages, competitor surveys, daily-driver packages, and completed plans | [Historical Evidence Index](archive/INDEX.md) | Preserved provenance; do not treat as current status. |
 

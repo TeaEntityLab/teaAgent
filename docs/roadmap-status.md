@@ -9,10 +9,10 @@
 > or historical review reasoning in dated analysis files.
 >
 > **Review trigger:** Roadmap horizon, milestone, or track status changes.
-> **Last reviewed:** 2026-07-22
+> **Last reviewed:** 2026-08-25
 
 **Status:** Canonical roadmap tracking document
-**Last updated:** 2026-07-22 (intent/scheduling reconciliation: the owner-operator is the current validated persona; external adoption and hosted/team expansion are not current goals; horizons are status taxonomy, not sprint menus; DR-006 authority and the dated decision queue govern new work. Prior acceptance tier snapshot `628 passed` at `85109e4` on 2026-06-10 remains historical evidence, not a current collection; full-suite count unverified — see [suite truncation analysis](analysis/suite-truncation-root-cause-2026-06-10.md))
+**Last updated:** 2026-08-25 (durable-effect roadmap review: the owner-operator is the current validated persona; H4 now separates run continuity from effect correctness; EFX-001–003 are promoted P0 governance-gap intake; generic external-effect infrastructure remains held. Prior acceptance tier snapshot `628 passed` at `85109e4` on 2026-06-10 remains historical evidence, not a current collection; full-suite count unverified — see [suite truncation analysis](analysis/suite-truncation-root-cause-2026-06-10.md))
 **Owner:** TBD
 
 > **Canonical source of truth.** All other status docs (`docs/security/risk-register-and-threat-model-2026-06-02.md`, `docs/analysis/defeat-scenarios-and-cascade-effects-2026-06-02.md`, `docs/analysis/active-findings-status-ledger-2026-06-06.md`) defer to this document for overall completion status. Per-item test evidence lives in the risk register §9.
@@ -25,15 +25,21 @@ Provide a single source of truth for roadmap item status, ownership, confidence,
 
 ## Scheduling Rule
 
-As of 2026-07-22, no currently authorized, non-held, non-external roadmap code
-item is known. Governance-gap fixes may still land under DR-006 without
-reopening a product roadmap item. Horizons below are status taxonomy, not
-sprint menus. New work starts only from cited owner friction, an independently
-proved governance gap, a dated owner override, qualifying M4 co-maintainer
-dogfood, or the existing
+As of 2026-08-25, EFX-001 through EFX-003 are the only newly known,
+authorized, non-held code items. They entered through DR-006's
+`governance-gap` lane after deterministic local probes reproduced ambiguous
+mutating-tool dispatch, effectful-tool approval bypass, and reusable
+argument-blind one-time approval. Code remains unimplemented at this review.
+Their scope is local remediation on the existing runner, registry, audit, and
+approval seams; they do not authorize an effect platform, exactly-once claim,
+distributed outbox, fencing service, actor supervisor, or second event/workflow
+framework.
+
+H0-H6 remain status taxonomy, not sprint menus. Other new work starts only from
+cited owner friction, an independently proved governance gap, a dated owner
+override, qualifying M4 co-maintainer dogfood, or the existing
 [dated decision queue](specs/held-roadmap-forward-spec-index-2026-07-11.md#8-dated-decision-queue).
-A trigger opens evaluation; it does not create implementation authority or
-prove completion.
+A trigger opens evaluation outside the proved governance-gap lane; it does not create implementation authority or prove completion.
 
 ## Roadmap Horizons
 
@@ -43,9 +49,25 @@ prove completion.
 | H1 | Daily operator loop | Setup, daily cockpit, plan, execute, approve, verify, recover, and remember are one coherent journey | governance | Complete | High | H2 | Journey acceptance tests pass across CLI/TUI baseline; acceptance tier snapshot `628 passed` at `85109e4` (2026-06-10) |
 | H2 | Multi-surface continuity | CLI, TUI, IDE, dashboard, background, cloud, and gateway share one run-state contract | TBD | On Hold — M2 foundation complete | Medium | Owner-validated continuity need | M2 acceptance complete; full surface parity (IDE/dashboard/cloud) is external/future under harness-first |
 | H3 | Ecosystem trust | MCP, plugins, skills, hooks, subagents, and automations are explainable, revocable, and testable for the owner-operator | TBD | On Hold — M3 evidence complete | Medium | Cited owner friction | M3 acceptance complete; further owner-operator trust-onboarding simplification requires real daily-use evidence |
-| H4 | Durable owner/agent operations | Long-running owner-operator and co-maintainer-agent workflows have durable execution, control-plane views, policy, audit, and cost attribution | TBD | On Hold — shadow wiring exists | Low | DR-006 + 2026-09-12 H4 review | Policy/RBAC shadow-wired (WDA-002/003); ADR-0029 consensus validation Option D executed (deleted/quarantined with recovery record); ADR-0031 is a proposed exit-criteria packet, while DR-006 owns the hold |
+| H4 | Durable owner/agent operations | Long-running owner-operator and co-maintainer-agent workflows have durable run-state continuity, control-plane views, policy, audit, and cost attribution. Run continuity does not imply exactly-once tool execution, external-effect settlement, business acceptance, or reversal; ADR-0042 remains binding | TBD | On Hold — shadow wiring exists | Low | DR-006 + EFX local closure + 2026-09-12 H4 review | Policy/RBAC shadow-wired (WDA-002/003); EFX-001–003 are separate roadmap-neutral governance gaps; generic external-effect reconciliation remains held; ADR-0029 Option D executed; ADR-0031 remains a proposed exit-criteria packet |
 | H5 | Quality and eval loop | Prompt/runtime/model changes cannot silently degrade daily outcomes | TBD | Blocked — offline release gate exists | Low | Funded live-provider evidence + owner decision | Release eval gate in CI; offline conversational and deterministic repo-map fixture corpora gated; default no-model gate remains advisory |
 | H6 | Owner packaging and local distribution | Desktop/client-server and local release channels have supply-chain, update, rollback, and support plans for owner-operated use | TBD | On Hold — local proof exists; daily CLI unwired | Low | Owner update friction + trust-boundary proof | Single-platform update proof is reproducible via `scripts/prove_update_platform.py`; `update/*` remains intentionally absent from the daily CLI; no desktop packaging/session-attach proof |
+
+## Roadmap-Neutral Governance-Gap Intake - Effect Authority
+
+These items do not reopen or renumber H0-H6. `Promote` is the scheduling
+disposition under DR-006; implementation status remains `Pending` until code and
+behavioral evidence land.
+
+| ID | Work Item | Implementation Status | Scheduling | Confidence | Required Exit Evidence |
+|----|-----------|-----------------------|------------|------------|------------------------|
+| EFX-001 | Refuse blind redispatch after an unmatched mutating-tool start; surface the attempt as unconfirmed/`UNKNOWN` | Pending | Promote — P0 `governance-gap` | High | Permanent process-death fault test proves a non-idempotent logical effect cannot be applied again without new authority |
+| EFX-002 | Inventory effectful tools and fail closed when local policy sees external mutation, regardless of misleading read-only/destructive hints | Pending | Promote — P0 `governance-gap` | High | Governed-path tests prove prompt/read-only/workspace-write modes cannot execute GitHub, browser, MCP, shell, or other external mutation without the required authority |
+| EFX-003 | Bind one-time approval to run, tool, canonical payload/effect intent, then consume or expire it before dispatch | Pending | Promote — P0 `governance-gap` | High | Changed arguments and reused/missing call IDs require new approval; one-time grants cannot authorize a second attempt |
+| EFX-FUTURE | Provider-specific idempotency, settlement, and reconciliation beyond ADR-0042 | Absent | On Hold | Low | Local gaps closed, dated owner promise, provider-enforced identity/status contract, effect-specific fault evidence, and Human Review |
+
+Evidence and adoption status:
+[Durable-Effect Roadmap Socratic Review](analysis/durable-effect-roadmap-socratic-review-2026-08-25.md).
 
 ## Milestones
 

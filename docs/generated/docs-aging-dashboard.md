@@ -4,7 +4,7 @@
 
 **Stale threshold:** 90 days since `Last reviewed`
 **Current-truth docs scanned:** 17
-**Needs attention (working tier only):** 13
+**Needs attention (working tier only):** 10
 **Archive-tier docs (exempt from staleness):** 0
 
 Regenerate: `python3 scripts/report_docs_aging.py`
@@ -27,16 +27,9 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 
 | Document | Status | Last reviewed | File mtime | Notes |
 | --- | --- | --- | --- | --- |
-| `docs/daily-driver-current-status.md` | stale_by_mtime | 2026-06-25 | 2026-06-26 | File modified after last reviewed date |
 | `docs/plans/ticket-plans/index.md` | stale_by_mtime | 2026-06-18 | 2026-06-30 | File modified after last reviewed date |
 | `docs/tui-daily-driver-guide.md` | stale_by_mtime | 2026-06-21 | 2026-07-01 | File modified after last reviewed date |
 | `docs/USAGE.md` | stale_by_mtime | 2026-06-06 | 2026-07-01 | Missing owner banner; File modified after last reviewed date |
-
-### docs
-
-| Document | Status | Last reviewed | File mtime | Notes |
-| --- | --- | --- | --- | --- |
-| `docs/INDEX.md` | stale_by_mtime | 2026-06-17 | 2026-07-22 | Missing owner banner; File modified after last reviewed date |
 
 ### governance
 
@@ -57,12 +50,6 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 | --- | --- | --- | --- | --- |
 | `docs/release-checklist.md` | stale_by_mtime | 2026-06-07 | 2026-07-22 | Missing owner banner; File modified after last reviewed date |
 
-### strategy
-
-| Document | Status | Last reviewed | File mtime | Notes |
-| --- | --- | --- | --- | --- |
-| `docs/backlog-priority.md` | stale_by_mtime | 2026-06-28 | 2026-07-22 | Missing owner banner; File modified after last reviewed date |
-
 ### verification
 
 | Document | Status | Last reviewed | File mtime | Notes |
@@ -74,7 +61,7 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 | Document | Owner | Tier | Review trigger |
 | --- | --- | --- | --- |
 | `README.md` | project | working | README feature claims, golden path, or provider count changes. |
-| `docs/INDEX.md` | docs | working | New front-door docs, supersession links, or validation command changes. |
+| `docs/INDEX.md` | docs | working | New front-door docs, supersession links, roadmap evidence, or validation command changes. |
 | `docs/USAGE.md` | daily-driver | working | CLI/TUI command behavior, permission modes, or surface recipes change. |
 | `docs/cli.md` | cli | working | CLI flags, subcommands, or handler behavior changes. |
 | `docs/acceptance.md` | verification | working | Acceptance test inventory or count changes. |

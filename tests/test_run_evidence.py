@@ -343,10 +343,68 @@ def _assert_fold_matches_legacy(events: list[dict], run_id: str) -> RunEvidenceB
             run_id,
             typed,
             events,
+            verify_parity=True,
         )
         assert result.gap_categories == []
         assert result.bundle.to_dict() == legacy.to_dict()
     return legacy
+
+
+def test_from_events_parity_adds_exactly_one_assembly() -> None:
+    """The default fold does one assembly; verify_parity adds exactly one more.
+
+    Regression guard for the ADR32-M2 receipt/evidence fold. The typed fold
+    (``build_evidence_from_events``) legitimately calls ``_assemble_evidence_bundle``
+    once as its shared projection step. The parity comparison must be opt-in: the
+    default hot path must NOT assemble the legacy bundle a second time (the earlier
+    implementation did, doubling evidence work on every production call).
+    """
+    import teaagent.run_evidence as run_evidence
+
+    events = [
+        {
+            'event_type': 'run_started',
+            'run_id': 'r-once',
+            'payload': {},
+            'created_at': '2026-06-13T10:00:00+00:00',
+        },
+        {
+            'event_type': 'run_completed',
+            'run_id': 'r-once',
+            'payload': {'status': 'completed'},
+            'created_at': '2026-06-13T10:00:01+00:00',
+        },
+    ]
+    from teaagent.runner._events import read_run_events_from_audit
+
+    typed = read_run_events_from_audit(events)
+    calls = {'legacy': 0}
+    original = run_evidence._assemble_evidence_bundle
+
+    def _counting_assemble(*args: object, **kwargs: object):
+        calls['legacy'] += 1
+        return original(*args, **kwargs)
+
+    run_evidence._assemble_evidence_bundle = _counting_assemble
+    try:
+        calls['legacy'] = 0
+        default_result = build_run_evidence_bundle_from_events(
+            '.', 'r-once', typed, events
+        )
+        default_calls = calls['legacy']
+
+        calls['legacy'] = 0
+        parity_result = build_run_evidence_bundle_from_events(
+            '.', 'r-once', typed, events, verify_parity=True
+        )
+        parity_calls = calls['legacy']
+    finally:
+        run_evidence._assemble_evidence_bundle = original
+
+    assert default_calls == 1, 'default fold should assemble exactly once'
+    assert parity_calls == default_calls + 1, 'parity must add exactly one assembly'
+    assert default_result.gap_categories == []
+    assert default_result.bundle.to_dict() == parity_result.bundle.to_dict()
 
 
 def test_m6_fold_equals_legacy_on_success_run():

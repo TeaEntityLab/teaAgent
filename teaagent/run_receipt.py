@@ -374,8 +374,15 @@ def build_run_receipt(
     *,
     budget_cap_cents: int | None = None,
     use_event_stream: bool = True,
+    shadow_parity: bool = False,
 ) -> str:
-    """Build a formatted run receipt for *run_id*."""
+    """Build a formatted run receipt for *run_id*.
+
+    ``shadow_parity`` is an opt-in ADR32-M2 diagnostic: when enabled alongside
+    ``use_event_stream`` it also renders the legacy receipt and records a
+    ``receipt_event_derived_mismatch`` audit warning on divergence. It is off by
+    default so the production receipt path renders once instead of twice.
+    """
     try:
         events = store.show_run(run_id)
     except FileNotFoundError:
@@ -396,7 +403,7 @@ def build_run_receipt(
         raw_audit_events=events,
     )
     receipt = format_run_receipt(summary, context, bundle=bundle, events=events)
-    if use_event_stream:
+    if use_event_stream and shadow_parity:
         legacy_bundle = build_run_evidence_bundle(
             root,
             run_id,

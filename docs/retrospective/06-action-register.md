@@ -18,6 +18,7 @@ Legend: ✅ Done (committed) · 🟡 In progress · ⬜ Not started · 🔵 Alre
 | U-P0-1 | UX | Replace the placeholder URL in the first-run welcome and standardize all four GitHub URLs to one canonical URL. | `teaagent/cli/_handlers/_misc.py:475`; `SUPPORT.md:18`; `teaagent/cli/__init__.py:359`; `docs/ops/deployment-guide.md:68` | The entire repository uses one GitHub URL; `rg "yourusername\|anomalyco"` has no matches in documentation or CLI code. | ✅ | `4022016` — unified to `TeaEntityLab/teaagent` |
 | U-P0-2 | UX | Align advertised TUI commands with actual behavior: implement or remove `conflict` and `o/t/n/p/a` from HELP_TEXT (`rendering.py:64-72`) and the state panel (`core.py:226-238`); also implement branch-start/merge/cancel semantics for `parallel`/`select`/`cancel`, or narrow the help text to their current option-store/select/clear behavior. | `teaagent/tui/_commands.py:365-393,307-361` | No advertised command returns a "not yet implemented" response; HELP_TEXT accurately describes implemented semantics. | ✅ | Narrowed: removed dead Conflict Resolution Mode panel + dead Parallel Experiments panel + dead fields/import from `core.py`; HELP_TEXT already aligned; conflict handlers remain as hidden commands returning `not_available` |
 | G-P0-1 | Governance | Update `docs/audit-event.schema.json` to add `prev_hash`/`hash`/`chain_hmac` as optional properties, or split it into a "logical event schema" and a "persisted chain-entry schema." | `docs/audit-event.schema.json:5-13`; `teaagent/audit.py:473-477` | Every chained event written by AuditLogger passes schema validation; add a schema-conformance test. | ✅ | Split: `docs/audit-chain-entry.schema.json` (strict envelope with `prev_hash`/`hash`/`chain_hmac`); `tests/test_audit_schema_conformance.py` validates both schemas; `scripts/check_audit_schema_conformance.py` CI script |
+| G-P0-2 | Governance | Rethink roadmap against durable-effect survey; promote EFX-001 interrupted dispatch, EFX-002 effect classification/approval escalation, EFX-003 exact one-time approval binding as P0 DR-006 governance gaps on existing seams; hold generic exactly-once/ledger/outbox/reconciliation/fencing/actor/lease work. | `docs/analysis/durable-effect-roadmap-socratic-review-2026-08-25.md`; `docs/roadmap-status.md`; `docs/backlog-priority.md` | Seven-lens panel record with C1-C9 adoption ledger and acceptance contracts exists; roadmap-status and backlog-priority reflect EFX-001..003 as promoted P0; docs-consistency adoption guard passes. | ✅ | This session — durable panel/adoption record added; roadmap-status, backlog-priority, held forward-spec index, daily-driver current status, recovery guide, docs INDEX, checkpoint test wording, and `tests/test_docs_consistency.py` adoption guard updated; focused pytest 8 passed; `scripts/verify_docs.sh` passed |
 
 ## P1 - Fix Soon (Usability/Correctness/Contract Consistency)
 
@@ -82,16 +83,16 @@ Legend: ✅ Done (committed) · 🟡 In progress · ⬜ Not started · 🔵 Alre
 
 | Priority | Count | Distribution by Dimension |
 | --- | --- | --- |
-| P0 | 8 | Security 3, Architecture 2, UX 2, Governance 1 |
+| P0 | 9 | Security 3, Architecture 2, UX 2, Governance 2 |
 | P1 | 18 | Security 4, Governance 3, Architecture 5, UX 6 (including cross-dimensional items) |
 | P2 | 31 | Security 11, Governance 8, Architecture 7, UX 5 |
-| **Total** | **57** | |
+| **Total** | **58** | |
 
 ### Status Summary
 
 | Status | Count | Items |
 | --- | --- | --- |
-| ✅ Done (verified) | 53 | S-P0-1, S-P0-2, S-P0-3, A-P0-1, A-P0-2, U-P0-1, U-P0-2, G-P0-1; S-P1-1, S-P1-2, S-P1-3, S-P1-4, G-P1-1, G-P1-2, G-P1-3, A-P1-1, A-P1-2, A-P1-3, A-P1-4, A-P1-5, U-P1-1, U-P1-2, U-P1-3, U-P1-4, U-P1-5, U-P1-6; S-P2-1, S-P2-4, S-P2-5, S-P2-6, S-P2-7, S-P2-8, S-P2-9, S-P2-10, S-P2-11, G-P2-1, G-P2-2, G-P2-3, G-P2-5, G-P2-6, G-P2-7, G-P2-8, A-P2-1, A-P2-2, A-P2-3, A-P2-5, A-P2-6, A-P2-7, U-P2-1, U-P2-2, U-P2-3, U-P2-4, U-P2-5 |
+| ✅ Done (verified) | 54 | S-P0-1, S-P0-2, S-P0-3, A-P0-1, A-P0-2, U-P0-1, U-P0-2, G-P0-1, G-P0-2; S-P1-1, S-P1-2, S-P1-3, S-P1-4, G-P1-1, G-P1-2, G-P1-3, A-P1-1, A-P1-2, A-P1-3, A-P1-4, A-P1-5, U-P1-1, U-P1-2, U-P1-3, U-P1-4, U-P1-5, U-P1-6; S-P2-1, S-P2-4, S-P2-5, S-P2-6, S-P2-7, S-P2-8, S-P2-9, S-P2-10, S-P2-11, G-P2-1, G-P2-2, G-P2-3, G-P2-5, G-P2-6, G-P2-7, G-P2-8, A-P2-1, A-P2-2, A-P2-3, A-P2-5, A-P2-6, A-P2-7, U-P2-1, U-P2-2, U-P2-3, U-P2-4, U-P2-5 |
 | 🟡 In progress | 0 | — |
 | ⬜ Not started | 0 | — |
 | 🔵 Already existed | 4 | S-P2-2, S-P2-3, G-P2-4, A-P2-4 |

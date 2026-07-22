@@ -1,10 +1,11 @@
 # Backlog Priority
 
-> **Last reviewed:** 2026-06-28
+> **Last reviewed:** 2026-08-25
 > **Review trigger:** Backlog priorities or shipped/beta status claims change.
-> **Scheduling gate (2026-06-22):** DR-001 met — 5 owner evidence entries in
-> [Operator Friction Log](work-log/operator-friction-log.md). New UX work should cite
-> friction log IDs. **DR-006 T1/T5 ratified 2026-06-22.**
+> **Scheduling gate (2026-08-25):** DR-006 remains authoritative. Deterministic
+> local probes promote EFX-001–003 as P0 `governance-gap` remediation; no
+> product horizon, distributed effect subsystem, or external adoption work is
+> reopened.
 
 Prioritized by impact order: security and production risk → core platform capabilities → developer experience and ecosystem.
 
@@ -43,6 +44,10 @@ was met on 2026-06-22; completing that intake does not authorize new work.
 | Seven-control-loops SCL follow-on work | `legacy-competitive` | Listed implementation rows are historical `Complete`; follow-on scheduling is **held** without friction, governance-gap proof, or owner override |
 | Community-pain-point CPP follow-on work | `legacy-competitive` | Listed implementation rows are historical `Complete`; follow-on scheduling is **held** without friction, governance-gap proof, or owner override |
 | Consensus validation (ADR-0029) | `governance-gap` | **Deleted/quarantined (2026-07-22)** — owner-ratified Option D executed; no production importers; feature intent and git recovery path preserved in ADR-0029 disposition spec |
+| EFX-001 ambiguous mutating-tool dispatch | `governance-gap` | **Promote — P0** — process death after a non-idempotent mutation but before settlement left an unmatched start and explicit blind retry duplicated the logical effect; require `UNKNOWN`/no-blind-redispatch behavior plus a permanent fault test |
+| EFX-002 effect classification and approval escalation | `governance-gap` | **Promote — P0** — governed `AgentRunner` in `prompt` mode executed mocked `github_create_pr` without a pending approval because the effectful tool was classified non-destructive; audit built-in and remote effect metadata and fail closed under local policy |
+| EFX-003 one-time approval identity and consumption | `governance-gap` | **Promote — P0** — missing model call IDs collide on `model-{tool_name}` and one `approve_once` grant remains reusable across changed arguments; bind exact intent and consume/expire before dispatch |
+| EFX-FUTURE generic external-effect settlement | `legacy-competitive` / `owner-override` | **Hold** — ADR-0042 remains binding; exactly-once, generic ledger/outbox/reconciliation, fencing, actor supervision, and distributed leases need a new owner promise and sink-enforced evidence |
 
 ---
 

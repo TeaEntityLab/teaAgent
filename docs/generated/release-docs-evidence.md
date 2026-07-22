@@ -1,8 +1,8 @@
 # Release Documentation Evidence Bundle (Generated)
 
-**Generated:** 2026-06-25T08:58:01+00:00
-**Git commit:** `442f5f338b4354ef6e55d97afcd0e391ed26b877` on `main`
-**Working tree dirty:** no
+**Generated:** 2026-08-25T07:07:09+00:00
+**Git commit:** `0df77f76ed6de6abf20aaf00129eaad63fbe80e7` on `main`
+**Working tree dirty:** yes
 
 Regenerate: `python3 scripts/build_release_docs_evidence_bundle.py`
 
@@ -15,8 +15,8 @@ Regenerate: `python3 scripts/build_release_docs_evidence_bundle.py`
 ## Last Gate Run
 
 - Overall gate status: **pass**
-- `/Users/teee/dev/teaagent/.venv/bin/python scripts/validate_docs_consistency.py` — **pass** (exit 0)
-- `/Users/teee/dev/teaagent/.venv/bin/python scripts/report_docs_aging.py --check` — **pass** (exit 0)
+- `/opt/homebrew/opt/python@3.14/bin/python3.14 scripts/validate_docs_consistency.py` — **pass** (exit 0)
+- `/opt/homebrew/opt/python@3.14/bin/python3.14 scripts/report_docs_aging.py --check` — **pass** (exit 0)
 
 ## Documentation Freshness
 
@@ -25,22 +25,20 @@ Regenerate: `python3 scripts/build_release_docs_evidence_bundle.py`
 - Stale by owner surface:
   - `architecture`: 1
   - `cli`: 1
-  - `daily-driver`: 1
-  - `docs`: 1
+  - `daily-driver`: 3
   - `governance`: 2
   - `project`: 1
   - `release`: 1
-  - `strategy`: 1
   - `verification`: 1
 
 ## Roadmap Excerpt
 
 - `H0` Claim and risk hygiene: **Complete** (confidence High, next gate H1)
 - `H1` Daily operator loop: **Complete** (confidence High, next gate H2)
-- `H2` Multi-surface continuity: **Partially fixed — M2 foundation wired** (confidence Medium, next gate WDA-002)
-- `H3` Ecosystem trust: **Partially fixed — M3 tests pass** (confidence Medium, next gate WDC-002)
-- `H4` Durable owner/agent operations: **Partially fixed — shadow wired** (confidence Low, next gate WDA-004)
-- `H5` Quality and eval loop: **Partially fixed — release gate wired** (confidence Low, next gate WDA-005)
+- `H2` Multi-surface continuity: **On Hold — M2 foundation complete** (confidence Medium, next gate Owner-validated continuity need)
+- `H3` Ecosystem trust: **On Hold — M3 evidence complete** (confidence Medium, next gate Cited owner friction)
+- `H4` Durable owner/agent operations: **On Hold — shadow wiring exists** (confidence Low, next gate DR-006 + EFX local closure + 2026-09-12 H4 review)
+- `H5` Quality and eval loop: **Blocked — offline release gate exists** (confidence Low, next gate Funded live-provider evidence + owner decision)
 - `M0` (1-2 weeks): **High** (next gate All 3 checks pass: `validate_docs_consistency.py`, `refresh_competitive_docs.py --check`, `teaagent tool lint --root .`)
 - `M1` (2-6 weeks): **High** (next gate CLI/TUI cockpit parity acceptance, run evidence summary acceptance, guided recovery acceptance)
 - `M2` (4-10 weeks): **High** (next gate Long-session context guard acceptance, scope budget acceptance, plan revision acceptance)

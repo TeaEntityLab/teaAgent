@@ -21,8 +21,8 @@
 > **Does not own:** Current statuses (`docs/roadmap-status.md`), release claims,
 > owner decisions, ADR acceptance, or implementation scheduling.
 >
-> **Review trigger:** A companion spec changes status, ADR-0031/0029 reaches
-> expiry, or the owner changes harness-first direction.
+> **Review trigger:** A companion spec changes status, EFX-FUTURE gains an
+> owner-ratified promise, ADR-0031 reaches expiry, or harness-first direction changes.
 
 ## 1. Why this packet exists
 
@@ -42,6 +42,12 @@ engineering action is to make each boundary explicit:
 This packet follows harness-first's thin-harness invariant: it does not add a
 second framework, supervisor, workflow engine, or product surface. It adds
 contracts around already-existing systems and the decisions that govern them.
+
+**2026-08-25 exception:** The later
+[durable-effect roadmap review](../analysis/durable-effect-roadmap-socratic-review-2026-08-25.md)
+reproduced three local effect-authority gaps. EFX-001–003 now live in the
+canonical roadmap/backlog as direct DR-006 governance remediation. This index
+holds only the broader, still-unearned external-effect architecture.
 
 ## 2. Authority order (resolve conflicts top-down)
 
@@ -68,6 +74,7 @@ If a historical plan schedules work DR-006 holds, DR-006 wins.
 | H3 ecosystem trust | M3 + three-concept onboarding complete | Further simplification needs real daily-use signal | `friction-driven` | No speculative UX work; cockpit spec preserves current operator answers. |
 | H4 policy/RBAC | RBAC enforce path exists; shipped default shadow; policy "enforce" label is advisory-only | Owner-demand hold + ADR-0031 evidence window | `governance-gap`, expiry 2026-09-12 | Promotion spec + 7 adversarial checks. |
 | H4 consensus validation | 658-line module is experimental/unwired; CLI uses another consensus engine | ADR-0029 deliberately avoids a third consensus gate | expiry decision 2026-12-10 | Wire-or-delete disposition + import-graph guard + 5 behavioral pins. |
+| H4 effect correctness boundary | EFX-001–003 local dispatch/approval gaps are reproduced and promoted on current-truth surfaces; ADR-0042 still bounds external reversal | Local fixes do not establish exactly-once, provider settlement, business acceptance, reconciliation, or distributed safety | `owner-override` plus provider-specific evidence | Keep EFX-FUTURE held; reuse existing governed seams; create no generic effect subsystem or companion-spec stack. |
 | M4 background lifecycle | Detached process store, attach, liveness, cockpit rows exist | Orphan semantics and background transition events are not pinned as acceptance | DR-006 carve-out (`owner-override`) | BG-001 acceptance spec + 3 checks + activation skip. |
 | M4 operator cockpit | CLI shared snapshot + TUI tabs/data sources exist | Needs owner dogfood proof against M4 exit question | DR-006 carve-out (`owner-override`) | Acceptance matrix + v1 schema pins. |
 | M4 gateway/cloud/SaaS | Some dormant surfaces may exist | Explicitly held; external/multi-tenant GTM is a non-goal | `legacy-competitive` hold | Deliberately not specified beyond the hold boundary. |
@@ -88,6 +95,8 @@ This packet intentionally does **not**:
 - fabricate owner friction or external-user sessions;
 - edit README/product positioning;
 - claim M4/M5/M6 complete.
+- add a generic effect gateway, ledger/outbox daemon, fencing coordinator,
+  reconciliation agent, actor supervisor, or compensation framework.
 
 Those omissions are acceptance conditions, not unfinished engineering.
 
@@ -145,13 +154,18 @@ the same commit.
 ### 5.4 No second framework
 
 No spec may be satisfied by adding a new scheduler, queue, supervisor, agent
-framework, or generic event bus. Reuse:
+framework, generic event bus, generic effect service, outbox daemon, or
+distributed fencing coordinator. Reuse:
 
-- ADR-0032 spine for run/audit events;
-- existing approval queue for any future consensus gate;
+- ADR-0032 spine and `AuditLogger` for run/audit evidence;
+- the existing `AgentRunner`, `ToolRegistry`, approval path, and checkpoint/run
+  stores for EFX-001–003;
+- the existing approval queue for any future consensus gate;
 - `RunStore`/audit for background outcomes;
+- Git sandbox, hash/mtime checks, and isolation for the boundaries they
+  actually cover;
 - existing workspace config provenance for mode/profile visibility;
-- existing update module for a future CLI.
+- the existing update module for a future CLI.
 
 ## 6. Inference ledger (evidence vs inference)
 
@@ -164,6 +178,7 @@ framework, or generic event bus. Reuse:
 | I5 | `require_real_execution` does not exist; simulated/fixture disclosure is implemented. | M5 promotion needs an explicit profile bit, not an implicit CI convention. | Equivalent typed configuration + BLOCK-on-simulated semantics lands under another name. |
 | I6 | Update CLI absent; dormant Version and extraction quirks exist. | Absence is safer than partial wiring; trust blockers must be fixed first. | Owner demand plus signed-artifact acceptance proves the complete boundary. |
 | I7 | Simulation record lacks consent/timing/evidence fields and report type is hardcoded. | Reusing it for real humans would corrupt provenance; separate schema required. | A versioned real-human record with privacy validation lands. |
+| I8 | Providerless probes reproduced local dispatch ambiguity, reusable argument-blind one-time approval, and prompt-mode execution of mocked `github_create_pr` without a pending approval. | EFX-001–003 are direct governance-gap remediation, while a generic effect architecture remains unearned. | Close each local gap with permanent behavioral evidence; widen scope only if a dated owner promise and provider-enforced contract falsify the local-only boundary. |
 
 ## 7. Promotion dependency graph
 
@@ -193,6 +208,7 @@ not create authority.
 | Date / trigger | Decision | Required packet |
 | --- | --- | --- |
 | 2026-09-12 | ADR-0031: promote, extend, or revert H4 shadow wiring | 30-day receipt analysis, policy/RBAC coverage, benchmark, rollback proof, owner sign-off |
+| First dated owner decision to widen ADR-0042 or first provider-specific settlement need | Decide whether EFX-FUTURE enters the product promise | EFX-001–003 closure, provider idempotency/status/reconciliation contract, effect-specific crash evidence, non-goals, and owner rationale |
 | 2026-12-10 | ADR-0029: wire or delete consensus validation | Import-graph guard, demand evidence, quorum-semantics decision, deletion/wiring checklist |
 | First qualifying participant | Start WDH-002 real session | Consent/privacy pre-flight; protocol §5 |
 | First owner update friction | Consider `teaagent update` | Signed update trust boundary + dormant blocker fixes |

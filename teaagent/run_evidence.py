@@ -946,16 +946,22 @@ def build_run_evidence_bundle_from_events(
     raw_audit_events: list[JsonMapping],
     *,
     goal_id: str = '',
+    verify_parity: bool = False,
 ) -> EventDerivedEvidenceResult:
-    """Build evidence from typed RunEvents, preserving raw-audit parity.
+    """Build evidence from typed RunEvents.
 
-    If typed folding ever diverges from the legacy raw-audit assembly, return
-    the legacy bundle and record the missing/raw categories. This preserves
-    receipt correctness while making the gap explicit for ADR32-M2 review.
+    By default this folds the typed stream once (the production path). When
+    ``verify_parity`` is True it additionally assembles the legacy raw-audit
+    bundle and, if the two diverge, returns the legacy bundle plus the gap
+    categories. The parity path is opt-in because the default runtime must not
+    pay for a second full assembly and two ``to_dict`` serializations on every
+    call; parity is asserted by the ADR32-M2 tests, not the hot path.
     """
     folded = build_evidence_from_events(
         events, root=root, run_id=run_id, goal_id=goal_id
     )
+    if not verify_parity:
+        return EventDerivedEvidenceResult(bundle=folded)
     legacy = _assemble_evidence_bundle(
         raw_audit_events, root=root, run_id=run_id, goal_id=goal_id
     )

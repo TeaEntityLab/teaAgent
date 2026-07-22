@@ -3,7 +3,9 @@
 Verifies that:
 - After a ``pending_approval`` pause, the checkpoint store holds the context.
 - Resuming by replaying observations yields the same final answer.
-- Crash-safe: context saved at each tool completion is replayable.
+- Post-settlement continuity: context saved at each tool completion is replayable.
+- The in-flight dispatch-to-settlement crash window is not covered here; EFX-001
+  tracks its required fault test and no-blind-redispatch contract.
 """
 
 from __future__ import annotations

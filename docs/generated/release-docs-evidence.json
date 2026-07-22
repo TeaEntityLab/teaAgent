@@ -1,21 +1,21 @@
 {
   "ok": true,
-  "created_at": "2026-06-25T08:58:01+00:00",
+  "created_at": "2026-08-25T07:07:09+00:00",
   "repo_root": "/Users/teee/dev/teaagent",
   "git": {
     "branch": "main",
-    "commit": "442f5f338b4354ef6e55d97afcd0e391ed26b877",
-    "dirty": false
+    "commit": "0df77f76ed6de6abf20aaf00129eaad63fbe80e7",
+    "dirty": true
   },
   "commands": [
     {
-      "cmd": "/Users/teee/dev/teaagent/.venv/bin/python scripts/validate_docs_consistency.py",
+      "cmd": "/opt/homebrew/opt/python@3.14/bin/python3.14 scripts/validate_docs_consistency.py",
       "exit_code": 0,
-      "stdout": "Risk register evidence coverage: 24/29 rows verified (82%)\nTicket index evidence coverage: 21/21 rows verified (100%)\nDocs consistency check passed.\n",
+      "stdout": "Risk register evidence coverage: 29/29 rows verified (100%)\nTicket index evidence coverage: 21/21 rows verified (100%)\nDocs consistency check passed.\n",
       "stderr": ""
     },
     {
-      "cmd": "/Users/teee/dev/teaagent/.venv/bin/python scripts/report_docs_aging.py --check",
+      "cmd": "/opt/homebrew/opt/python@3.14/bin/python3.14 scripts/report_docs_aging.py --check",
       "exit_code": 0,
       "stdout": "Docs aging dashboard check passed.\n",
       "stderr": ""
@@ -26,12 +26,10 @@
     "needs_attention": 10,
     "by_owner": {
       "project": 1,
-      "docs": 1,
-      "daily-driver": 1,
+      "daily-driver": 3,
       "cli": 1,
       "verification": 1,
       "release": 1,
-      "strategy": 1,
       "governance": 2,
       "architecture": 1
     },
@@ -56,30 +54,30 @@
       {
         "id": "H2",
         "name": "Multi-surface continuity",
-        "status": "Partially fixed — M2 foundation wired",
+        "status": "On Hold — M2 foundation complete",
         "confidence": "Medium",
-        "next_gate": "WDA-002"
+        "next_gate": "Owner-validated continuity need"
       },
       {
         "id": "H3",
         "name": "Ecosystem trust",
-        "status": "Partially fixed — M3 tests pass",
+        "status": "On Hold — M3 evidence complete",
         "confidence": "Medium",
-        "next_gate": "WDC-002"
+        "next_gate": "Cited owner friction"
       },
       {
         "id": "H4",
         "name": "Durable owner/agent operations",
-        "status": "Partially fixed — shadow wired",
+        "status": "On Hold — shadow wiring exists",
         "confidence": "Low",
-        "next_gate": "WDA-004"
+        "next_gate": "DR-006 + EFX local closure + 2026-09-12 H4 review"
       },
       {
         "id": "H5",
         "name": "Quality and eval loop",
-        "status": "Partially fixed — release gate wired",
+        "status": "Blocked — offline release gate exists",
         "confidence": "Low",
-        "next_gate": "WDA-005"
+        "next_gate": "Funded live-provider evidence + owner decision"
       }
     ],
     "milestones": [
