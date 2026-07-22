@@ -74,6 +74,7 @@ def test_audit_event_to_run_event_type_evidence_events_now_mapped() -> None:
         RunEventType.APPROVAL_GRANTED
     )
     assert audit_event_to_run_event_type('undo_applied') == RunEventType.UNDO_APPLIED
+    assert audit_event_to_run_event_type('run_paused') == RunEventType.RUN_PAUSED
 
 
 def test_read_run_events_from_audit_mapped_events_only() -> None:

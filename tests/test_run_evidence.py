@@ -12,6 +12,7 @@ from teaagent.run_evidence import (
     TestEvidence,
     auto_derive_known_gaps,
     build_run_evidence_bundle,
+    build_run_evidence_bundle_from_events,
     extract_approvals,
     extract_commands_run,
     extract_tests,
@@ -331,21 +332,20 @@ def _assert_fold_matches_legacy(events: list[dict], run_id: str) -> RunEvidenceB
     dicts through ``read_run_events_from_audit`` (typed reader) loses no evidence
     versus assembling directly from those dicts.
     """
-    from teaagent.run_evidence import (
-        _assemble_evidence_bundle,
-        build_evidence_from_events,
-    )
+    from teaagent.run_evidence import _assemble_evidence_bundle
     from teaagent.runner._events import read_run_events_from_audit
 
     with tempfile.TemporaryDirectory() as root:
-        # Raw-dict assembly (pre-cutover production path) is the baseline.
         legacy = _assemble_evidence_bundle(events, root=root, run_id=run_id)
-
-        # Typed-stream fold (current production path) must match it.
         typed = read_run_events_from_audit(events)
-        folded = build_evidence_from_events(typed, root=root, run_id=run_id)
-
-        assert folded.to_dict() == legacy.to_dict()
+        result = build_run_evidence_bundle_from_events(
+            root,
+            run_id,
+            typed,
+            events,
+        )
+        assert result.gap_categories == []
+        assert result.bundle.to_dict() == legacy.to_dict()
     return legacy
 
 
@@ -456,6 +456,35 @@ def test_m6_fold_equals_legacy_on_failure_run():
     _assert_fold_matches_legacy(events, 'r-fail')
 
 
+def test_m6_fold_equals_legacy_on_cancelled_run() -> None:
+    """Cancelled run folds losslessly through typed RunEvents."""
+    events = [
+        {
+            'event_type': 'run_started',
+            'run_id': 'r-cancel',
+            'payload': {},
+            'created_at': '2026-06-13T11:30:00+00:00',
+        },
+        {
+            'event_type': 'tool_use',
+            'run_id': 'r-cancel',
+            'payload': {
+                'tool_name': 'workspace_run_shell',
+                'input': {'command': 'pytest -q'},
+                'call_id': 'c1',
+            },
+            'created_at': '2026-06-13T11:30:01+00:00',
+        },
+        {
+            'event_type': 'run_cancelled',
+            'run_id': 'r-cancel',
+            'payload': {'reason': 'operator cancelled'},
+            'created_at': '2026-06-13T11:30:02+00:00',
+        },
+    ]
+    _assert_fold_matches_legacy(events, 'r-cancel')
+
+
 def test_m6_fold_equals_legacy_on_pending_approval_run():
     """Pending-approval run (requested, not resolved) folds losslessly."""
     events = [
@@ -473,6 +502,47 @@ def test_m6_fold_equals_legacy_on_pending_approval_run():
         },
     ]
     _assert_fold_matches_legacy(events, 'r-pend')
+
+
+def test_m6_fold_equals_legacy_on_paused_run() -> None:
+    """run_paused is typed so pending-approval completeness can be preserved."""
+    events = [
+        {
+            'event_type': 'run_started',
+            'run_id': 'r-paused',
+            'payload': {},
+            'created_at': '2026-06-13T12:00:00+00:00',
+        },
+        {
+            'event_type': 'run_paused',
+            'run_id': 'r-paused',
+            'payload': {'status': 'pending_approval'},
+            'created_at': '2026-06-13T12:00:01+00:00',
+        },
+    ]
+    _assert_fold_matches_legacy(events, 'r-paused')
+
+
+def test_build_run_evidence_bundle_legacy_flag_matches_event_stream() -> None:
+    events = [
+        {
+            'event_type': 'run_started',
+            'run_id': 'r-flag',
+            'payload': {},
+            'created_at': '2026-06-13T12:00:00+00:00',
+        },
+        {
+            'event_type': 'run_completed',
+            'run_id': 'r-flag',
+            'payload': {'cost_cents': 1.0},
+            'created_at': '2026-06-13T12:00:01+00:00',
+        },
+    ]
+    with tempfile.TemporaryDirectory() as root:
+        _write_run(root, 'r-flag', events)
+        typed = build_run_evidence_bundle(root, 'r-flag', use_event_stream=True)
+        legacy = build_run_evidence_bundle(root, 'r-flag', use_event_stream=False)
+        assert typed.to_dict() == legacy.to_dict()
 
 
 def test_m6_fold_preserves_created_at_in_command_timestamps():

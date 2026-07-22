@@ -5,6 +5,7 @@ Turns run evidence into an operator-facing receipt suitable for CLI/TUI output.
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -339,12 +340,40 @@ def format_run_receipt(  # noqa: C901
     return '\n'.join(lines)
 
 
+def _sha256_text(text: str) -> str:
+    return hashlib.sha256(text.encode('utf-8')).hexdigest()
+
+
+def _record_receipt_event_derived_mismatch(
+    store: RunStore,
+    run_id: str,
+    *,
+    event_stream_receipt: str,
+    legacy_receipt: str,
+) -> None:
+    """Best-effort audit warning for ADR32-M2 receipt parity drift."""
+    try:
+        audit = store.audit_logger(run_id)
+        audit.record(
+            'receipt_event_derived_mismatch',
+            run_id,
+            event_stream_receipt_sha256=_sha256_text(event_stream_receipt),
+            legacy_receipt_sha256=_sha256_text(legacy_receipt),
+        )
+    except Exception:
+        # Receipt rendering must remain read-only/recoverable even if the warning
+        # cannot be persisted (e.g. read-only RunStore). The parity test catches
+        # the mismatch; this audit path is only an operator breadcrumb.
+        return
+
+
 def build_run_receipt(
     store: RunStore,
     run_id: str,
     root: str | Path,
     *,
     budget_cap_cents: int | None = None,
+    use_event_stream: bool = True,
 ) -> str:
     """Build a formatted run receipt for *run_id*."""
     try:
@@ -360,5 +389,28 @@ def build_run_receipt(
     )
     context = extract_run_receipt_context(events, run_id=run_id, root=root, store=store)
     context.resume_state = _derive_resume_state(events, summary=summary)
-    bundle = build_run_evidence_bundle(root, run_id)
-    return format_run_receipt(summary, context, bundle=bundle, events=events)
+    bundle = build_run_evidence_bundle(
+        root,
+        run_id,
+        use_event_stream=use_event_stream,
+        raw_audit_events=events,
+    )
+    receipt = format_run_receipt(summary, context, bundle=bundle, events=events)
+    if use_event_stream:
+        legacy_bundle = build_run_evidence_bundle(
+            root,
+            run_id,
+            use_event_stream=False,
+            raw_audit_events=events,
+        )
+        legacy_receipt = format_run_receipt(
+            summary, context, bundle=legacy_bundle, events=events
+        )
+        if legacy_receipt != receipt:
+            _record_receipt_event_derived_mismatch(
+                store,
+                run_id,
+                event_stream_receipt=receipt,
+                legacy_receipt=legacy_receipt,
+            )
+    return receipt

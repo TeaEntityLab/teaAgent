@@ -139,6 +139,83 @@ def test_format_run_receipt_includes_required_sections():
         assert check_receipt_completeness(text, include_plan=True) == []
 
 
+def test_build_run_receipt_event_stream_matches_legacy_path() -> None:
+    events = [
+        {
+            'event_type': 'run_started',
+            'timestamp': '2026-06-06T10:00:00Z',
+            'payload': {
+                'task': 'receipt parity',
+                'provider': 'stub',
+                'model': 'model-x',
+                'permission_mode': 'workspace-write',
+            },
+        },
+        {
+            'event_type': 'tool_call_started',
+            'timestamp': '2026-06-06T10:01:00Z',
+            'payload': {
+                'tool_name': 'workspace_run_shell_mutate',
+                'call_id': 'verify-1',
+                'arguments': {'command': 'python -m pytest -q'},
+            },
+        },
+        {
+            'event_type': 'tool_call_completed',
+            'timestamp': '2026-06-06T10:01:30Z',
+            'payload': {
+                'tool_name': 'workspace_run_shell_mutate',
+                'call_id': 'verify-1',
+                'result': {'command': 'python -m pytest -q', 'exit_code': 0},
+            },
+        },
+        {
+            'event_type': 'tool_call_completed',
+            'timestamp': '2026-06-06T10:04:00Z',
+            'payload': {
+                'tool_name': 'workspace_write_file',
+                'call_id': 'write-1',
+                'arguments': {'path': 'result.txt'},
+                'result': {'path': 'result.txt'},
+            },
+        },
+        {
+            'event_type': 'run_completed',
+            'timestamp': '2026-06-06T10:05:00Z',
+            'payload': {'answer': 'ok'},
+        },
+    ]
+    with tempfile.TemporaryDirectory() as tmpdir:
+        run_id = 'receipt-parity'
+        _write_run(tmpdir, run_id, events)
+        store = RunStore(tmpdir)
+        event_receipt = build_run_receipt(store, run_id, tmpdir, use_event_stream=True)
+        legacy_receipt = build_run_receipt(
+            store, run_id, tmpdir, use_event_stream=False
+        )
+
+    assert event_receipt == legacy_receipt
+    assert check_receipt_completeness(event_receipt) == []
+
+
+def test_receipt_event_derived_mismatch_records_audit_warning() -> None:
+    from teaagent.run_receipt import _record_receipt_event_derived_mismatch
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        store = RunStore(tmpdir)
+        _record_receipt_event_derived_mismatch(
+            store,
+            'receipt-mismatch',
+            event_stream_receipt='event receipt',
+            legacy_receipt='legacy receipt',
+        )
+        events = store.show_run('receipt-mismatch')
+
+    assert events[-1]['event_type'] == 'receipt_event_derived_mismatch'
+    payload = events[-1]['payload']
+    assert payload['event_stream_receipt_sha256'] != payload['legacy_receipt_sha256']
+
+
 def test_build_run_receipt_for_missing_run():
     with tempfile.TemporaryDirectory() as tmpdir:
         store = RunStore(tmpdir)

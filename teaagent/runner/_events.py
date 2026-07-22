@@ -70,6 +70,7 @@ class RunEventType(str, Enum):
     APPROVAL_DENIED = 'approval_denied'
     RUN_CANCELLED = 'run_cancelled'
     RUN_PENDING_APPROVAL = 'run_pending_approval'
+    RUN_PAUSED = 'run_paused'
 
     # M5 hook-observability taxonomy (ADR 0032 M5, owner decision 2026-06-13):
     # the audit events emitted by the HookRegistry bridge in the tool-dispatch
@@ -147,6 +148,7 @@ _RUN_EVENT_TO_AUDIT_EVENT_TYPE: dict[RunEventType, str] = {
     RunEventType.APPROVAL_DENIED: 'approval_denied',
     RunEventType.RUN_CANCELLED: 'run_cancelled',
     RunEventType.RUN_PENDING_APPROVAL: 'run_pending_approval',
+    RunEventType.RUN_PAUSED: 'run_paused',
     # M5 hook-observability taxonomy — mapping only; hook execution stays in
     # the tool-dispatch layer (teaagent/tools.py), not spine-emitted.
     RunEventType.TOOL_HOOK_PRE_MUTATION: 'tool_hook_pre_mutation',

@@ -307,6 +307,26 @@ class RunEvidenceBundle:
         }
 
 
+@dataclass
+class EventDerivedEvidenceResult:
+    """Evidence bundle derived from typed RunEvents plus any fallback gaps.
+
+    ``gap_categories`` is empty when the typed stream is byte-equivalent to the
+    legacy raw-audit assembly. If a future audit event is not representable as a
+    ``RunEvent`` and the typed fold would lose evidence, the bundle falls back
+    to the raw audit assembly and names the missing event categories here.
+    """
+
+    bundle: RunEvidenceBundle
+    gap_categories: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> JsonMapping:
+        return {
+            'bundle': self.bundle.to_dict(),
+            'gap_categories': list(self.gap_categories),
+        }
+
+
 _HOOK_AUDIT_TYPES: frozenset[str] = frozenset(
     {
         'tool_hook_pre_mutation',
@@ -864,6 +884,8 @@ def build_run_evidence_bundle(
     run_id: str,
     *,
     goal_id: str = '',
+    use_event_stream: bool = True,
+    raw_audit_events: list[JsonMapping] | None = None,
 ) -> RunEvidenceBundle:
     """Build a complete evidence bundle for a run.
 
@@ -871,23 +893,76 @@ def build_run_evidence_bundle(
         root: Workspace root directory.
         run_id: Run identifier.
         goal_id: Optional goal identifier to link this run to a GoalRecord.
+        use_event_stream: When True, fold through the typed RunEvent stream;
+            when False, use the legacy raw-audit assembly path.
+        raw_audit_events: Optional already-loaded audit events. Supplying this
+            avoids a second RunStore read (used by receipt parity/shadow paths).
     """
     try:
-        events = RunStore(root).show_run(run_id)
+        events = (
+            raw_audit_events
+            if raw_audit_events is not None
+            else RunStore(root).show_run(run_id)
+        )
     except FileNotFoundError:
         return RunEvidenceBundle(run_id=run_id, goal_id=goal_id)
 
-    # M6 FOLD-T002 cutover: production evidence is now derived from the TYPED
-    # event stream, not raw audit dicts. Every evidence-bearing audit event is
-    # typed in RunEventType (M2 + M3 + M5), so read_run_events_from_audit is
-    # lossless here; events whose type is not in the taxonomy are not read by any
-    # extractor anyway. The legacy raw-dict assembly is no longer the production
-    # path — it survives only as the shared _assemble_evidence_bundle helper that
-    # the fold also uses, so the two cannot diverge.
+    if not use_event_stream:
+        return _assemble_evidence_bundle(
+            events, root=root, run_id=run_id, goal_id=goal_id
+        )
+
     from teaagent.runner._events import read_run_events_from_audit
 
     typed = read_run_events_from_audit(events)
-    return build_evidence_from_events(typed, root=root, run_id=run_id, goal_id=goal_id)
+    result = build_run_evidence_bundle_from_events(
+        root,
+        run_id,
+        typed,
+        events,
+        goal_id=goal_id,
+    )
+    return result.bundle
+
+
+def _event_gap_categories(
+    events: list['RunEvent'], raw_audit_events: list[JsonMapping]
+) -> list[str]:
+    from teaagent.runner._events import run_event_to_audit_event_type
+
+    represented = {run_event_to_audit_event_type(event.type) for event in events}
+    raw_types = {
+        event_type
+        for event in raw_audit_events
+        if isinstance((event_type := event.get('event_type')), str)
+    }
+    return sorted(raw_types - represented)
+
+
+def build_run_evidence_bundle_from_events(
+    root: str | Path,
+    run_id: str,
+    events: list['RunEvent'],
+    raw_audit_events: list[JsonMapping],
+    *,
+    goal_id: str = '',
+) -> EventDerivedEvidenceResult:
+    """Build evidence from typed RunEvents, preserving raw-audit parity.
+
+    If typed folding ever diverges from the legacy raw-audit assembly, return
+    the legacy bundle and record the missing/raw categories. This preserves
+    receipt correctness while making the gap explicit for ADR32-M2 review.
+    """
+    folded = build_evidence_from_events(
+        events, root=root, run_id=run_id, goal_id=goal_id
+    )
+    legacy = _assemble_evidence_bundle(
+        raw_audit_events, root=root, run_id=run_id, goal_id=goal_id
+    )
+    if folded.to_dict() == legacy.to_dict():
+        return EventDerivedEvidenceResult(bundle=folded)
+    gaps = _event_gap_categories(events, raw_audit_events) or ['parity_mismatch']
+    return EventDerivedEvidenceResult(bundle=legacy, gap_categories=gaps)
 
 
 def build_evidence_from_events(
