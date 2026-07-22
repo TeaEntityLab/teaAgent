@@ -268,6 +268,22 @@ pytest tests/acceptance/test_docs_acceptance_count_accuracy.py tests/acceptance/
 
 ---
 
+## H4 Policy/RBAC Coverage Declarations (ADR-0031 Criterion 2)
+
+Machine-readable source: `h4_policy_rbac_coverage` in
+[`claim-to-test-traceability.yaml`](claim-to-test-traceability.yaml).
+
+Checker: `scripts/check_h4_coverage.py`.
+
+Current repository workspace inventory: no enabled `.teaagent/policies/*.json`
+and no `.teaagent/roles/*.json` entries. The YAML section is intentionally
+empty. When a workspace has enabled H4 policies or RBAC roles, each item must
+declare at least one allow-side test and one deny-side test before ADR-0031
+promotion can be considered. The checker verifies declaration completeness and
+test-file references only; it does not run tests or certify semantic adequacy.
+
+---
+
 ## Gap Summary
 
 | Claim | Gap | Needed to close |

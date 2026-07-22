@@ -4,6 +4,14 @@ from teaagent.governance.audit_completeness import (
     AuditCompletenessReport,
     check_audit_completeness,
 )
+from teaagent.governance.h4_coverage import (
+    H4CoverageReport,
+    build_h4_coverage_report,
+)
+from teaagent.governance.h4_decision_packet import (
+    H4DecisionPacket,
+    build_h4_decision_packet,
+)
 from teaagent.governance.h4_evidence import (
     H4DenialCandidate,
     H4EvidenceReport,
@@ -16,6 +24,14 @@ from teaagent.governance.h4_integration import (
     evaluate_approval_policy_shadow,
     policy_governance_mode,
     rbac_governance_mode,
+)
+from teaagent.governance.h4_performance import (
+    H4PolicyPerformanceReport,
+    measure_policy_evaluation_performance,
+)
+from teaagent.governance.h4_rollback import (
+    H4RollbackDryRunReport,
+    run_h4_rollback_dry_run,
 )
 from teaagent.governance.plan_gate import (
     WRITE_TOOLS,
@@ -31,8 +47,16 @@ from teaagent.governance.tool_lint import ToolLintIssue, lint_registry
 
 __all__ = [
     'AuditCompletenessReport',
+    'H4DecisionPacket',
+    'build_h4_decision_packet',
     'H4DenialCandidate',
     'H4EvidenceReport',
+    'H4CoverageReport',
+    'build_h4_coverage_report',
+    'H4PolicyPerformanceReport',
+    'measure_policy_evaluation_performance',
+    'H4RollbackDryRunReport',
+    'run_h4_rollback_dry_run',
     'ReviewGate',
     'ToolLintIssue',
     'WRITE_TOOLS',

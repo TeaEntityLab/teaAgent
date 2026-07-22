@@ -374,6 +374,38 @@ def test_consensus_validation_deletion_preserves_recovery_record() -> None:
     assert 'symbol-level\ninventory, wire-blockers, and git recovery commands' in adr
 
 
+def test_h4_evidence_prep_surfaces_are_documented() -> None:
+    root = Path(__file__).resolve().parents[1]
+    matrix_md = (
+        root / 'docs' / 'architecture' / 'claim-to-test-traceability-matrix.md'
+    ).read_text(encoding='utf-8')
+    matrix_yaml = (
+        root / 'docs' / 'architecture' / 'claim-to-test-traceability.yaml'
+    ).read_text(encoding='utf-8')
+    spec = (
+        root / 'docs' / 'specs' / 'rbac-shadow-to-enforce-promotion-spec-2026-07-11.md'
+    ).read_text(encoding='utf-8')
+
+    assert '## H4 Policy/RBAC Coverage Declarations (ADR-0031 Criterion 2)' in matrix_md
+    assert 'h4_policy_rbac_coverage:' in matrix_yaml
+    for script in (
+        'scripts/prepare_h4_evidence.py',
+        'scripts/check_h4_coverage.py',
+        'scripts/benchmark_h4_policy.py',
+        'scripts/verify_h4_rollback.py',
+        'scripts/build_h4_decision_packet.py',
+    ):
+        assert script in spec
+    for test_file in (
+        'tests/test_h4_evidence.py',
+        'tests/test_h4_coverage.py',
+        'tests/test_h4_performance.py',
+        'tests/test_h4_rollback.py',
+        'tests/test_h4_decision_packet.py',
+    ):
+        assert test_file in spec
+
+
 def test_doc_cross_references_fail_for_non_historical_docs(tmp_path: Path) -> None:
     docs = tmp_path / 'docs'
     docs.mkdir()

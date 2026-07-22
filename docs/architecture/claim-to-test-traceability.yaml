@@ -201,3 +201,12 @@ claims:
       Stale docs = governance failure is a design principle, not a fully automated check.
       Drift-detection tests enforce count accuracy and claim-file existence, but do not verify
       claim-text accuracy against code behavior. Semantic drift detection is roadmap.
+
+h4_policy_rbac_coverage:
+  # ADR-0031 criterion 2 evidence declarations.
+  # Current repo default has no enabled .teaagent/policies/*.json and no
+  # .teaagent/roles/*.json entries, so this section is intentionally empty.
+  # Workspaces with enabled policies or roles must declare allow_tests and
+  # deny_tests for each item before H4 promotion can be considered.
+  policies: []
+  roles: []

@@ -1,0 +1,197 @@
+"""H4 ADR-0031 decision-packet assembly.
+
+Aggregates the agent-completable H4 evidence outputs for ADR-0031 without
+promoting enforcement. Criteria 1, 2, 3, and 5 can be prepared deterministically;
+criterion 4 is human sign-off and is always reported as human-required. The
+packet is evidence for the owner review, not a promotion verdict.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Optional
+
+from teaagent.governance.h4_coverage import build_h4_coverage_report
+from teaagent.governance.h4_evidence import (
+    build_h4_evidence_report,
+    discover_audit_logs,
+    load_events_from_paths,
+)
+from teaagent.governance.h4_performance import (
+    DEFAULT_ITERATIONS,
+    DEFAULT_POLICY_COUNT,
+    DEFAULT_THRESHOLD_MS,
+    measure_policy_evaluation_performance,
+)
+from teaagent.governance.h4_rollback import run_h4_rollback_dry_run
+
+
+@dataclass(frozen=True)
+class H4CriterionStatus:
+    """One ADR-0031 criterion status inside the decision packet."""
+
+    criterion: str
+    status: str
+    summary: str
+    evidence: dict[str, Any]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            'criterion': self.criterion,
+            'status': self.status,
+            'summary': self.summary,
+            'evidence': self.evidence,
+        }
+
+
+@dataclass(frozen=True)
+class H4DecisionPacket:
+    """Owner-review packet for ADR-0031 shadow-to-enforce decision."""
+
+    criteria: list[H4CriterionStatus]
+
+    @property
+    def agent_prepared_criteria(self) -> int:
+        return sum(
+            1 for criterion in self.criteria if criterion.status != 'human_required'
+        )
+
+    @property
+    def human_required_criteria(self) -> int:
+        return sum(
+            1 for criterion in self.criteria if criterion.status == 'human_required'
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            'decision': 'ADR-0031 H4 shadow-to-enforce review packet',
+            'promotion_ready': False,
+            'agent_prepared_criteria': self.agent_prepared_criteria,
+            'human_required_criteria': self.human_required_criteria,
+            'criteria': [criterion.to_dict() for criterion in self.criteria],
+            'note': (
+                'Evidence packet only. It does not flip H4 modes or claim promotion readiness. '
+                'Criterion 4 remains owner/security-governance sign-off.'
+            ),
+        }
+
+
+def _criterion_one(
+    root: Path,
+    *,
+    audit_logs: Optional[list[Path]],
+    since: Optional[str],
+    until: Optional[str],
+) -> H4CriterionStatus:
+    paths = audit_logs if audit_logs is not None else discover_audit_logs(root)
+    events = load_events_from_paths(paths) if paths else []
+    report = build_h4_evidence_report(events, since=since, until=until)
+    if not paths:
+        status = 'needs_audit_logs'
+        summary = (
+            'No audit logs were found; cannot prepare the 30-day shadow-denial window.'
+        )
+    elif report.skipped_malformed:
+        status = 'needs_review'
+        summary = f'{report.skipped_malformed} malformed H4 receipt(s) require operator review.'
+    else:
+        status = 'prepared'
+        summary = (
+            f'{report.observed_events} observed H4 receipt(s), '
+            f'{len(report.candidates)} denial candidate(s) for owner adjudication.'
+        )
+    return H4CriterionStatus(
+        criterion='1-zero-false-positive-window',
+        status=status,
+        summary=summary,
+        evidence=report.to_dict(),
+    )
+
+
+def _criterion_two(root: Path, *, matrix_path: str | Path | None) -> H4CriterionStatus:
+    report = build_h4_coverage_report(root, matrix_path=matrix_path)
+    status = 'prepared' if report.ok else 'needs_coverage_declarations'
+    summary = (
+        f'{len(report.policies)} enabled policie(s), {len(report.roles)} role(s), '
+        f'{len(report.gaps)} coverage gap(s).'
+    )
+    return H4CriterionStatus(
+        criterion='2-coverage-completeness',
+        status=status,
+        summary=summary,
+        evidence=report.to_dict(),
+    )
+
+
+def _criterion_three(
+    *, policy_count: int, iterations: int, threshold_ms: float
+) -> H4CriterionStatus:
+    report = measure_policy_evaluation_performance(
+        policy_count=policy_count,
+        iterations=iterations,
+        threshold_ms=threshold_ms,
+    )
+    status = 'prepared' if report.ok else 'needs_performance_review'
+    summary = (
+        f'median={report.median_ms:.3f}ms threshold={report.threshold_ms:.3f}ms '
+        f'over {report.policy_count} policies.'
+    )
+    return H4CriterionStatus(
+        criterion='3-performance-slo',
+        status=status,
+        summary=summary,
+        evidence=report.to_dict(),
+    )
+
+
+def _criterion_four() -> H4CriterionStatus:
+    return H4CriterionStatus(
+        criterion='4-human-signoff',
+        status='human_required',
+        summary=(
+            'Owner/security-governance sign-off cannot be generated by an agent. '
+            'A PR titled "Approve shadow→enforce promotion" is required by ADR-0031.'
+        ),
+        evidence={'required': 'owner/security-governance sign-off'},
+    )
+
+
+def _criterion_five() -> H4CriterionStatus:
+    report = run_h4_rollback_dry_run()
+    status = 'prepared' if report.ok else 'needs_rollback_review'
+    summary = 'rollback dry-run succeeded' if report.ok else 'rollback dry-run failed'
+    return H4CriterionStatus(
+        criterion='5-rollback-plan',
+        status=status,
+        summary=summary,
+        evidence=report.to_dict(),
+    )
+
+
+def build_h4_decision_packet(
+    root: str | Path,
+    *,
+    audit_logs: Optional[list[Path]] = None,
+    since: Optional[str] = None,
+    until: Optional[str] = None,
+    matrix_path: str | Path | None = None,
+    policy_count: int = DEFAULT_POLICY_COUNT,
+    iterations: int = DEFAULT_ITERATIONS,
+    threshold_ms: float = DEFAULT_THRESHOLD_MS,
+) -> H4DecisionPacket:
+    """Build the ADR-0031 owner-review packet from agent-completable evidence."""
+    root_path = Path(root).resolve()
+    return H4DecisionPacket(
+        criteria=[
+            _criterion_one(root_path, audit_logs=audit_logs, since=since, until=until),
+            _criterion_two(root_path, matrix_path=matrix_path),
+            _criterion_three(
+                policy_count=policy_count,
+                iterations=iterations,
+                threshold_ms=threshold_ms,
+            ),
+            _criterion_four(),
+            _criterion_five(),
+        ]
+    )

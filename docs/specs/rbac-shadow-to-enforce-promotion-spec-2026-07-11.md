@@ -93,17 +93,29 @@ session.
      window containing ≥ 1 real run per week.
 2. **Coverage completeness.** Every enabled policy in
    `.teaagent/policies/*.json` and every role in the RBAC store has at least
-   one test exercising its allow AND deny sides. Evidence: extend
-   `docs/architecture/claim-to-test-traceability-matrix.md` with a policy/RBAC
-   section; the matrix row count must equal the enabled-policy count.
+   one test exercising its allow AND deny sides. Evidence is prepared by
+   `teaagent/governance/h4_coverage.py` and `scripts/check_h4_coverage.py`,
+   which inventory current stores and compare them to the
+   `h4_policy_rbac_coverage` section of
+   `docs/architecture/claim-to-test-traceability.yaml`. The checker verifies
+   declarations and referenced test files; it does not run tests or certify
+   semantic adequacy.
 3. **Performance.** Benchmark `PolicyEngine.evaluate_with_explanation` on a
-   store with 25 policies: median < 50 ms (ADR-0031 SLO). Harness:
-   `pytest-benchmark` (already a dev dependency, `pyproject.toml:118`).
+   deterministic scratch store with 25 policies: median < 50 ms (ADR-0031
+   SLO). Evidence is prepared by `teaagent/governance/h4_performance.py` and
+   `scripts/benchmark_h4_policy.py`; the harness reports median/max latency and
+   threshold status, but does not flip H4 modes or certify promotion readiness.
 4. **Human sign-off.** PR titled "Approve shadow→enforce promotion" that flips
    the default and cites this spec; owner review required (positioning-level
    decision).
 5. **Rollback plan.** §3.4 below is the runbook; validated by running its steps
    in a scratch workspace before the promotion PR merges.
+
+Agent-completable packet assembly is implemented by
+`teaagent/governance/h4_decision_packet.py` and
+`scripts/build_h4_decision_packet.py`. The packet aggregates criteria 1, 2, 3,
+and 5 while always reporting criterion 4 as `human_required`; it sets
+`promotion_ready=false` and does not change modes.
 
 ### 3.2 Promotion mechanics (config flip, per harness-first §6.2)
 
@@ -142,11 +154,12 @@ independently: a false positive on one surface must not roll back the other.
 
 ### 3.4 Rollback runbook (criterion 5)
 
-1. Set `TEAAGENT_H4_POLICY_MODE=shadow` (env wins over config — verified
-   precedence) or edit workspace config; run `teaagent doctor config` and
-   confirm effective mode + source.
+1. Set `TEAAGENT_H4_POLICY_MODE=shadow` and `TEAAGENT_H4_RBAC_MODE=shadow`
+   (env wins over config — verified precedence) or edit workspace config; run
+   `teaagent doctor config` and confirm effective mode + source.
 2. Re-run the denied action; confirm it proceeds and the receipt shows
-   `mode=shadow, enforced=false`.
+   `mode=shadow, enforced=false`. Evidence is prepared in a scratch workspace by
+   `teaagent/governance/h4_rollback.py` and `scripts/verify_h4_rollback.py`.
 3. File the false-positive record (§3.1.1 table) — rollback without a recorded
    cause is prohibited.
 4. No data migration is needed in either direction (mode only changes gating,
@@ -154,7 +167,10 @@ independently: a false positive on one surface must not roll back the other.
 
 ## 4. Executable specification
 
-Tests live in `tests/test_h4_promotion_spec.py` (this spec's companion).
+Current-hold tests and evidence-preparation tests live in `tests/test_h4_promotion_spec.py`,
+`tests/test_h4_evidence.py`, `tests/test_h4_coverage.py`,
+`tests/test_h4_performance.py`, `tests/test_h4_rollback.py`, and
+`tests/test_h4_decision_packet.py`.
 
 | Contract clause | Test | Kind |
 | --- | --- | --- |
@@ -166,6 +182,10 @@ Tests live in `tests/test_h4_promotion_spec.py` (this spec's companion).
 | Shadow never blocks even on deny | `test_shadow_mode_never_blocks_denied_action` | guards hold today |
 | Enforce return value ↔ receipt consistency (RBAC) | `test_rbac_enforce_result_consistent_with_receipt` | guards hold today, survives promotion |
 | Denial-candidate extraction is deterministic and owner-verdict-null | `tests/test_h4_evidence.py` | prepares ADR-0031 exit-criterion-1 evidence; does not change the hold |
+| Policy/RBAC coverage declarations are complete for current stores | `tests/test_h4_coverage.py` | prepares ADR-0031 exit-criterion-2 evidence; does not change the hold |
+| Policy evaluation performance evidence stays below the ADR-0031 SLO | `tests/test_h4_performance.py` | prepares ADR-0031 exit-criterion-3 evidence; does not change the hold |
+| Rollback-to-shadow dry-run proves denied actions proceed with `enforced=false` | `tests/test_h4_rollback.py` | prepares ADR-0031 exit-criterion-5 evidence; does not change the hold |
+| H4 decision packet aggregates agent-preparable evidence and marks sign-off human-required | `tests/test_h4_decision_packet.py` | prepares owner-review packet; explicitly not promotion readiness |
 
 Existing (not duplicated here): shadow receipts recorded and RBAC
 enforce-denies — `tests/test_h4_shadow_wiring.py`.
