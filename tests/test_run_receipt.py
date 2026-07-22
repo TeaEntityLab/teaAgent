@@ -189,7 +189,9 @@ def test_build_run_receipt_event_stream_matches_legacy_path() -> None:
         run_id = 'receipt-parity'
         _write_run(tmpdir, run_id, events)
         store = RunStore(tmpdir)
-        event_receipt = build_run_receipt(store, run_id, tmpdir, use_event_stream=True)
+        event_receipt = build_run_receipt(
+            store, run_id, tmpdir, use_event_stream=True, shadow_parity=True
+        )
         legacy_receipt = build_run_receipt(
             store, run_id, tmpdir, use_event_stream=False
         )
