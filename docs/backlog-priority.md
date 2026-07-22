@@ -12,9 +12,9 @@ Prioritized by impact order: security and production risk → core platform capa
 
 ## Backlog Provenance (DR-004, 2026-06-22)
 
-Tags classify **why** work exists. Scheduling still gated per
-[Direction Review Agenda](strategy/direction-review-agenda-2026-06-22.md) until
-DR-001 (owner friction evidence) completes.
+Tags classify **why** work exists. Scheduling is governed by
+[DR-006](strategy/dr-006-owner-decision-2026-06-22.md). DR-001 evidence intake
+was met on 2026-06-22; completing that intake does not authorize new work.
 
 | Tag | Meaning |
 | --- | --- |
@@ -30,17 +30,19 @@ DR-001 (owner friction evidence) completes.
 | --- | --- | --- |
 | CP-4 OpenCode Gap Watch | `legacy-competitive` | Monitoring only; escalation → feature sprint **blocked** without friction evidence |
 | CP-6 Community Presence | `legacy-competitive` | **Hold** — external acquisition non-goal |
-| M4 cloud/background/control-plane cockpit | `legacy-competitive` | **Hold except DR-006 carve-out** — background lifecycle + operator cockpit may proceed under owner-override co-maintainer dogfood; cloud/SaaS/multi-tenant GTM held (T4 owner decision) |
+| M4 cloud/background/control-plane cockpit | `legacy-competitive` | **Hold except DR-006 carve-out** — background lifecycle + operator cockpit eligible under owner-override co-maintainer dogfood; cloud/SaaS/multi-tenant GTM held (T4). Owner 2026-07-22: carve-out remains held with no scheduled dogfood |
 | RBAC enforce flip (ADR 0031, 2026-09-12) | `governance-gap` | **Hold** until owner demand signal |
 | TASK-006 RunEvent taxonomy + M0 | `harness-migration` | **Done** — ADR-0032 run-event taxonomy; `teaagent/runner/_events.py` spine + audit dual-write (M0–M7 in work-log) |
-| TASK-001 constitution repositioning | `owner-override` | **Promote** (harness-first ratified) |
+| TASK-001 constitution repositioning | `owner-override` | **Done (Human Review 2026-07-22)** — owner ratified harness-first positioning; no README/product-contract changes required |
 | TASK-002 docs tiering | `harness-migration` | **Done** — tier column in `docs/generated/docs-inventory.md` + aging dashboard; `check-docs-inventory` pre-commit regen |
 | TASK-003 test typing pass | `harness-migration` | **Done** — all 586 test files typed (contract/behavior/adversarial/lifecycle) per `scripts/audit_test_quality.py` |
 | TASK-004 flagship tests off deprecated approval | `governance-gap` | **Done (2026-07-01)** — G-P2-2 removed call-id preapproval; flagship uses `--approve-scoped`; see `work-log/task-004-blocked-2026-06-13.md` resolution |
 | TASK-007 friction log bootstrap | `friction-driven` | **Met (2026-06-22)** — 5/5 owner evidence entries (F2/F3/F6/F7/F8); DR-001 7b satisfied |
 | Phase 4–6 Beta (consensus, sandbox, control plane) | `owner-override` | Shipped; **freeze** new platform surface per T3/T4 |
 | Competitive refresh release gate | `legacy-competitive` | **Resolved (DR-006 T5):** split gate — CI blocks on `main`; manual survey quarterly |
-| Seven-control-loops SCL-P0 tickets | `legacy-competitive` | **Hold** until owner validates in friction log |
+| Seven-control-loops SCL follow-on work | `legacy-competitive` | Listed implementation rows are historical `Complete`; follow-on scheduling is **held** without friction, governance-gap proof, or owner override |
+| Community-pain-point CPP follow-on work | `legacy-competitive` | Listed implementation rows are historical `Complete`; follow-on scheduling is **held** without friction, governance-gap proof, or owner override |
+| Consensus validation (ADR-0029, 2026-12-10) | `governance-gap` | **Delete/quarantine (owner-ratified 2026-07-22)** — zero production importers (only a legacy path alias); execute per ADR-0029 deletion checklist at or before expiry |
 
 ---
 
@@ -325,13 +327,13 @@ The following plans are marked as complete and are retained for reference:
 **Reference:** `docs/plans/competitive-positioning-plan-2026-05-31.md`
 
 ### CP-6 — Community Presence / Developer Relations [P3]
-**Status:** 📋 Process (not binary) (automation script created)
-**Journey:** Post on r/LocalLLaMA, Hacker News, GitHub, Dev.to; track GitHub stars, Reddit mentions, HN upvotes
-**Acceptance criteria:** Track metrics monthly, respond to governance-related competitor issues
-**Size:** Ongoing
-**Reference:** `docs/plans/competitive-positioning-plan-2026-05-31.md`
-**Process document:** `docs/processes/community-presence.md`
-**Automation script:** `scripts/community_presence_monitor.py`
+**Status:** On hold — external acquisition and community-growth activity are not current goals.
+**Journey:** Historical proposal only; monitoring or public outreach requires a new owner-ratified positioning decision.
+**Acceptance criteria:** No activity is scheduled from this row while harness-first and DR-006 remain unchanged.
+**Size:** Not scheduled
+**Reference:** `docs/plans/competitive-positioning-plan-2026-05-31.md` (historical)
+**Process document:** `docs/processes/community-presence.md` (inactive reference)
+**Automation script:** `scripts/community_presence_monitor.py` (must not imply scheduled work)
 
 ---
 
@@ -346,17 +348,17 @@ These are reference documents for strategic decisions. Extract actionable items 
 
 ---
 
-## Phase 4-6 Status — Beta (All Shipped)
+## Phase 4-6 Code Surface Status — Beta (focused surfaces shipped; roadmap holds remain)
 
-Phase 4 (consensus), Phase 5 (sandbox routing + execution), and Phase 6 (skill writer, docker monitor, control plane) are **Beta** with all items marked as shipped. No remaining hardening work identified.
+The listed Phase 4–6 code surfaces and cited focused tests exist at Beta maturity. This does not complete canonical M4–M6 milestones, prove owner dogfood, authorize new platform surface, or establish hosted, multi-tenant, or production readiness.
 
 ---
 
-## Future Roadmap — Phase 4-5 (Beta — core shipped, E2E hardening ongoing)
+## Future Roadmap — Phase 4-5 (Beta code surfaces; milestone acceptance separate)
 
-Phase 4 (consensus) and Phase 5 (sandbox routing + execution) are **Beta** with CLI,
-unit tests, and acceptance flows. Optional hardening (async votes, skill execution,
-docker-smoke CI) is shipped. See [architecture.md](architecture.md#phase-4-5-roadmap-beta).
+Phase 4 consensus and Phase 5 sandbox code surfaces have CLI, unit-test, and
+acceptance evidence. Follow-on work remains governed by roadmap holds, DR-006,
+and the applicable ADR decision dates; code existence is not milestone acceptance.
 
 ### Phase 4: Federated Swarm Consensus & Peer Attestations — **Beta**
 

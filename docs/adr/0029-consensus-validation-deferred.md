@@ -34,6 +34,18 @@ Shipping a third consensus surface without wiring invites doc⇄reality drift.
 - Follow-up: on expiry, choose **wire behind approval queue** or **delete/quarantine**
   with import-graph evidence.
 
+## Owner Disposition (2026-07-22)
+
+Owner-ratified in the 2026-07-22 direction-review session: **delete/quarantine**
+`consensus_validation` rather than wire it. Basis: zero production importers
+(only a legacy path alias in `teaagent/_compat_modules.py`); destructive actions
+already flow through the approval queue (ADR 0022) and swarm consensus
+(ADR 0019). This resolves the expiry direction early. Execution follows the
+deletion checklist — import-graph guard, remove the module and its
+`consensus-validation-disposition` spec pins, drop the compat alias, and update
+roadmap/backlog — and may land at or before the 2026-12-10 review. Until
+executed, the module stays `experimental — unwired`.
+
 ## References
 
 - [Work Direction Decomposition (WDA-006)](../plans/work-direction-decomposition-2026-06-10.md)

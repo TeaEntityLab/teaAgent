@@ -207,11 +207,12 @@ documentation corpus does not silently stale between release cycles.
 When the quarterly survey reveals a competitor capability gap, follow the
 [signal-to-acceptance-gap process](processes/signal-to-acceptance-gap.md):
 
-1. Record the signal with date, source, and confidence.
-2. Map signal to an existing or new use-case row in `docs/use-cases.md`.
-3. If the gap is P0/P1, file a ticket with acceptance criteria.
-4. Add a row to `docs/use-case-matrix.md` with `Covered = no` and a
-   linked backlog action.
+1. Record the signal as a dated hypothesis with source and confidence.
+2. Map it to an existing use-case row; do not create current intent from the survey.
+3. Establish scheduling authority: cited owner friction, independently proved
+   governance-gap evidence, or a dated owner override under DR-006.
+4. Only then file a code ticket with acceptance criteria and add a linked
+   `Covered = no` matrix row. A survey priority label alone never authorizes work.
 
 ### Refresh evidence
 

@@ -330,6 +330,30 @@ def test_current_roadmap_stays_owner_operator_harness_first() -> None:
     assert 'external-facing release channels' not in roadmap
 
 
+def test_intent_review_candidate_adoption_state() -> None:
+    root = Path(__file__).resolve().parents[1]
+    review = (
+        root / 'docs' / 'analysis' / 'intent-roadmap-socratic-survey-2026-07-22.md'
+    ).read_text(encoding='utf-8')
+    roadmap = (root / 'docs' / 'roadmap-status.md').read_text(encoding='utf-8')
+    release_checklist = (root / 'docs' / 'release-checklist.md').read_text(
+        encoding='utf-8'
+    )
+    friction_log = (root / 'docs' / 'work-log' / 'operator-friction-log.md').read_text(
+        encoding='utf-8'
+    )
+
+    assert '## Candidate Adoption Ledger' in review
+    for candidate_id in ('C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'):
+        assert f'| {candidate_id} |' in review
+
+    assert 'A trigger opens evaluation' in roadmap
+    assert 'it does not create implementation authority' in roadmap
+    assert 'A survey priority label alone never authorizes work.' in release_checklist
+    assert 'Which recent run ID best represents actual daily use?' in friction_log
+    assert 'a new strategy doc, separate execution-plan doc' in review
+
+
 def test_doc_cross_references_fail_for_non_historical_docs(tmp_path: Path) -> None:
     docs = tmp_path / 'docs'
     docs.mkdir()

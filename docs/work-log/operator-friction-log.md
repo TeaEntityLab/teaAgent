@@ -13,9 +13,17 @@ UX work tied to real harness use instead of competitor feature parity.
 
 ## Current Intake Status
 
-- Owner evidence entries: 5 (F2/F3/F6/F7/F8 confirmed; F1/F4/F5 not confirmed).
-- Competitor-derived hypotheses: 7 open (none closed — a promoted hypothesis links to its owner-evidence entry rather than self-closing).
-- Direction implication: UX work may cite owner evidence entries below; harness-first §5.2 seeds F2/F3 are now owner-validated.
+- Owner evidence entries: 5, all closed (F2/F3/F6/F7/F8).
+- Open unvalidated hypotheses: 3 (approval call-id hunting, run-id confusion,
+  config-source confusion).
+- Owner-validated/promoted hypotheses retained for provenance: 3 (F2/F3/F7).
+- Governance-process hypothesis resolved by DR-006: 1.
+- Direction implication: none of the retained hypotheses is open roadmap demand;
+  new UX work still requires a cited owner-evidence entry or governance gap.
+- Owner revalidation (2026-07-22): the owner confirmed in a direction-review
+  session that F2/F3/F6/F7/F8 remain closed and reported no new daily-loop
+  friction. This is an owner zero-friction attestation captured in-session (not
+  a simulated entry); absence of new friction is not proof of continued daily use.
 
 Use this log when:
 
@@ -64,6 +72,11 @@ fields only when the entry is promoted to work.
 3. Which approval, audit, cost, rollback, or state fact did you need earlier?
 4. What would have made ask, approve, verify, or undo obvious?
 5. Is this friction one-off, repeated, or caused by a hidden config/source?
+6. Which recent run ID best represents actual daily use?
+7. Could the cockpit alone explain status, approvals, cost, and the safest recovery?
+8. Did background process state agree with the authoritative audit/run outcome?
+9. Which held surface would have materially changed the outcome?
+10. If none would, which dormant surface should remain absent or be deleted at its decision trigger?
 
 ## Expanded Entry Format
 

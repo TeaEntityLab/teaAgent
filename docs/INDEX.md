@@ -80,6 +80,7 @@ Use this short list instead of scanning every dated analysis file.
 | Current direction and scope | [Harness-First Direction](strategy/harness-first-direction-2026-06-13.md) | Current direction record. |
 | Latest broad review package | [System Critical Review Package 2026-06-10](analysis/system-critical-review-2026-06-10-INDEX.md) | Current dated evidence package; not timeless truth. |
 | Reflective intent review | [Intent Critical Review And Worklist](analysis/intent-critical-review-and-worklist-2026-06-12.md) | Historical input to harness-first direction. |
+| 2026-07-22 intent and roadmap Socratic survey | [Intent and Roadmap Socratic Survey](analysis/intent-roadmap-socratic-survey-2026-07-22.md) | Dated evidence snapshot with panel consensus, adoption ledger, and 30/60/90 plan; not current truth. |
 | Documentation system review | [Historical Evidence Index](archive/INDEX.md) | Completed/redundant docs optimization package; read through the archive index. |
 | Older review packages, competitor surveys, daily-driver packages, and completed plans | [Historical Evidence Index](archive/INDEX.md) | Preserved provenance; do not treat as current status. |
 

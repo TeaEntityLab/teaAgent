@@ -1,8 +1,9 @@
 # Documentation Strategy
 
 **Owner:** Documentation governance  
-**Last updated:** 2026-06-04  
-**Status:** Normative — this file defines the rules for all `docs/` content
+**Last updated:** 2026-07-22
+**Status:** Normative within documentation governance; subordinate to the
+owner-ratified Harness-First Direction and DR-006
 
 ---
 
@@ -15,56 +16,54 @@ code state they describe.
 
 ---
 
-## 2. Two-Tier Document Model
+## 2. Three-Tier Document Model
 
-All `docs/` files belong to exactly one tier.
+All `docs/` files belong to exactly one tier. When this file conflicts with the
+owner-ratified [Harness-First Direction](strategy/harness-first-direction-2026-06-13.md)
+or [DR-006](strategy/dr-006-owner-decision-2026-06-22.md), those direction
+records win.
 
-### Tier 1 — Canonical Active Truth
+### Constitution — Canonical Active Truth
 
 These documents are single sources of truth for their domain. They are updated
-in-place whenever the underlying state changes, and they are tested by
-`scripts/validate_docs_consistency.py`.
+in place whenever the underlying state changes and are tested by
+`scripts/validate_docs_consistency.py`. The constitution tier must remain at or
+below 12 claim-tested documents.
 
 | File | Domain |
 |---|---|
-| `docs/roadmap-status.md` | Roadmap horizons, milestones, and work-item status |
+| `docs/roadmap-status.md` | Roadmap horizons, milestones, holds, and work-item status |
 | `docs/security/risk-register-and-threat-model-*.md` | Security risk status and STRIDE model |
 | `docs/acceptance.md` | Acceptance test suite status and tier breakdown |
 | `docs/governance/coverage-omit-ledger.md` | Coverage omit patterns and owner mapping |
 | `docs/governance/guarded-claims-registry.md` | Volatile public-facing claims requiring guards |
-| `README.md` | Public product description, provider count, feature list |
+| `README.md` | Public product description, provider count, and feature list |
 
-**Rules for Tier 1:**
-- Every status field must be one of: `Fixed`, `Active`, `In Progress`, `Pending`,
-  `Deferred`, `Blocked`, `Complete`.
-- Every `Fixed` row must cite at least one test function name (`test_<name>`) or
-  a commit hash (7+ hex chars) as evidence.
-- Every `Active` or `In Progress` row must cite at least one ticket ID or code
-  file reference.
-- A Tier 1 document must never contain contradictory status claims between its
-  header/summary section and its detailed table rows.
+**Rules for Constitution documents:**
+- Every status field must use the vocabulary owned by the relevant canonical
+  document.
+- Every fixed or complete claim must cite executable evidence or a commit.
+- Every active item must cite an owner and an authorized scheduling source.
+- Header, summary, and table claims must agree.
 
-### Tier 2 — Dated Historical Evidence
+### Working — Guides, Runbooks, ADRs, and Design Notes
 
-These documents are time-stamped audit records. They are **never retroactively
-edited** except to add a supersession note. They are not subject to
-Tier 1 consistency rules because their job is to record what was true at a
-point in time.
+Working documents support current operation or a bounded decision. They may
+change, but each must name an owner surface or review trigger. A working
+document cannot override Constitution status or create implementation
+authority.
 
-Examples: `docs/analysis/daily-driver-risk-register-2026-06-01.md`,
-`docs/work-log/phase-0-governance-closure-report-2026-06-04.md`,
-`docs/analysis/task-evidence-audit-2026-06-04.md`.
+### Archive — Dated Evidence and Superseded Plans
 
-**Rules for Tier 2:**
-- File name must contain a date (`YYYY-MM-DD`).
-- Top of file must state the capture date.
-- If a later document supersedes this one, add a `> **Superseded by:** [link]`
-  blockquote at the top. Do not delete the file.
-- Do not update Tier 2 files to reflect current code state; create a new dated
-  file instead.
+Dated analyses, reviews, surveys, critiques, deltas, and completed plans record
+what was observed or argued at a point in time. They are never current-truth
+authority. Preserve them with supersession links; do not refresh their body as
+if it were current.
 
----
-
+The introspection freeze applies: create a new dated review artifact only for a
+named trigger such as an incident, release, quarterly/monthly review gate, or
+explicit owner request. Do not create a new strategy document per session;
+amend the current authority instead.
 ## 3. Claim Completeness Criteria
 
 A "claim" is any status assertion, feature claim, or completion statement in a
@@ -158,7 +157,7 @@ state has changed, create a new dated document.
 |---|---|
 | Bug was fixed; risk register row should move to FIXED | Update the Tier 1 risk register table row in-place |
 | New risk discovered | Add a new row to the Tier 1 risk register |
-| Analysis of a new problem was done | Create a new Tier 2 dated doc in `docs/analysis/` |
+| A named trigger produced analysis that existing current-truth docs cannot carry | Create at most one dated Archive evidence snapshot in `docs/analysis/`; amend current truth separately |
 | A roadmap item is complete | Update `docs/roadmap-status.md` row in-place; add exit evidence |
 | A sprint ended and you want to record what happened | Create a new Tier 2 work log in `docs/work-log/` |
 | Existing docs are out of date with each other | Fix the Tier 1 docs; create a dated Tier 2 audit if the inconsistency was significant |

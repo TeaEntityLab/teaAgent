@@ -50,7 +50,8 @@ requirement is only that docs never claim more than that.
 
 ### Problem
 
-The harness works (650/650 acceptance as of 2026-06-25, receipts, undo, audit chain) but is
+The harness has acceptance-backed receipts, undo, and audit-chain behavior (the
+live acceptance inventory is owned by `docs/acceptance.md`) but is
 hard to operate, even for its author: too many concepts on the happy path,
 governance vocabulary saturating daily interactions, a runner that has
 become a gravity well, three half-finished eventing systems, and a docs
