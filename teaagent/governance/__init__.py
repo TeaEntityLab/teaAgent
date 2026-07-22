@@ -4,6 +4,12 @@ from teaagent.governance.audit_completeness import (
     AuditCompletenessReport,
     check_audit_completeness,
 )
+from teaagent.governance.h4_evidence import (
+    H4DenialCandidate,
+    H4EvidenceReport,
+    build_h4_evidence_report,
+    extract_denial_candidates,
+)
 from teaagent.governance.h4_integration import (
     H4GovernanceMode,
     check_subagent_launch_rbac,
@@ -25,11 +31,15 @@ from teaagent.governance.tool_lint import ToolLintIssue, lint_registry
 
 __all__ = [
     'AuditCompletenessReport',
+    'H4DenialCandidate',
+    'H4EvidenceReport',
     'ReviewGate',
     'ToolLintIssue',
     'WRITE_TOOLS',
     'assert_write_allowed',
     'H4GovernanceMode',
+    'build_h4_evidence_report',
+    'extract_denial_candidates',
     'check_audit_completeness',
     'check_subagent_launch_rbac',
     'evaluate_approval_policy_shadow',

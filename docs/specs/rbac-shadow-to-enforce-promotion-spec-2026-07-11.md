@@ -74,10 +74,21 @@ session.
      the owner marks as wrong (the action should have been allowed). Owner
      adjudication is recorded as a dated table in a work-log file; agents may
      prepare the candidate list, never the verdicts.
-   - Candidate extraction (deterministic, offline):
-     `python3 - <<'EOF'`-style script filtering
-     `json.loads(line)` for `event_type == 'h4_governance_shadow' and not payload['allowed']`,
-     emitting `{ts, surface, mode, reason, context.action, context.tool_name | context.subagent}`.
+   - Candidate extraction (deterministic, offline): implemented as
+     `teaagent/governance/h4_evidence.py` (`build_h4_evidence_report` /
+     `extract_denial_candidates`) with the CLI
+     `scripts/prepare_h4_evidence.py`. It filters audit records for
+     `event_type == 'h4_governance_shadow' and payload['allowed'] is False`,
+     emitting `{ts, surface, mode, reason, context.action,
+     context.tool_name | context.subagent, assignee, run_id, event_id}` plus
+     per-surface weekly coverage and empty-week gaps. Every candidate carries
+     `owner_verdict=None` — the tool prepares the list, the owner records the
+     verdicts in the work-log table.
+     The extractor accepts persisted nested audit records and in-memory flat
+     captures only when the full frozen analysis key-set is present; malformed
+     H4 receipts or unknown surfaces are counted in `skipped_malformed`, not
+     silently turned into coverage. Date-only `--until` bounds include the full
+     civil day, and inverted windows are rejected as operator error.
    - Pass condition per surface: zero owner-confirmed false positives across a
      window containing ≥ 1 real run per week.
 2. **Coverage completeness.** Every enabled policy in
@@ -154,6 +165,7 @@ Tests live in `tests/test_h4_promotion_spec.py` (this spec's companion).
 | Shadow receipt schema = evidence-analysis input | `test_shadow_receipt_payload_schema` | guards hold today |
 | Shadow never blocks even on deny | `test_shadow_mode_never_blocks_denied_action` | guards hold today |
 | Enforce return value ↔ receipt consistency (RBAC) | `test_rbac_enforce_result_consistent_with_receipt` | guards hold today, survives promotion |
+| Denial-candidate extraction is deterministic and owner-verdict-null | `tests/test_h4_evidence.py` | prepares ADR-0031 exit-criterion-1 evidence; does not change the hold |
 
 Existing (not duplicated here): shadow receipts recorded and RBAC
 enforce-denies — `tests/test_h4_shadow_wiring.py`.
