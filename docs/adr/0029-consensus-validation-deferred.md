@@ -2,9 +2,9 @@
 
 ## Status
 
-Accepted — 2026-06-10
+Closed — Option D executed 2026-07-22
 
-**Expiry review:** 2026-12-10 (re-score whether `consensus_validation` should gate destructive actions)
+**Pre-deletion recovery anchor:** `4fde92f` (`docs: preserve consensus validation intent before deletion`)
 
 ## Context
 
@@ -19,13 +19,15 @@ Shipping a third consensus surface without wiring invites doc⇄reality drift.
 
 ## Decision
 
-**Defer** wiring `consensus_validation` into the destructive-action path until
-2026-12-10. Until then:
+ADR-0029 originally deferred wiring `consensus_validation` into the
+destructive-action path until 2026-12-10. The owner resolved that expiry
+direction early on 2026-07-22: **delete/quarantine** the unwired validation
+module rather than wire it behind the approval queue.
 
-1. `consensus_validation` remains labeled `experimental — unwired`.
-2. Destructive actions continue to flow through the existing approval queue and
-   JIT approval coordinator — no duplicate consensus gate.
-3. WDA-006 acceptance is met by this ADR plus the wiring validator watch-list.
+Destructive actions continue to flow through the existing approval queue and
+JIT approval coordinator. TeaAgent must not cite `consensus_validation` as live;
+the runtime surface is deleted, and any future revival must recover it from git
+history and pass a new owner/governance decision.
 
 ## Consequences
 
@@ -38,13 +40,12 @@ Shipping a third consensus surface without wiring invites doc⇄reality drift.
 
 Owner-ratified in the 2026-07-22 direction-review session: **delete/quarantine**
 `consensus_validation` rather than wire it. Basis: zero production importers
-(only a legacy path alias in `teaagent/_compat_modules.py`); destructive actions
-already flow through the approval queue (ADR 0022) and swarm consensus
-(ADR 0019). This resolves the expiry direction early. Execution follows the
-deletion checklist — import-graph guard, remove the module and its
-`consensus-validation-disposition` spec pins, drop the compat alias, and update
-roadmap/backlog — and may land at or before the 2026-12-10 review. Until
-executed, the module stays `experimental — unwired`.
+(only a legacy path alias in `teaagent/_compat_modules.py` before this
+execution); destructive actions already flow through the approval queue (ADR
+0022) and swarm consensus (ADR 0019). Option D is now executed: the module,
+legacy shim alias, wiring watch-list row, and tests that pinned the deleted
+runtime surface were removed. The historical feature inventory and recovery
+commands remain in the disposition spec.
 
 Preservation requirement before deletion: keep the feature intent, symbol-level
 inventory, wire-blockers, and git recovery commands in

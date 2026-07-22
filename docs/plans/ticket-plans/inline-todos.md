@@ -31,9 +31,14 @@ them). Each has now been either implemented for real or made explicitly honest
 about being a non-gating simulation. Verified by
 [`tests/test_inline_todo_resolutions.py`](../../../tests/test_inline_todo_resolutions.py).
 
+The former `teaagent/consensus/consensus_validation.py` row was retired on
+2026-07-22 when ADR-0029 Option D deleted/quarantined that runtime surface. Its
+ROLE_BASED `voter_roles` fix and recovery path are preserved in
+[`consensus-validation-disposition-spec-2026-07-11.md`](../../specs/consensus-validation-disposition-spec-2026-07-11.md) §2.1;
+there is no active runtime test because the module no longer exists.
+
 | Location | Pattern | Resolution |
 |----------|---------|------------|
-| [`teaagent/consensus/consensus_validation.py`](../../../teaagent/consensus/consensus_validation.py) | Voter role was inferred from `voter_id`. | **Resolved:** `ConsensusRule.check_consensus` / `ConsensusValidator.cast_vote` accept an optional `voter_roles` map and look the role up; absent a mapping, `voter_id` is treated as its own role (documented default contract). |
 | [`teaagent/domain/workflow_engine.py`](../../../teaagent/domain/workflow_engine.py) | Workflow step execution was silently simulated. | **Resolved (honest):** steps are flagged `StepExecution.simulated=True` and the log/docstring state that real agent invocation is a governed-execution (AgentRunner) boundary, deliberately deferred. No synthetic output is presented as real. |
 | [`teaagent/eval_suite.py`](../../../teaagent/eval_suite.py) | Eval execution and baseline diffing were placeholders. | **Resolved:** prompt/conversational tests run via the real `model_runner`/fixture/replay seam; `_compare_with_baseline` produces a real difflib unified diff + similarity ratio; non-prompt categories carry honest `advisory_only=True` / `execution_mode='simulated'` metadata (non-gating). |
 | [`teaagent/cli/_handlers/_consensus.py`](../../../teaagent/cli/_handlers/_consensus.py) | History query / config persistence "not implemented". | **Resolved (stale ref):** `consensus_history_command` and persisted config (`_load_persisted_consensus_config`) are implemented; the prior line refs were stale. |

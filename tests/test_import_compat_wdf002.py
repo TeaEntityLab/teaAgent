@@ -13,7 +13,6 @@ _CANONICAL_IMPORTS: tuple[tuple[str, str], ...] = (
     ('teaagent.governance.scope_creep', 'ScopeCreepDetector'),
     ('teaagent.governance.release_gate', 'ReleaseGate'),
     ('teaagent.governance.repo_map_benchmark', 'RepoMapBenchmark'),
-    ('teaagent.consensus.consensus_validation', 'ConsensusValidator'),
 )
 
 _DEPRECATED_IMPORTS: tuple[tuple[str, str], ...] = (
@@ -23,7 +22,6 @@ _DEPRECATED_IMPORTS: tuple[tuple[str, str], ...] = (
     ('teaagent.scope_creep', 'ScopeCreepDetector'),
     ('teaagent.release_gate', 'ReleaseGate'),
     ('teaagent.repo_map_benchmark', 'RepoMapBenchmark'),
-    ('teaagent.consensus_validation', 'ConsensusValidator'),
 )
 
 

@@ -65,7 +65,7 @@ The wiring validator (`scripts/validate_wiring.py`) **passes at HEAD [verified]*
 |------|--------|------|
 | M4 cloud/SaaS/multi-tenant GTM | Governance hold | T4 owner decision (`backlog-priority.md`) |
 | RBAC shadow → enforce (H4) | Governance hold | Owner demand + ADR-0031 (expiry 2026-09-12) |
-| Consensus validation gate | Deferred | ADR-0029 (expiry 2026-12-10) |
+| Consensus validation gate | Deleted/quarantined | ADR-0029 Option D executed 2026-07-22; historical recovery path preserved in disposition spec |
 | H5 non-advisory model/provider gate | Needs live provider runs + owner | M5 exit criteria |
 | WDH-002 non-maintainer user sessions | Needs real external humans | Recruitment (not agent-completable) |
 | SCL-P0 tickets | Hold until owner validates in friction log | `backlog-priority.md` |

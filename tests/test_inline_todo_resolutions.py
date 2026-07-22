@@ -10,12 +10,6 @@ from __future__ import annotations
 import shlex
 from datetime import datetime
 
-from teaagent.consensus.consensus_validation import (
-    ConsensusRequest,
-    ConsensusRule,
-    ConsensusRuleType,
-    ConsensusStatus,
-)
 from teaagent.domain.agent_factory import AgentFactory
 from teaagent.domain.issue_intake import (
     CommandSuggester,
@@ -32,65 +26,7 @@ from teaagent.eval_suite import EvalRunner, EvalStore
 from teaagent.plugin_system import AgentPlugin, PluginRegistry
 from teaagent.swarm import CodeReview, SubagentResult, SwarmManager
 
-
-def _role_rule() -> ConsensusRule:
-    return ConsensusRule(
-        rule_id='r1',
-        rule_type=ConsensusRuleType.ROLE_BASED,
-        required_approvals=0,
-        total_voters=3,
-        required_roles={'security', 'architecture'},
-    )
-
-
-# --- #1 consensus ROLE_BASED real role lookup -------------------------------
-
-
-def test_role_based_uses_explicit_voter_role_map() -> None:
-    """An explicit voter->role mapping is honoured (real lookup)."""
-    rule = _role_rule()
-    votes = {'alice': True, 'bob': True}
-    roles = {'alice': 'security', 'bob': 'architecture'}
-
-    assert rule.check_consensus(votes, roles) == ConsensusStatus.APPROVED
-
-
-def test_role_based_pending_when_required_role_missing() -> None:
-    rule = _role_rule()
-    votes = {'alice': True, 'bob': True}
-    # Both map to the same role -> the 'architecture' requirement is unmet.
-    roles = {'alice': 'security', 'bob': 'security'}
-
-    assert rule.check_consensus(votes, roles) == ConsensusStatus.PENDING
-
-
-def test_role_based_falls_back_to_voter_id_as_role() -> None:
-    """With no mapping, voter_id is its own role (documented default contract)."""
-    rule = _role_rule()
-    votes = {'security': True, 'architecture': True}
-
-    assert rule.check_consensus(votes) == ConsensusStatus.APPROVED
-
-
-def test_request_records_and_roundtrips_voter_roles() -> None:
-    request = ConsensusRequest(
-        request_id='q1',
-        rule_id='r1',
-        action='deploy',
-        context={},
-        requested_by='alice',
-    )
-    request.add_vote('alice', True, role='security')
-    request.add_vote('bob', False)
-
-    assert request.voter_roles == {'alice': 'security'}
-
-    restored = ConsensusRequest.from_dict(request.to_dict())
-    assert restored.voter_roles == {'alice': 'security'}
-    assert restored.votes == {'alice': True, 'bob': False}
-
-
-# --- #2 workflow simulated execution is explicitly labelled -----------------
+# --- #1 workflow simulated execution is explicitly labelled -----------------
 
 
 def test_step_execution_simulated_flag_roundtrips() -> None:
@@ -108,7 +44,7 @@ def test_step_execution_simulated_defaults_false() -> None:
     assert StepExecution(step_id=1, success=True).simulated is False
 
 
-# --- #3 eval baseline comparison is a real diff -----------------------------
+# --- #2 eval baseline comparison is a real diff -----------------------------
 
 
 def test_eval_baseline_comparison_matches(tmp_path) -> None:
@@ -131,7 +67,7 @@ def test_eval_baseline_comparison_real_diff(tmp_path) -> None:
     assert 0.0 < result['similarity'] < 1.0
 
 
-# --- #5 agent removal actually unregisters ----------------------------------
+# --- #3 agent removal actually unregisters ----------------------------------
 
 
 def test_plugin_registry_unregister_agent() -> None:
@@ -158,7 +94,7 @@ def test_factory_remove_agent_unregisters_from_memory() -> None:
     assert factory.remove_agent('gen') is False
 
 
-# --- #6 issue-intake command quoting + real explore delegation --------------
+# --- #4 issue-intake command quoting + real explore delegation --------------
 
 
 def _parsed_issue() -> ParsedIssue:
@@ -232,7 +168,7 @@ def test_explore_without_collaborator_returns_deterministic_context(tmp_path) ->
     assert context['issue_type'] == 'bug'
 
 
-# --- #7 swarm review is evidence-based, not a hardcoded mock ------------------
+# --- #5 swarm review is evidence-based, not a hardcoded mock -----------------
 
 
 def test_swarm_review_scores_success_and_output(tmp_path) -> None:

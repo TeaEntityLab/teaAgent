@@ -19,7 +19,6 @@ _DEPRECATED_ALIASES: dict[str, str] = {
     'teaagent.scope_creep': 'teaagent.governance.scope_creep',
     'teaagent.release_gate': 'teaagent.governance.release_gate',
     'teaagent.repo_map_benchmark': 'teaagent.governance.repo_map_benchmark',
-    'teaagent.consensus_validation': 'teaagent.consensus.consensus_validation',
 }
 
 

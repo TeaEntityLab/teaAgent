@@ -1,63 +1,57 @@
 # Consensus Validation Disposition Spec (ADR-0029 Expiry Package)
 
-> **Claim class:** Forward-looking specification (planned/held work — NOT current truth).
+> **Claim class:** Executed deletion / historical recovery record.
 >
-> **Status:** Preparation artifact for held item.
+> **Status:** ADR-0029 Option D executed 2026-07-22; runtime surface deleted,
+> intent and recovery path preserved.
 >
-> **Date:** 2026-07-11
+> **Date:** 2026-07-11; executed 2026-07-22.
 >
-> **Trigger:** Owner request 2026-07-11 — forward-spec held/external roadmap items
-> so future execution has pinned contracts and executable holds.
+> **Trigger:** Owner request 2026-07-11 prepared the expiry package; owner
+> direction-review 2026-07-22 chose delete/quarantine.
 >
-> **Scheduling gate (DR-006):** ADR-0029 expiry review **2026-12-10**
-> (`docs/adr/0029-consensus-validation-deferred.md`): choose **wire behind
-> approval queue** or **delete/quarantine** with import-graph evidence.
+> **Scheduling gate (DR-006):** resolved by ADR-0029 Option D.
 >
-> **Owns:** The decision package for that expiry review — both options fully
-> specified, plus the behavioral baseline the decision relies on.
+> **Owns:** The historical design inventory, wire-blockers, deletion checklist,
+> and git recovery path for the deleted `consensus_validation` module.
 >
-> **Does not own:** Current-truth status (`docs/roadmap-status.md`), the
-> deferral decision itself, ADR statuses.
+> **Does not own:** Current live consensus behavior (ADR-0019 engine), the
+> centralized approval queue (ADR-0022), or authority to revive/wire the deleted
+> module.
 >
-> **Review trigger:** ADR-0029 expiry (2026-12-10), or owner demand for a
-> multi-agent consensus gate before then.
+> **Review trigger:** Owner demand for a post-approval multi-agent consensus
+> gate; otherwise this record is archival.
 
-## 1. Current verified state (2026-07-11, HEAD)
+## 1. Historical pre-deletion state (2026-07-11 to 2026-07-22)
 
-- Module: `teaagent/consensus/consensus_validation.py` (658 lines) —
-  `ConsensusRuleType` (`:37-44`, N_OF_M / UNANIMOUS / MAJORITY /
-  SUPERMAJORITY / ROLE_BASED), `ConsensusRule.check_consensus`
-  (`:61-134`, with optional `voter_roles` mapping added 2026-06-30, commit
-  `b633ca6`), `ConsensusRequest` (`:167-248`), `ConsensusStore`
-  (tenant-scoped JSON under `.teaagent/`, `:251-434`), `ConsensusValidator`
-  (`request_consensus`/`cast_vote`/`get_consensus_status`, `:437-657`).
-- **Docs drift (recorded finding):** ADR-0029 cites
-  `teaagent/consensus_validation.py`. The module physically moved to
-  `teaagent/consensus/consensus_validation.py`; the old dotted path still
-  imports only via the deprecation shim
-  (`teaagent/_compat_modules.py:22`). `tests/test_consensus.py:6` still uses
-  the deprecated path (exercising the shim); `tests/test_import_compat_wdf002.py`
-  covers both paths deliberately.
-- **Unwired, verified:** no production module under `teaagent/` imports
-  `consensus_validation`. `teaagent/consensus/__init__.py` does **not**
-  re-export it. The CLI `consensus *` commands import the **ADR-0019
-  federated engine** (`teaagent/cli/_handlers/_consensus.py:10-26` →
-  `teaagent.consensus` `ConsensusEngine`) — a different system.
-- Watch-list: `scripts/validate_wiring.py:32` names the module, satisfying
-  ADR-0029 clause 3.
-- The three consensus surfaces (per ADR-0029 context):
+- Module before deletion: `teaagent/consensus/consensus_validation.py` (658
+  lines) — `ConsensusRuleType` (N_OF_M / UNANIMOUS / MAJORITY / SUPERMAJORITY /
+  ROLE_BASED), `ConsensusRule.check_consensus` (with optional `voter_roles`
+  mapping added 2026-06-30, commit `b633ca6`), `ConsensusRequest`,
+  `ConsensusStore`, and `ConsensusValidator` (`request_consensus` / `cast_vote`
+  / `get_consensus_status`).
+- **Pre-deletion import state:** no production module under `teaagent/` imported
+  `consensus_validation`; the only compatibility path was the deprecated alias
+  `teaagent.consensus_validation` in `teaagent/_compat_modules.py`.
+- **Deleted in ADR-0029 Option D:** the module, the deprecated alias, the wiring
+  watch-list row, `tests/test_consensus.py`, `tests/test_consensus_disposition_spec.py`,
+  consensus-validation rows in `tests/test_import_compat_wdf002.py`, and the
+  voter-role cases in `tests/test_inline_todo_resolutions.py`.
+- The two remaining consensus surfaces are:
   | Surface | Location | Status |
   | --- | --- | --- |
   | Federated swarm consensus (ADR-0019) | `teaagent/consensus/` engine | Wired: CLI `consensus *` commands |
   | Centralized subagent approval queue (ADR-0022) | `teaagent/subagents/` queue stores | Wired: production approval path |
-  | `consensus_validation` (this module) | `teaagent/consensus/consensus_validation.py` | **Experimental — unwired** (ADR-0029) |
 
-## 2. The hold and its gate
+The removed `consensus_validation` design is preserved below for git-history
+recovery only; restoring it is not authority to wire it.
 
-ADR-0029 (Accepted 2026-06-10) defers wiring until **2026-12-10** to avoid a
-third parallel consensus surface. Destructive actions flow through the
-approval queue + JIT approval coordinator only. Nothing here changes that;
-this spec exists so the expiry review is a decision, not an investigation.
+## 2. The closed hold and its gate
+
+ADR-0029 (Accepted 2026-06-10) deferred wiring to avoid a third parallel
+consensus surface. Owner decision on 2026-07-22 chose Option D. Destructive
+actions still flow through the approval queue + JIT approval coordinator only.
+This spec now exists as the recovery record for the deleted validation design.
 
 ### 2.1 Pre-deletion preservation record (2026-07-22)
 
@@ -166,27 +160,25 @@ worry); it adds a second key for a narrow action class.
      destructive gate, revote must be an audited event.
 - Rollback: unwire = remove the single queue-side hook; storage is inert JSON.
 
-### 3.2 Option D: delete/quarantine
+### 3.2 Option D: delete/quarantine — executed 2026-07-22
 
-Justified when, at expiry: no owner demand signal (DR-006 T1), zero
-production imports (the import-graph guard test provides continuous
-evidence), and the approval queue has handled all real multi-agent
-coordination needs.
+Justified by: no owner friction entry requiring an extra consensus gate, zero
+production imports, and the existing approval queue covering real destructive
+action governance.
 
-Deletion checklist:
-1. Delete `teaagent/consensus/consensus_validation.py`; remove the shim row
-   `teaagent/_compat_modules.py:22`; remove watch-list row
-   `scripts/validate_wiring.py:32`.
-2. Retire tests: `tests/test_consensus.py`, the consensus rows of
-   `tests/test_import_compat_wdf002.py`, the voter-roles cases in
+Deletion checklist result:
+1. Deleted `teaagent/consensus/consensus_validation.py`; removed the shim row in
+   `teaagent/_compat_modules.py`; removed the watch-list row in
+   `scripts/validate_wiring.py`.
+2. Retired tests: `tests/test_consensus.py`, consensus-validation rows of
+   `tests/test_import_compat_wdf002.py`, voter-role cases in
    `tests/test_inline_todo_resolutions.py`, and
-   `tests/test_consensus_disposition_spec.py` (this spec's companion) — in
-   the **same commit**, with the traceability matrix updated (harness-first
-   §4.2 deletion policy).
-3. Update ADR-0029 (Accepted → Superseded/Closed with the decision), the
-   roadmap-verification held-table row, and `docs/plans/ticket-plans/inline-todos.md`
-   if the module carries catalog entries.
-4. Run `scripts/validate_wiring.py` and `scripts/validate_docs_consistency.py`.
+   `tests/test_consensus_disposition_spec.py`.
+3. Updated ADR-0029, this spec, roadmap/backlog/reference docs, and
+   `docs/plans/ticket-plans/inline-todos.md`.
+4. Required verification: `scripts/validate_wiring.py`,
+   `scripts/validate_docs_consistency.py`, focused tests, and a reference scan
+   for stale production imports.
 
 ### 3.3 Decision matrix (prepared for the owner)
 
@@ -201,40 +193,39 @@ Default recommendation absent new evidence: **Option D** — the module has
 had zero production demand since 2026-06-10, and ADR-0029's own rationale
 (avoid parallel consensus systems) still holds.
 
-## 4. Executable specification
+## 4. Executable specification after deletion
 
-Tests live in `tests/test_consensus_disposition_spec.py`.
+The old executable spec `tests/test_consensus_disposition_spec.py` was retired
+with the runtime module it pinned. The active guard is now
+`tests/test_docs_consistency.py::test_consensus_validation_deletion_preserves_recovery_record`.
 
 | Contract clause | Test | Kind |
 | --- | --- | --- |
-| No production import of consensus_validation (ADR-0029 clause 1) | `test_consensus_validation_has_no_production_imports` | guards hold today — failure = someone wired it; that must be the deliberate §3.1 decision |
-| Wiring-validator watch-list names the module (clause 3) | `test_wiring_validator_watchlist_names_module` | guards hold today |
-| N_OF_M rejects exactly when approval is impossible | `test_n_of_m_rejects_only_when_approval_impossible` | baseline for §3.1 |
-| SUPERMAJORITY threshold is over cast votes (quirk pin) | `test_supermajority_threshold_is_over_cast_votes_not_total` | baseline — wire-blocker evidence |
-| Revote silently overwrites (quirk pin) | `test_add_vote_overwrites_prior_vote_silently` | baseline — wire-blocker evidence |
-| cast_vote refuses unknown/terminal requests; expiry flips status | `test_cast_vote_lifecycle_guards` | baseline for §3.1 event contract |
+| Deletion preserves original intent, feature inventory, wire-blockers, and git recovery commands | `test_consensus_validation_deletion_preserves_recovery_record` | guards archaeology after runtime deletion |
 
-Existing coverage (not duplicated): rule-type outcomes, store round-trips,
-tenant isolation (`tests/test_consensus.py`); ROLE_BASED voter_roles
-semantics (`tests/test_inline_todo_resolutions.py`).
+Existing live consensus coverage remains with ADR-0019 tests (`tests/test_consensus_cli.py`,
+`tests/test_consensus_engine_history.py`, and `tests/acceptance/test_consensus_flow.py`);
+those tests are unrelated to the deleted validation module.
 
-## 5. Expiry-day checklist (2026-12-10)
+## 5. Revival checklist
 
-1. Read the guard test history: has
-   `test_consensus_validation_has_no_production_imports` ever been touched?
-   (Any change = investigate wiring attempts.)
-2. Check friction log for multi-agent sign-off entries; apply §3.3 matrix.
-3. Execute §3.1 (with wire-blocker fixes) or §3.2 wholesale — no partial
-   states; a half-wired consensus gate is worse than either option.
-4. Update ADR-0029 status and this spec's status line in the same commit.
+1. Recover the deleted module from git history using §2.1.3.
+2. Re-run the decision matrix in §3.3 against current owner friction and
+   governance-gap evidence.
+3. If Option W is chosen in the future, rebuild the module behind the approval
+   queue, fix the SUPERMAJORITY quorum semantics, add audited revote events,
+   and add ADR-0032 audit events before any destructive-action wiring.
+4. Update ADR-0029 with the new owner decision in the same commit.
 
 ## 6. Risks and open questions
 
-- **Three-surface confusion is already real:** the CLI `consensus` commands
-  operate the ADR-0019 engine while this module shares the package name.
-  Any future doc citing "consensus" must name the ADR. (This spec does.)
-- **Silent bit-rot:** unwired code drifts. The behavioral baseline tests
-  double as a canary — if the module stops passing them, delete leans harder.
+- **Two-surface clarity is now required:** the CLI `consensus` commands operate
+  the ADR-0019 engine. Future docs must not imply the deleted
+  `consensus_validation` module is live; references to it are historical or
+  recovery-only.
+- **History recovery risk:** restoring deleted code from git can revive stale
+  semantics. Treat recovery as evidence collection until a new owner/governance
+  decision authorizes a rebuild.
 - Open: if Option W is chosen, do consensus votes come from human owners
   only, or may co-maintainer agents vote? Owner call; default: humans only
   (agents request, never approve — consistent with the approval-queue

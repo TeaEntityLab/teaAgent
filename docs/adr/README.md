@@ -32,7 +32,7 @@ This directory contains all Architecture Decision Records (ADRs) for the TeaAgen
 | 0023 | Strict Plan-Before-Write Enforcement | Accepted and Implemented | 2026-05-29 | - |
 | 0024 | Automated Memory Invalidation | Accepted and Implemented | 2026-05-29 | - |
 | 0025 | Shared ChatSessionController for Chat Surfaces | Accepted and Implemented | 2026-06-01 | 2026-06-04 13:18:00 +0800 |
-| 0029 | Consensus Validation Deferred Behind Approval Queue | Accepted | 2026-06-10 | 2026-12-10 (expiry review) |
+| 0029 | Consensus Validation Deferred Behind Approval Queue | Closed — Option D executed | 2026-06-10 | 2026-07-22 |
 | 0031 | Shadow Mode Exit Criteria | Proposed | 2026-06-12 | 2026-09-12 (expiry review) |
 | 0032 | Run Event Taxonomy and Event Spine | Accepted and Implemented | 2026-06-13 | 2026-06-17 |
 | 0040 | Reconcile the Second Execution Framework with the Primary Runner | Accepted | 2026-06-20 | - |
@@ -62,7 +62,7 @@ This directory contains all Architecture Decision Records (ADRs) for the TeaAgen
 - **0022**: Centralized Approval Queue for Subagents - Batch approval management
 - **0023**: Strict Plan-Before-Write Enforcement - Plan validation
 - **0024**: Automated Memory Invalidation - Memory hygiene
-- **0029**: Consensus Validation Deferred Behind Approval Queue - Consensus gate deferral
+- **0029**: Consensus Validation Deferred Behind Approval Queue - deleted/quarantined unwired validation module; recovery record retained
 - **0031**: Shadow Mode Exit Criteria - Policy/RBAC shadow→enforce promotion path
 - **0032**: Run Event Taxonomy and Event Spine - Unified run-lifecycle event contract
 - **0042**: Shell-Mutation Reversibility Boundary (SEC-11) - Two-tier undo (git-sandbox transactional rollback + disclosed journal fallback); external effects out of scope by design

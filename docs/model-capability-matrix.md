@@ -111,4 +111,4 @@ When adding new provider adapters or model support:
 - [Provider Adapter Factory](../teaagent/llm/_config.py)
 - [Tool Registry](../teaagent/tools.py)
 - [Budget Enforcement](../teaagent/budget.py)
-- [Multi-Sig Consensus](../teaagent/consensus/consensus_validation.py)
+- [Federated Swarm Consensus](../teaagent/consensus/engine.py)

@@ -29,7 +29,6 @@ ENTRY_ROOTS: tuple[str, ...] = (
 # H4/H5/H6 clusters from ENG-R1 — must be production-wired or explicitly labeled.
 WATCH_MODULES: tuple[str, ...] = (
     'teaagent.governance.policy_routing',
-    'teaagent.consensus.consensus_validation',
     'teaagent.governance.scope_creep',
     'teaagent.governance.repo_map_benchmark',
     'teaagent.update',

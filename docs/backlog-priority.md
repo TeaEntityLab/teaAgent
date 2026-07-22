@@ -42,7 +42,7 @@ was met on 2026-06-22; completing that intake does not authorize new work.
 | Competitive refresh release gate | `legacy-competitive` | **Resolved (DR-006 T5):** split gate — CI blocks on `main`; manual survey quarterly |
 | Seven-control-loops SCL follow-on work | `legacy-competitive` | Listed implementation rows are historical `Complete`; follow-on scheduling is **held** without friction, governance-gap proof, or owner override |
 | Community-pain-point CPP follow-on work | `legacy-competitive` | Listed implementation rows are historical `Complete`; follow-on scheduling is **held** without friction, governance-gap proof, or owner override |
-| Consensus validation (ADR-0029, 2026-12-10) | `governance-gap` | **Delete/quarantine (owner-ratified 2026-07-22)** — zero production importers (only a legacy path alias); execute per ADR-0029 deletion checklist at or before expiry |
+| Consensus validation (ADR-0029) | `governance-gap` | **Deleted/quarantined (2026-07-22)** — owner-ratified Option D executed; no production importers; feature intent and git recovery path preserved in ADR-0029 disposition spec |
 
 ---
 
@@ -364,9 +364,9 @@ and the applicable ADR decision dates; code existence is not milestone acceptanc
 
 | Task | Priority | Status | Evidence |
 |------|----------|--------|----------|
-| Consensus data structures | P1 | Shipped | `teaagent/consensus.py`, `tests/test_consensus.py` |
+| Consensus data structures | P1 | Shipped | `teaagent/consensus/` engine, `tests/test_consensus_engine_history.py` |
 | Peer identity management | P1 | Shipped | `PeerRegistry`, CLI `teaagent consensus peers` |
-| Voting mechanism | P1 | Shipped | `VotingMechanism`, `tests/test_consensus.py` |
+| Voting mechanism | P1 | Shipped | `teaagent/consensus/voting.py`, `tests/test_consensus_cli.py` |
 | Consensus engine | P0 | Shipped | `ConsensusEngine`, attestation + pre-approval |
 | Swarm integration | P0 | Shipped | `SwarmManager` + pre-approval gate |
 | CLI commands | P2 | Shipped | `teaagent/cli/_handlers/_consensus.py` |
