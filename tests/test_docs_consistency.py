@@ -354,6 +354,26 @@ def test_intent_review_candidate_adoption_state() -> None:
     assert 'a new strategy doc, separate execution-plan doc' in review
 
 
+def test_consensus_validation_deletion_preserves_recovery_record() -> None:
+    root = Path(__file__).resolve().parents[1]
+    spec = (
+        root / 'docs' / 'specs' / 'consensus-validation-disposition-spec-2026-07-11.md'
+    ).read_text(encoding='utf-8')
+    adr = (root / 'docs' / 'adr' / '0029-consensus-validation-deferred.md').read_text(
+        encoding='utf-8'
+    )
+    assert '### 2.1 Pre-deletion preservation record (2026-07-22)' in spec
+    assert '`ConsensusRuleType`: `N_OF_M`, `UNANIMOUS`, `MAJORITY`' in spec
+    assert '`ConsensusValidator`: `create_rule`, `request_consensus`' in spec
+    assert '`SUPERMAJORITY` counted only votes cast' in spec
+    assert 'Revival needs an\n  audited revote' in spec
+    assert 'git show 7a7799d:teaagent/consensus/consensus_validation.py' in spec
+    assert 'git restore --source=<deletion_commit>^' in spec
+    assert 'Restoring from history is evidence\nrecovery, not authority' in spec
+    assert 'Preservation requirement before deletion' in adr
+    assert 'symbol-level\ninventory, wire-blockers, and git recovery commands' in adr
+
+
 def test_doc_cross_references_fail_for_non_historical_docs(tmp_path: Path) -> None:
     docs = tmp_path / 'docs'
     docs.mkdir()

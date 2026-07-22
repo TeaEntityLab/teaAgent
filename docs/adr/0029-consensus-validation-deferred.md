@@ -46,6 +46,12 @@ deletion checklist — import-graph guard, remove the module and its
 roadmap/backlog — and may land at or before the 2026-12-10 review. Until
 executed, the module stays `experimental — unwired`.
 
+Preservation requirement before deletion: keep the feature intent, symbol-level
+inventory, wire-blockers, and git recovery commands in
+`../specs/consensus-validation-disposition-spec-2026-07-11.md` §2. Deletion may
+remove runtime files and tests, but it must not remove the historical record
+needed to recover or evaluate the design from git history.
+
 ## References
 
 - [Work Direction Decomposition (WDA-006)](../plans/work-direction-decomposition-2026-06-10.md)

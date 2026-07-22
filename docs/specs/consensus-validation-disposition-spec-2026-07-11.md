@@ -59,6 +59,77 @@ third parallel consensus surface. Destructive actions flow through the
 approval queue + JIT approval coordinator only. Nothing here changes that;
 this spec exists so the expiry review is a decision, not an investigation.
 
+### 2.1 Pre-deletion preservation record (2026-07-22)
+
+This section exists so `consensus_validation` remains recoverable after Option D
+deletes the code. Deletion must remove the runtime surface, not the historical
+intent, feature inventory, or revival path.
+
+#### 2.1.1 Original intent
+
+`consensus_validation` was intended as a **post-approval multi-agent consensus
+validator** for collaborative or destructive actions that had already passed the
+normal approval queue. It was never supposed to replace ADR-0022's centralized
+approval queue; the safe wiring shape was a second key behind the queue for a
+narrow action class.
+
+The surviving design question, if revived, is: "Do we need a separate N-of-M /
+role-based sign-off gate after the existing queue has approved a destructive
+action?" Absent that owner friction or governance-gap evidence, DR-006 favors
+deletion over preserving dormant code.
+
+#### 2.1.2 Feature inventory to preserve in history
+
+The module at `teaagent/consensus/consensus_validation.py` contained:
+
+| Area | Symbols / behavior | Revival note |
+| --- | --- | --- |
+| Status model | `ConsensusStatus`: `pending`, `approved`, `rejected`, `expired`, `cancelled` | Keep terminal-state semantics explicit if rebuilt. |
+| Rule model | `ConsensusRuleType`: `N_OF_M`, `UNANIMOUS`, `MAJORITY`, `SUPERMAJORITY`, `ROLE_BASED`; `ConsensusRule.check_consensus()` | Rebuild only the rule types needed by real policy; do not automatically restore `SUPERMAJORITY`. |
+| Role-based voting | `ROLE_BASED` rules consult `voter_roles`; absent a mapping, `voter_id` is treated as the role | This was the 2026-06-30 A-P2-7 fix; keep it if role-based consensus returns. |
+| Request model | `ConsensusRequest`: action, context, requester, votes, voter roles, timestamps, expiry, metadata | Revote currently overwrote silently; audited revote events are required before destructive-action wiring. |
+| Storage | `ConsensusStore`: tenant-scoped JSON under `.teaagent/consensus-rules` and `.teaagent/consensus-requests` using `atomic_write_text` | Reuse only if file-backed request state is still desired; otherwise prefer the approval queue's store. |
+| Validator facade | `ConsensusValidator`: `create_rule`, `request_consensus`, `cast_vote`, `get_consensus_status`, `create_default_rules` | Facade was not imported by production paths. A revived version must integrate through the approval queue. |
+| Policy bridge | `create_rule()` created `PolicyType.CONSENSUS` allow policies with `rule_id` metadata | Bridge was inert without a queue hook; rebuild with a real policy condition contract or delete it. |
+| Default rules | 2-of-3 production deploy, unanimous destructive action, majority operational decision | Treat as examples, not product requirements. |
+
+Known wire-blockers that history must not hide:
+
+- `SUPERMAJORITY` counted only votes cast, not `total_voters`; a single YES vote
+  could approve. Destructive-action revival must use quorum semantics or remove
+  this rule type from wireable policy.
+- `ConsensusRequest.add_vote()` overwrote prior votes silently. Revival needs an
+  audited revote or immutable-vote contract.
+- The module emitted no ADR-0032 audit events and had no approval-queue hold
+  hook. Any revival starts with the event/queue integration, not the old facade.
+- The CLI `consensus *` commands used the separate ADR-0019 federated engine;
+  they were not proof that this validation module was live.
+
+#### 2.1.3 Git recovery path
+
+Known-good code anchor when this preservation record was written:
+`7a7799d` (`docs: record owner-ratified intent decisions and intent-roadmap survey`).
+The deletion commit's parent should also contain the final pre-deletion code.
+
+To find the deleted module later:
+
+```bash
+git log --all --follow -- teaagent/consensus/consensus_validation.py
+git show 7a7799d:teaagent/consensus/consensus_validation.py
+git show <deletion_commit>^:teaagent/consensus/consensus_validation.py
+```
+
+To restore the last pre-deletion implementation for investigation, not automatic
+re-adoption:
+
+```bash
+git restore --source=<deletion_commit>^ -- teaagent/consensus/consensus_validation.py
+git restore --source=<deletion_commit>^ -- tests/test_consensus.py tests/test_consensus_disposition_spec.py
+```
+
+Then re-run the decision matrix in §3.3. Restoring from history is evidence
+recovery, not authority to wire the module.
+
 ## 3. Future contract — both options
 
 ### 3.1 Option W: wire behind the approval queue
