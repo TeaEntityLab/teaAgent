@@ -126,9 +126,11 @@ def test_register_mcp_tools_annotations_inferred():
         register_mcp_tools(registry, endpoint=endpoint)
         echo_tool = registry.get('remote_echo')
         write_tool = registry.get('remote_write')
-        assert echo_tool.annotations.read_only is True
-        assert echo_tool.annotations.destructive is False
+        assert echo_tool.annotations.read_only is False
+        assert echo_tool.annotations.destructive is True
+        assert echo_tool.annotations.external_effect is True
         assert write_tool.annotations.destructive is True
+        assert write_tool.annotations.external_effect is True
     finally:
         server.shutdown()
 

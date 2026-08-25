@@ -276,6 +276,7 @@ def authorize_tool_call(
             read_only=tool.annotations.read_only,
             description=tool.description,
             handler=tool.handler,
+            external_effect=bool(getattr(tool.annotations, 'external_effect', False)),
         )
         if auto_mode_approved:
             runner.audit.record(

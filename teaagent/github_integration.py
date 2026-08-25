@@ -184,7 +184,10 @@ def register_github_tools(registry: ToolRegistry) -> None:
             required=['status'],
         ),
         annotations=ToolAnnotations(
-            read_only=False, destructive=False, idempotent=True
+            read_only=False,
+            destructive=True,
+            idempotent=False,
+            external_effect=True,
         ),
         handler=lambda args: github_create_pr(
             args['repo'],
@@ -259,7 +262,10 @@ def register_github_tools(registry: ToolRegistry) -> None:
             required=['status'],
         ),
         annotations=ToolAnnotations(
-            read_only=False, destructive=False, idempotent=False
+            read_only=False,
+            destructive=True,
+            idempotent=False,
+            external_effect=True,
         ),
         handler=lambda args: github_review_pr(
             args['repo'],

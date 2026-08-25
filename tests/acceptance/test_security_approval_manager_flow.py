@@ -149,8 +149,8 @@ def test_approve_once_then_assert_allowed():
         call_id='c1',
         destructive=True,
     )
-    # Verify that the call was approved
-    assert mgr.get_jit_state().is_call_approved('c1')
+    # One-time grants are consumed at authorization.
+    assert not mgr.get_jit_state().is_call_approved('c1')
 
 
 def test_shutdown_does_not_raise():

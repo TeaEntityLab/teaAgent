@@ -336,10 +336,13 @@ def parse_model_decision(text: str) -> ToolRequest | FinalAnswer:
             raise ToolValidationError('tool decision requires object arguments')
         if call_id is not None and not isinstance(call_id, str):
             raise ToolValidationError('tool decision call_id must be string')
+        from teaagent.policy import compute_scoped_payload_digest
+
+        digest = compute_scoped_payload_digest(tool_name, arguments)
         return ToolRequest(
             tool_name=tool_name,
             arguments=arguments,
-            call_id=call_id or f'model-{tool_name}',
+            call_id=call_id or f'model-{tool_name}-{digest}',
         )
     raise ToolValidationError("decision type must be 'tool' or 'final'")
 

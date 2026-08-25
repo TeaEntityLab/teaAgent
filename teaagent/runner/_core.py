@@ -26,7 +26,12 @@ from teaagent.file_policy import FilePolicy
 from teaagent.long_result_envelope import DEFAULT_MAX_PREVIEW_BYTES, store_long_result
 from teaagent.phase_tracker import PhaseTracker
 from teaagent.plugin_system import discover_and_load_all
-from teaagent.policy import ApprovalPolicy, JITApprovalState, PermissionMode
+from teaagent.policy import (
+    ApprovalPolicy,
+    JITApprovalState,
+    PermissionMode,
+    compute_scoped_payload_digest,
+)
 from teaagent.proof_of_use import build_proof_of_use, emit_proof_of_use_audit
 from teaagent.run_context import RunContext
 from teaagent.run_logging import setup_run_logging, teardown_run_logging
@@ -377,6 +382,31 @@ class AgentRunner:
             for k, v in initial_context_extra.items():
                 if k != 'task':
                     cast(dict[str, Any], context)[k] = v
+        pending = context.get('pending_effect')
+        if isinstance(pending, dict) and not pending.get('idempotent', False):
+            digest = pending.get('payload_digest')
+            if isinstance(digest, str) and digest:
+                raw_unconfirmed = context.get('unconfirmed_effects')
+                unconfirmed = (
+                    list(raw_unconfirmed) if isinstance(raw_unconfirmed, list) else []
+                )
+                if digest not in unconfirmed:
+                    unconfirmed.append(digest)
+                context['unconfirmed_effects'] = unconfirmed
+            observations.append(
+                {
+                    'call_id': pending.get('call_id'),
+                    'tool_name': pending.get('tool_name'),
+                    'error': 'OUTCOME_UNKNOWN',
+                    'retry_safe': False,
+                    'interrupted': True,
+                }
+            )
+            context.pop('pending_effect', None)
+            if self.checkpoint_store is not None:
+                self.checkpoint_store.save(current_run_id, context)
+        elif isinstance(pending, dict):
+            context.pop('pending_effect', None)
         if self.decision_log is not None:
             summary = self.decision_log.inject_summary()
             if summary:
@@ -576,6 +606,48 @@ class AgentRunner:
         ``result`` is ``None`` the execution error path already updated
         state and the caller should return immediately.
         """
+        digest = compute_scoped_payload_digest(
+            decision.tool_name, decision.arguments or {}
+        )
+        idempotent = bool(annotations.get('idempotent'))
+        raw_unconfirmed = context.get('unconfirmed_effects')
+        unconfirmed = list(raw_unconfirmed) if isinstance(raw_unconfirmed, list) else []
+        if digest in unconfirmed and not idempotent:
+            tool_calls += 1
+            tool_started_at = time.monotonic()
+            err_observation: dict[str, Any] = {
+                'call_id': decision.call_id,
+                'tool_name': decision.tool_name,
+                'error': 'OUTCOME_UNKNOWN',
+                'retry_safe': False,
+                'interrupted': True,
+            }
+            context['observations'].append(err_observation)
+            self.event_spine.emit(
+                RunEventType.TOOL_CALL_FAILED, run_id, err_observation
+            )
+            self.audit.record(
+                'tool_call_failed',
+                run_id,
+                call_id=decision.call_id,
+                tool_name=decision.tool_name,
+                error='OUTCOME_UNKNOWN',
+                retry_safe=False,
+            )
+            if self.checkpoint_store is not None:
+                self.checkpoint_store.save(run_id, context)
+            return tool_calls, context, None, tool_started_at
+
+        context['pending_effect'] = {
+            'call_id': decision.call_id,
+            'tool_name': decision.tool_name,
+            'payload_digest': digest,
+            'idempotent': idempotent,
+            'retry_safe': idempotent,
+            'outcome': 'OUTCOME_UNKNOWN',
+        }
+        if self.checkpoint_store is not None:
+            self.checkpoint_store.save(run_id, context)
         self.audit.record(
             'tool_call_started',
             run_id,
@@ -604,16 +676,17 @@ class AgentRunner:
                 reset_parent_run_id(parent_token)
         except ToolExecutionError as exc:
             tool_calls += 1
-            err_observation: dict[str, Any] = {
+            failed_observation: dict[str, Any] = {
                 'call_id': decision.call_id,
                 'tool_name': decision.tool_name,
                 'error': str(exc),
                 'duration_ms': round((time.monotonic() - tool_started_at) * 1000.0, 2),
             }
-            context['observations'].append(err_observation)
+            context['observations'].append(failed_observation)
             self.event_spine.emit(
-                RunEventType.TOOL_CALL_FAILED, run_id, err_observation
+                RunEventType.TOOL_CALL_FAILED, run_id, failed_observation
             )
+            context.pop('pending_effect', None)
             if self.checkpoint_store is not None:
                 self.checkpoint_store.save(run_id, context)
             return tool_calls, context, None, tool_started_at
@@ -630,6 +703,7 @@ class AgentRunner:
         started_at: float,
     ) -> tuple[int, RunContext]:
         """Record a successful tool result and optionally compact context."""
+        context.pop('pending_effect', None)
         _long_meta: dict[str, Any] | None = None
         if (
             isinstance(result, str)
@@ -712,6 +786,9 @@ class AgentRunner:
             'read_only': tool.annotations.read_only,
             'destructive': tool.annotations.destructive,
             'idempotent': tool.annotations.idempotent,
+            'external_effect': bool(
+                getattr(tool.annotations, 'external_effect', False)
+            ),
         }
         self._authorize_tool_call(
             decision,

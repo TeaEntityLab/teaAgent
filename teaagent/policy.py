@@ -115,6 +115,7 @@ class ApprovalPolicy:
         read_only: bool | None = None,
         description: str = '',
         handler: Any | None = None,
+        external_effect: bool = False,
     ) -> None:
         # Sync external JIT state with manager's state
         if jit_state:
@@ -123,6 +124,10 @@ class ApprovalPolicy:
             manager_state.session_approved_tools.update(
                 jit_state.session_approved_tools
             )
+            if hasattr(jit_state, 'once_grants') and hasattr(
+                manager_state, 'once_grants'
+            ):
+                manager_state.once_grants.update(jit_state.once_grants)
 
         with self._flock_store():
             self._approval_manager.assert_allowed(
@@ -134,6 +139,7 @@ class ApprovalPolicy:
                 read_only=read_only,
                 description=description,
                 handler=handler,
+                external_effect=external_effect,
             )
 
         # Sync back JIT state in case it was modified by JIT prompting
@@ -143,6 +149,15 @@ class ApprovalPolicy:
             jit_state.session_approved_tools.update(
                 manager_state.session_approved_tools
             )
+            if hasattr(manager_state, 'once_grants'):
+                if not hasattr(jit_state, 'once_grants'):
+                    jit_state.once_grants = {}
+                jit_state.once_grants.update(manager_state.once_grants)
+                for consumed in (
+                    set(jit_state.approved_call_ids) - manager_state.approved_call_ids
+                ):
+                    jit_state.approved_call_ids.discard(consumed)
+                    jit_state.once_grants.pop(consumed, None)
 
     # Note: Multi-sig quorum methods are kept here for backward compatibility
     # and complex federated_sync integration. They can be migrated to ApprovalManager

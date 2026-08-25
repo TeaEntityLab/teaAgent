@@ -106,18 +106,47 @@ class JITApprovalState:
 
     approved_call_ids: set[str] = field(default_factory=set)
     session_approved_tools: set[str] = field(default_factory=set)
+    # call_id -> canonical payload digest. Missing entry means a legacy
+    # call-id-only grant (still one-time, not payload-bound).
+    once_grants: dict[str, str] = field(default_factory=dict)
 
-    def approve_once(self, call_id: str) -> None:
-        """Approve a single tool call (one-time use)."""
+    def approve_once(self, call_id: str, payload_digest: str | None = None) -> None:
+        """Approve a single tool call (one-time use).
+
+        When *payload_digest* is provided the grant is bound to that exact
+        tool+arguments intent. A later consume with a different digest fails
+        and leaves the grant intact.
+        """
         self.approved_call_ids.add(call_id)
+        if payload_digest is not None:
+            self.once_grants[call_id] = payload_digest
 
     def approve_session(self, tool_name: str) -> None:
         """Approve a tool for the entire session."""
         self.session_approved_tools.add(tool_name)
 
-    def is_call_approved(self, call_id: str) -> bool:
-        """Check if a specific call ID is approved."""
-        return call_id in self.approved_call_ids
+    def is_call_approved(self, call_id: str, payload_digest: str | None = None) -> bool:
+        """Peek whether a one-time grant exists (does not consume)."""
+        if call_id not in self.approved_call_ids and call_id not in self.once_grants:
+            return False
+        stored = self.once_grants.get(call_id)
+        return stored is None or payload_digest is None or stored == payload_digest
+
+    def consume_once(self, call_id: str, payload_digest: str) -> bool:
+        """Consume a one-time grant if it matches *payload_digest*.
+
+        Digest-bound grants require an exact match. Legacy call-id-only grants
+        are consumed on first use of any payload. Mismatched digest-bound grants
+        are left in place so the authorized payload can still consume them.
+        """
+        if call_id not in self.approved_call_ids and call_id not in self.once_grants:
+            return False
+        stored = self.once_grants.get(call_id)
+        if stored is not None and stored != payload_digest:
+            return False
+        self.approved_call_ids.discard(call_id)
+        self.once_grants.pop(call_id, None)
+        return True
 
     def is_tool_session_approved(self, tool_name: str) -> bool:
         """Check if a tool is approved for the session."""
@@ -296,10 +325,16 @@ class JITApprovalManager:
         self.enable_jit_prompt = enable_jit_prompt
         self.approval_timeout_seconds = approval_timeout_seconds
 
-    def is_approved(self, *, tool_name: str, call_id: str) -> bool:
-        return self.jit_state.is_tool_session_approved(
-            tool_name
-        ) or self.jit_state.is_call_approved(call_id)
+    def is_approved(
+        self,
+        *,
+        tool_name: str,
+        call_id: str,
+        payload_digest: str | None = None,
+    ) -> bool:
+        return self.jit_state.is_tool_session_approved(tool_name) or (
+            self.jit_state.is_call_approved(call_id, payload_digest)
+        )
 
     def prompt_and_resolve(
         self,
@@ -313,7 +348,12 @@ class JITApprovalManager:
             return None
         choice = self._prompt(tool_name, call_id, arguments)
         if choice == 'o':
-            self.jit_state.approve_once(call_id)
+            digest = None
+            if arguments is not None:
+                from teaagent.policy import compute_scoped_payload_digest
+
+                digest = compute_scoped_payload_digest(tool_name, arguments)
+            self.jit_state.approve_once(call_id, payload_digest=digest)
             return True
         if choice == 's':
             self.jit_state.approve_session(tool_name)
@@ -851,6 +891,7 @@ class ApprovalManager:
         read_only: bool | None = None,
         description: str = '',
         handler: Any | None = None,
+        external_effect: bool = False,
     ) -> None:
         """Check if a tool call is allowed under current approval policy.
 
@@ -874,6 +915,7 @@ class ApprovalManager:
             annotations={
                 'destructive': destructive,
                 'read_only': read_only or False,
+                'external_effect': external_effect,
             },
             permission_mode=self.permission_mode,
             plan_contract=plan_contract,
@@ -925,7 +967,12 @@ class ApprovalManager:
                 reason_code=reason_code,
             )
 
-        if self._jit_manager.is_approved(tool_name=tool_name, call_id=call_id):
+        from teaagent.policy import compute_scoped_payload_digest
+
+        payload_digest = compute_scoped_payload_digest(tool_name, arguments or {})
+        if self.jit_state.is_tool_session_approved(tool_name):
+            return
+        if self.jit_state.consume_once(call_id, payload_digest):
             return
 
         if self._store_manager.check_preset(
@@ -1184,9 +1231,21 @@ class ApprovalManager:
                     reason_code=DenialReasonCode.SKILL_WRITE_BLOCKED,
                 )
 
-    def approve_once(self, call_id: str) -> None:
+    def approve_once(
+        self,
+        call_id: str,
+        *,
+        tool_name: str | None = None,
+        arguments: dict[str, Any] | None = None,
+        payload_digest: str | None = None,
+    ) -> None:
         """Approve a single tool call (one-time use)."""
-        self.jit_state.approve_once(call_id)
+        digest = payload_digest
+        if digest is None and tool_name is not None:
+            from teaagent.policy import compute_scoped_payload_digest
+
+            digest = compute_scoped_payload_digest(tool_name, arguments or {})
+        self.jit_state.approve_once(call_id, payload_digest=digest)
 
     def approve_session(self, tool_name: str) -> None:
         """Approve a tool for the entire session."""

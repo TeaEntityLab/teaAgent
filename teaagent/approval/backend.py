@@ -60,6 +60,14 @@ class ApprovalRequest:
 # ---------------------------------------------------------------------------
 
 
+def requires_effect_escalation(annotations: dict[str, bool]) -> bool:
+    """True when local policy must not auto-approve the tool in constrained modes."""
+    return bool(
+        annotations.get('destructive', False)
+        or annotations.get('external_effect', False)
+    )
+
+
 class ApprovalBackend(ABC):
     """Approval decision boundary for destructive tool calls.
 
@@ -93,12 +101,13 @@ class ReadOnlyBackend(ApprovalBackend):
 
     def approve(self, request: ApprovalRequest) -> ApprovalDecision:
         destructive = request.annotations.get('destructive', False)
+        external_effect = request.annotations.get('external_effect', False)
         read_only = request.read_only
         block_reason = read_only_runtime_block_reason(
             tool_name=request.tool_name,
             description=request.description,
             read_only=read_only,
-            destructive=destructive,
+            destructive=destructive or external_effect,
             handler=request.handler,
         )
         if block_reason is not None:
@@ -121,6 +130,15 @@ class WorkspaceWriteBackend(ApprovalBackend):
     _ALLOWED_DESTRUCTIVE: ClassVar[frozenset[str]] = _WORKSPACE_WRITE_TOOL_NAMES
 
     def approve(self, request: ApprovalRequest) -> ApprovalDecision:
+        if request.annotations.get('external_effect', False):
+            return ApprovalDecision(
+                approved=False,
+                reason=(
+                    f"Tool '{request.tool_name}' performs an external effect and "
+                    'requires prompt/allow/danger-full-access permission mode.'
+                ),
+                reason_code=DenialReasonCode.WORKSPACE_WRITE_MODE.value,
+            )
         if not request.annotations.get('destructive', False):
             return ApprovalDecision(approved=True)
 
@@ -164,7 +182,7 @@ class PromptBackend(ApprovalBackend):
     """
 
     def approve(self, request: ApprovalRequest) -> ApprovalDecision:
-        if not request.annotations.get('destructive', False):
+        if not requires_effect_escalation(request.annotations):
             return ApprovalDecision(approved=True)
 
         if request.allow_all_destructive:

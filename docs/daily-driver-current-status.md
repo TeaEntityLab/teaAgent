@@ -11,7 +11,7 @@
 > `docs/analysis/`.
 >
 > **Review trigger:** TUI, chat, agent mode, approval, cost, undo, or resume behavior changes.
-> **Last reviewed:** 2026-08-25 (planning-authority correction and known effect-authority boundaries; no runtime fix)
+> **Last reviewed:** 2026-08-25 (EFX-001–003 runtime guards landed; live GitHub/browser/provider proof still missing)
 
 This page is the short daily-use entry point for TeaAgent's TUI, TUI chat, and
 agent mode. It is intentionally more practical than the audit corpus.
@@ -38,7 +38,7 @@ daily-driver plan is historical evidence, not an active scheduling authority.
 
 ## Solid today
 
-- Approval governance remains strong for correctly classified workspace-destructive tools, but external-effect classification, one-time JIT binding, and interrupted-dispatch recovery have known EFX-001–003 gaps; see "Known issues."
+- Approval governance now fail-closes GitHub/browser/MCP external mutations in prompt/read-only/workspace-write, consumes one-time JIT grants, and refuses blind redispatch of unmatched non-idempotent starts. Keep live credentials off until acceptance-tier evidence exists; see "Known issues."
 - `teaagent chat` prints successful task answers and no longer marks successful tasks as failures.
 - `teaagent chat` `/cost` and `/budget` are wired to real session cost. Budget semantics are explicit: `None` means unlimited, while `0` is a real zero cap. Cost display labels whether the value is actual, estimated, or unavailable.
 - `teaagent chat` `/undo` uses the undo journal and preserves unrelated manual edits.
@@ -149,8 +149,8 @@ bug or that TeaAgent has already fixed the class.
 | Dynamic generated skills are not yet proven end-to-end. | Treat generated skills as governed candidates until a run proves activation, source preservation, and output verification. Do not rely on RSS/WebSearch skill summaries as fully reliable yet. | DSK-P0-001 through DSK-P0-004 |
 | Seven-control-loop package is not daily-driver runtime proof by itself. | `docs/roadmap-status.md` owns SCL row status, while DR-006/backlog provenance keep competitor-derived SCL-P0 scheduling on hold unless owner friction evidence, governance-gap proof, or owner override promotes it. Treat completed SCL rows as control-model/docs evidence until runtime receipts prove daily behavior. | SCL-P0-001 through SCL-P0-007; DR-006 |
 | Community pain-point docs are not mitigation proof by themselves. | `docs/roadmap-status.md` owns CPP row status. Daily-driver claims still need implementation receipts and tests before survey-derived pain points can be claimed fixed in user-visible behavior. | CPP-P0-001 through CPP-P0-008 |
-| External-effect approval classification and one-time JIT binding are not reliable yet. | A governed `prompt`-mode probe reached mocked `github_create_pr` without pending approval; a one-time call-ID grant remained reusable across changed arguments. Until EFX-002/003 close, do not rely on prompt mode alone for GitHub/browser/remote mutation; keep those integrations disabled or remove ambient credentials. | EFX-002, EFX-003 |
-| Interrupted mutating-tool execution is not reconciled. | A process death after mutation but before result settlement can leave an unmatched start; blindly rerunning can duplicate a non-idempotent effect. Inspect the run, workspace, and external system before any retry. | EFX-001; [Recovery And Continuity Guide](recovery-and-continuity-guide.md#interrupted-mutating-tool-execution) |
+| External-effect approval and one-time JIT guards landed; live provider proof is still missing. | Prompt/read-only/workspace-write now escalate GitHub/browser/MCP mutations; one-time grants bind payload digest and consume. Do not treat this as production-proven GitHub/browser safety until acceptance tests and a live-credential dry-run exist. | EFX-002, EFX-003 |
+| Interrupted mutating-tool execution is disclosed as `OUTCOME_UNKNOWN`, not settled. | Process death after mutation now leaves a checkpointed unmatched start; resume refuses blind non-idempotent redispatch. Inspect the run, workspace, and external system before any new authorized attempt. | EFX-001; [Recovery And Continuity Guide](recovery-and-continuity-guide.md#interrupted-mutating-tool-execution) |
 
 ## Recently fixed
 
@@ -189,11 +189,12 @@ bug or that TeaAgent has already fixed the class.
 - Do not treat community pain-point docs as mitigation evidence. Use
   `docs/roadmap-status.md` for row state, then require implementation/test
   receipts before claiming daily-driver behavior is fixed.
-- Do not rely on `prompt` mode alone to gate external GitHub, browser, MCP, or
-  other remote mutation until EFX-002/003 close.
-- Do not blindly resume or rerun a mutating call whose audit trail has a start
-  but no completion/failure; treat it as unconfirmed and follow the recovery
-  guide.
+- Do not treat EFX-001–003 unit/integration guards as production-proven GitHub,
+  browser, or other live-provider safety. Keep those integrations disabled or
+  remove ambient credentials until acceptance-tier evidence exists.
+- Do not treat an unmatched mutating start as settled. Resume refuses blind
+  non-idempotent redispatch and surfaces `OUTCOME_UNKNOWN`; inspect the run,
+  workspace, and external system before any new authorized attempt.
 
 
 ## 2026-06-25 review note

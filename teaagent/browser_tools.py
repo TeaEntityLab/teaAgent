@@ -22,6 +22,13 @@ from teaagent.workspace_tools._helpers import object_schema
 
 logger = logging.getLogger(__name__)
 
+_EXTERNAL_MUTATION = ToolAnnotations(
+    read_only=False,
+    destructive=True,
+    idempotent=False,
+    external_effect=True,
+)
+
 # ---------------------------------------------------------------------------
 # Lazy browser singleton
 # ---------------------------------------------------------------------------
@@ -255,7 +262,7 @@ def register_browser_tools(
             },
             required=['status'],
         ),
-        annotations=ToolAnnotations(read_only=True),
+        annotations=_EXTERNAL_MUTATION,
         handler=lambda args: browser_navigate(
             args['url'], timeout_ms=args.get('timeout_ms', 30000)
         ),
@@ -389,7 +396,7 @@ def register_browser_tools(
             },
             required=['status'],
         ),
-        annotations=ToolAnnotations(read_only=True),
+        annotations=_EXTERNAL_MUTATION,
         handler=lambda args: browser_click(
             args['selector'], timeout_ms=args.get('timeout_ms', 10000)
         ),
@@ -419,7 +426,7 @@ def register_browser_tools(
             {'status': 'string', 'message': 'string'},
             required=['status'],
         ),
-        annotations=ToolAnnotations(read_only=True),
+        annotations=_EXTERNAL_MUTATION,
         handler=lambda args: browser_fill(
             args['selector'], args['value'], timeout_ms=args.get('timeout_ms', 10000)
         ),
@@ -441,7 +448,7 @@ def register_browser_tools(
             {'status': 'string', 'result': 'string', 'message': 'string'},
             required=['status'],
         ),
-        annotations=ToolAnnotations(read_only=True),
+        annotations=_EXTERNAL_MUTATION,
         handler=lambda args: browser_evaluate(args['expression']),
     )
 
@@ -460,6 +467,12 @@ def _register_disabled(registry: ToolRegistry) -> None:
         ('browser_fill', 'Fill a form field with a value.'),
         ('browser_evaluate', 'Run JavaScript in the browser page context.'),
     ]
+    mutating = {
+        'browser_navigate',
+        'browser_click',
+        'browser_fill',
+        'browser_evaluate',
+    }
     for name, desc in disabled_tools:
         registry.register(
             name=name,
@@ -469,6 +482,10 @@ def _register_disabled(registry: ToolRegistry) -> None:
                 {'status': 'string', 'message': 'string'},
                 required=['status'],
             ),
-            annotations=ToolAnnotations(read_only=True),
+            annotations=(
+                _EXTERNAL_MUTATION
+                if name in mutating
+                else ToolAnnotations(read_only=True)
+            ),
             handler=_make_disabled_handler(_DISABLED_MESSAGE),
         )

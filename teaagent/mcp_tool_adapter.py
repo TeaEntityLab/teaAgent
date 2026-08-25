@@ -22,8 +22,9 @@ The ``input_schema`` and ``output_schema`` follow the MCP response shapes:
 - ``output_schema`` is a fixed envelope ``{content: [...], isError: bool}``
   that matches the MCP ``tools/call`` result shape.
 
-``annotations`` are inferred from the tool name and MCP ``annotations`` hints
-(``destructiveHint``, ``readOnlyHint``) when present.
+``annotations`` are fail-closed local policy: remote MCP ``readOnlyHint`` /
+``destructiveHint`` / ``idempotentHint`` values are untrusted and cannot
+relax approval. Registered MCP tools are treated as external effects.
 
 The client connection is opened once during registration and closed on each
 individual tool call to stay within stdlib connection semantics.  Pass a
@@ -49,11 +50,19 @@ _MCP_TOOL_OUTPUT_SCHEMA: dict[str, Any] = {
 
 
 def _infer_annotations(mcp_tool: dict[str, Any]) -> ToolAnnotations:
-    hints = mcp_tool.get('annotations', {})
+    """Map MCP tools to local policy.
+
+    Remote ``readOnlyHint`` / ``destructiveHint`` / ``idempotentHint`` values are
+    untrusted and must not relax local approval. MCP tools are treated as
+    external effects that require escalation in constrained permission modes.
+    """
+    del mcp_tool  # hints are untrusted; kept as parameter for call-site stability
     return ToolAnnotations(
-        read_only=bool(hints.get('readOnlyHint', False)),
-        destructive=bool(hints.get('destructiveHint', False)),
-        idempotent=bool(hints.get('idempotentHint', False)),
+        read_only=False,
+        destructive=True,
+        idempotent=False,
+        external_effect=True,
+        security_tier='High',
     )
 
 

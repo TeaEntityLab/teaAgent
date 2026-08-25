@@ -114,6 +114,14 @@ class RunContext(TypedDict, total=False):
     project_instructions: str
     """Project-level instructions injected by hooks."""
 
+    # -- Durable effect keys (EFX-001) --
+
+    pending_effect: dict[str, Any]
+    """Unmatched mutating-tool start awaiting settlement."""
+
+    unconfirmed_effects: list[str]
+    """Payload digests of unmatched non-idempotent starts."""
+
 
 def make_initial_context(
     task: str,

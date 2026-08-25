@@ -80,6 +80,17 @@ def prepare_run_resume(
             initial_context_extra = {
                 k: v for k, v in checkpoint.items() if k not in ('task', 'observations')
             }
+            pending_effect = checkpoint.get('pending_effect')
+            if isinstance(pending_effect, dict) and not pending_effect.get(
+                'idempotent', False
+            ):
+                call = pending_effect.get('call_id', 'unknown')
+                tool = pending_effect.get('tool_name', 'unknown')
+                pending_warning = (
+                    f"Unmatched mutating tool start '{call}' ({tool}) is "
+                    'unconfirmed (OUTCOME_UNKNOWN). Blind rerun can duplicate '
+                    'a non-idempotent mutation.'
+                )
         else:
             initial_observations = store.observations_for_run(run_id)
             if auto_compact and len(initial_observations) > 40:
@@ -106,10 +117,10 @@ def prepare_run_resume(
                     f'auto-approved safely due to redacted arguments. '
                     f'Please approve explicitly with --approve-call-id {call_id}.'
                 )
-            elif auto_approve_pending:
+            elif auto_approve_pending and not pending_warning:
                 _ensure_scoped_approval(approval_store, run_id, pending, digest)
                 auto_approved = call_id
-            else:
+            elif not pending_warning:
                 pending_warning = f'run {run_id} has a pending approval'
 
     return PreparedRunResume(

@@ -271,9 +271,10 @@ TUI `/undo` and CLI `teaagent undo --last` explicitly label whether journal undo
 ## Interrupted mutating tool execution
 
 If a process stops after `tool_call_started` but before a completion/failure and
-checkpoint save, the effect is **unconfirmed**. Current TeaAgent does not
-reconcile that unmatched start. Blindly rerunning the same logical mutation can
-apply a non-idempotent effect again.
+checkpoint save, the effect is **unconfirmed**. Resume now surfaces
+`OUTCOME_UNKNOWN` and refuses blind redispatch of a non-idempotent unmatched
+start. That is disclosure, not settlement: inspect the target system before any
+new authorized attempt.
 
 Before resume or rerun:
 
@@ -285,8 +286,11 @@ Before resume or rerun:
 5. Resume or issue a new mutation only after the first attempt is reconciled or
    deliberately abandoned.
 
-The 2026-08-25 roadmap tracks the missing runtime guard as EFX-001. This advice
-does not claim exactly-once behavior or generic external-effect reversal.
+EFX-001 now refuses blind redispatch of an unmatched non-idempotent start and
+surfaces `OUTCOME_UNKNOWN`. Blindly rerunning the same logical mutation can
+still apply a non-idempotent effect again if the operator issues a new
+authorized attempt. This advice still does not claim exactly-once behavior or
+generic external-effect reversal.
 
 ## Persistence error handling (P1-C fix)
 
@@ -314,7 +318,7 @@ scenarios can be verified without mocking the filesystem. See
 | TUI `/cost` as spend truth | Known display gap. | Run summary or provider dashboard. |
 | TUI `/undo` when no journal exists | Falls back to checkpoint restore (explicitly labeled). | Check git status, then use `teaagent chat` `/undo` or manual git review. |
 | `teaagent chat <task>` | Needs execute/reject fix. | Use `teaagent agent run "<task>"` or REPL prompt after launch. |
-| Mutating tool started with no completion/failure after process interruption | Effect is unconfirmed; blind rerun can duplicate it. | Inspect the run, workspace, and external system; do not retry until reconciled (EFX-001). |
+| Mutating tool started with no completion/failure after process interruption | Unconfirmed/`OUTCOME_UNKNOWN`; non-idempotent blind rerun is refused. | Inspect the run, workspace, and external system before any new authorized attempt (EFX-001). |
 
 ## Continuity acceptance criteria
 

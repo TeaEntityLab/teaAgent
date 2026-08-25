@@ -28,6 +28,8 @@ class ToolAnnotations:
     idempotent: bool = False
     stateful: bool = False
     security_tier: str = 'Medium'  # Low, Medium, High, Critical
+    # Local-only: remote MCP/vendor hints must not set this False to relax policy.
+    external_effect: bool = False
 
 
 @dataclass(frozen=True)

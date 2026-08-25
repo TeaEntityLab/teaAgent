@@ -12,6 +12,8 @@ _CHECKPOINT_KEYS = (
     'compacted_summary',
     'memory_keys',
     'workflow_execution',
+    'pending_effect',
+    'unconfirmed_effects',
 )
 _SCHEMA_VERSION = 1
 
