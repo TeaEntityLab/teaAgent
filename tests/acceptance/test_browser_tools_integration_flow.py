@@ -6,7 +6,8 @@ the workspace tool registry and handle graceful degradation when Playwright is n
 
 Key concepts tested:
 - Tool Registration: Browser tools are registered in the tool registry
-- Read-Only Nature: Browser tools are marked as read-only (no filesystem writes)
+- Effect classification: snapshot/screenshot/get_content stay read-only;
+  navigate/click/fill/evaluate are local external mutations (EFX-002)
 - Tool Availability: Tools are available when Playwright is installed
 - Error Handling: Tools return errors gracefully when Playwright is unavailable
 - Workspace Integration: Browser tools are included in workspace tool registry
@@ -14,7 +15,7 @@ Key concepts tested:
 
 Acceptance Criteria:
 - AC1: Browser tools (navigate, snapshot, screenshot, etc.) are registered
-- AC2: All browser tools are marked as read-only
+- AC2: Read-only browser tools stay read-only; mutating tools are external_effect
 - AC3: Browser tools return error status when Playwright is not installed
 - AC4: Browser tools are included in workspace tool registry when available
 - AC5: All registered browser tools have valid input and output schemas
@@ -44,6 +45,18 @@ from teaagent.browser_tools import (
 )
 from teaagent.types import ToolRegistry
 
+_READ_ONLY_BROWSER_TOOLS = (
+    'browser_snapshot',
+    'browser_screenshot',
+    'browser_get_content',
+)
+_MUTATING_BROWSER_TOOLS = (
+    'browser_navigate',
+    'browser_click',
+    'browser_fill',
+    'browser_evaluate',
+)
+
 
 def test_browser_tools_registered() -> None:
     registry = ToolRegistry()
@@ -66,13 +79,28 @@ def test_browser_tools_registered() -> None:
 def test_browser_tools_are_read_only() -> None:
     registry = ToolRegistry()
     register_browser_tools(registry)
-    tools = registry.list_tools()
-    for name in tools:
-        tool = registry.get(name)
-        # Verify all browser tools are marked as read-only (no filesystem writes)
-        assert tool.annotations.read_only, (
-            f'Expected browser tool {name!r} to be marked read-only'
+    for name in _READ_ONLY_BROWSER_TOOLS:
+        ann = registry.get(name).annotations
+        assert ann.read_only, f'Expected browser tool {name!r} to be marked read-only'
+        assert ann.external_effect is False, (
+            f'Expected browser tool {name!r} not to be an external effect'
         )
+        assert ann.destructive is False, (
+            f'Expected browser tool {name!r} not to be destructive'
+        )
+
+
+def test_browser_mutating_tools_are_external_effects() -> None:
+    registry = ToolRegistry()
+    register_browser_tools(registry)
+    for name in _MUTATING_BROWSER_TOOLS:
+        ann = registry.get(name).annotations
+        assert ann.read_only is False, f'Expected {name!r} not to be read-only'
+        assert ann.destructive is True, f'Expected {name!r} to be destructive'
+        assert ann.external_effect is True, (
+            f'Expected {name!r} to be an external effect'
+        )
+        assert ann.idempotent is False, f'Expected {name!r} not to be idempotent'
 
 
 def test_browser_navigate_no_playwright() -> None:

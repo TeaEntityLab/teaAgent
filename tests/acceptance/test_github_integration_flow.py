@@ -89,6 +89,18 @@ def test_github_ci_status_annotations() -> None:
     assert tool.annotations.read_only, (
         'Expected github_ci_status to be marked as read-only'
     )
+    assert tool.annotations.external_effect is False
+
+
+def test_github_mutating_tools_are_external_effects() -> None:
+    registry = ToolRegistry()
+    register_github_tools(registry)
+    for name in ('github_create_pr', 'github_review_pr'):
+        ann = registry.get(name).annotations
+        assert ann.read_only is False, name
+        assert ann.destructive is True, name
+        assert ann.external_effect is True, name
+        assert ann.idempotent is False, name
 
 
 def test_github_tool_execution_errors() -> None:

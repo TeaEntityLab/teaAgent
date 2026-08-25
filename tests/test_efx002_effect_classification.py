@@ -55,9 +55,15 @@ def test_browser_mutating_tools_are_external_effects() -> None:
         assert ann.destructive is True, name
         assert ann.external_effect is True, name
         assert ann.idempotent is False, name
-    snapshot = registry.get('browser_snapshot').annotations
-    assert snapshot.read_only is True
-    assert snapshot.external_effect is False
+    for name in (
+        'browser_snapshot',
+        'browser_screenshot',
+        'browser_get_content',
+    ):
+        ann = registry.get(name).annotations
+        assert ann.read_only is True, name
+        assert ann.external_effect is False, name
+        assert ann.destructive is False, name
 
 
 def test_prompt_backend_does_not_auto_approve_github_create_pr() -> None:
