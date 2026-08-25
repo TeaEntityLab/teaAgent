@@ -11,7 +11,7 @@
 > `docs/analysis/`.
 >
 > **Review trigger:** TUI, chat, agent mode, approval, cost, undo, or resume behavior changes.
-> **Last reviewed:** 2026-08-25 (EFX-001–003 runtime guards landed; live GitHub/browser/provider proof still missing)
+> **Last reviewed:** 2026-08-25 (EFX-001–003 runtime guards and providerless acceptance landed; live GitHub/browser/provider proof still missing)
 
 This page is the short daily-use entry point for TeaAgent's TUI, TUI chat, and
 agent mode. It is intentionally more practical than the audit corpus.
@@ -38,7 +38,7 @@ daily-driver plan is historical evidence, not an active scheduling authority.
 
 ## Solid today
 
-- Approval governance now fail-closes GitHub/browser/MCP external mutations in prompt/read-only/workspace-write, consumes one-time JIT grants, and refuses blind redispatch of unmatched non-idempotent starts. Keep live credentials off until acceptance-tier evidence exists; see "Known issues."
+- Approval governance now fail-closes GitHub/browser/MCP external mutations in prompt/read-only/workspace-write, consumes one-time JIT grants, and refuses blind redispatch of unmatched non-idempotent starts. Providerless acceptance is in `tests/acceptance/test_efx_durable_effect_flow.py`. Keep live credentials off until a live-credential dry-run exists; see "Known issues."
 - `teaagent chat` prints successful task answers and no longer marks successful tasks as failures.
 - `teaagent chat` `/cost` and `/budget` are wired to real session cost. Budget semantics are explicit: `None` means unlimited, while `0` is a real zero cap. Cost display labels whether the value is actual, estimated, or unavailable.
 - `teaagent chat` `/undo` uses the undo journal and preserves unrelated manual edits.
@@ -149,7 +149,7 @@ bug or that TeaAgent has already fixed the class.
 | Dynamic generated skills are not yet proven end-to-end. | Treat generated skills as governed candidates until a run proves activation, source preservation, and output verification. Do not rely on RSS/WebSearch skill summaries as fully reliable yet. | DSK-P0-001 through DSK-P0-004 |
 | Seven-control-loop package is not daily-driver runtime proof by itself. | `docs/roadmap-status.md` owns SCL row status, while DR-006/backlog provenance keep competitor-derived SCL-P0 scheduling on hold unless owner friction evidence, governance-gap proof, or owner override promotes it. Treat completed SCL rows as control-model/docs evidence until runtime receipts prove daily behavior. | SCL-P0-001 through SCL-P0-007; DR-006 |
 | Community pain-point docs are not mitigation proof by themselves. | `docs/roadmap-status.md` owns CPP row status. Daily-driver claims still need implementation receipts and tests before survey-derived pain points can be claimed fixed in user-visible behavior. | CPP-P0-001 through CPP-P0-008 |
-| External-effect approval and one-time JIT guards landed; live provider proof is still missing. | Prompt/read-only/workspace-write now escalate GitHub/browser/MCP mutations; one-time grants bind payload digest and consume. Do not treat this as production-proven GitHub/browser safety until acceptance tests and a live-credential dry-run exist. | EFX-002, EFX-003 |
+| External-effect approval and one-time JIT guards landed; live provider proof is still missing. | Prompt/read-only/workspace-write now escalate GitHub/browser/MCP mutations; one-time grants bind payload digest and consume. Providerless acceptance exists; do not treat this as production-proven GitHub/browser safety until a live-credential dry-run exists. | EFX-002, EFX-003 |
 | Interrupted mutating-tool execution is disclosed as `OUTCOME_UNKNOWN`, not settled. | Process death after mutation now leaves a checkpointed unmatched start; resume refuses blind non-idempotent redispatch. Inspect the run, workspace, and external system before any new authorized attempt. | EFX-001; [Recovery And Continuity Guide](recovery-and-continuity-guide.md#interrupted-mutating-tool-execution) |
 
 ## Recently fixed

@@ -42,7 +42,7 @@ acceptance flow writes the user TUI state file. In sandboxed environments, run
 them with permission to bind localhost ports and write the TeaAgent state
 directory.
 
-**Current acceptance test count: `663 passed`** (pytest-collected guard target)
+**Current acceptance test count: `669 passed`** (pytest-collected guard target)
 
 Keep historical acceptance-count snapshots in dated analysis or roadmap docs.
 This file only owns the live guard target.
@@ -74,6 +74,7 @@ Product claim-to-test traceability: [`docs/architecture/claim-to-test-traceabili
 | `test_docs_acceptance_count_accuracy.py` | Docs acceptance count accuracy | `docs/acceptance.md` passed count matches pytest collection; architecture avoids stale `104+ AT` |
 | `test_error_recovery_common_misuse_flow.py` | Common misuse recovery | Provider-missing exit, error hints, read-only write blocks, adapter failure surfaces context |
 | `test_error_remediation_flow.py` | Error remediation hints | Core errors include actionable default hints and custom hint override support |
+| `test_efx_durable_effect_flow.py` | Providerless EFX-001/002/003 durable-effect guards | Prompt mode pauses `github_create_pr` before handler; MCP read-only hints cannot relax local policy; one-time approval binds payload digest and consumes; unmatched mutating starts are `OUTCOME_UNKNOWN` and not blindly redispatched |
 | `test_external_tool_manifest_compatibility_flow.py` | External ecosystem compatibility | External MCP manifests and community skill packages remain compatible; invalid schemas fail with clear validation errors |
 | `test_first_hour_e2e_flow.py` | First-hour e2e loop | `setup` → `daily` → `preflight` → `run` → pytest pass → audit `show` → git recovery |
 | `test_first_run_experience_flow.py` | First-run onboarding | `init` bootstraps `.teaagent/config.json`, creates `AGENTS.md` when missing, preserves existing `AGENTS.md`, and returns actionable onboarding checklist |

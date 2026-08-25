@@ -12,7 +12,7 @@
 > **Last reviewed:** 2026-08-25
 
 **Status:** Canonical roadmap tracking document
-**Last updated:** 2026-08-25 (durable-effect roadmap review: the owner-operator is the current validated persona; H4 now separates run continuity from effect correctness; EFX-001–003 runtime guards landed on existing seams with focused tests; generic external-effect infrastructure remains held. Prior acceptance tier snapshot `628 passed` at `85109e4` on 2026-06-10 remains historical evidence, not a current collection; full-suite count unverified — see [suite truncation analysis](analysis/suite-truncation-root-cause-2026-06-10.md))
+**Last updated:** 2026-08-25 (durable-effect roadmap review: the owner-operator is the current validated persona; H4 now separates run continuity from effect correctness; EFX-001–003 runtime guards landed on existing seams with focused tests and providerless acceptance; live GitHub/browser/provider proof still required for Complete; generic external-effect infrastructure remains held. Prior acceptance tier snapshot `628 passed` at `85109e4` on 2026-06-10 remains historical evidence, not a current collection; full-suite count unverified — see [suite truncation analysis](analysis/suite-truncation-root-cause-2026-06-10.md))
 **Owner:** TBD
 
 > **Canonical source of truth.** All other status docs (`docs/security/risk-register-and-threat-model-2026-06-02.md`, `docs/analysis/defeat-scenarios-and-cascade-effects-2026-06-02.md`, `docs/analysis/active-findings-status-ledger-2026-06-06.md`) defer to this document for overall completion status. Per-item test evidence lives in the risk register §9.
@@ -30,8 +30,9 @@ authorized, non-held code items. They entered through DR-006's
 `governance-gap` lane after deterministic local probes reproduced ambiguous
 mutating-tool dispatch, effectful-tool approval bypass, and reusable
 argument-blind one-time approval. Runtime guards now exist on the existing
-runner, registry, audit, and approval seams with focused tests; acceptance-tier
-evidence is still required before Complete. They do not authorize an effect
+runner, registry, audit, and approval seams with focused tests and providerless
+acceptance (`tests/acceptance/test_efx_durable_effect_flow.py`); live
+GitHub/browser/provider proof is still required before Complete. They do not authorize an effect
 platform, exactly-once claim, distributed outbox, fencing service, actor
 supervisor, or second event/workflow framework.
 
@@ -57,14 +58,14 @@ A trigger opens evaluation outside the proved governance-gap lane; it does not c
 
 These items do not reopen or renumber H0-H6. `Promote` is the scheduling
 disposition under DR-006; implementation status is `In Progress` while focused
-runtime evidence exists and acceptance-tier evidence is still required for
-Complete.
+runtime and providerless acceptance evidence exists and live-provider proof is
+still required for Complete.
 
 | ID | Work Item | Implementation Status | Scheduling | Confidence | Required Exit Evidence |
 |----|-----------|-----------------------|------------|------------|------------------------|
-| EFX-001 | Refuse blind redispatch after an unmatched mutating-tool start; surface the attempt as unconfirmed/`UNKNOWN` | In Progress — runner sandwich + process-death test | Promote — P0 `governance-gap` | High | `tests/test_efx001_interrupted_dispatch.py`; acceptance-tier evidence still required for Complete |
-| EFX-002 | Inventory effectful tools and fail closed when local policy sees external mutation, regardless of misleading read-only/destructive hints | In Progress — local `external_effect` + fail-closed backends | Promote — P0 `governance-gap` | High | `tests/test_efx002_effect_classification.py`; acceptance-tier evidence still required for Complete |
-| EFX-003 | Bind one-time approval to run, tool, canonical payload/effect intent, then consume or expire it before dispatch | In Progress — digest-bound consume-once JIT | Promote — P0 `governance-gap` | High | `tests/test_efx003_one_time_approval.py`; acceptance-tier evidence still required for Complete |
+| EFX-001 | Refuse blind redispatch after an unmatched mutating-tool start; surface the attempt as unconfirmed/`UNKNOWN` | In Progress — runner sandwich + process-death test | Promote — P0 `governance-gap` | High | `tests/test_efx001_interrupted_dispatch.py`; providerless `tests/acceptance/test_efx_durable_effect_flow.py`; live GitHub/browser/provider proof still required for Complete |
+| EFX-002 | Inventory effectful tools and fail closed when local policy sees external mutation, regardless of misleading read-only/destructive hints | In Progress — local `external_effect` + fail-closed backends | Promote — P0 `governance-gap` | High | `tests/test_efx002_effect_classification.py`; providerless `tests/acceptance/test_efx_durable_effect_flow.py`; live GitHub/browser/provider proof still required for Complete |
+| EFX-003 | Bind one-time approval to run, tool, canonical payload/effect intent, then consume or expire it before dispatch | In Progress — digest-bound consume-once JIT | Promote — P0 `governance-gap` | High | `tests/test_efx003_one_time_approval.py`; providerless `tests/acceptance/test_efx_durable_effect_flow.py`; live GitHub/browser/provider proof still required for Complete |
 | EFX-FUTURE | Provider-specific idempotency, settlement, and reconciliation beyond ADR-0042 | Absent | On Hold | Low | Local gaps closed, dated owner promise, provider-enforced identity/status contract, effect-specific fault evidence, and Human Review |
 
 Evidence and adoption status:
