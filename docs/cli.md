@@ -1,10 +1,26 @@
 # TeaAgent CLI
 
-**Last reviewed:** 2026-06-06
+**Last reviewed:** 2026-08-26 (complete top-level command-group roster added; drift-guarded)
 
 > **Review trigger:** CLI flags, subcommands, or handler behavior changes.
 
 Choose your surface: [USAGE.md — Choose Your Surface](USAGE.md#choose-your-surface) (CLI, TUI, VS Code, MCP, ACP, A2A, ANP, managed runtime).
+
+## Command Groups
+
+The sections below document the most-used groups in depth. This is the
+complete set of top-level groups (verify any of them with
+`teaagent <group> --help`):
+
+`agent`, `approval`, `artifact`, `ask`, `audit`, `background`, `chat`, `ci`,
+`clarify`, `classify`, `cloud`, `cockpit`, `code-ontology`, `completion`,
+`configure`, `consensus`, `control-plane`, `cost`, `credentials`, `daily`,
+`doctor`, `env`, `experiment`, `gateway`, `goal`, `graphqlite`, `guidance`,
+`health`, `init`, `journal`, `mcp`, `memory`, `metrics`, `model`,
+`permission`, `plan`, `plugin`, `preflight`, `recall`, `recipes`, `release`,
+`replay`, `resume`, `run`, `runs`, `sandbox`, `selftest`, `session`, `setup`,
+`skill`, `status`, `surfaces`, `sync`, `tool`, `tui`, `ultrawork` (deprecated),
+`undo`, `watch`, `workspace`, `yesterday`
 
 ## Install
 

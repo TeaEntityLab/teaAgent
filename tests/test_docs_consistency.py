@@ -418,6 +418,26 @@ def test_roadmap_rethink_lens_review_candidate_adoption_state() -> None:
     assert '(decision packet review)' in held
 
 
+def test_cli_reference_lists_every_command_group() -> None:
+    """Every live top-level CLI group must appear in docs/cli.md roster."""
+    root = Path(__file__).resolve().parents[1]
+
+    from teaagent.cli import build_parser
+
+    parser = build_parser()
+    live: set[str] = set()
+    for action in parser._actions:
+        choices = getattr(action, 'choices', None)
+        if choices and isinstance(choices, dict):
+            live |= set(choices)
+    live.discard('help')
+    doc = (root / 'docs' / 'cli.md').read_text(encoding='utf-8')
+    missing = sorted(name for name in live if f'`{name}`' not in doc)
+    assert not missing, (
+        f'docs/cli.md command roster is missing live top-level groups: {missing}'
+    )
+
+
 def test_consensus_validation_deletion_preserves_recovery_record() -> None:
     root = Path(__file__).resolve().parents[1]
     spec = (
