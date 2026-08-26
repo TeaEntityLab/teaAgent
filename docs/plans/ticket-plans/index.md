@@ -10,7 +10,7 @@
 > [Active Findings Status Ledger](../../analysis/active-findings-status-ledger-2026-06-06.md).
 >
 > **Review trigger:** Ticket closure status or execution order changes.
-> **Last reviewed:** 2026-06-18
+> **Last reviewed:** 2026-08-26 (historical closure index re-checked against daily-driver Recently fixed; no drift found)
 
 ---
 

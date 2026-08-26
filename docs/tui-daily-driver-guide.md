@@ -9,7 +9,7 @@
 > steps (`plans/ticket-plans/index.md`), or historical review prose in dated analysis files.
 >
 > **Review trigger:** TUI operator loop or recovery pointers change.
-> **Last reviewed:** 2026-06-21
+> **Last reviewed:** 2026-08-26 (reviewed against EFX-002 ambient-warning and fail-closed approvals; no drift found — cockpit warnings surface harness-health lines automatically)
 
 Use this guide when `teaagent tui` is your daily operator cockpit.
 

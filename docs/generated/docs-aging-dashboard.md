@@ -4,31 +4,12 @@
 
 **Stale threshold:** 90 days since `Last reviewed`
 **Current-truth docs scanned:** 17
-**Needs attention (working tier only):** 4
+**Needs attention (working tier only):** 0
 **Archive-tier docs (exempt from staleness):** 0
 
 Regenerate: `python3 scripts/report_docs_aging.py`
 
-## Stale Or Incomplete By Owner Surface
-
-### daily-driver
-
-| Document | Status | Last reviewed | File mtime | Notes |
-| --- | --- | --- | --- | --- |
-| `docs/plans/ticket-plans/index.md` | stale_by_mtime | 2026-06-18 | 2026-06-30 | File modified after last reviewed date |
-| `docs/tui-daily-driver-guide.md` | stale_by_mtime | 2026-06-21 | 2026-07-01 | File modified after last reviewed date |
-
-### governance
-
-| Document | Status | Last reviewed | File mtime | Notes |
-| --- | --- | --- | --- | --- |
-| `docs/governance/README.md` | stale_by_mtime | 2026-06-06 | 2026-06-21 | Missing owner banner; File modified after last reviewed date |
-
-### roadmap
-
-| Document | Status | Last reviewed | File mtime | Notes |
-| --- | --- | --- | --- | --- |
-| `docs/roadmap-status.md` | stale_by_mtime | 2026-08-25 | 2026-08-26 | File modified after last reviewed date |
+All scanned current-truth working-tier docs are fresh.
 
 ## Review Triggers (Current-Truth Docs)
 

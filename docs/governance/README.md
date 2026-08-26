@@ -1,7 +1,8 @@
 # Governance Index
 
-> **Last reviewed:** 2026-06-06
+> **Last reviewed:** 2026-08-26 (high-risk path review entry point added)
 > **Review trigger:** Governance index or process entry points change.
+> **Owner:** docs / governance
 
 This directory contains the authoritative standards and process documentation for TeaAgent. All documents are grounded in the actual project configuration (`pyproject.toml`, `ruff.toml`, `.github/workflows/`, `SECURITY.md`).
 
@@ -183,3 +184,16 @@ Does the change affect any of these?
 | ADR acceptance | Two maintainers |
 
 There is no dedicated security team at this project stage. Security-sensitive PRs are flagged by the `security/` branch prefix and the `### Security` changelog tag, which triggers the two-reviewer requirement.
+
+
+## High-Risk Path Changes
+
+Changes to `teaagent/approval/`, `teaagent/policy.py`, `teaagent/audit*`,
+`teaagent/sandbox/`, budget modules, or `teaagent/runner/_core.py` require a
+reflective-risk report staged at `docs/reviews/<id>-risk.md` (pre-commit gate:
+`check-high-risk-paths`; see [review-system §4.2](../retrospective/review-system.md)).
+An environment acknowledgement is accepted only when it cites an existing
+report: `TEAAGENT_RISK_ACK="ref docs/reviews/<id>-risk.md: <reason>"`.
+
+Existing reports live in [docs/reviews/](../reviews/) — consult the most
+relevant one before touching these surfaces.
