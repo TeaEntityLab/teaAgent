@@ -967,11 +967,11 @@ class ApprovalManager:
                 reason_code=reason_code,
             )
 
+        if self.jit_state.is_tool_session_approved(tool_name):
+            return
         from teaagent.policy import compute_scoped_payload_digest
 
         payload_digest = compute_scoped_payload_digest(tool_name, arguments or {})
-        if self.jit_state.is_tool_session_approved(tool_name):
-            return
         if self.jit_state.consume_once(call_id, payload_digest):
             return
 
