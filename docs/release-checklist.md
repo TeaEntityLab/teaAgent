@@ -1,6 +1,6 @@
 # Release Checklist
 
-**Last reviewed:** 2026-06-07
+**Last reviewed:** 2026-08-26 (full-suite evidence step added to Acceptance smoke)
 
 > **Review trigger:** Release gates, survey cadence, or validation workflow changes.
 
@@ -58,6 +58,9 @@ release if generated-docs CI is green and `validate_docs_consistency.py` passes.
 ## Acceptance smoke
 
 - `python3 -m pytest tests/acceptance --collect-only -q` matches `docs/acceptance.md` status count.
+- Full suite: run `python3 -m pytest tests -q` and record the result (passed/failed/skipped + commit) in the
+  [acceptance Current Status](acceptance.md#current-status) section before any zero-failure claim. Acceptance-tier
+  green alone has missed environment-dependent failures (2026-08-26 triage found nine).
 - Spot-check new acceptance flows referenced in the survey backlog table.
 
 ## Monthly Docs Drift Review (P2-B)
