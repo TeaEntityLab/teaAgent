@@ -1,6 +1,6 @@
 # TeaAgent
 
-> **Last reviewed:** 2026-06-17
+> **Last reviewed:** 2026-08-26 (permission-mode bullets cover external-effect tools; EFX-002)
 > **Review trigger:** README feature claims, golden path, or provider count changes.
 > **Direction record:** [Harness-First Direction](docs/strategy/harness-first-direction-2026-06-13.md) (owner-operator harness-first current direction)
 
@@ -95,9 +95,9 @@ Same as the [golden path](#golden-path-first-hour) above. Prefer `--human` on `d
 
 ### 3. Permission Modes
 
-- `read-only`: blocks destructive tools
-- `workspace-write`: allows file writes, blocks shell mutation
-- `prompt`: asks for approval on destructive actions
+- `read-only`: blocks destructive tools and external-effect tools
+- `workspace-write`: allows file writes, blocks shell mutation and external-effect tools
+- `prompt`: asks for approval on destructive actions and external-effect tools (GitHub PR mutators, browser actions, remote MCP)
 - `allow`: allows destructive tools for the session
 - `danger-full-access`: full access for trusted automation only
 
@@ -201,7 +201,7 @@ CLI / TUI  →  AgentRunner (decision loop)  →  ToolRegistry  →  Workspace T
 
 - **AgentRunner**: Iterates between model decisions and tool executions within budget limits.
 - **ToolRegistry**: Single point of tool dispatch with schema validation and lint checks.
-- **ApprovalPolicy**: Enforces permission modes before any destructive tool runs.
+- **ApprovalPolicy**: Enforces permission modes before any destructive or external-effect tool runs.
 - **AuditLogger**: Universal event sink — every decision, execution, and error is recorded.
 - **ModelDecisionEngine**: Bridges LLM responses into structured decisions via prompt assembly and JSON parsing.
 - **Workspace Tools**: File read/write, shell inspect/mutate, glob search, git status, hash-anchored editing.

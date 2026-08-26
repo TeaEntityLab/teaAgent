@@ -8,8 +8,8 @@ Regenerate: `python3 scripts/generate_command_snippet_inventory.py`
 
 | Command | Source | Coverage | Verification |
 | --- | --- | --- | --- |
-| `teaagent --config .teaagent/config.json model smoke gpt` | `docs/cli.md:31` (0de72469) | manual | Alternate config path smoke |
-| `teaagent --help` | `docs/cli.md:25` (d09b09bd) | manual | CLI help smoke |
+| `teaagent --config .teaagent/config.json model smoke gpt` | `docs/cli.md:47` (0de72469) | manual | Alternate config path smoke |
+| `teaagent --help` | `docs/cli.md:41` (d09b09bd) | manual | CLI help smoke |
 | `teaagent agent daily gpt "Summarize the tests" --permission-mode read-only` | `README.md:366` (05bc391c) | smoke | tests/acceptance/test_daily_cli.py |
 | `teaagent agent daily gpt "map subsystem boundaries" --context-profile deep` | `docs/USAGE.md:371` (3ac367a2) | smoke | tests/acceptance/test_daily_cli.py |
 | `teaagent agent daily gpt "plan test fix" --context-profile balanced` | `docs/USAGE.md:370` (291ea4fe) | smoke | tests/acceptance/test_daily_cli.py |
