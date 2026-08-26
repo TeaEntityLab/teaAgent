@@ -1,8 +1,8 @@
 # Backlog Priority
 
-> **Last reviewed:** 2026-08-25
+> **Last reviewed:** 2026-08-26
 > **Review trigger:** Backlog priorities or shipped/beta status claims change.
-> **Scheduling gate (2026-08-25):** DR-006 remains authoritative. EFX-001–003
+> **Scheduling gate (2026-08-26):** DR-006 remains authoritative. EFX-001–003
 > are in-progress P0 `governance-gap` remediations on existing seams; no
 > product horizon, distributed effect subsystem, or external adoption work is
 > reopened.
@@ -32,7 +32,7 @@ was met on 2026-06-22; completing that intake does not authorize new work.
 | CP-4 OpenCode Gap Watch | `legacy-competitive` | Monitoring only; escalation → feature sprint **blocked** without friction evidence |
 | CP-6 Community Presence | `legacy-competitive` | **Hold** — external acquisition non-goal |
 | M4 cloud/background/control-plane cockpit | `legacy-competitive` | **Hold except DR-006 carve-out** — background lifecycle + operator cockpit eligible under owner-override co-maintainer dogfood; cloud/SaaS/multi-tenant GTM held (T4). Owner 2026-07-22: carve-out remains held with no scheduled dogfood |
-| RBAC enforce flip (ADR 0031, 2026-09-12) | `governance-gap` | **Hold** until owner demand signal |
+| RBAC enforce flip (ADR 0031, 2026-09-12) | `governance-gap` | **Hold** — ADR-0031 review due 2026-09-12 (decision packet evaluation: promote/extend/revert; no premature enforce flip) |
 | TASK-006 RunEvent taxonomy + M0 | `harness-migration` | **Done** — ADR-0032 run-event taxonomy; `teaagent/runner/_events.py` spine + audit dual-write (M0–M7 in work-log) |
 | TASK-001 constitution repositioning | `owner-override` | **Done (Human Review 2026-07-22)** — owner ratified harness-first positioning; no README/product-contract changes required |
 | TASK-002 docs tiering | `harness-migration` | **Done** — tier column in `docs/generated/docs-inventory.md` + aging dashboard; `check-docs-inventory` pre-commit regen |

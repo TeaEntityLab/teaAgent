@@ -389,6 +389,34 @@ def test_durable_effect_review_candidate_adoption_state() -> None:
     assert 'Blindly rerunning the same logical mutation' in recovery
 
 
+def test_roadmap_rethink_lens_review_candidate_adoption_state() -> None:
+    """2026-08-26 parallel-lens panel: adopted wording pinned at named surfaces."""
+    root = Path(__file__).resolve().parents[1]
+    lens_review = (
+        root / 'docs' / 'analysis' / 'roadmap-rethink-lens-review-2026-08-26.md'
+    ).read_text(encoding='utf-8')
+    roadmap = (root / 'docs' / 'roadmap-status.md').read_text(encoding='utf-8')
+    backlog = (root / 'docs' / 'backlog-priority.md').read_text(encoding='utf-8')
+    held = (
+        root / 'docs' / 'specs' / 'held-roadmap-forward-spec-index-2026-07-11.md'
+    ).read_text(encoding='utf-8')
+    daily = (root / 'docs' / 'daily-driver-current-status.md').read_text(
+        encoding='utf-8'
+    )
+
+    assert '## Candidate Adoption Ledger' in lens_review
+    assert '| L1 |' in lens_review
+    assert '| L2 |' in lens_review
+    # L1: OperatorUsability — stale vacuous gate replaced.
+    assert 'until live-credential dry-run proof exists' in daily
+    assert 'until acceptance-tier evidence exists' not in daily
+    # L2: StrategicSynthesis — H4 gate qualified; ADR-0031 review named.
+    assert 'EFX live-proof closure' in roadmap
+    assert 'live-provider proof pending' in roadmap
+    assert 'ADR-0031 review due 2026-09-12' in backlog
+    assert '(decision packet review)' in held
+
+
 def test_consensus_validation_deletion_preserves_recovery_record() -> None:
     root = Path(__file__).resolve().parents[1]
     spec = (

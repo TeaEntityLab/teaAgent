@@ -191,7 +191,7 @@ bug or that TeaAgent has already fixed the class.
   receipts before claiming daily-driver behavior is fixed.
 - Do not treat EFX-001–003 unit/integration guards as production-proven GitHub,
   browser, or other live-provider safety. Keep those integrations disabled or
-  remove ambient credentials until acceptance-tier evidence exists.
+  remove ambient credentials until live-credential dry-run proof exists.
 - Do not treat an unmatched mutating start as settled. Resume refuses blind
   non-idempotent redispatch and surfaces `OUTCOME_UNKNOWN`; inspect the run,
   workspace, and external system before any new authorized attempt.
