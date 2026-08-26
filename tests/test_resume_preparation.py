@@ -197,47 +197,49 @@ def test_auto_approve_pending_false_warns_without_granting() -> None:
 
 def test_unmatched_effect_warning_blocks_auto_grant() -> None:
     """EFX-001: checkpointed pending_effect (OUTCOME_UNKNOWN) must suppress
-    auto-grant even with auto_approve_pending=True — auto-granting a scoped
+    auto-grant for EVERY auto_approve_pending value — auto-granting a scoped
     approval while a non-idempotent effect is unconfirmed is exactly the
-    blind-redispatch hazard. Kills the 'and not pending_warning' mutant.
+    blind-redispatch hazard. Kills the warning-guard mutants (True case) and
+    the knob-inversion mutant (False case).
     """
     from teaagent.checkpoint import SQLiteCheckpointStore
     from teaagent.policy import compute_scoped_payload_digest
 
-    with tempfile.TemporaryDirectory() as tmp:
-        run_id = 'unknown-effect-run'
-        _seed_pending(tmp, run_id)
+    for auto_approve in (True, False):
+        with tempfile.TemporaryDirectory() as tmp:
+            run_id = 'unknown-effect-run'
+            _seed_pending(tmp, run_id)
 
-        ckpt_path = Path(tmp) / 'ckpt.sqlite'
-        digest = compute_scoped_payload_digest(
-            'workspace_write_file', dict(_DEFAULT_ARGS)
-        )
-        SQLiteCheckpointStore(ckpt_path).save(
-            run_id,
-            {
-                'task': 'finish write',
-                'observations': [],
-                'pending_effect': {
-                    'call_id': 'write-1',
-                    'tool_name': 'workspace_write_file',
-                    'payload_digest': digest,
-                    'idempotent': False,
-                    'retry_safe': False,
-                    'outcome': 'OUTCOME_UNKNOWN',
+            ckpt_path = Path(tmp) / 'ckpt.sqlite'
+            digest = compute_scoped_payload_digest(
+                'workspace_write_file', dict(_DEFAULT_ARGS)
+            )
+            SQLiteCheckpointStore(ckpt_path).save(
+                run_id,
+                {
+                    'task': 'finish write',
+                    'observations': [],
+                    'pending_effect': {
+                        'call_id': 'write-1',
+                        'tool_name': 'workspace_write_file',
+                        'payload_digest': digest,
+                        'idempotent': False,
+                        'retry_safe': False,
+                        'outcome': 'OUTCOME_UNKNOWN',
+                    },
                 },
-            },
-        )
+            )
 
-        prepared = prepare_run_resume(
-            tmp,
-            run_id,
-            auto_approve_pending=True,
-            checkpoint_path=ckpt_path,
-        )
+            prepared = prepare_run_resume(
+                tmp,
+                run_id,
+                auto_approve_pending=auto_approve,
+                checkpoint_path=ckpt_path,
+            )
 
-        assert prepared.auto_approved_call_id is None
-        assert prepared.pending_warning is not None
-        assert prepared.pending_warning.startswith('Unmatched mutating tool start')
-        # Negative post-state: no scoped approval may exist for the run.
-        store = ApprovalPresetStore(tmp)
-        assert store.list_scoped_approvals_for_run(run_id) == []
+            assert prepared.auto_approved_call_id is None, auto_approve
+            assert prepared.pending_warning is not None
+            assert prepared.pending_warning.startswith('Unmatched mutating tool start')
+            # Negative post-state: no scoped approval may exist for the run.
+            store = ApprovalPresetStore(tmp)
+            assert store.list_scoped_approvals_for_run(run_id) == []

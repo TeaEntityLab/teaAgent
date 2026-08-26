@@ -53,8 +53,8 @@ MUTATIONS: list[Mutation] = [
     ),
     Mutation(
         file='teaagent/integration/resume_preparation.py',
-        old='elif not digest:',
-        new='elif digest:',
+        old='if not digest:',
+        new='if digest:',
         tests=[
             'tests/test_resume_preparation.py::test_legacy_record_without_digest_warns_and_does_not_auto_grant'
         ],
@@ -62,8 +62,8 @@ MUTATIONS: list[Mutation] = [
     ),
     Mutation(
         file='teaagent/integration/resume_preparation.py',
-        old='elif auto_approve_pending and not pending_warning:',
-        new='elif not auto_approve_pending:',
+        old='if auto_approve_pending and not existing_warning:',
+        new='if auto_approve_pending or existing_warning:',
         tests=[
             'tests/test_resume_preparation.py::test_auto_approve_pending_false_warns_without_granting'
         ],
@@ -71,7 +71,7 @@ MUTATIONS: list[Mutation] = [
     ),
     Mutation(
         file='teaagent/integration/resume_preparation.py',
-        old='auto_approve_pending and not pending_warning',
+        old='auto_approve_pending and not existing_warning',
         new='auto_approve_pending',
         tests=[
             'tests/test_resume_preparation.py::test_unmatched_effect_warning_blocks_auto_grant'
