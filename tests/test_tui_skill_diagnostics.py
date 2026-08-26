@@ -5,9 +5,20 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from teaagent.skill_loader import get_skill_diagnostics
 from teaagent.tui import TeaAgentTUI
 from teaagent.tui._commands import _COMMAND_DISPATCH
+
+
+@pytest.fixture(autouse=True)
+def _isolate_user_skill_dirs(monkeypatch):
+    """Keep discovery inside tmp roots — real ~/.claude etc. must not leak."""
+    from teaagent import skill_loader
+
+    monkeypatch.setattr(skill_loader, '_USER_SKILL_DIRS', [])
+    monkeypatch.setattr(skill_loader, '_EXTENDED_USER_SKILL_DIRS', [])
 
 
 def _install_skill(base: Path, rel_dir: str, name: str, body: str) -> None:
