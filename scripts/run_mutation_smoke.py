@@ -70,6 +70,15 @@ MUTATIONS: list[Mutation] = [
         desc='invert auto_approve_pending knob -> TUI would auto-grant instead of warn',
     ),
     Mutation(
+        file='teaagent/integration/resume_preparation.py',
+        old='auto_approve_pending and not pending_warning',
+        new='auto_approve_pending',
+        tests=[
+            'tests/test_resume_preparation.py::test_unmatched_effect_warning_blocks_auto_grant'
+        ],
+        desc='drop OUTCOME_UNKNOWN warning guard -> resume would auto-grant a scoped approval while a non-idempotent effect is unconfirmed (blind-redispatch hazard)',
+    ),
+    Mutation(
         file='teaagent/ergonomics/_approval_state.py',
         old='and record.argument_digest == argument_digest',
         new='and record.argument_digest != argument_digest',
