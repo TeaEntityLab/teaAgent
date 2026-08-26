@@ -24,7 +24,7 @@
 
 - [ ] `ruff check` + `ruff format --check` pass
 - [ ] `mypy teaagent/` reports 0 issues
-- [ ] `pytest -m smoke` passes
+- [ ] `python3 scripts/run_test_tier.py --tier smoke` passes
 - [ ] Coverage at least 75%
 - [ ] `check_root_module_count.py` ≤ 184
 - [ ] `check_complexity.py` ≤ 99
