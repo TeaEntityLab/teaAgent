@@ -62,13 +62,12 @@ def test_github_tools_absent_by_default(tmp_path) -> None:
     assert 'github_create_pr' not in registry.list_tools()
 
 
-def test_github_create_pr_no_token() -> None:
+def test_github_create_pr_no_token(monkeypatch) -> None:
     """Should raise PermissionError when GITHUB_TOKEN is not set."""
-    import os
-
-    if 'GITHUB_TOKEN' not in os.environ and 'GH_TOKEN' not in os.environ:
-        with pytest.raises(PermissionError, match='GitHub token not found'):
-            github_create_pr('owner/repo', 'title', 'branch')
+    monkeypatch.delenv('GITHUB_TOKEN', raising=False)
+    monkeypatch.delenv('GH_TOKEN', raising=False)
+    with pytest.raises(PermissionError, match='GitHub token not found'):
+        github_create_pr('owner/repo', 'title', 'branch')
 
 
 def test_github_list_prs_registration_schema() -> None:
@@ -103,12 +102,9 @@ def test_github_mutating_tools_are_external_effects() -> None:
         assert ann.idempotent is False, name
 
 
-def test_github_tool_execution_errors() -> None:
+def test_github_tool_execution_errors(monkeypatch) -> None:
     """Tools should raise PermissionError (not crash) when GITHUB_TOKEN is not set."""
-    import os
-
-    if 'GITHUB_TOKEN' not in os.environ and 'GH_TOKEN' not in os.environ:
-        import pytest
-
-        with pytest.raises(PermissionError, match='GitHub token not found'):
-            github_list_prs('owner/nonexistent-repo-12345')
+    monkeypatch.delenv('GITHUB_TOKEN', raising=False)
+    monkeypatch.delenv('GH_TOKEN', raising=False)
+    with pytest.raises(PermissionError, match='GitHub token not found'):
+        github_list_prs('owner/nonexistent-repo-12345')
