@@ -1,8 +1,9 @@
 # TeaAgent Documentation Index
-# 2026-08-25
+# 2026-08-26
 
-> **Last reviewed:** 2026-08-25
+> **Last reviewed:** 2026-08-26 (roadmap-rethink lens review indexed)
 > **Review trigger:** New front-door docs, supersession links, roadmap evidence, or validation command changes.
+> **Owner:** docs
 
 This is the curated front door for TeaAgent documentation. It is intentionally
 not an exhaustive file list. Use it to find the current source of truth, then
