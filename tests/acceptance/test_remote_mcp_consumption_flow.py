@@ -137,8 +137,12 @@ def test_destructive_annotation_propagated():
     try:
         registry = ToolRegistry()
         register_mcp_tools(registry, endpoint=endpoint)
-        assert registry.get('gh_list_issues').annotations.read_only is True
+        # EFX-002: remote hints are untrusted and must not propagate into local
+        # policy annotations — both tools register fail-closed.
+        assert registry.get('gh_list_issues').annotations.read_only is False
+        assert registry.get('gh_list_issues').annotations.destructive is True
         assert registry.get('gh_create_issue').annotations.destructive is True
+        assert registry.get('gh_create_issue').annotations.external_effect is True
     finally:
         server.shutdown()
 

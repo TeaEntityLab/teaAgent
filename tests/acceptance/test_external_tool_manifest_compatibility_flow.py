@@ -120,8 +120,11 @@ def test_external_mcp_manifest_annotations_and_schema_errors() -> None:
         names = register_mcp_tools(registry, endpoint=endpoint)
 
         assert set(names) == {'community_read_docs', 'community_bad_schema'}
-        assert registry.get('community_read_docs').annotations.read_only is True
-        assert registry.get('community_read_docs').annotations.destructive is False
+        # EFX-002: remote readOnlyHint/destructiveHint are untrusted; all MCP
+        # tools register fail-closed regardless of manifest hints.
+        assert registry.get('community_read_docs').annotations.read_only is False
+        assert registry.get('community_read_docs').annotations.destructive is True
+        assert registry.get('community_read_docs').annotations.external_effect is True
 
         ok = registry.execute('community_read_docs', {'path': 'README.md'})
         assert ok['isError'] is False

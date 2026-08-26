@@ -193,18 +193,20 @@ class TestAssertionFailureFixes:
                     rel = py_file.relative_to(root)
                     bare_asserts.append(f'{rel}:{lineno}: {line.strip()}')
 
-        # There are 18 known bare assert statements across non-test source files.
+        # There are 21 known bare assert statements across non-test source files.
         # If this count changes, new asserts may have been added — investigate.
         # Accounting: 8 live in teaagent/runner/_invariants.py (an assertion-helper
         # module — assert_budget_invariant / assert_audit_invariant / ... — invoked
         # only from tests under pytest, never under `python -O`, so bare asserts are
         # the right idiom there); 1 in teaagent/env_config.py (a post-generation
         # lockfile self-consistency invariant — the hash was just computed, so it can
-        # only fail on an internal code bug, not on untrusted input); the remaining 9
-        # are mypy type-narrowing guards (``assert x is not None``), not strippable
-        # state/security checks.
-        assert len(bare_asserts) == 18, (
-            f'Expected 18 bare assert statements in source, found {len(bare_asserts)}:\n'
+        # only fail on an internal code bug, not on untrusted input); 3 in
+        # teaagent/governance/h4_rollback.py::_extract_payload (internal invariants
+        # over an in-process _RecordingAudit — never untrusted input); the
+        # remaining 9 are mypy type-narrowing guards (``assert x is not None``),
+        # not strippable state/security checks.
+        assert len(bare_asserts) == 21, (
+            f'Expected 21 bare assert statements in source, found {len(bare_asserts)}:\n'
             + '\n'.join(bare_asserts)
         )
 
