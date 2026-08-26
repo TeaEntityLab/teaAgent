@@ -1,7 +1,7 @@
 # Release Documentation Evidence Bundle (Generated)
 
-**Generated:** 2026-08-25T08:32:02+00:00
-**Git commit:** `26e80d4beb79518d079ad0c2d7ef8fdd203850e9` on `main`
+**Generated:** 2026-08-26T12:09:05+00:00
+**Git commit:** `ade46871bd14aa1b15128e19e1219f11c16c19aa` on `main`
 **Working tree dirty:** yes
 
 Regenerate: `python3 scripts/build_release_docs_evidence_bundle.py`
@@ -14,22 +14,15 @@ Regenerate: `python3 scripts/build_release_docs_evidence_bundle.py`
 
 ## Last Gate Run
 
-- Overall gate status: **fail**
-- `/opt/homebrew/opt/python@3.14/bin/python3.14 scripts/validate_docs_consistency.py` — **fail** (exit 1)
+- Overall gate status: **pass**
+- `/opt/homebrew/opt/python@3.14/bin/python3.14 scripts/validate_docs_consistency.py` — **pass** (exit 0)
 - `/opt/homebrew/opt/python@3.14/bin/python3.14 scripts/report_docs_aging.py --check` — **pass** (exit 0)
 
 ## Documentation Freshness
 
 - Current-truth docs scanned: **17**
-- Needs attention: **10** (>90 days)
-- Stale by owner surface:
-  - `architecture`: 1
-  - `cli`: 1
-  - `daily-driver`: 3
-  - `governance`: 2
-  - `project`: 1
-  - `release`: 1
-  - `verification`: 1
+- Needs attention: **0** (>90 days)
+- All scanned current-truth docs are fresh.
 
 ## Roadmap Excerpt
 
@@ -37,7 +30,7 @@ Regenerate: `python3 scripts/build_release_docs_evidence_bundle.py`
 - `H1` Daily operator loop: **Complete** (confidence High, next gate H2)
 - `H2` Multi-surface continuity: **On Hold — M2 foundation complete** (confidence Medium, next gate Owner-validated continuity need)
 - `H3` Ecosystem trust: **On Hold — M3 evidence complete** (confidence Medium, next gate Cited owner friction)
-- `H4` Durable owner/agent operations: **On Hold — shadow wiring exists** (confidence Low, next gate DR-006 + EFX local closure + 2026-09-12 H4 review)
+- `H4` Durable owner/agent operations: **On Hold — shadow wiring exists** (confidence Low, next gate DR-006 + EFX live-proof closure + 2026-09-12 ADR-0031 review)
 - `H5` Quality and eval loop: **Blocked — offline release gate exists** (confidence Low, next gate Funded live-provider evidence + owner decision)
 - `M0` (1-2 weeks): **High** (next gate All 3 checks pass: `validate_docs_consistency.py`, `refresh_competitive_docs.py --check`, `teaagent tool lint --root .`)
 - `M1` (2-6 weeks): **High** (next gate CLI/TUI cockpit parity acceptance, run evidence summary acceptance, guided recovery acceptance)

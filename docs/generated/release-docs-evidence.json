@@ -1,17 +1,17 @@
 {
-  "ok": false,
-  "created_at": "2026-08-25T08:32:02+00:00",
+  "ok": true,
+  "created_at": "2026-08-26T12:09:05+00:00",
   "repo_root": "/Users/teee/dev/teaagent",
   "git": {
     "branch": "main",
-    "commit": "26e80d4beb79518d079ad0c2d7ef8fdd203850e9",
+    "commit": "ade46871bd14aa1b15128e19e1219f11c16c19aa",
     "dirty": true
   },
   "commands": [
     {
       "cmd": "/opt/homebrew/opt/python@3.14/bin/python3.14 scripts/validate_docs_consistency.py",
-      "exit_code": 1,
-      "stdout": "Risk register evidence coverage: 29/29 rows verified (100%)\nTicket index evidence coverage: 21/21 rows verified (100%)\nERROR: docs/generated/docs-inventory.md is out of date; run: python3 scripts/generate_docs_inventory.py\n",
+      "exit_code": 0,
+      "stdout": "Risk register evidence coverage: 29/29 rows verified (100%)\nTicket index evidence coverage: 21/21 rows verified (100%)\nDocs consistency check passed.\n",
       "stderr": ""
     },
     {
@@ -23,16 +23,8 @@
   ],
   "docs_freshness": {
     "scanned": 17,
-    "needs_attention": 10,
-    "by_owner": {
-      "project": 1,
-      "daily-driver": 3,
-      "cli": 1,
-      "verification": 1,
-      "release": 1,
-      "governance": 2,
-      "architecture": 1
-    },
+    "needs_attention": 0,
+    "by_owner": {},
     "stale_threshold_days": 90
   },
   "roadmap_excerpt": {
@@ -70,7 +62,7 @@
         "name": "Durable owner/agent operations",
         "status": "On Hold — shadow wiring exists",
         "confidence": "Low",
-        "next_gate": "DR-006 + EFX local closure + 2026-09-12 H4 review"
+        "next_gate": "DR-006 + EFX live-proof closure + 2026-09-12 ADR-0031 review"
       },
       {
         "id": "H5",
