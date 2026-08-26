@@ -62,7 +62,7 @@ MUTATIONS: list[Mutation] = [
     ),
     Mutation(
         file='teaagent/integration/resume_preparation.py',
-        old='elif auto_approve_pending:',
+        old='elif auto_approve_pending and not pending_warning:',
         new='elif not auto_approve_pending:',
         tests=[
             'tests/test_resume_preparation.py::test_auto_approve_pending_false_warns_without_granting'

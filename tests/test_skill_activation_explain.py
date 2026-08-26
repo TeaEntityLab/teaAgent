@@ -2,7 +2,17 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
+from teaagent import skill_loader
 from teaagent.skill_loader import explain_skill_activation
+
+
+@pytest.fixture(autouse=True)
+def _isolate_user_skill_dirs(monkeypatch):
+    """Real ~/.claude etc. must not leak into tmp-root shadow assertions."""
+    monkeypatch.setattr(skill_loader, '_USER_SKILL_DIRS', [])
+    monkeypatch.setattr(skill_loader, '_EXTENDED_USER_SKILL_DIRS', [])
 
 
 def _install_skill(base: Path, rel_dir: str, name: str, body: str) -> None:

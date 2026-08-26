@@ -5,8 +5,18 @@ import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import pytest
+
+from teaagent import skill_loader
 from teaagent.cli._handlers._skill import skill_health_command
 from teaagent.skill_loader import get_skill_health
+
+
+@pytest.fixture(autouse=True)
+def _isolate_user_skill_dirs(monkeypatch):
+    """Real ~/.claude etc. must not leak into empty-workspace assertions."""
+    monkeypatch.setattr(skill_loader, '_USER_SKILL_DIRS', [])
+    monkeypatch.setattr(skill_loader, '_EXTENDED_USER_SKILL_DIRS', [])
 
 
 def _install_skill(base: Path, rel_dir: str, name: str) -> Path:
