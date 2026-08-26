@@ -7,7 +7,7 @@ last_audit: 2026-06-01
 ---
 # TeaAgent Quick Start Guide
 
-> **Last reviewed:** 2026-06-06
+> **Last reviewed:** 2026-08-26 (external-effect tool gating documented; EFX-002)
 > **Review trigger:** CLI/TUI command behavior, permission modes, or surface recipes change.
 
 A beginner-friendly walkthrough from installation to your first agent run and chat session.
@@ -642,7 +642,10 @@ default before enabling automation.
 
 Session-scoped `ApprovalPolicy` gates destructive workspace tools. Non-destructive reads
 and inspect-only shell commands are always allowed unless Plan Mode or Auto Mode adds
-extra blocks.
+extra blocks. External-effect tools (GitHub PR create/review, browser
+navigate/click/fill/evaluate, all remote MCP tools) are additionally gated by the local
+`external_effect` annotation regardless of their declared hints: they fail closed in
+`read-only` and `workspace-write`, and require approval in `prompt` (EFX-002).
 
 | Mode | File reads | File writes | Shell inspect | Shell mutate | Approvals | Audit | Rollback |
 |------|:----------:|:-----------:|:-------------:|:------------:|:---------:|:-----:|:--------:|

@@ -1,6 +1,6 @@
 # TeaAgent Architecture
 
-> **Last reviewed:** 2026-06-06
+> **Last reviewed:** 2026-08-26 (ToolAnnotations table includes external_effect; EFX-002)
 > **Review trigger:** Architecture claims, provider count, or module boundaries change.
 
 ## System Overview
@@ -138,10 +138,11 @@ All tools are registered through `ToolRegistry` with:
 | `description`  | Human-readable purpose for prompt injection |
 | `input_schema` | JSON Schema for argument validation         |
 | `output_schema`| JSON Schema for result validation           |
-| `annotations`  | `read_only`, `destructive`, `idempotent`    |
+| `annotations`  | `read_only`, `destructive`, `idempotent`, `stateful`, `external_effect` |
 
 `ApprovalPolicy` sits between the decision loop and tool execution. It checks
-annotations against the active `PermissionMode` before any destructive tool runs:
+annotations against the active `PermissionMode` before any destructive or
+external-effect tool runs:
 
 | Mode                 | Read | Write | Shell Mutate | Destructive Approval |
 |----------------------|------|-------|-------------|-----------------------|

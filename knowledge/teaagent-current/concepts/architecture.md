@@ -6,7 +6,7 @@ resource: "urn:teaagent:doc:docs/architecture.md"
 tags: ["teaagent", "architecture", "boundaries", "constitution"]
 teaagent:
   source_path: "docs/architecture.md"
-  source_sha256: "390eefd8020830cb581026d4e575ad25cdacbb5579ac5f0bade7be343da5c83f"
+  source_sha256: "d16ca57fd6511e1f093a4aac14fca83b909f42001e9f4a5f4a2ebdc52a85847d"
   docs_tier: "constitution"
   authority: "canonical"
   lifecycle: "current"
