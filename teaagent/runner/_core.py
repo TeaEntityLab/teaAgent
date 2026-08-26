@@ -100,6 +100,44 @@ def validate_tool_decision(decision_json: dict) -> tuple[bool, str]:
     return True, ''
 
 
+def _absorb_pending_effect(
+    context: RunContext,
+    observations: list[dict[str, Any]],
+    *,
+    run_id: str,
+    checkpoint_store: Any,
+) -> None:
+    """EFX-001: convert a checkpointed non-idempotent pending effect into an
+    OUTCOME_UNKNOWN observation, mark its digest unconfirmed, and persist.
+    Idempotent pendings are simply cleared (retry-safe by contract).
+    """
+    pending = context.get('pending_effect')
+    if not isinstance(pending, dict):
+        return
+    if not pending.get('idempotent', False):
+        digest = pending.get('payload_digest')
+        if isinstance(digest, str) and digest:
+            raw_unconfirmed = context.get('unconfirmed_effects')
+            unconfirmed = (
+                list(raw_unconfirmed) if isinstance(raw_unconfirmed, list) else []
+            )
+            if digest not in unconfirmed:
+                unconfirmed.append(digest)
+            context['unconfirmed_effects'] = unconfirmed
+        observations.append(
+            {
+                'call_id': pending.get('call_id'),
+                'tool_name': pending.get('tool_name'),
+                'error': 'OUTCOME_UNKNOWN',
+                'retry_safe': False,
+                'interrupted': True,
+            }
+        )
+    context.pop('pending_effect', None)
+    if checkpoint_store is not None:
+        checkpoint_store.save(run_id, context)
+
+
 class AgentRunner:
     """Executes an agent run loop: decide, dispatch tools, enforce budgets, record audit events.
 
@@ -382,31 +420,12 @@ class AgentRunner:
             for k, v in initial_context_extra.items():
                 if k != 'task':
                     cast(dict[str, Any], context)[k] = v
-        pending = context.get('pending_effect')
-        if isinstance(pending, dict) and not pending.get('idempotent', False):
-            digest = pending.get('payload_digest')
-            if isinstance(digest, str) and digest:
-                raw_unconfirmed = context.get('unconfirmed_effects')
-                unconfirmed = (
-                    list(raw_unconfirmed) if isinstance(raw_unconfirmed, list) else []
-                )
-                if digest not in unconfirmed:
-                    unconfirmed.append(digest)
-                context['unconfirmed_effects'] = unconfirmed
-            observations.append(
-                {
-                    'call_id': pending.get('call_id'),
-                    'tool_name': pending.get('tool_name'),
-                    'error': 'OUTCOME_UNKNOWN',
-                    'retry_safe': False,
-                    'interrupted': True,
-                }
-            )
-            context.pop('pending_effect', None)
-            if self.checkpoint_store is not None:
-                self.checkpoint_store.save(current_run_id, context)
-        elif isinstance(pending, dict):
-            context.pop('pending_effect', None)
+        _absorb_pending_effect(
+            context,
+            observations,
+            run_id=current_run_id,
+            checkpoint_store=self.checkpoint_store,
+        )
         if self.decision_log is not None:
             summary = self.decision_log.inject_summary()
             if summary:

@@ -35,6 +35,68 @@ class PreparedRunResume:
         }
 
 
+def _compact_observations(
+    observations: list[dict[str, Any]],
+    *,
+    auto_compact: bool,
+) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
+    """Keep the most recent 20 observations when history grows past 40."""
+    if auto_compact and len(observations) > 40:
+        return observations[-20:], {
+            'resume_compaction': {'truncated': True, 'kept_observations': 20}
+        }
+    return observations, None
+
+
+def _resolve_pending_approval(
+    *,
+    approval_store: Any,
+    run_id: str,
+    pending: dict[str, Any],
+    approve_call_ids: frozenset[str],
+    auto_approve_pending: bool,
+    existing_warning: str | None,
+) -> tuple[str | None, str | None]:
+    """Resolve one stored pending approval. Returns (auto_approved, warning)."""
+    digest = pending.get('argument_digest')
+    call_id = pending['call_id']
+
+    # If the caller explicitly pre-approved this call, skip silently
+    # — no re-grant, no auto-approval flag, no warning (SURF-010 P0).
+    if call_id in approve_call_ids:
+        return None, existing_warning
+    if not digest:
+        return None, (
+            f"Pending call '{call_id}' is a legacy record and cannot be "
+            f'auto-approved safely due to redacted arguments. '
+            f'Please approve explicitly with --approve-call-id {call_id}.'
+        )
+    if auto_approve_pending and not existing_warning:
+        _ensure_scoped_approval(approval_store, run_id, pending, digest)
+        return call_id, existing_warning
+    if not existing_warning:
+        return None, f'run {run_id} has a pending approval'
+    return None, existing_warning
+
+
+def _unmatched_effect_warning(
+    checkpoint: dict[str, Any] | None,
+) -> str | None:
+    """EFX-001: warning text for a checkpointed non-idempotent pending effect."""
+    if not isinstance(checkpoint, dict):
+        return None
+    pending_effect = checkpoint.get('pending_effect')
+    if not isinstance(pending_effect, dict) or pending_effect.get('idempotent', False):
+        return None
+    call = pending_effect.get('call_id', 'unknown')
+    tool = pending_effect.get('tool_name', 'unknown')
+    return (
+        f"Unmatched mutating tool start '{call}' ({tool}) is "
+        'unconfirmed (OUTCOME_UNKNOWN). Blind rerun can duplicate '
+        'a non-idempotent mutation.'
+    )
+
+
 def prepare_run_resume(
     root: str | Path,
     run_id: str,
@@ -80,49 +142,25 @@ def prepare_run_resume(
             initial_context_extra = {
                 k: v for k, v in checkpoint.items() if k not in ('task', 'observations')
             }
-            pending_effect = checkpoint.get('pending_effect')
-            if isinstance(pending_effect, dict) and not pending_effect.get(
-                'idempotent', False
-            ):
-                call = pending_effect.get('call_id', 'unknown')
-                tool = pending_effect.get('tool_name', 'unknown')
-                pending_warning = (
-                    f"Unmatched mutating tool start '{call}' ({tool}) is "
-                    'unconfirmed (OUTCOME_UNKNOWN). Blind rerun can duplicate '
-                    'a non-idempotent mutation.'
-                )
+            pending_warning = _unmatched_effect_warning(checkpoint)
         else:
             initial_observations = store.observations_for_run(run_id)
-            if auto_compact and len(initial_observations) > 40:
-                initial_observations = initial_observations[-20:]
-                initial_context_extra = {
-                    'resume_compaction': {
-                        'truncated': True,
-                        'kept_observations': 20,
-                    }
-                }
+            initial_observations, initial_context_extra = _compact_observations(
+                initial_observations, auto_compact=auto_compact
+            )
 
         pending = store.pending_approval_for_run(run_id)
         if pending:
-            digest = pending.get('argument_digest')
-            call_id = pending['call_id']
-
-            # If the caller explicitly pre-approved this call, skip silently
-            # — no re-grant, no auto-approval flag, no warning (SURF-010 P0).
-            if call_id in approve_call_ids:
-                pass
-            elif not digest:
-                pending_warning = (
-                    f"Pending call '{call_id}' is a legacy record and cannot be "
-                    f'auto-approved safely due to redacted arguments. '
-                    f'Please approve explicitly with --approve-call-id {call_id}.'
-                )
-            elif auto_approve_pending and not pending_warning:
-                _ensure_scoped_approval(approval_store, run_id, pending, digest)
-                auto_approved = call_id
-            elif not pending_warning:
-                pending_warning = f'run {run_id} has a pending approval'
-
+            auto_approved, extra_warning = _resolve_pending_approval(
+                approval_store=approval_store,
+                run_id=run_id,
+                pending=pending,
+                approve_call_ids=approve_call_ids,
+                auto_approve_pending=auto_approve_pending,
+                existing_warning=pending_warning,
+            )
+            if extra_warning is not None:
+                pending_warning = extra_warning
     return PreparedRunResume(
         run_id=run_id,
         original_task=original_task,
