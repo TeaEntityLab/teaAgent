@@ -1,6 +1,6 @@
 # TeaAgent Terminology Guide
 
-**Last reviewed:** 2026-06-10
+**Last reviewed:** 2026-08-26 (Effect Authority Vocabulary added; EFX-001–003)
 
 > **Review trigger:** Canonical terminology or state vocabulary changes.
 
@@ -46,6 +46,19 @@ Tool names use underscores:
 
 ### Documentation Reference
 When writing documentation, use the hyphenated form for CLI examples and underscored form for code examples.
+
+
+## Effect Authority Vocabulary (EFX)
+
+Governance terms introduced by the durable-effect guards. Use these exact
+nouns in docs, audit output, and operator guidance; do not invent synonyms.
+
+| Term | Meaning |
+| --- | --- |
+| **external effect** | A tool annotation (`external_effect=True`) marking actions that change systems outside the workspace. Local-only: remote MCP/vendor hints cannot set it to false. |
+| **unmatched start** | An audited `tool_call_started` with no matching completion, failure, or checkpoint settlement — typically after process death mid-dispatch. |
+| `OUTCOME_UNKNOWN` | The disclosure status recorded for an unmatched non-idempotent start. Disclosure, not settlement: inspect run, workspace, and external system before any new authorized attempt; blind redispatch is refused. |
+| **payload digest** | Canonical hash of tool name plus arguments. One-time approvals bind to it and are consumed at authorization, so a grant cannot authorize changed arguments. |
 
 ## Phase Naming
 
