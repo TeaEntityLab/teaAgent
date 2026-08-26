@@ -7,6 +7,7 @@ reflective-risk report or an explicit acknowledgement.
 from __future__ import annotations
 
 from scripts.check_high_risk_paths import (
+    ack_references_existing_report,
     has_risk_report,
     high_risk_files,
     load_patterns,
@@ -46,3 +47,43 @@ def test_risk_report_satisfies_gate() -> None:
     assert has_risk_report(['teaagent/policy.py', 'docs/reviews/abc-risk.md'])
     # A non-risk doc does not satisfy the gate.
     assert not has_risk_report(['docs/reviews/notes.md', 'teaagent/policy.py'])
+
+
+def test_ack_with_existing_report_reference_passes() -> None:
+    assert ack_references_existing_report(
+        'ref docs/reviews/efx-001-003-durable-effect-risk.md: perf reorder'
+    )
+
+
+def test_ack_without_report_reference_fails() -> None:
+    assert not ack_references_existing_report('trivial reorder only')
+    assert not ack_references_existing_report('')
+
+
+def test_ack_citing_missing_report_fails() -> None:
+    assert not ack_references_existing_report(
+        'ref docs/reviews/nonexistent-risk.md: stale ref'
+    )
+
+
+def test_main_rejects_ack_without_report_reference(monkeypatch, capsys) -> None:
+    from scripts import check_high_risk_paths as gate
+
+    monkeypatch.setattr(gate, 'load_patterns', lambda: ['teaagent/policy.py'])
+    monkeypatch.setattr(gate, '_staged_files', lambda: ['teaagent/policy.py'])
+    monkeypatch.setenv('TEAAGENT_RISK_ACK', 'trivial reorder only')
+    assert gate.main() == 1
+    assert 'must cite an existing risk report' in capsys.readouterr().out
+
+
+def test_main_accepts_ack_with_existing_report_reference(monkeypatch, capsys) -> None:
+    from scripts import check_high_risk_paths as gate
+
+    monkeypatch.setattr(gate, 'load_patterns', lambda: ['teaagent/policy.py'])
+    monkeypatch.setattr(gate, '_staged_files', lambda: ['teaagent/policy.py'])
+    monkeypatch.setenv(
+        'TEAAGENT_RISK_ACK',
+        'ref docs/reviews/efx-001-003-durable-effect-risk.md: follow-up',
+    )
+    assert gate.main() == 0
+    assert 'high-risk paths acknowledged' in capsys.readouterr().out

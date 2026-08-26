@@ -7,10 +7,12 @@ review-institution-gate), the change must be accompanied by a reflective-risk
 report at ``docs/reviews/<id>-risk.md``, or explicitly acknowledged.
 
 The gate passes when ANY of:
-  - no staged file matches a high-risk pattern;
   - a ``docs/reviews/*-risk.md`` file is staged in the same commit;
-  - ``TEAAGENT_RISK_ACK`` is set (records an explicit acknowledgement reason),
-    mirroring the repo's ``ALLOW_TEST_WEAKENING`` escape-hatch convention.
+  - ``TEAAGENT_RISK_ACK`` cites an existing ``docs/reviews/*-risk.md`` report
+    plus a reason (``ref docs/reviews/<id>-risk.md: <reason>``), mirroring the
+    repo's ``ALLOW_TEST_WEAKENING`` escape-hatch convention while keeping
+    permanent in-tree provenance for the acknowledgement (panel L3,
+    roadmap-rethink-lens-review-2026-08-26).
 
 Usage:
     python3 scripts/check_high_risk_paths.py
@@ -24,6 +26,7 @@ from __future__ import annotations
 
 import fnmatch
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -32,6 +35,7 @@ import yaml
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _CONFIG = _REPO_ROOT / 'scripts' / 'high_risk_paths.yaml'
+_ACK_REPORT_RE = re.compile(r'docs/reviews/[\w./-]+-risk\.md')
 _RISK_REPORT_GLOB = 'docs/reviews/*-risk.md'
 
 
@@ -62,6 +66,15 @@ def has_risk_report(staged: list[str]) -> bool:
     return any(fnmatch.fnmatch(f, _RISK_REPORT_GLOB) for f in staged)
 
 
+def ack_references_existing_report(ack: str) -> bool:
+    """True when *ack* cites at least one risk-report path that exists on disk.
+
+    Keeps acknowledgements anchored to a permanent in-tree artifact instead of
+    an ephemeral environment string (audit-provenance requirement).
+    """
+    return any((_REPO_ROOT / match).is_file() for match in _ACK_REPORT_RE.findall(ack))
+
+
 def _staged_files() -> list[str]:
     result = subprocess.run(
         ['git', 'diff', '--cached', '--name-only', '--diff-filter=ACMR'],
@@ -84,6 +97,11 @@ def main() -> int:
 
     ack = os.environ.get('TEAAGENT_RISK_ACK')
     if ack:
+        if not ack_references_existing_report(ack):
+            print('❌ TEAAGENT_RISK_ACK must cite an existing risk report:')
+            print('  TEAAGENT_RISK_ACK="ref docs/reviews/<id>-risk.md: <reason>"')
+            print(f'  (received: {ack!r})')
+            return 1
         print(f'high-risk paths acknowledged (TEAAGENT_RISK_ACK={ack!r}):')
         for f in matched:
             print(f'  - {f}')
@@ -96,7 +114,10 @@ def main() -> int:
     print('review-system.md §4.2: changes to approval / policy / audit / sandbox /')
     print('budget / runner gates require a reflective-risk report. Either:')
     print('  - run the reflective-risk skill and stage docs/reviews/<id>-risk.md, or')
-    print('  - set TEAAGENT_RISK_ACK="<reason>" to acknowledge (recorded in output).')
+    print(
+        '  - set TEAAGENT_RISK_ACK="ref docs/reviews/<id>-risk.md: <reason>" '
+        'to acknowledge an existing report.'
+    )
     return 1
 
 

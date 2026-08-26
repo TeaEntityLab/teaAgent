@@ -407,6 +407,7 @@ def test_roadmap_rethink_lens_review_candidate_adoption_state() -> None:
     assert '## Candidate Adoption Ledger' in lens_review
     assert '| L1 |' in lens_review
     assert '| L2 |' in lens_review
+    assert '| L3 |' in lens_review
     # L1: OperatorUsability — stale vacuous gate replaced.
     assert 'until live-credential dry-run proof exists' in daily
     assert 'until acceptance-tier evidence exists' not in daily

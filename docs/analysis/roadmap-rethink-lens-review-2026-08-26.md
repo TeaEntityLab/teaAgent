@@ -41,6 +41,7 @@ H5 Blocked; EFX-FUTURE Held. Authority chain unchanged
 |---|---|---|---|---|
 | L1 | Replace stale "acceptance-tier evidence" operator gate with "live-credential dry-run proof" gate | adopted | Providerless acceptance landed in `tests/acceptance/test_efx_durable_effect_flow.py` (669 guard); stale gate invited operators to re-enable live creds | Guarded by `test_durable_effect_review_candidate_adoption_state`; revisit if live dry-run lands |
 | L2 | Qualify H4 Next Gate as "EFX live-proof closure" + name ADR-0031 review; clarify RBAC row as decision-packet review due 2026-09-12 | adopted | Runtime guards + providerless acceptance are local-only; "local closure" without qualification conflated guards with settlement | Guarded same test; next trigger is the 2026-09-12 ADR-0031 packet itself |
+| L3 | Require `TEAAGENT_RISK_ACK` to cite an existing `docs/reviews/*-risk.md` (ProvenanceSecurity Q4) | adopted | Env-only acks leave no in-tree artifact — audit-provenance erosion ("normalization of deviance" objection); `39fd5a8` ack is unrecoverable from history | Enforced by `scripts/check_high_risk_paths.py` (`ref <report>: <reason>`); guarded by `tests/test_check_high_risk_paths.py` |
 
 ## Shared Findings
 
