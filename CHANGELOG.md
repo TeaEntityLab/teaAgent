@@ -4,6 +4,31 @@ All notable changes to TeaAgent are tracked here.
 
 ## Unreleased
 
+- **EFX durable-effect governance guards** (`87d1c61`, `26e80d4`, `62ddf99`):
+  - `external_effect` tool annotation: GitHub PR create/review, browser
+    navigate/click/fill/evaluate, and ALL remote MCP tools fail closed in
+    read-only/workspace-write and require approval in prompt mode; remote
+    `readOnlyHint`/`destructiveHint` hints are untrusted (EFX-002).
+  - Unmatched mutating-tool starts checkpoint `pending_effect` before execute;
+    resume surfaces `OUTCOME_UNKNOWN` with `retry_safe=false` and refuses
+    blind non-idempotent redispatch (EFX-001).
+  - One-time JIT approvals bind a canonical payload digest and are consumed
+    at authorization — changed arguments cannot replay a grant; omitted call
+    IDs derive digest-suffixed identities (EFX-003).
+  - Providerless acceptance: `tests/acceptance/test_efx_durable_effect_flow.py`
+    (acceptance guard now 669).
+- **Approval/ops surface** (`839a847`, `39fd5a8`, `2684b31`):
+  - `daily`/`preflight` warn when `GITHUB_TOKEN`/`GH_TOKEN` are ambient.
+  - High-risk-path commits: `TEAAGENT_RISK_ACK` must cite an existing
+    `docs/reviews/*-risk.md` (`ref <report>: <reason>`).
+  - Session-approved tools skip redundant payload hashing on the approval hot path.
+- **Tests/docs hardening** (`b48d773`..`f8c8233`): hermetic skill-diagnostics,
+  GitHub no-token, and resume-prep tests; mutation-smoke registry realigned
+  with both-flag killer tests; release checklist mandates recorded full-suite
+  evidence (latest: 6668 passed / 0 failed / 25 skipped, coverage 78.37%);
+  docs aging cleared to zero stale; Effect Authority vocabulary added to the
+  terminology guide; CLI command-group roster drift-guarded.
+
 - **Plan execution batch (system-transparency / comprehensive plans)**:
   - `teaagent.async_bridge.run_coroutine_sync` — approval/multisig paths no longer call `asyncio.set_event_loop` (ADR 009).
   - ACP stdio loop emits JSON-RPC errors instead of swallowing exceptions.
