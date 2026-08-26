@@ -4,7 +4,7 @@
 
 **Stale threshold:** 90 days since `Last reviewed`
 **Current-truth docs scanned:** 17
-**Needs attention (working tier only):** 10
+**Needs attention (working tier only):** 9
 **Archive-tier docs (exempt from staleness):** 0
 
 Regenerate: `python3 scripts/report_docs_aging.py`
@@ -49,12 +49,6 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 | Document | Status | Last reviewed | File mtime | Notes |
 | --- | --- | --- | --- | --- |
 | `docs/release-checklist.md` | stale_by_mtime | 2026-06-07 | 2026-07-22 | Missing owner banner; File modified after last reviewed date |
-
-### verification
-
-| Document | Status | Last reviewed | File mtime | Notes |
-| --- | --- | --- | --- | --- |
-| `docs/acceptance.md` | stale_by_mtime | 2026-06-21 | 2026-06-22 | File modified after last reviewed date |
 
 ## Review Triggers (Current-Truth Docs)
 
