@@ -83,6 +83,7 @@ Use this short list instead of scanning every dated analysis file.
 | Reflective intent review | [Intent Critical Review And Worklist](analysis/intent-critical-review-and-worklist-2026-06-12.md) | Historical input to harness-first direction. |
 | 2026-07-22 intent and roadmap Socratic survey | [Intent and Roadmap Socratic Survey](analysis/intent-roadmap-socratic-survey-2026-07-22.md) | Dated evidence snapshot with panel consensus, adoption ledger, and 30/60/90 plan; not current truth. |
 | 2026-08-25 durable-effect roadmap review | [Durable-Effect Roadmap Socratic Review](analysis/durable-effect-roadmap-socratic-review-2026-08-25.md) | Dated evidence with seven-lens consensus, three providerless probes, EFX-001–003 acceptance contracts, and Candidate Adoption Ledger; not current truth. |
+| 2026-08-26 roadmap rethink lens review | [Roadmap Rethink — Parallel Lens Review](analysis/roadmap-rethink-lens-review-2026-08-26.md) | Dated evidence: seven-lens panel verdict on post-EFX state, adopted wording changes L1–L3, and Candidate Adoption Ledger; not current truth. |
 | Documentation system review | [Historical Evidence Index](archive/INDEX.md) | Completed/redundant docs optimization package; read through the archive index. |
 | Older review packages, competitor surveys, daily-driver packages, and completed plans | [Historical Evidence Index](archive/INDEX.md) | Preserved provenance; do not treat as current status. |
 
