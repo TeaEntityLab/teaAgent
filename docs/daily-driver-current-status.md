@@ -11,7 +11,7 @@
 > `docs/analysis/`.
 >
 > **Review trigger:** TUI, chat, agent mode, approval, cost, undo, or resume behavior changes.
-> **Last reviewed:** 2026-08-25 (EFX-001–003 runtime guards and providerless acceptance landed; live GitHub/browser/provider proof still missing)
+> **Last reviewed:** 2026-08-26 (EFX-001–003 runtime guards, providerless acceptance, and ambient-credential warning landed; live GitHub/browser/provider proof still missing)
 
 This page is the short daily-use entry point for TeaAgent's TUI, TUI chat, and
 agent mode. It is intentionally more practical than the audit corpus.
@@ -39,6 +39,7 @@ daily-driver plan is historical evidence, not an active scheduling authority.
 ## Solid today
 
 - Approval governance now fail-closes GitHub/browser/MCP external mutations in prompt/read-only/workspace-write, consumes one-time JIT grants, and refuses blind redispatch of unmatched non-idempotent starts. Providerless acceptance is in `tests/acceptance/test_efx_durable_effect_flow.py`. Keep live credentials off until a live-credential dry-run exists; see "Known issues."
+- `daily`/`preflight` warn when `GITHUB_TOKEN`/`GH_TOKEN` sit in the shell environment: external-effect tools stay fail-closed until approved, but remove ambient tokens unless authorizing live use (EFX-002).
 - `teaagent chat` prints successful task answers and no longer marks successful tasks as failures.
 - `teaagent chat` `/cost` and `/budget` are wired to real session cost. Budget semantics are explicit: `None` means unlimited, while `0` is a real zero cap. Cost display labels whether the value is actual, estimated, or unavailable.
 - `teaagent chat` `/undo` uses the undo journal and preserves unrelated manual edits.
