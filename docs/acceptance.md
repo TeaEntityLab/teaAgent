@@ -173,11 +173,14 @@ Product claim-to-test traceability: [`docs/architecture/claim-to-test-traceabili
 ## Current Status
 
 The live acceptance count above is the only current acceptance-count claim in
-this document. The last recorded supported-interpreter full-suite verification
-in the June 5 daily-driver finalization package reported `4265 passed, 0 failed, 6 skipped`
-on Python 3.14.4 (4265 = 4090 baseline + 175 new tests across P0–P2 workstreams).
-Treat that full-suite number as a dated evidence snapshot, not as a substitute
-for re-running `python3 -m pytest -q` before a release or safety claim.
+this document. Latest recorded supported-interpreter full-suite verification:
+`6668 passed, 0 failed, 25 skipped` on Python 3.14.7 at commit `026a8cc`
+(2026-08-26, full `pytest tests -q`, 1564s). Earlier snapshot: June 5
+daily-driver finalization package reported `4265 passed, 0 failed, 6 skipped`
+on Python 3.14.4 (4265 = 4090 baseline + 175 new tests across P0–P2
+workstreams). Treat any full-suite number as a dated evidence snapshot, not as
+a substitute for re-running `python3 -m pytest -q` before a release or safety
+claim.
 
 Note: 12 pre-existing test failures were fixed as part of this stream — 5 caused
 by the new built-in RSS skill discovery path (patched `_BUILTIN_SKILL_DIR`), 3

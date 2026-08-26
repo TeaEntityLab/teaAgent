@@ -12,7 +12,7 @@
 > **Last reviewed:** 2026-08-25
 
 **Status:** Canonical roadmap tracking document
-**Last updated:** 2026-08-26 (durable-effect roadmap review: the owner-operator is the current validated persona; H4 now separates run continuity from effect correctness; EFX-001–003 runtime guards landed on existing seams with focused tests and providerless acceptance; live GitHub/browser/provider proof still required for Complete; generic external-effect infrastructure remains held. Prior acceptance tier snapshot `628 passed` at `85109e4` on 2026-06-10 remains historical evidence, not a current collection; full-suite count unverified — see [suite truncation analysis](analysis/suite-truncation-root-cause-2026-06-10.md))
+**Last updated:** 2026-08-26 (durable-effect roadmap review: the owner-operator is the current validated persona; H4 now separates run continuity from effect correctness; EFX-001–003 runtime guards landed on existing seams with focused tests and providerless acceptance; live GitHub/browser/provider proof still required for Complete; generic external-effect infrastructure remains held. Full suite verified 2026-08-26 at `026a8cc`: `6668 passed, 0 failed, 25 skipped`; prior snapshot `628 passed` at `85109e4` on 2026-06-10 is historical — see [suite truncation analysis](analysis/suite-truncation-root-cause-2026-06-10.md))
 **Owner:** TBD
 
 > **Canonical source of truth.** All other status docs (`docs/security/risk-register-and-threat-model-2026-06-02.md`, `docs/analysis/defeat-scenarios-and-cascade-effects-2026-06-02.md`, `docs/analysis/active-findings-status-ledger-2026-06-06.md`) defer to this document for overall completion status. Per-item test evidence lives in the risk register §9.
