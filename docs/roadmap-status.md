@@ -70,6 +70,8 @@ still required for Complete.
 
 Evidence and adoption status:
 [Durable-Effect Roadmap Socratic Review](analysis/durable-effect-roadmap-socratic-review-2026-08-25.md).
+Current execution sequence (non-authoritative):
+[Current Roadmap Execution Plan](plans/current-roadmap-execution-plan-2026-08-26.md).
 
 ## Milestones
 

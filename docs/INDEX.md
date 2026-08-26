@@ -1,7 +1,7 @@
 # TeaAgent Documentation Index
 # 2026-08-26
 
-> **Last reviewed:** 2026-08-26 (roadmap-rethink lens review indexed)
+> **Last reviewed:** 2026-08-26 (current roadmap execution plan indexed; ADR-0029 active queue reconciled)
 > **Review trigger:** New front-door docs, supersession links, roadmap evidence, or validation command changes.
 > **Owner:** docs
 
@@ -122,6 +122,7 @@ Use this short list instead of scanning every dated analysis file.
 
 | Plan | Use it for |
 | --- | --- |
+| [Current Roadmap Execution Plan](plans/current-roadmap-execution-plan-2026-08-26.md) | Current authorized sequence: owner-gated EFX live proof, ADR-0031 evidence/decision, and trigger-only held lanes. It does not promote H0–H6. |
 | [Work Direction Decomposition](plans/work-direction-decomposition-2026-06-10.md) | WD-A … WD-H backlog with acceptance gates; **execution closed except WDH-002 partial** — see [Work Direction Execution Index](plans/work-direction-execution-index-2026-06-10.md) for current closure status. |
 | [Documentation Optimization Master Plan](plans/documentation-optimization-master-plan-2026-06-04.md) | Prioritizing documentation work by stability, UX, risk, and ROI. |
 | [Documentation Optimization Work Items](work-log/documentation-optimization-work-items-2026-06-04.md) | Concrete task execution ledger. |

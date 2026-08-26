@@ -446,6 +446,9 @@ def test_consensus_validation_deletion_preserves_recovery_record() -> None:
     adr = (root / 'docs' / 'adr' / '0029-consensus-validation-deferred.md').read_text(
         encoding='utf-8'
     )
+    forward_index = (
+        root / 'docs' / 'specs' / 'held-roadmap-forward-spec-index-2026-07-11.md'
+    ).read_text(encoding='utf-8')
     assert '### 2.1 Pre-deletion preservation record (2026-07-22)' in spec
     assert '`ConsensusRuleType`: `N_OF_M`, `UNANIMOUS`, `MAJORITY`' in spec
     assert '`ConsensusValidator`: `create_rule`, `request_consensus`' in spec
@@ -456,6 +459,9 @@ def test_consensus_validation_deletion_preserves_recovery_record() -> None:
     assert 'Restoring from history is evidence\nrecovery, not authority' in spec
     assert 'Preservation requirement before deletion' in adr
     assert 'symbol-level\ninventory, wire-blockers, and git recovery commands' in adr
+    assert 'ADR-0029 Option D executed and recovery record retained' in forward_index
+    assert 'ADR-0029 expiry 2026-12-10' not in forward_index
+    assert '| 2026-12-10 | ADR-0029:' not in forward_index
 
 
 def test_h4_evidence_prep_surfaces_are_documented() -> None:

@@ -11,7 +11,7 @@
 > `docs/analysis/`.
 >
 > **Review trigger:** TUI, chat, agent mode, approval, cost, undo, or resume behavior changes.
-> **Last reviewed:** 2026-08-26 (EFX-001–003 runtime guards, providerless acceptance, and ambient-credential warning landed; live GitHub/browser/provider proof still missing)
+> **Last reviewed:** 2026-08-26 (EFX providerless proof/live-proof gate, ambient-credential warning, and current roadmap execution sequence reviewed)
 
 This page is the short daily-use entry point for TeaAgent's TUI, TUI chat, and
 agent mode. It is intentionally more practical than the audit corpus.
@@ -75,6 +75,9 @@ Owner friction enters through the
 [Operator Friction Log](work-log/operator-friction-log.md); broader held work
 stays in the
 [dated decision queue](specs/held-roadmap-forward-spec-index-2026-07-11.md#8-dated-decision-queue).
+The
+[Current Roadmap Execution Plan](plans/current-roadmap-execution-plan-2026-08-26.md)
+sequences only work admitted by those sources; it cannot promote a held item.
 
 ## Latest project-level cross-review
 

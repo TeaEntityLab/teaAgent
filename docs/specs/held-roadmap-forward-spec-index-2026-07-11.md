@@ -22,7 +22,11 @@
 > owner decisions, ADR acceptance, or implementation scheduling.
 >
 > **Review trigger:** A companion spec changes status, EFX-FUTURE gains an
-> owner-ratified promise, ADR-0031 reaches expiry, or harness-first direction changes.
+> owner-ratified promise, ADR-0031 reaches expiry, or harness-first direction
+> changes.
+>
+> **Last reviewed:** 2026-08-26 (ADR-0029 Option D execution reconciled;
+> EFX-FUTURE and ADR-0031 gates reviewed).
 
 ## 1. Why this packet exists
 
@@ -73,7 +77,7 @@ If a historical plan schedules work DR-006 holds, DR-006 wins.
 | H2 multi-surface continuity | M2 foundation complete | IDE/dashboard/cloud parity is external/future | harness-first descope | No implementation spec added; existing parity docs/tests remain sufficient. |
 | H3 ecosystem trust | M3 + three-concept onboarding complete | Further simplification needs real daily-use signal | `friction-driven` | No speculative UX work; cockpit spec preserves current operator answers. |
 | H4 policy/RBAC | RBAC enforce path exists; shipped default shadow; policy "enforce" label is advisory-only | Owner-demand hold + ADR-0031 evidence window | `governance-gap`, expiry 2026-09-12 (decision packet review) | Promotion spec + 7 adversarial checks. |
-| H4 consensus validation | 658-line module is experimental/unwired; CLI uses another consensus engine | ADR-0029 deliberately avoids a third consensus gate | expiry decision 2026-12-10 | Wire-or-delete disposition + import-graph guard + 5 behavioral pins. |
+| H4 consensus validation | Deleted/quarantined 2026-07-22; ADR-0029 Option D executed and recovery record retained | Resolved early; no remaining implementation or expiry decision | New owner/governance decision required for any revival | Keep disposition/recovery spec; no 2026-12-10 decision remains. |
 | H4 effect correctness boundary | EFX-001–003 local dispatch/approval gaps are reproduced and promoted on current-truth surfaces; ADR-0042 still bounds external reversal | Local fixes do not establish exactly-once, provider settlement, business acceptance, reconciliation, or distributed safety | `owner-override` plus provider-specific evidence | Keep EFX-FUTURE held; reuse existing governed seams; create no generic effect subsystem or companion-spec stack. |
 | M4 background lifecycle | Detached process store, attach, liveness, cockpit rows exist | Orphan semantics and background transition events are not pinned as acceptance | DR-006 carve-out (`owner-override`) | BG-001 acceptance spec + 3 checks + activation skip. |
 | M4 operator cockpit | CLI shared snapshot + TUI tabs/data sources exist | Needs owner dogfood proof against M4 exit question | DR-006 carve-out (`owner-override`) | Acceptance matrix + v1 schema pins. |
@@ -190,9 +194,6 @@ flowchart TD
     EXT[Real non-maintainer recruited + consent] --> PILOT[WDH-002 session]
     DOG[Co-maintainer dogfood] --> BG[BG-001 lifecycle]
     DOG --> COC[Cockpit acceptance]
-    EXP[ADR-0029 expiry 2026-12-10] --> CD{Consensus decision}
-    CD -->|demand + quorum fix| CW[Wire behind approval queue]
-    CD -->|no demand| DEL[Delete/quarantine]
     H4 --> HR1[Owner sign-off]
     UPD --> TRUST[Signature + ordering + extraction blockers fixed]
     TRUST --> HR2[Wire update CLI]
@@ -209,11 +210,15 @@ not create authority.
 | --- | --- | --- |
 | 2026-09-12 | ADR-0031: promote, extend, or revert H4 shadow wiring | 30-day receipt analysis, policy/RBAC coverage, benchmark, rollback proof, owner sign-off |
 | First dated owner decision to widen ADR-0042 or first provider-specific settlement need | Decide whether EFX-FUTURE enters the product promise | EFX-001–003 closure, provider idempotency/status/reconciliation contract, effect-specific crash evidence, non-goals, and owner rationale |
-| 2026-12-10 | ADR-0029: wire or delete consensus validation | Import-graph guard, demand evidence, quorum-semantics decision, deletion/wiring checklist |
 | First qualifying participant | Start WDH-002 real session | Consent/privacy pre-flight; protocol §5 |
 | First owner update friction | Consider `teaagent update` | Signed update trust boundary + dormant blocker fixes |
 | First funded live-provider gate | Consider M5 promotion | ≥3 runs/route, variance + cost report, replay artifacts, owner decision |
 | M4 dogfood session | Evaluate BG-001 + cockpit subcriteria | Background/cockpit work-log evidence; cloud/gateway remain held |
+
+ADR-0029 is intentionally absent from the active queue. The owner executed
+Option D on 2026-07-22; the deleted design remains recoverable through
+`consensus-validation-disposition-spec-2026-07-11.md`, and any revival requires
+a new owner/governance decision.
 
 ## 9. Verification policy for this packet
 

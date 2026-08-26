@@ -15,19 +15,34 @@ _ACCEPTANCE_DIR = _REPO / 'tests' / 'acceptance'
 
 
 def _collect_acceptance_count() -> int:
-    # Prefer the repo venv so the acceptance count matches the project docs gate.
-    python = str(_VENV_PYTHON if _VENV_PYTHON.exists() else Path(sys.executable))
-    result = subprocess.run(
-        [python, '-m', 'pytest', str(_ACCEPTANCE_DIR), '--collect-only', '-q'],
-        capture_output=True,
-        text=True,
-        check=False,
-        cwd=_REPO,
+    """Prefer the repo venv, but fall back to the running interpreter.
+
+    A ``.venv`` can exist without pytest (e.g. recreated by a bare
+    ``uv venv``/``uv run --python``), so mere existence is not enough —
+    try each candidate until collection output parses.
+    """
+    candidates: list[str] = []
+    if _VENV_PYTHON.exists():
+        candidates.append(str(_VENV_PYTHON))
+    candidates.append(sys.executable)
+
+    failures: list[str] = []
+    for python in dict.fromkeys(candidates):
+        result = subprocess.run(
+            [python, '-m', 'pytest', str(_ACCEPTANCE_DIR), '--collect-only', '-q'],
+            capture_output=True,
+            text=True,
+            check=False,
+            cwd=_REPO,
+        )
+        output = f'{result.stdout}\n{result.stderr}'
+        match = re.search(r'(\d+)\s+tests?\s+collected', output)
+        if result.returncode == 0 and match:
+            return int(match.group(1))
+        failures.append(f'{python} (exit {result.returncode}):\n{output}')
+    raise AssertionError(
+        'Could not parse successful pytest collection output:\n' + '\n'.join(failures)
     )
-    output = f'{result.stdout}\n{result.stderr}'
-    match = re.search(r'(\d+)\s+tests?\s+collected', output)
-    assert match, f'Could not parse pytest collection output:\n{output}'
-    return int(match.group(1))
 
 
 def test_acceptance_doc_passed_count_matches_pytest_collect() -> None:
