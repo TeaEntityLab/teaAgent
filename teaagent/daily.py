@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -276,6 +277,16 @@ def build_harness_health_report(
     pending = [run.run_id for run in recent_runs or [] if run.pending_approval]
     if pending:
         warnings.append(f'pending approvals in recent runs: {", ".join(pending)}')
+    ambient_tokens = sorted(
+        name for name in ('GITHUB_TOKEN', 'GH_TOKEN') if os.environ.get(name)
+    )
+    if ambient_tokens:
+        warnings.append(
+            'ambient credential env vars detected ('
+            + ', '.join(ambient_tokens)
+            + '); external-effect tools fail closed until approved — remove '
+            'tokens unless authorizing live use (EFX-002)'
+        )
     return HarnessHealthReport(
         healthy=bool(base_health.get('healthy', False)),
         failures=list(base_health.get('failures', [])),

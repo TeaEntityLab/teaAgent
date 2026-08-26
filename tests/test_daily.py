@@ -83,3 +83,26 @@ def test_harness_health_warns_without_optional_indexes() -> None:
         assert payload['healthy']
         assert not any(payload['optional_indexes'].values())
         assert 'no optional context indexes are available' in payload['warnings']
+
+
+def test_harness_health_warns_on_ambient_github_token(monkeypatch) -> None:
+    monkeypatch.setenv('GITHUB_TOKEN', 'ambient-token')
+    monkeypatch.delenv('GH_TOKEN', raising=False)
+    with tempfile.TemporaryDirectory() as tmp:
+        payload = build_harness_health_report(
+            tmp, {'healthy': True, 'failures': [], 'warnings': []}
+        ).to_dict()
+    ambient = [w for w in payload['warnings'] if 'ambient credential' in w]
+    assert len(ambient) == 1
+    assert 'GITHUB_TOKEN' in ambient[0]
+    assert 'EFX-002' in ambient[0]
+
+
+def test_harness_health_silent_without_ambient_tokens(monkeypatch) -> None:
+    monkeypatch.delenv('GITHUB_TOKEN', raising=False)
+    monkeypatch.delenv('GH_TOKEN', raising=False)
+    with tempfile.TemporaryDirectory() as tmp:
+        payload = build_harness_health_report(
+            tmp, {'healthy': True, 'failures': [], 'warnings': []}
+        ).to_dict()
+    assert not any('ambient credential' in w for w in payload['warnings'])
