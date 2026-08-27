@@ -269,10 +269,13 @@ Aggregate packet (`build_h4_decision_packet.py`): 4 agent-prepared
 criteria, 1 human-required, `promotion_ready=false`.
 
 Criterion 1 having zero observations is honest evidence: the shadow
-wiring exists but has not been triggered in real runs. The owner must
-decide whether zero observations satisfies "30-day zero-false-positive
-window" or whether exercised shadow receipts are required before
-promotion. This plan takes no position on that adjudication.
+wiring exists and 5,690 historical events were scanned across 1,391
+audit logs, but 0 `h4_governance_shadow` events occurred because shadow
+mode has not been exercised in live runs. The owner must decide on
+2026-09-12 whether unexercised shadow receipts satisfy the "30-day
+zero-false-positive window" criterion or whether live shadow execution
+evidence is required before promotion. This plan takes no position on
+that adjudication.
 
 ### 6.2 Owner decision on 2026-09-12
 

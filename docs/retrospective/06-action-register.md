@@ -87,8 +87,8 @@ Legend: ✅ Done (committed) · 🟡 In progress · ⬜ Not started · 🔵 Alre
 | --- | --- | --- |
 | P0 | 9 | Security 3, Architecture 2, UX 2, Governance 2 |
 | P1 | 18 | Security 4, Governance 3, Architecture 5, UX 6 (including cross-dimensional items) |
-| P2 | 31 | Security 11, Governance 8, Architecture 7, UX 5 |
-| **Total** | **58** | |
+| P2 | 33 | Security 11, Governance 10, Architecture 7, UX 5 |
+| **Total** | **60** | |
 
 ### Status Summary
 

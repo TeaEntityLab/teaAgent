@@ -15,14 +15,14 @@ BASELINE = 99
 def count_violations(repo: Path) -> int:
     try:
         result = subprocess.run(
-            ['uv', 'run', 'ruff', 'check', 'teaagent/', '--select=C901'],
+            ['uv', 'run', 'ruff', 'check', '--no-cache', 'teaagent/', '--select=C901'],
             cwd=repo,
             capture_output=True,
             text=True,
         )
     except FileNotFoundError:
         result = subprocess.run(
-            ['ruff', 'check', 'teaagent/', '--select=C901'],
+            ['ruff', 'check', '--no-cache', 'teaagent/', '--select=C901'],
             cwd=repo,
             capture_output=True,
             text=True,
