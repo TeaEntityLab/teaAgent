@@ -60,8 +60,9 @@ def test_github_url_with_git_suffix_not_flagged() -> None:
 
 
 def test_should_ignore_self_and_retrospective() -> None:
-    """The script's own file and retrospective docs must be ignored."""
+    """The script's own file, its test file, and retrospective docs must be ignored."""
     assert _should_ignore('scripts/check_github_url_consistency.py')
+    assert _should_ignore('tests/test_validation_script_guards.py')
     assert _should_ignore('docs/retrospective/06-action-register.md')
     assert not _should_ignore('README.md')
     assert not _should_ignore('docs/USAGE.md')
