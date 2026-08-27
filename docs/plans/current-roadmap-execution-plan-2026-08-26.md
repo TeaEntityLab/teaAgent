@@ -317,14 +317,14 @@ admission gate. An empty scheduled queue is an acceptable result.
 
 ### Plan verification
 
-- [ ] `docs/roadmap-status.md` and `docs/backlog-priority.md` remain the only
+- [x] `docs/roadmap-status.md` and `docs/backlog-priority.md` remain the only
       owners of status and scheduling.
-- [ ] ADR-0029 has no stale 2026-12-10 active decision in the held-roadmap
+- [x] ADR-0029 has no stale 2026-12-10 active decision in the held-roadmap
       queue; Option D execution remains recoverable.
-- [ ] EFX-001..003 remain In Progress until live proof actually lands.
-- [ ] EFX-FUTURE, M4 cloud/SaaS, H5/M5, H6/M6, and WDH-002 remain held or
+- [x] EFX-001..003 remain In Progress until live proof actually lands.
+- [x] EFX-FUTURE, M4 cloud/SaaS, H5/M5, H6/M6, and WDH-002 remain held or
       blocked without their trigger.
-- [ ] ADR-0031 preparation never flips enforcement or claims Human Review.
+- [x] ADR-0031 preparation never flips enforcement or claims Human Review.
 
 ### Repository checks after plan/status edits
 
