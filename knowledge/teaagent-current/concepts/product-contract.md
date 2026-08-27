@@ -6,7 +6,7 @@ resource: "urn:teaagent:doc:docs/product-contract.md"
 tags: ["teaagent", "product", "governance", "constitution"]
 teaagent:
   source_path: "docs/product-contract.md"
-  source_sha256: "a2a3d67dad3cb3b49bf1940e8c5866ff7f81dd551cdccfb8c394a0e62687dfcb"
+  source_sha256: "b507d9538a2972af1e77e7bff118a0446f308f544f18f4ad5683973f7a8e007a"
   docs_tier: "constitution"
   authority: "canonical"
   lifecycle: "current"
