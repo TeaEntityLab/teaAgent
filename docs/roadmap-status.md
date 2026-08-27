@@ -54,6 +54,23 @@ A trigger opens evaluation outside the proved governance-gap lane; it does not c
 | H5 | Quality and eval loop | Prompt/runtime/model changes cannot silently degrade daily outcomes | TBD | Blocked — offline release gate exists | Low | Funded live-provider evidence + owner decision | Release eval gate in CI; offline conversational and deterministic repo-map fixture corpora gated; default no-model gate remains advisory |
 | H6 | Owner packaging and local distribution | Desktop/client-server and local release channels have supply-chain, update, rollback, and support plans for owner-operated use | TBD | On Hold — local proof exists; daily CLI unwired | Low | Owner update friction + trust-boundary proof | Single-platform update proof is reproducible via `scripts/prove_update_platform.py`; `update/*` remains intentionally absent from the daily CLI; no desktop packaging/session-attach proof |
 
+## North-Star Goals (G1-G6)
+
+Owner-ratified harness goals from the
+[Harness-First Direction](strategy/harness-first-direction-2026-06-13.md) §2.
+This table owns their current honest status; the identity document keeps the
+ratified wording. Adoption record:
+[whole-project lens review](analysis/whole-project-lens-review-2026-08-26.md).
+
+| Goal | Ratified outcome | Status | Evidence / gate |
+| --- | --- | --- | --- |
+| G1 | Daily task without consulting docs | Pending — Unmeasured | Friction log 5/5 owner entries closed; owner zero-friction attestation 2026-07-22; no doc-lookup metric exists |
+| G2 | Any run explained from one artifact | Pending — Unmeasured (surface exists) | `teaagent agent show <run>` plus run evidence summary (`tests/acceptance/test_run_evidence_summary_flow.py`); no one-screen acceptance signal yet |
+| G3 | One event spine | Complete — Rescoped by owner decision | Spine is a typed observability read-model with audit dual-write (`teaagent/runner/_events.py`, ADR-0032); approval/budget/hook enforcement stays inline per [M4](work-log/m4-budget-stays-inline-2026-06-13.md) and [M5](work-log/m5-hooks-observability-only-2026-06-13.md) (enforcement bridge assessed unsuitable) |
+| G4 | Extensible by hooks, not forks | Complete — tool dispatch scope | 8-event `HookRegistry` wired into tool dispatch (`teaagent/tools.py`); session-lifecycle hooks remain unwired |
+| G5 | Docs corpus carries its weight | Complete | Constitution tier 8 ≤ 12; aging dashboard green; ~500-file corpus with 259 archive-tiered |
+| G6 | Tests prove behavior, not construction | Complete | 586 test files typed (contract/behavior/adversarial/lifecycle) via `scripts/audit_test_quality.py` |
+
 ## Roadmap-Neutral Governance-Gap Intake - Effect Authority
 
 These items do not reopen or renumber H0-H6. `Promote` is the scheduling

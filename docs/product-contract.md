@@ -1,6 +1,6 @@
 # TeaAgent Product Contract
 
-> **Last reviewed:** 2026-06-13
+> **Last reviewed:** 2026-08-26
 > **Review trigger:** Persona framing, external-adoption claims, or strategic positioning changes.
 > **Direction record:** [Harness-First Direction](strategy/harness-first-direction-2026-06-13.md)
 
@@ -12,7 +12,7 @@ TeaAgent is a **governance-first coding-agent harness** for autonomous developme
 - **Provider-adapter based** — connects to LLM providers; it is not a model framework.
 - **Tool-boundary centered** — all side effects flow through `ToolRegistry`, `ApprovalPolicy`, and workspace tools.
 - **Audit-first** — every iteration, tool call, approval decision, and final result is recorded in per-run JSONL.
-- **Permission-mode enforced** — `read-only`, `workspace-write`, `prompt`, `allow`, and `danger-full-access` are first-class.
+- **Permission-mode enforced** — `read-only`, `workspace-write`, `prompt`, `allow`, and `danger-full-access` are first-class; destructive and external-effect tools (GitHub/browser/MCP mutators) fail closed pending approval in the first three (EFX-002).
 
 Core execution path:
 

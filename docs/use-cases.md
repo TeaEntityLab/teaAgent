@@ -106,8 +106,8 @@ hygiene, drift checks, and periodic review rather than feature buildout.
 
 ## Implemented Market-Standard Use Cases
 
-| Use Case | User Goal | Blast Radius | Rollback Path | Audit Criticality | Required Acceptance Coverage | Priority | Status |
-|---|---|---|---|---|---|---|---|
+| Use Case | User Goal | Required Acceptance Coverage | Priority | Status |
+|---|---|---|---|---|
 | Product onboarding and provider readiness | Install, initialize, verify providers, and start a safe first run without reading architecture docs. | `test_first_run_experience_flow.py`, `test_model_smoke_gating_flow.py`, `test_live_provider_conformance_flow.py`, `test_provider_matrix_consistency_flow.py` | P0 | Implemented |
 | Read-only planning mode | Explore an unfamiliar repo and produce a plan without file edits or shell mutation. | `test_plan_mode_read_only_flow.py` | P0 | Implemented |
 | End-to-end code-change loop | Ask the agent to fix a small failing test, apply a scoped edit, rerun tests, inspect diff, and report the result. | `test_workspace_edit_flow.py`, `test_agent_fix_test_review_flow.py` | P0 | Implemented |

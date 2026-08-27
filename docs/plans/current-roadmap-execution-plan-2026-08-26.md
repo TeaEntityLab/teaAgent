@@ -283,6 +283,7 @@ that cites the exact signal and copies its existing companion spec.
 | H6/M6 packaging | owner update friction plus signed-artifact trust boundary | `update-cli-wiring-and-packaging-spec-2026-07-11.md` |
 | WDH-002 | consenting non-maintainer and privacy preflight | `wdh-002-external-pilot-protocol-2026-07-11.md` |
 | EFX-FUTURE | dated owner promise plus a provider-specific identity/status/reconciliation contract and fault evidence | ADR-0042 boundary first; no generic subsystem template |
+| Dormant-surface deletion review | owner names a dormant surface with cited friction or maintenance cost | ADR-0029 Option D disposition spec (import-graph scan proving zero active callers, git recovery anchor, atomic deletion of code/shims/tests, consistency guard) |
 
 Monitoring CP-4, holding CP-6, or refreshing a survey does not satisfy a code
 admission gate. An empty scheduled queue is an acceptable result.

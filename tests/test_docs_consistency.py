@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
@@ -416,6 +417,80 @@ def test_roadmap_rethink_lens_review_candidate_adoption_state() -> None:
     assert 'live-provider proof pending' in roadmap
     assert 'ADR-0031 review due 2026-09-12' in backlog
     assert '(decision packet review)' in held
+
+
+def test_maturity_matrix_acceptance_counts_match_acceptance_doc() -> None:
+    """G-P2-9 C2: maturity-matrix posture counts cannot drift from truth."""
+    root = Path(__file__).resolve().parents[1]
+    matrix = (root / 'docs' / 'maturity-matrix.md').read_text(encoding='utf-8')
+    acceptance = (root / 'docs' / 'acceptance.md').read_text(encoding='utf-8')
+
+    posture = re.search(
+        r'\((\d+) test files across `tests/acceptance/`, (\d+) collected tests',
+        matrix,
+    )
+    assert posture, 'maturity-matrix.md posture line missing acceptance counts'
+    matrix_files, matrix_tests = int(posture.group(1)), int(posture.group(2))
+
+    guard = re.search(r'Current acceptance test count: `(\d+) passed`', acceptance)
+    assert guard, 'docs/acceptance.md guard target missing'
+    assert matrix_tests == int(guard.group(1)), (
+        'maturity-matrix collected-test count drifted from docs/acceptance.md'
+    )
+
+    actual_files = len(list((root / 'tests' / 'acceptance').glob('test_*.py')))
+    assert matrix_files == actual_files, (
+        'maturity-matrix acceptance file count drifted from tests/acceptance/'
+    )
+
+
+def test_roadmap_status_north_star_goals_section() -> None:
+    """G-P2-9 C3: honest G1-G6 status stays pinned in roadmap-status."""
+    root = Path(__file__).resolve().parents[1]
+    roadmap = (root / 'docs' / 'roadmap-status.md').read_text(encoding='utf-8')
+
+    assert '## North-Star Goals (G1-G6)' in roadmap
+    for goal in ('G1', 'G2', 'G3', 'G4', 'G5', 'G6'):
+        assert f'| {goal} |' in roadmap, f'missing North-Star row for {goal}'
+    # G3 must stay recorded as rescoped, citing the owner-reviewed work-logs.
+    assert 'Rescoped by owner decision' in roadmap
+    assert 'm4-budget-stays-inline-2026-06-13.md' in roadmap
+    assert 'm5-hooks-observability-only-2026-06-13.md' in roadmap
+    # Unmeasured goals stay honest until owner-run metrics exist.
+    assert 'Unmeasured' in roadmap
+
+
+def test_whole_project_review_candidate_adoption_state() -> None:
+    """2026-08-26 whole-project panel: adopted wording pinned at named surfaces."""
+    root = Path(__file__).resolve().parents[1]
+    record = (
+        root / 'docs' / 'analysis' / 'whole-project-lens-review-2026-08-26.md'
+    ).read_text(encoding='utf-8')
+    use_cases = (root / 'docs' / 'use-cases.md').read_text(encoding='utf-8')
+    contract = (root / 'docs' / 'product-contract.md').read_text(encoding='utf-8')
+    plan = (
+        root / 'docs' / 'plans' / 'current-roadmap-execution-plan-2026-08-26.md'
+    ).read_text(encoding='utf-8')
+    index = (root / 'docs' / 'INDEX.md').read_text(encoding='utf-8')
+
+    assert '## Candidate Adoption Ledger' in record
+    for row in ('| C1 |', '| C2 |', '| C3 |', '| C4 |', '| C5 |', '| C6 |'):
+        assert row in record, f'ledger row {row} missing from panel record'
+    # C6 stays rejected; shipping it requires re-litigation in the record.
+    assert '**rejected**' in record
+    # C1: the 8-column market-standard header is gone; 5 real columns remain.
+    assert (
+        '| Use Case | User Goal | Required Acceptance Coverage | Priority | Status |'
+        in use_cases
+    )
+    assert 'Audit Criticality | Required Acceptance Coverage' not in use_cases
+    # C4: contract names fail-closed external-effect gating (no live-proof claim).
+    assert 'external-effect tools (GitHub/browser/MCP mutators) fail closed' in contract
+    # C5: trigger-only deletion lane exists with the ADR-0029 contract.
+    assert 'Dormant-surface deletion review' in plan
+    assert 'ADR-0029 Option D disposition spec' in plan
+    # The panel record is indexed as dated evidence.
+    assert 'whole-project-lens-review-2026-08-26.md' in index
 
 
 def test_cli_reference_lists_every_command_group() -> None:

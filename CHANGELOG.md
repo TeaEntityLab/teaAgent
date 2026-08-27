@@ -28,6 +28,14 @@ All notable changes to TeaAgent are tracked here.
   evidence (latest: 6668 passed / 0 failed / 25 skipped, coverage 78.37%);
   docs aging cleared to zero stale; Effect Authority vocabulary added to the
   terminology guide; CLI command-group roster drift-guarded.
+- **Whole-project lens review adoption (G-P2-9)**: use-cases market-standard
+  table repaired to its 5 real columns; maturity-matrix acceptance posture
+  refreshed (131 files / 669 collected) and drift-guarded; North-Star G1–G6
+  status table added to roadmap-status with G3 recorded as rescoped (M4/M5
+  work-logs); product-contract permission bullet names EFX-002 fail-closed
+  external-effect gating; dormant-surface deletion trigger lane added to the
+  execution plan; panel record with C1–C6 adoption ledger in
+  `docs/analysis/whole-project-lens-review-2026-08-26.md`.
 
 - **Plan execution batch (system-transparency / comprehensive plans)**:
   - `teaagent.async_bridge.run_coroutine_sync` — approval/multisig paths no longer call `asyncio.set_event_loop` (ADR 009).

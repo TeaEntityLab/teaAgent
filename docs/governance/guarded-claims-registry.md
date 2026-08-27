@@ -66,11 +66,16 @@ documents may keep their historical numbers; current-truth front doors may not.
 
 ## Guarded Claim: acceptance count accuracy
 
-- **Claim class**: acceptance test count in docs/acceptance.md.
+- **Claim class**: acceptance test count in docs/acceptance.md and
+  docs/maturity-matrix.md.
 - **Rule**: `docs/acceptance.md` passed count must match `pytest --collect-only`
-  count for `tests/acceptance/`.
+  count for `tests/acceptance/`. The maturity-matrix "Honest External Posture"
+  file/test counts must match the acceptance.md guard target and the
+  `tests/acceptance/test_*.py` file count.
 - **Validator function**: `validate_docs_consistency` compares
-  `_extract_acceptance_status_count` with `_collect_acceptance_test_count`.
+  `_extract_acceptance_status_count` with `_collect_acceptance_test_count`;
+  `tests/test_docs_consistency.py::test_maturity_matrix_acceptance_counts_match_acceptance_doc`
+  pins the maturity-matrix numbers.
 
 ## Guarded Claim: review date coherence
 
