@@ -28,7 +28,7 @@ if str(_REPO_ROOT) not in sys.path:
 
 from scripts.check_high_risk_paths import high_risk_files, load_patterns  # noqa: E402
 
-ACTION_ID_PATTERN = re.compile(r'\b[SGUA]-P[0-2]-[0-9]\b')
+ACTION_ID_PATTERN = re.compile(r'\b[SGUA]-P[0-2]-[0-9]+\b')
 RISK_CLASS_PATTERN = re.compile(r'(?i)risk\s*class[:\s]*(low|medium|high)')
 CHECKLIST_PATTERN = re.compile(r'(?i)self.review.checklist|checklist')
 
