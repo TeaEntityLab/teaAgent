@@ -1,6 +1,6 @@
 # TeaAgent Product Contract
 
-> **Last reviewed:** 2026-08-26
+> **Last reviewed:** 2026-08-27
 > **Review trigger:** Persona framing, external-adoption claims, or strategic positioning changes.
 > **Direction record:** [Harness-First Direction](strategy/harness-first-direction-2026-06-13.md)
 

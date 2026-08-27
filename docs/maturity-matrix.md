@@ -1,6 +1,6 @@
 # TeaAgent Maturity Matrix
 
-> **Last reviewed:** 2026-08-26
+> **Last reviewed:** 2026-08-27
 > **Review trigger:** Subsystem maturity labels change.
 
 Last updated: 2026-05-31 (TUI evolution Phase A-C + doc review)
