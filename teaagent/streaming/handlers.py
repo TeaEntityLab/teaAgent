@@ -39,6 +39,56 @@ def _default_progress_enabled(args: argparse.Namespace) -> bool:
     return sys.stderr.isatty()
 
 
+def _build_json_stream_handlers(
+    args: argparse.Namespace,
+    audit: AuditLogger,
+    *,
+    progress: bool,
+    stream: bool,
+    stream_text_only: bool,
+) -> Optional[Callable[[str], None]]:
+    """Wire on_chunk for JSON streaming mode."""
+
+    def emit(event: StreamEvent) -> None:
+        emit_stream_event(event)
+
+    if progress:
+        audit.add_sink(audit_sink_for_json_stream(emit))
+    if not stream:
+        return None
+
+    def text_sink(text: str) -> None:
+        emit(StreamEvent('text_delta', {'text': text}))
+
+    base_chunk: Callable[[str], None] = text_sink
+    if stream_text_only:
+        filter_streamer = DecisionContentStreamer(text_sink)
+        base_chunk = filter_streamer.feed
+    return base_chunk
+
+
+def _build_terminal_stream_handlers(
+    args: argparse.Namespace,
+    audit: AuditLogger,
+    *,
+    progress: bool,
+    stream: bool,
+    stream_text_only: bool,
+) -> Optional[Callable[[str], None]]:
+    """Wire on_chunk for terminal (non-JSON) mode."""
+    if progress:
+        audit.add_sink(audit_sink_for_progress())
+    if not stream:
+        return None
+
+    def text_stdout(text: str) -> None:
+        print(text, end='', file=sys.stdout, flush=True)
+
+    if stream_text_only:
+        return DecisionContentStreamer(text_stdout).feed
+    return text_stdout
+
+
 def build_run_stream_handlers(
     args: argparse.Namespace,
     audit: AuditLogger,
@@ -49,37 +99,22 @@ def build_run_stream_handlers(
     stream = bool(getattr(args, 'stream', False))
     stream_text_only = not bool(getattr(args, 'stream_raw', False))
 
-    on_chunk: Optional[Callable[[str], None]] = None
-
     if json_stream:
-
-        def emit(event: StreamEvent) -> None:
-            emit_stream_event(event)
-
-        if progress:
-            audit.add_sink(audit_sink_for_json_stream(emit))
-        if stream:
-
-            def text_sink(text: str) -> None:
-                emit(StreamEvent('text_delta', {'text': text}))
-
-            base_chunk: Callable[[str], None] = text_sink
-            if stream_text_only:
-                filter_streamer = DecisionContentStreamer(text_sink)
-                base_chunk = filter_streamer.feed
-            on_chunk = base_chunk
+        on_chunk = _build_json_stream_handlers(
+            args,
+            audit,
+            progress=progress,
+            stream=stream,
+            stream_text_only=stream_text_only,
+        )
     else:
-        if progress:
-            audit.add_sink(audit_sink_for_progress())
-        if stream:
-
-            def text_stdout(text: str) -> None:
-                print(text, end='', file=sys.stdout, flush=True)
-
-            if stream_text_only:
-                on_chunk = DecisionContentStreamer(text_stdout).feed
-            else:
-                on_chunk = text_stdout
+        on_chunk = _build_terminal_stream_handlers(
+            args,
+            audit,
+            progress=progress,
+            stream=stream,
+            stream_text_only=stream_text_only,
+        )
 
     return RunStreamHandlers(
         stream=stream,

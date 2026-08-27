@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 
 ACTION_ID_PATTERN = re.compile(
-    r'\b[SGUA]-P[0-2]-[0-9]\b'  # e.g. S-P2-4, G-P0-1, A-P1-3, U-P2-5
+    r'\b[SGUA]-P[0-2]-[0-9]+\b'  # e.g. S-P2-4, G-P0-1, A-P1-3, U-P2-10
 )
 
 # File patterns that require an action ID when changed.
