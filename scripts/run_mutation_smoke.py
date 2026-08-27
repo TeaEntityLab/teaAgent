@@ -65,7 +65,8 @@ MUTATIONS: list[Mutation] = [
         old='if auto_approve_pending and not existing_warning:',
         new='if auto_approve_pending or existing_warning:',
         tests=[
-            'tests/test_resume_preparation.py::test_auto_approve_pending_false_warns_without_granting'
+            'tests/test_resume_preparation.py::test_auto_approve_pending_false_warns_without_granting',
+            'tests/test_resume_preparation.py::test_unmatched_effect_warning_blocks_auto_grant',
         ],
         desc='invert auto_approve_pending knob -> TUI would auto-grant instead of warn',
     ),
