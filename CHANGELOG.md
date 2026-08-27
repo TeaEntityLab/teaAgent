@@ -36,6 +36,13 @@ All notable changes to TeaAgent are tracked here.
   external-effect gating; dormant-surface deletion trigger lane added to the
   execution plan; panel record with C1–C6 adoption ledger in
   `docs/analysis/whole-project-lens-review-2026-08-26.md`.
+- **ADR-0031 H4 evidence packet prepared (G-P2-10)**: ran all five Phase 2
+  evidence scripts; criteria 2 (coverage: 0 gaps), 3 (performance: median
+  0.50 ms < 50 ms threshold), 5 (rollback: ok) pass; criterion 1 (shadow
+  window: 0 observed `h4_governance_shadow` events in 1391 audit logs) and
+  criterion 4 (human sign-off) remain open; `promotion_ready=false`.
+  Evidence stored at `.teaagent/reviews/adr-0031/`; roadmap-status H4 row
+  and execution plan §6.1.1 updated with results.
 
 - **Plan execution batch (system-transparency / comprehensive plans)**:
   - `teaagent.async_bridge.run_coroutine_sync` — approval/multisig paths no longer call `asyncio.set_event_loop` (ADR 009).

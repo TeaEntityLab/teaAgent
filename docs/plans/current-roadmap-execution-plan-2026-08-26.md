@@ -15,7 +15,7 @@
 > **Owner:** Governance for preparation; owner-operator for live effects and
 > Human Review decisions.
 >
-> **Last reviewed:** 2026-08-26
+> **Last reviewed:** 2026-08-27 (Phase 2 evidence collected; see §6.1.1)
 >
 > **Review trigger:** EFX live-proof evidence lands; ADR-0031 is decided; a
 > qualifying DR-006 signal is recorded; or an authority document changes.
@@ -251,6 +251,28 @@ python3 scripts/build_h4_decision_packet.py \
 The owner must adjudicate every denial candidate. A missing week, no real runs,
 an unknown verdict, malformed receipt, coverage gap, median latency at or above
 50 ms, or failed rollback keeps the corresponding criterion unsatisfied.
+
+### 6.1.1 Evidence collected 2026-08-27
+
+Agent-completable evidence scripts were run on 2026-08-27 at commit
+`ecf8ec5`. Results stored under `.teaagent/reviews/adr-0031/`:
+
+| Criterion | Script | Result | Status |
+| --- | --- | --- | --- |
+| 1 — shadow window | `prepare_h4_evidence.py` | 0 observed events, 0 denial candidates | Open — no `h4_governance_shadow` events in 1391 audit logs; shadow mode has not been exercised |
+| 2 — coverage | `check_h4_coverage.py` | 0 policies, 0 roles, 0 gaps | Pass |
+| 3 — performance | `benchmark_h4_policy.py` | median 0.50 ms, max 0.59 ms (threshold 50 ms) | Pass |
+| 4 — human sign-off | — | owner/security-governance sign-off required | Human-required |
+| 5 — rollback | `verify_h4_rollback.py` | `ok=true` | Pass |
+
+Aggregate packet (`build_h4_decision_packet.py`): 4 agent-prepared
+criteria, 1 human-required, `promotion_ready=false`.
+
+Criterion 1 having zero observations is honest evidence: the shadow
+wiring exists but has not been triggered in real runs. The owner must
+decide whether zero observations satisfies "30-day zero-false-positive
+window" or whether exercised shadow receipts are required before
+promotion. This plan takes no position on that adjudication.
 
 ### 6.2 Owner decision on 2026-09-12
 

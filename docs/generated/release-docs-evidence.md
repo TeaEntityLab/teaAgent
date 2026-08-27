@@ -1,7 +1,7 @@
 # Release Documentation Evidence Bundle (Generated)
 
-**Generated:** 2026-08-27T03:08:48+00:00
-**Git commit:** `1dc6e4c3cbd614a432482cd203fbac360e0dffe7` on `main`
+**Generated:** 2026-08-27T04:24:33+00:00
+**Git commit:** `ecf8ec55c9f9ee9142b0b5cac215cf062e9773b0` on `main`
 **Working tree dirty:** yes
 
 Regenerate: `python3 scripts/build_release_docs_evidence_bundle.py`
@@ -33,7 +33,7 @@ Regenerate: `python3 scripts/build_release_docs_evidence_bundle.py`
 - `H1` Daily operator loop: **Complete** (confidence High, next gate H2)
 - `H2` Multi-surface continuity: **On Hold — M2 foundation complete** (confidence Medium, next gate Owner-validated continuity need)
 - `H3` Ecosystem trust: **On Hold — M3 evidence complete** (confidence Medium, next gate Cited owner friction)
-- `H4` Durable owner/agent operations: **On Hold — shadow wiring exists** (confidence Low, next gate DR-006 + EFX live-proof closure + 2026-09-12 ADR-0031 review)
+- `H4` Durable owner/agent operations: **On Hold — shadow wiring exists; ADR-0031 evidence packet prepared 2026-08-27** (confidence Low, next gate EFX live-proof closure + 2026-09-12 ADR-0031 owner review (promote/extend/revert))
 - `H5` Quality and eval loop: **Blocked — offline release gate exists** (confidence Low, next gate Funded live-provider evidence + owner decision)
 - `M0` (1-2 weeks): **High** (next gate All 3 checks pass: `validate_docs_consistency.py`, `refresh_competitive_docs.py --check`, `teaagent tool lint --root .`)
 - `M1` (2-6 weeks): **High** (next gate CLI/TUI cockpit parity acceptance, run evidence summary acceptance, guided recovery acceptance)
