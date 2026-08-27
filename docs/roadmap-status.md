@@ -9,7 +9,7 @@
 > or historical review reasoning in dated analysis files.
 >
 > **Review trigger:** Roadmap horizon, milestone, or track status changes.
-> **Last reviewed:** 2026-08-26
+> **Last reviewed:** 2026-08-27
 
 **Status:** Canonical roadmap tracking document
 **Last updated:** 2026-08-27 (the owner-operator is the current validated persona; ADR-0031 H4 evidence packet prepared: criteria 2/3/5 pass, criterion 1 has 0 shadow events across 5,690 scanned events (unexercised), criterion 4 remains human sign-off; `promotion_ready=false`; EFX-001–003 remain In Progress with live-provider proof pending; full suite verified 2026-08-26 at `026a8cc`: `6668 passed, 0 failed, 25 skipped`; prior snapshot `628 passed` at `85109e4` on 2026-06-10 is historical — see [suite truncation analysis](analysis/suite-truncation-root-cause-2026-06-10.md))

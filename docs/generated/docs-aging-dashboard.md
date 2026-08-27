@@ -4,7 +4,7 @@
 
 **Stale threshold:** 90 days since `Last reviewed`
 **Current-truth docs scanned:** 17
-**Needs attention (working tier only):** 3
+**Needs attention (working tier only):** 2
 **Archive-tier docs (exempt from staleness):** 0
 
 Regenerate: `python3 scripts/report_docs_aging.py`
@@ -22,12 +22,6 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 | Document | Status | Last reviewed | File mtime | Notes |
 | --- | --- | --- | --- | --- |
 | `docs/maturity-matrix.md` | stale_by_mtime | 2026-08-26 | 2026-08-27 | Missing owner banner; File modified after last reviewed date |
-
-### roadmap
-
-| Document | Status | Last reviewed | File mtime | Notes |
-| --- | --- | --- | --- | --- |
-| `docs/roadmap-status.md` | stale_by_mtime | 2026-08-26 | 2026-08-27 | File modified after last reviewed date |
 
 ## Review Triggers (Current-Truth Docs)
 
