@@ -23,6 +23,7 @@ PLACEHOLDER_PATTERNS: list[re.Pattern] = [
 
 IGNORE_PATTERNS: list[str] = [
     r'check_github_url_consistency\.py$',
+    r'test_validation_script_guards\.py$',
     r'\.git/',  # git internals
     r'docs/retrospective/',  # retrospective evidence documents the historical problem
 ]
