@@ -343,6 +343,49 @@ Choose exactly one outcome and record it in ADR-0031 plus a dated decision log:
 No agent-generated packet can satisfy Human Review. No mode/default change may
 share a commit with an undecided or incomplete packet.
 
+### 6.3 Advisor horizons for after 2026-09-12 (hypothesis, 2026-08-31)
+
+> **Claim class:** External advisor hypothesis only. Not a scheduling
+> authority. Source:
+> `.omx/artifacts/claude-you-are-an-external-advisor-for-teaagent-a-harness-first-own-2026-08-31T06-14-02-585Z.md`.
+> DR-006 and `roadmap-status.md` remain authoritative; this section
+> only makes the 12-day runway’s fuel problem explicit.
+
+**Bottom line per advisor:** Do not promote H4 at 2026-09-12 on 0 organic
+events; demo synthetic 2 must not launder into C1. EFX promotes only on
+live proof. The roadmap’s fuel is exhausted (5/5 friction closed, zero
+new entries, no dogfood scheduled) — every DR-006 lane except
+`governance-gap` is starved. Next job is to restart evidence generation.
+
+- **2026-09-12 dispositions:** Extend H4 only if bound to a scheduled
+  dogfood session that will generate organic `h4_governance_shadow`
+  events; otherwise revert (default) per thin-harness invariant and
+  existing rollback proof requirements. H2/H5/H6/M4-beyond-carve-out/M5/M6/WDH-002/EFX-FUTURE remain Hold.
+- **Horizon A — Close evidence loop (09-12 → ~10-15):** EFX live proof
+  (owner throwaway + scoped credential + budget cap via
+  `efx-live-proof-procedure-2026-08-31.md` → dated receipts for
+  OUTCOME_UNKNOWN/refused redispatch, fail-closed classification,
+  digest-bound replay denial; audit chain intact); execute ADR-0031
+  disposition (dated sign-off + either >0 organic events or revert
+  commit with `6681` green); DR-006 falsifier review at ~09-22
+  (3 months from 06-22, four falsifiers).
+- **Horizon B — Generate evidence via dogfood (parallel, 09-12 → ~11-15):**
+  M4 co-maintainer background + cockpit carve-out is the only lane that
+  can produce organic shadow events (C1), new friction entries, and
+  BG-001/cockpit evidence. Exit: ≥1 dated dogfood work-log, organic
+  event count, new friction *or* explicit dated “no friction” owner
+  testimony (agents must not simulate); cloud/gateway/multi-tenant stay held.
+- **Horizon C — Prune or promote by demand (~Q4, ~12-01):** Fork on B.
+  No demand → revert H4 if still standing, keep `update/*` absent,
+  M5/M6 held (harness with zero friction is done, not stalled).
+  Demand emerges → route per dated queue row (EFX-FUTURE only on first
+  provider-settlement need, `teaagent update` only on first update
+  friction, M5 only on first funded gate) with required packets.
+  Either way quarterly competitive survey (T5, due end-September) as
+  docs-only hypothesis intake. Falsifier for this whole proposal: if
+  owner won’t schedule dogfood *and* won’t revert, declare H-series
+  maintenance-mode explicitly.
+
 ## 7. Phase 3 — Trigger-only roadmap plans
 
 Do not pre-build these lanes. When a trigger occurs, create one bounded plan

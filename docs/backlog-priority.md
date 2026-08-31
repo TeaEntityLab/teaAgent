@@ -6,6 +6,12 @@
 > are in-progress P0 `governance-gap` remediations on existing seams; no
 > product horizon, distributed effect subsystem, or external adoption work is
 > reopened.
+> **Advisor note 2026-08-31 (hypothesis, not authority):** H4 extend only if
+> dogfood scheduled for organic events else revert (0 organic ≠ promotion,
+> demo synthetic ≠ C1); EFX promote only on live proof; M4 dogfood is only
+> DR-006 lane that can generate organic events/friction/BG-001;
+> H2/H5/H6/WDH-002/EFX-FUTURE remain Hold — see
+> `.omx/artifacts/claude-you-are-an-external-advisor-for-teaagent-a-harness-first-own-2026-08-31T06-14-02-585Z.md`.
 
 Prioritized by impact order: security and production risk → core platform capabilities → developer experience and ecosystem.
 
