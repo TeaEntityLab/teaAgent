@@ -12,7 +12,7 @@
 > **Status:** Active for already-authorized verification and dated decision
 > preparation. Held rows remain held.
 >
-> **Last reviewed:** 2026-08-31 (Phase 2 evidence refreshed; see §6.1.1–6.1.2)
+> **Last reviewed:** 2026-08-31 (Phase 2 evidence refreshed 06:31, H4 demo guarded 13:20, full suite 6681 at bf07bc8, EFX procedure drafted; see §6.1.1–6.1.3)
 
 > **Review trigger:** EFX live-proof evidence lands; ADR-0031 is decided; a
 > qualifying DR-006 signal is recorded; or an authority document changes.
@@ -296,6 +296,35 @@ No new shadow receipts appeared; the 12-day runway to the
 live shadow exercise before promotion) is still the blocking
 decision. This refresh confirms evidence tooling remains green
 and does not claim new production observation.
+
+### 6.1.3 H4 demo exercisable and guarded, EFX procedure ready (2026-08-31)
+
+To make the 12-day runway actionable without owner auth or live
+provider, two scaffolds landed at `f525a78`/`bf07bc8`:
+
+- `scripts/exercise_h4_shadow_demo.py` — scratch workspace, denying
+  `approval` policy + RBAC `no-role` assignee, exercises both H4
+  surfaces, writes 2 `h4_governance_shadow` receipts to a temp
+  JSONL; `prepare_h4_evidence.py --audit-log /tmp/h4_demo.jsonl`
+  yields 2 denial candidates `owner_verdict:null`. Proves
+  criterion-1 analysis is exercisable before 2026-09-12; does not
+  touch production logs or flip modes.
+- `tests/test_h4_shadow_demo.py` — guard that runs the demo as a
+  subprocess and asserts `2 observed / 2 candidates / 0 malformed`,
+  `allowed:false enforced:false shadow`. Re-verified sharded full
+  suite at `bf07bc8`: `6707` collected, `6681 passed 26 skipped`
+  (`aa 1111/12, ab 1533/4 incl. guard, ac 1488/9, ad 1337/0, ae 84/0,
+  other 1128/1`) with `pytest -n auto --dist worksteal`,
+  `PYTHONPATH=scripts`.
+- `docs/plans/efx-live-proof-procedure-2026-08-31.md` — six-item
+  Definition of Ready, ordered `002→003→001`, sanitized work-log and
+  one-commit status-flip checklist per §5.4; dry-run
+  `tests/test_efx*` + `tests/acceptance/test_efx_durable_effect_flow.py`
+  `15 passed` at `bf07bc8`.
+
+These scaffolds do not change `promotion_ready` or EFX status; they
+only make the owner’s 2026-09-12 decision and EFX authorization
+one session away.
 
 ### 6.2 Owner decision on 2026-09-12
 

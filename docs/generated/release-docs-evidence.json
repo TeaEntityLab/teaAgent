@@ -1,17 +1,17 @@
 {
-  "ok": true,
-  "created_at": "2026-08-31T05:51:25+00:00",
+  "ok": false,
+  "created_at": "2026-08-31T05:57:20+00:00",
   "repo_root": "/Users/teee/dev/teaagent",
   "git": {
     "branch": "main",
-    "commit": "6ccbc3120cb0319b52b9eada24c59f585d8c44ca",
-    "dirty": false
+    "commit": "7ca7aaaefe8c8b7401d8e74281e38ca5d5166f85",
+    "dirty": true
   },
   "commands": [
     {
       "cmd": "/opt/homebrew/opt/python@3.14/bin/python3.14 scripts/validate_docs_consistency.py",
-      "exit_code": 0,
-      "stdout": "Risk register evidence coverage: 29/29 rows verified (100%)\nTicket index evidence coverage: 21/21 rows verified (100%)\nDocs consistency check passed.\n",
+      "exit_code": 1,
+      "stdout": "Risk register evidence coverage: 29/29 rows verified (100%)\nTicket index evidence coverage: 21/21 rows verified (100%)\nERROR: docs/generated/docs-inventory.md is out of date; run: python3 scripts/generate_docs_inventory.py\n",
       "stderr": ""
     },
     {
@@ -53,7 +53,7 @@
       {
         "id": "H4",
         "name": "Durable owner/agent operations",
-        "status": "On Hold — shadow wiring exists; ADR-0031 evidence packet prepared 2026-08-27, refreshed 2026-08-31 (same 0 shadow events, `promotion_ready=false`)",
+        "status": "On Hold — shadow wiring exists; ADR-0031 evidence packet prepared 2026-08-27, refreshed 2026-08-31 (same 0 shadow events, `promotion_ready=false`); H4 demo `scripts/exercise_h4_shadow_demo.py` exercisable (2 denial candidates) and guarded (`tests/test_h4_shadow_demo.py`)",
         "confidence": "Low",
         "next_gate": "EFX live-proof closure + 2026-09-12 ADR-0031 owner review (promote/extend/revert)"
       },

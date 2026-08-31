@@ -1,8 +1,8 @@
 # Release Documentation Evidence Bundle (Generated)
 
-**Generated:** 2026-08-31T05:51:25+00:00
-**Git commit:** `6ccbc3120cb0319b52b9eada24c59f585d8c44ca` on `main`
-**Working tree dirty:** no
+**Generated:** 2026-08-31T05:57:20+00:00
+**Git commit:** `7ca7aaaefe8c8b7401d8e74281e38ca5d5166f85` on `main`
+**Working tree dirty:** yes
 
 Regenerate: `python3 scripts/build_release_docs_evidence_bundle.py`
 
@@ -14,8 +14,8 @@ Regenerate: `python3 scripts/build_release_docs_evidence_bundle.py`
 
 ## Last Gate Run
 
-- Overall gate status: **pass**
-- `/opt/homebrew/opt/python@3.14/bin/python3.14 scripts/validate_docs_consistency.py` — **pass** (exit 0)
+- Overall gate status: **fail**
+- `/opt/homebrew/opt/python@3.14/bin/python3.14 scripts/validate_docs_consistency.py` — **fail** (exit 1)
 - `/opt/homebrew/opt/python@3.14/bin/python3.14 scripts/report_docs_aging.py --check` — **pass** (exit 0)
 
 ## Documentation Freshness
@@ -29,7 +29,7 @@ Regenerate: `python3 scripts/build_release_docs_evidence_bundle.py`
 - `H0` Claim and risk hygiene: **Complete** (confidence High, next gate H1)
 - `H1` Daily operator loop: **Complete** (confidence High, next gate H2)
 - `H2` Multi-surface continuity: **On Hold — M2 foundation complete** (confidence Medium, next gate Owner-validated continuity need)
-- `H4` Durable owner/agent operations: **On Hold — shadow wiring exists; ADR-0031 evidence packet prepared 2026-08-27, refreshed 2026-08-31 (same 0 shadow events, `promotion_ready=false`)** (confidence Low, next gate EFX live-proof closure + 2026-09-12 ADR-0031 owner review (promote/extend/revert))
+- `H4` Durable owner/agent operations: **On Hold — shadow wiring exists; ADR-0031 evidence packet prepared 2026-08-27, refreshed 2026-08-31 (same 0 shadow events, `promotion_ready=false`); H4 demo `scripts/exercise_h4_shadow_demo.py` exercisable (2 denial candidates) and guarded (`tests/test_h4_shadow_demo.py`)** (confidence Low, next gate EFX live-proof closure + 2026-09-12 ADR-0031 owner review (promote/extend/revert))
 - `H6` Owner packaging and local distribution: **On Hold — local proof exists; daily CLI unwired** (confidence Low, next gate Owner update friction + trust-boundary proof)
 - `M0` (1-2 weeks): **High** (next gate All 3 checks pass: `validate_docs_consistency.py`, `refresh_competitive_docs.py --check`, `teaagent tool lint --root .`)
 - `M1` (2-6 weeks): **High** (next gate CLI/TUI cockpit parity acceptance, run evidence summary acceptance, guided recovery acceptance)
