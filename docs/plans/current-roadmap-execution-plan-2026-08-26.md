@@ -12,14 +12,11 @@
 > **Status:** Active for already-authorized verification and dated decision
 > preparation. Held rows remain held.
 >
-> **Owner:** Governance for preparation; owner-operator for live effects and
-> Human Review decisions.
->
-> **Last reviewed:** 2026-08-27 (Phase 2 evidence collected; see §6.1.1)
->
+> **Last reviewed:** 2026-08-31 (Phase 2 evidence refreshed; see §6.1.1–6.1.2)
+
 > **Review trigger:** EFX live-proof evidence lands; ADR-0031 is decided; a
 > qualifying DR-006 signal is recorded; or an authority document changes.
->
+
 > **Action register:** G-P0-2
 
 ## 1. Executive rule
@@ -276,6 +273,29 @@ mode has not been exercised in live runs. The owner must decide on
 zero-false-positive window" criterion or whether live shadow execution
 evidence is required before promotion. This plan takes no position on
 that adjudication.
+
+### 6.1.2 Evidence refreshed 2026-08-31
+
+Agent-completable evidence scripts were re-run on 2026-08-31 at commit
+`fe267d0` (4 days after §6.1.1) against the same window
+`2026-08-13→2026-09-11`. Results stored under `.teaagent/reviews/adr-0031/`:
+
+| Criterion | Script | Result | Status |
+| --- | --- | --- | --- |
+| 1 — shadow window | `prepare_h4_evidence.py` | 0 observed events, 0 denial candidates (total 5,690 events) | Open — same unexercised result as 2026-08-27; no new `h4_governance_shadow` events in the 4-day interval |
+| 2 — coverage | `check_h4_coverage.py` | 0 policies, 0 roles, 0 gaps | Pass (unchanged) |
+| 3 — performance | `benchmark_h4_policy.py` | median ~0.52 ms, max ~0.68 ms (threshold 50 ms) | Pass (unchanged) |
+| 4 — human sign-off | — | owner/security-governance sign-off required | Human-required (unchanged) |
+| 5 — rollback | `verify_h4_rollback.py` | `ok=true` | Pass (unchanged) |
+
+Aggregate packet (`build_h4_decision_packet.py`): unchanged —
+4 agent-prepared, 1 human-required, `promotion_ready=false`.
+No new shadow receipts appeared; the 12-day runway to the
+2026-09-12 decision remains. Owner adjudication of criterion 1
+(whether 0 observations satisfies the 30-day window or requires
+live shadow exercise before promotion) is still the blocking
+decision. This refresh confirms evidence tooling remains green
+and does not claim new production observation.
 
 ### 6.2 Owner decision on 2026-09-12
 

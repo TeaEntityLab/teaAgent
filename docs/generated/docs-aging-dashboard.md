@@ -20,7 +20,7 @@ All scanned current-truth working-tier docs are fresh.
 | `docs/USAGE.md` | daily-driver | working | CLI/TUI command behavior, permission modes, or surface recipes change. |
 | `docs/cli.md` | cli | working | CLI flags, subcommands, or handler behavior changes. |
 | `docs/acceptance.md` | verification | working | Acceptance test inventory or count changes. |
-| `docs/roadmap-status.md` | roadmap | working | Roadmap horizon, milestone, or track status changes. |
+| `docs/roadmap-status.md` | roadmap | working | Roadmap horizon, milestone, or track status changes |
 | `docs/daily-driver-current-status.md` | daily-driver | working | TUI, chat, agent mode, approval, cost, undo, or resume behavior changes. |
 | `docs/release-checklist.md` | release | working | Release gates, survey cadence, or validation workflow changes. |
 | `docs/backlog-priority.md` | strategy | working | Backlog priorities or shipped/beta status claims change. |

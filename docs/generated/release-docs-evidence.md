@@ -1,7 +1,7 @@
 # Release Documentation Evidence Bundle (Generated)
 
-**Generated:** 2026-08-27T06:50:18+00:00
-**Git commit:** `126fdcef89176018b6a7ef0843e3c687b10b9cce` on `main`
+**Generated:** 2026-08-31T04:26:28+00:00
+**Git commit:** `fe267d012d758c927dcb8455d6be89f07ade542a` on `main`
 **Working tree dirty:** yes
 
 Regenerate: `python3 scripts/build_release_docs_evidence_bundle.py`
@@ -29,9 +29,8 @@ Regenerate: `python3 scripts/build_release_docs_evidence_bundle.py`
 - `H0` Claim and risk hygiene: **Complete** (confidence High, next gate H1)
 - `H1` Daily operator loop: **Complete** (confidence High, next gate H2)
 - `H2` Multi-surface continuity: **On Hold — M2 foundation complete** (confidence Medium, next gate Owner-validated continuity need)
-- `H3` Ecosystem trust: **On Hold — M3 evidence complete** (confidence Medium, next gate Cited owner friction)
-- `H4` Durable owner/agent operations: **On Hold — shadow wiring exists; ADR-0031 evidence packet prepared 2026-08-27** (confidence Low, next gate EFX live-proof closure + 2026-09-12 ADR-0031 owner review (promote/extend/revert))
-- `H5` Quality and eval loop: **Blocked — offline release gate exists** (confidence Low, next gate Funded live-provider evidence + owner decision)
+- `H4` Durable owner/agent operations: **On Hold — shadow wiring exists; ADR-0031 evidence packet prepared 2026-08-27, refreshed 2026-08-31 (same 0 shadow events, `promotion_ready=false`)** (confidence Low, next gate EFX live-proof closure + 2026-09-12 ADR-0031 owner review (promote/extend/revert))
+- `H6` Owner packaging and local distribution: **On Hold — local proof exists; daily CLI unwired** (confidence Low, next gate Owner update friction + trust-boundary proof)
 - `M0` (1-2 weeks): **High** (next gate All 3 checks pass: `validate_docs_consistency.py`, `refresh_competitive_docs.py --check`, `teaagent tool lint --root .`)
 - `M1` (2-6 weeks): **High** (next gate CLI/TUI cockpit parity acceptance, run evidence summary acceptance, guided recovery acceptance)
 - `M2` (4-10 weeks): **High** (next gate Long-session context guard acceptance, scope budget acceptance, plan revision acceptance)

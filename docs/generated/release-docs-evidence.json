@@ -1,10 +1,10 @@
 {
   "ok": false,
-  "created_at": "2026-08-27T06:50:18+00:00",
+  "created_at": "2026-08-31T04:26:28+00:00",
   "repo_root": "/Users/teee/dev/teaagent",
   "git": {
     "branch": "main",
-    "commit": "126fdcef89176018b6a7ef0843e3c687b10b9cce",
+    "commit": "fe267d012d758c927dcb8455d6be89f07ade542a",
     "dirty": true
   },
   "commands": [
@@ -51,25 +51,18 @@
         "next_gate": "Owner-validated continuity need"
       },
       {
-        "id": "H3",
-        "name": "Ecosystem trust",
-        "status": "On Hold — M3 evidence complete",
-        "confidence": "Medium",
-        "next_gate": "Cited owner friction"
-      },
-      {
         "id": "H4",
         "name": "Durable owner/agent operations",
-        "status": "On Hold — shadow wiring exists; ADR-0031 evidence packet prepared 2026-08-27",
+        "status": "On Hold — shadow wiring exists; ADR-0031 evidence packet prepared 2026-08-27, refreshed 2026-08-31 (same 0 shadow events, `promotion_ready=false`)",
         "confidence": "Low",
         "next_gate": "EFX live-proof closure + 2026-09-12 ADR-0031 owner review (promote/extend/revert)"
       },
       {
-        "id": "H5",
-        "name": "Quality and eval loop",
-        "status": "Blocked — offline release gate exists",
+        "id": "H6",
+        "name": "Owner packaging and local distribution",
+        "status": "On Hold — local proof exists; daily CLI unwired",
         "confidence": "Low",
-        "next_gate": "Funded live-provider evidence + owner decision"
+        "next_gate": "Owner update friction + trust-boundary proof"
       }
     ],
     "milestones": [
