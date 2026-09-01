@@ -8,7 +8,7 @@
 > **Does not own:** Daily-user command recommendations (`daily-driver-current-status.md`)
 > or historical review reasoning in dated analysis files.
 >
-> **Last reviewed:** 2026-08-31
+> **Last reviewed:** 2026-09-01
 
 **Status:** Canonical roadmap tracking document
 **Last updated:** 2026-08-31 (advisor 2026-08-31: H4 extend only if dogfood scheduled for organic events else revert, 0 organic ≠ promotion, demo synthetic ≠ C1; EFX promote only on live proof; M4 dogfood is only DR-006 lane that can generate organic events/friction/BG-001; the owner-operator is the current validated persona; ADR-0031 H4 evidence packet prepared 2026-08-27 and refreshed 2026-08-31: criteria 2/3/5 pass, criterion 1 still 0 shadow events across 5,690 scanned events (unexercised, same window 2026-08-13→2026-09-11), criterion 4 remains human sign-off; `promotion_ready=false`; EFX-001–003 remain In Progress with live-provider proof pending; full suite verified 2026-08-31 at `bf07bc8`: `6681 passed, 0 failed, 26 skipped` via sharded `pytest -n auto --dist worksteal` (CI-equivalent, 6707 collected, shards: aa 1111/12, ab 1533/4, ac 1488/9, ad 1337/0, ae 84/0, other 1128/1, guard `test_h4_shadow_demo` in ab) — prior `6680` at `8e0de39`, `6668` at `026a8cc` and `628` at `85109e4` historical — see [suite truncation analysis](analysis/suite-truncation-root-cause-2026-06-10.md); advisor artifact `.omx/artifacts/claude-you-are-an-external-advisor-for-teaagent-a-harness-first-own-2026-08-31T06-14-02-585Z.md`)

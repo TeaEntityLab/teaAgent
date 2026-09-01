@@ -12,7 +12,7 @@
 > **Status:** Active for already-authorized verification and dated decision
 > preparation. Held rows remain held.
 >
-> **Last reviewed:** 2026-08-31 (Phase 2 evidence refreshed 06:31, H4 demo guarded 13:20, full suite 6681 at bf07bc8, EFX procedure drafted; see §6.1.1–6.1.3)
+> **Last reviewed:** 2026-09-01 (re-affirmed: queue empty, 6681 green, H4 demo guarded, EFX procedure ready, horizons A/B/C per advisor; no new friction, no dogfood scheduled — see Horizon A plan `horizon-a-close-evidence-loop-2026-09-12.md`)
 
 > **Review trigger:** EFX live-proof evidence lands; ADR-0031 is decided; a
 > qualifying DR-006 signal is recorded; or an authority document changes.

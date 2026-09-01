@@ -1,6 +1,6 @@
 # Backlog Priority
 
-> **Last reviewed:** 2026-08-31
+> **Last reviewed:** 2026-09-01
 > **Review trigger:** Backlog priorities or shipped/beta status claims change.
 > **Scheduling gate (2026-08-26):** DR-006 remains authoritative. EFX-001–003
 > are in-progress P0 `governance-gap` remediations on existing seams; no
