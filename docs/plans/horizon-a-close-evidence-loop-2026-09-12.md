@@ -31,7 +31,7 @@ Use `docs/plans/efx-live-proof-procedure-2026-08-31.md`.
 
 - **Promote:** Only if `C1` shows >0 organic `h4_governance_shadow` events, `C2/C3/C5` green, and owner sign-off. Requires high-risk plan to flip `policy_governance_mode` from advisory to enforce (rename `evaluate_approval_policy_shadow`, add deny branch, RBAC already enforces) + `doctor config` visibility + `h4_mode_changed` audit.
 - **Extend:** Only if bound to a scheduled dogfood session that will generate organic events; name missing criteria, new expiry, evidence to collect. Never silent roll-forward.
-- **Revert (default):** If no dogfood scheduled by 09-12 or extended window again 0 organic, revert shadow wiring, preserve evidence/history, keep suite `6681` green. Thin-harness invariant requires this.
+- **Revert (default):** If no dogfood scheduled by 09-12 or extended window again 0 organic, revert shadow wiring, preserve evidence/history, keep suite `6681` green. Thin-harness invariant requires this. Falsifier: if owner won’t schedule dogfood *and* won’t revert, declare H-series maintenance-mode explicitly per advisor §6.3.
 
 **Exit evidence:** Dated ADR-0031 decision log + either promotion commit with enforce tests or revert commit with rollback proof.
 
@@ -39,7 +39,7 @@ Use `docs/plans/efx-live-proof-procedure-2026-08-31.md`.
 
 **Trigger:** Calendar gate, no code.
 
-**Steps:** Owner walks four falsifiers (friction log stays 0 but feature ships without override; release off-main without `--check`; new UX tickets cite `competitive-positioning-plan` without friction ID; quarterly survey skipped while README makes fresh comparison claims). All currently look clear — record that explicitly.
+**Steps:** Owner walks four falsifiers (friction log stays 0 but feature ships without override; release off-main without `--check`; new UX tickets cite `competitive-positioning-plan` without friction ID; quarterly survey skipped while README makes fresh comparison claims). All currently look clear — record that explicitly. Also schedule quarterly competitive survey (T5, due end-September) as docs-only hypothesis intake.
 
 **Exit evidence:** Dated owner note in `docs/work-log/operator-friction-log.md` or `dr-006-owner-decision` addendum.
 
