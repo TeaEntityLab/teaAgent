@@ -85,6 +85,21 @@ Anti-pattern guards:
 | WDH-002 | Hold | simulated protocol only | consenting non-maintainer participant and privacy review | Human-trigger-only |
 | EFX-FUTURE | Hold / absent | no provider settlement contract | EFX closure, dated owner promise, sink-enforced identity/status contract, fault evidence, Human Review | No design or implementation work |
 | ADR-0029 consensus validation | Resolved | Option D delete/quarantine executed 2026-07-22; recovery record retained | new owner/governance decision required for any revival | No scheduled work; no 2026-12-10 decision remains |
+## 3.5 Rethink 2026-09-01 — what can start now vs what stays Hold until 09-12
+
+*Starts now (no owner auth, no 09-12 trigger):* re-run H4 demo/evidence
+(`exercise_h4_shadow_demo.py → 2 synthetic`, `prepare_h4_evidence.py`,
+`test_h4_shadow_demo.py` guarded, `test_efx*` 11 passed), keep the `EFX`
+harness hot via `tests/test_efx001_*` fault harness copy and
+`efx-live-proof-procedure-2026-08-31.md` checklist, and nightly
+`verify_docs.sh`/`validate_docs_consistency.py` — all thin-harness,
+no external mutation.
+
+*Stays Hold:* any live GitHub/browser mutation, any `allow` /
+`danger-full-access` proof, any H4 `enforce` flip, any generic
+ledger / outbox / fencing / actor / second-runner, and all Phase 3
+lanes (§7) until their dated decision queue trigger fires.
+
 
 ## 4. Critical path
 
