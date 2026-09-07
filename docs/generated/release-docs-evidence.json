@@ -1,30 +1,32 @@
 {
-  "ok": true,
-  "created_at": "2026-09-01T04:04:54+00:00",
+  "ok": false,
+  "created_at": "2026-09-07T02:55:05+00:00",
   "repo_root": "/Users/teee/dev/teaagent",
   "git": {
     "branch": "main",
-    "commit": "29f1bc5ee5d726b1ab1f92726817b9b91ae8232a",
-    "dirty": false
+    "commit": "66411a1c34892b9fc907f21fcf367c77e639389f",
+    "dirty": true
   },
   "commands": [
     {
       "cmd": "/opt/homebrew/opt/python@3.14/bin/python3.14 scripts/validate_docs_consistency.py",
-      "exit_code": 0,
-      "stdout": "Risk register evidence coverage: 29/29 rows verified (100%)\nTicket index evidence coverage: 21/21 rows verified (100%)\nDocs consistency check passed.\n",
+      "exit_code": 1,
+      "stdout": "Risk register evidence coverage: 29/29 rows verified (100%)\nTicket index evidence coverage: 21/21 rows verified (100%)\nERROR: docs/generated/docs-aging-dashboard.md is out of date; run: python3 scripts/report_docs_aging.py\n",
       "stderr": ""
     },
     {
       "cmd": "/opt/homebrew/opt/python@3.14/bin/python3.14 scripts/report_docs_aging.py --check",
-      "exit_code": 0,
-      "stdout": "Docs aging dashboard check passed.\n",
-      "stderr": ""
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": "docs/generated/docs-aging-dashboard.md is out of date; run: python3 scripts/report_docs_aging.py\n"
     }
   ],
   "docs_freshness": {
     "scanned": 17,
-    "needs_attention": 0,
-    "by_owner": {},
+    "needs_attention": 1,
+    "by_owner": {
+      "security": 1
+    },
     "stale_threshold_days": 90
   },
   "roadmap_excerpt": {
