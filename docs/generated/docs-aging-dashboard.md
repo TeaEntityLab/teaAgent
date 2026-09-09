@@ -4,18 +4,30 @@
 
 **Stale threshold:** 90 days since `Last reviewed`
 **Current-truth docs scanned:** 17
-**Needs attention (working tier only):** 1
+**Needs attention (working tier only):** 3
 **Archive-tier docs (exempt from staleness):** 0
 
 Regenerate: `python3 scripts/report_docs_aging.py`
 
 ## Stale Or Incomplete By Owner Surface
 
+### docs
+
+| Document | Status | Last reviewed | File mtime | Notes |
+| --- | --- | --- | --- | --- |
+| `docs/INDEX.md` | stale_by_mtime | 2026-08-27 | 2026-09-09 | Missing owner banner; File modified after last reviewed date |
+
 ### security
 
 | Document | Status | Last reviewed | File mtime | Notes |
 | --- | --- | --- | --- | --- |
 | `docs/permission-and-approval-playbook.md` | stale_by_age | 2026-06-06 | 2026-06-06 | Missing owner banner; Last reviewed older than 90 days |
+
+### verification
+
+| Document | Status | Last reviewed | File mtime | Notes |
+| --- | --- | --- | --- | --- |
+| `docs/acceptance.md` | stale_by_mtime | 2026-08-26 | 2026-09-09 | File modified after last reviewed date |
 
 ## Review Triggers (Current-Truth Docs)
 

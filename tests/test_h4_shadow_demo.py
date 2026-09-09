@@ -45,6 +45,7 @@ def test_h4_shadow_demo_emits_two_denial_candidates(tmp_path: Path) -> None:
         )
         assert payload.get('mode') == 'shadow'
         assert payload.get('surface') in {'approval', 'subagent_launch'}
+        assert payload.get('provenance') == 'synthetic-demo'
 
     # Also verify prepare_h4_evidence sees 2 candidates
     from teaagent.governance.h4_evidence import (
@@ -55,9 +56,9 @@ def test_h4_shadow_demo_emits_two_denial_candidates(tmp_path: Path) -> None:
     report = build_h4_evidence_report(
         load_events_from_paths([output]), since='2026-08-13', until='2026-09-11'
     )
-    assert report.observed_events == 2
-    assert len(report.candidates) == 2
+    assert report.observed_events == 0
+    assert report.synthetic_excluded == 2
+    assert len(report.candidates) == 0
+    assert report.reachable_runs == 0
+    assert report.verdict == 'unexercised'
     assert report.skipped_malformed == 0
-    for cand in report.candidates:
-        assert cand.owner_verdict is None
-        assert cand.surface in {'approval', 'subagent_launch'}

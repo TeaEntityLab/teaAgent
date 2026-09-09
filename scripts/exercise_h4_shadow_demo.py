@@ -94,6 +94,7 @@ def main() -> int:
             arguments={'path': '/tmp/demo.txt', 'content': 'hello'},
             destructive=False,
             call_id='call_demo_001',
+            provenance='synthetic-demo',
         )
 
         # Exercise RBAC surface — with no roles, this will be denied and recorded
@@ -106,6 +107,7 @@ def main() -> int:
             assignee='demo-assignee-no-role',
             def_name='demo-subagent',
             depth=1,
+            provenance='synthetic-demo',
         )
 
         # Copy audit JSONL to requested output for offline analysis
@@ -136,7 +138,12 @@ def main() -> int:
                 load_events_from_paths([output]), since='2026-08-13', until='2026-09-11'
             )
             print(
-                f'Demo evidence: {report.observed_events} observed, {len(report.candidates)} denial candidates, {report.skipped_malformed} malformed'
+                f'Demo evidence: verdict={report.verdict}, '
+                f'{report.observed_events} observed, '
+                f'{report.synthetic_excluded} synthetic excluded, '
+                f'{report.reachable_runs} reachable runs, '
+                f'{len(report.candidates)} denial candidates, '
+                f'{report.skipped_malformed} malformed'
             )
             if report.candidates:
                 print(

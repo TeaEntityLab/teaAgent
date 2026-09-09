@@ -3,7 +3,7 @@
 ## Architecture
 
 - Keep the harness thin: orchestration, tool governance, state boundaries, audit, and validation belong here; domain reasoning belongs in the model or skills.
-- Treat thin harness as a **target invariant for new work**, not a claim about current code size (see `docs/strategy/harness-first-direction-2026-06-13.md`).
+- Treat thin harness as a **target invariant for new work**, not a claim about current code size (see `docs/strategy/harness-first-direction-2026-06-13.md`). Measured 2026-09-09: `teaagent/` is 502 files / **124,984 LOC**, and `scripts/check_god_modules.py` passes its 800-line rule only via **18 exemptions** — including `runner/_core.py` (1,054 lines), the module the ownership map calls a gravity well. Quote these numbers, not the slogan, when judging whether a change makes the harness thinner.
 - Prefer protocol assets over vendor-specific assets: MCP-style tool metadata, Skills, and portable run records.
 - Do not add a second agent framework without an ADR.
 

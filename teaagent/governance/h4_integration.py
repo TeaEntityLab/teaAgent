@@ -55,18 +55,25 @@ def record_h4_shadow_event(
     context: dict[str, Any],
     enforced: bool,
     details: Optional[list[dict[str, Any]]] = None,
+    provenance: Optional[str] = None,
 ) -> None:
-    audit.record(
-        'h4_governance_shadow',
-        run_id,
-        surface=surface,
-        mode=mode.value,
-        allowed=allowed,
-        enforced=enforced,
-        reason=reason,
-        context=context,
-        details=details or [],
-    )
+    """Record an ``h4_governance_shadow`` receipt to the audit log.
+
+    ``provenance`` is an optional origin marker (e.g. ``synthetic-demo``). When
+    omitted, the receipt is treated as organic by the evidence extractor.
+    """
+    payload: dict[str, Any] = {
+        'surface': surface,
+        'mode': mode.value,
+        'allowed': allowed,
+        'enforced': enforced,
+        'reason': reason,
+        'context': context,
+        'details': details or [],
+    }
+    if provenance is not None:
+        payload['provenance'] = provenance
+    audit.record('h4_governance_shadow', run_id, **payload)
 
 
 def evaluate_approval_policy_shadow(
@@ -78,8 +85,13 @@ def evaluate_approval_policy_shadow(
     arguments: dict[str, Any],
     destructive: bool,
     call_id: str,
+    provenance: Optional[str] = None,
 ) -> bool:
-    """Evaluate approval policies and record a shadow receipt. Never blocks."""
+    """Evaluate approval policies and record a shadow receipt. Never blocks.
+
+    ``provenance`` stamps the receipt with an origin marker such as
+    ``synthetic-demo``; omit it for organic production receipts.
+    """
     if workspace_root is None:
         return True
 
@@ -116,6 +128,7 @@ def evaluate_approval_policy_shadow(
         context=context,
         enforced=False,
         details=details,
+        provenance=provenance,
     )
     return True
 
@@ -128,8 +141,13 @@ def check_subagent_launch_rbac(
     assignee: str,
     def_name: str,
     depth: int,
+    provenance: Optional[str] = None,
 ) -> tuple[bool, str]:
-    """RBAC gate for subagent launch. Shadow by default; enforce when configured."""
+    """RBAC gate for subagent launch. Shadow by default; enforce when configured.
+
+    ``provenance`` stamps the receipt with an origin marker such as
+    ``synthetic-demo``; omit it for organic production receipts.
+    """
     from teaagent.governance.rbac import Permission, RBACSystem
 
     mode = rbac_governance_mode()
@@ -160,6 +178,7 @@ def check_subagent_launch_rbac(
             },
             enforced=mode == H4GovernanceMode.ENFORCE and not allowed,
             details=[],
+            provenance=provenance,
         )
     if mode == H4GovernanceMode.ENFORCE and not allowed:
         return False, reason

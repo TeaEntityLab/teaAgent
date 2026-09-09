@@ -1,6 +1,6 @@
 # Backlog Priority
 
-> **Last reviewed:** 2026-09-01
+> **Last reviewed:** 2026-09-09
 > **Review trigger:** Backlog priorities or shipped/beta status claims change.
 > **Scheduling gate (2026-08-26):** DR-006 remains authoritative. EFX-001–003
 > are in-progress P0 `governance-gap` remediations on existing seams; no
@@ -12,6 +12,23 @@
 > DR-006 lane that can generate organic events/friction/BG-001;
 > H2/H5/H6/WDH-002/EFX-FUTURE remain Hold — see
 > `.omx/artifacts/claude-you-are-an-external-advisor-for-teaagent-a-harness-first-own-2026-08-31T06-14-02-585Z.md`.
+> **Quarantine (2026-09-09, ADR-0043):** the 2026-09-09 Socratic roadmap/intent
+> panel found pre-2026-06-13 code implementing the harness-first §2 non-goals
+> (remote/federated multi-agent execution; general-purpose workflow engine) still
+> imported from production paths, exposed as opt-in CLI subcommands, and gated by
+> CI. All of it predates the decisions that descoped it, so this is retention, not
+> violation. The surfaces below are now explicitly `legacy-competitive` / **On
+> Hold** with a dated 2026-12-09 disposition review in
+> [ADR-0043](adr/0043-legacy-competitive-surface-quarantine.md): no new feature
+> work without a dated `owner-override`, and no present-tense capability claims.
+>
+> | Surface | Daily-path reachable | Disposition at expiry |
+> | --- | --- | --- |
+> | `teaagent/federated_sync.py` | No (`teaagent sync`; multisig off by default) | Promote under `owner-override` or delete |
+> | `teaagent/signature_relay.py` | No (`teaagent sync signature-relay`) | Delete with `federated_sync` unless WAN multisig ratified |
+> | `teaagent/domain/workflow_engine.py` | **No production caller**; execution simulated | Strongest deletion candidate (needs importer sweep) |
+> | `teaagent/consensus/` + `cli/_handlers/_consensus.py` | No (`teaagent consensus`; off by default) | Delete per ADR-0029 precedent unless ratified |
+> | `teaagent/jit_approval_server.py` | No (`teaagent control-plane serve`) | M4 carve-out only if dogfood scheduled; else delete |
 
 Prioritized by impact order: security and production risk → core platform capabilities → developer experience and ecosystem.
 

@@ -34,6 +34,12 @@ _VALID_STATUSES = frozenset(
         'Proposed',
         'Pending',
         'On Hold',
+        # Honest partial/unmeasured states (added 2026-09-09, ledger R-04).
+        # The vocabulary previously offered no way to say "landed in part" or
+        # "never measured", which biased rows toward Complete/Pending; the
+        # 2026-09-09 review found G3/G4 marked Complete for partial migrations.
+        'Partial',
+        'Unmeasured',
         # Emoji equivalents
         '\U0001f534',  # 🔴 Not Started / Blocked
         '\U0001f7e1',  # 🟡 In Progress
@@ -52,6 +58,8 @@ _STATUS_MARKERS = (
     'Proposed',
     'Pending',
     'Partially fixed',
+    'Partial',
+    'Unmeasured',
     'On Hold',
     '\U0001f534',  # 🔴
     '\U0001f7e1',  # 🟡

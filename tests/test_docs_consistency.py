@@ -452,8 +452,11 @@ def test_roadmap_status_north_star_goals_section() -> None:
     assert '## North-Star Goals (G1-G6)' in roadmap
     for goal in ('G1', 'G2', 'G3', 'G4', 'G5', 'G6'):
         assert f'| {goal} |' in roadmap, f'missing North-Star row for {goal}'
-    # G3 must stay recorded as rescoped, citing the owner-reviewed work-logs.
-    assert 'Rescoped by owner decision' in roadmap
+    # G3 must keep citing the owner-reviewed work-logs that recorded why the
+    # M4/M5 migration stopped. The former assertion pinning the literal phrase
+    # 'Rescoped by owner decision' was deleted 2026-09-09 (ledger R-04): it
+    # pinned the wording that labelled a partial migration Complete, so the
+    # guard actively defended the mislabel. Cite the evidence, not the adjective.
     assert 'm4-budget-stays-inline-2026-06-13.md' in roadmap
     assert 'm5-hooks-observability-only-2026-06-13.md' in roadmap
     # Unmeasured goals stay honest until owner-run metrics exist.
@@ -922,3 +925,42 @@ def test_roadmap_status_code_references_pass_for_repo_doc() -> None:
     roadmap = (root / 'docs' / 'roadmap-status.md').read_text(encoding='utf-8')
     errors = _VALIDATE_MODULE.validate_doc_code_references(roadmap, repo_root=root)
     assert errors == []
+
+
+def test_roadmap_g5_corpus_counts_match_inventory() -> None:
+    """G5's stated corpus figures must match the real corpus.
+
+    The 2026-09-09 review found the G5 row claiming a "~500-file corpus with 259
+    archive-tiered" while the corpus was actually 639 files with 262 archived.
+    That misreport is the exact drift this guard exists to catch: adding docs
+    without restating G5 fails here.
+    """
+    root = Path(__file__).resolve().parents[1]
+    actual_total = len(list((root / 'docs').rglob('*.md')))
+    inventory_rows = [
+        line
+        for line in (root / 'docs' / 'generated' / 'docs-inventory.md')
+        .read_text(encoding='utf-8')
+        .splitlines()
+        if line.startswith('| `')
+    ]
+    tiers: dict[str, int] = {}
+    for line in inventory_rows:
+        tier = line.split('|')[2].strip()
+        tiers[tier] = tiers.get(tier, 0) + 1
+
+    roadmap = (root / 'docs' / 'roadmap-status.md').read_text(encoding='utf-8')
+    g5_row = next(line for line in roadmap.splitlines() if line.startswith('| G5 |'))
+    numbers = {int(n) for n in re.findall(r'\d+', g5_row)}
+
+    assert actual_total in numbers, (
+        f'G5 row does not state the real corpus total {actual_total}: {g5_row}'
+    )
+    assert len(inventory_rows) in numbers, (
+        f'G5 row does not state the real inventory row count '
+        f'{len(inventory_rows)}: {g5_row}'
+    )
+    for tier in ('constitution', 'working', 'archive'):
+        assert tiers[tier] in numbers, (
+            f'G5 row does not state the real {tier} tier count {tiers[tier]}: {g5_row}'
+        )

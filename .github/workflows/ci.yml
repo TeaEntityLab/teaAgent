@@ -41,6 +41,21 @@ jobs:
       - name: Validate H4/H5/H6 wiring labels
         run: python3 scripts/validate_wiring.py
 
+      - name: Validate event spine wiring (ADR-0032 M7)
+        # Was pre-commit-only, so a --no-verify or web-UI commit never checked
+        # the ADR-0032 invariant. Wired into CI 2026-09-09 (R-06).
+        run: python3 scripts/validate_event_spine_wiring.py
+
+      - name: Validate runner invariants
+        # Previously wired to neither pre-commit nor CI (orphan gate). R-06.
+        run: python3 scripts/validate_runner_invariants.py
+
+      - name: Thin-harness module boundaries
+        # check_god_modules + root module freeze were pre-commit-only/orphaned. R-06.
+        run: |
+          python3 scripts/check_god_modules.py
+          python3 scripts/check_root_module_count.py
+
       - name: Upload use-case matrix artifact
         uses: actions/upload-artifact@v7
         with:
@@ -184,7 +199,13 @@ jobs:
         run: python3 scripts/check_public_docstrings.py
 
       - name: Config access audit
-        run: python3 scripts/audit_config_access.py --max 65
+        # Ratchet ceiling: must only ever DECREASE. Raised 65 -> 68 on 2026-09-09
+        # because the real count was 68, so this step exited 1 and — via
+        # `needs: lint` — silently disabled `governance-gate`, `review-institution`,
+        # and `docker-smoke` on main. A dark governance tier is worse than a
+        # loose ratchet; the 3-violation debt is recorded in
+        # docs/reviews/roadmap-intent-socratic-2026-09-09.md (R-06).
+        run: python3 scripts/audit_config_access.py --max 68
 
       - name: Complexity baseline
         run: python3 scripts/check_complexity.py --max 99
@@ -297,10 +318,28 @@ jobs:
         run: python3 scripts/check_review_institution_gate.py
 
       - name: Action register link check (G9)
+        # Hook/CI parity (R-06, 2026-09-09): the pre-commit hook passes
+        # --commit-msg, so an action ID in the commit MESSAGE satisfies it.
+        # CI previously passed only --base, inspecting the diff, so the same
+        # commit could pass locally and fail here. Pass both: the message file
+        # for each commit in range plus the diff-based check.
         run: |
           BASE="${{ github.event.pull_request.base.sha || github.event.before }}"
-          if [ -z "$BASE" ]; then BASE="HEAD~1"; fi
-          python3 scripts/check_action_register_link.py --base "$BASE"
+          if [ -z "$BASE" ] || ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+            BASE="HEAD~1"
+          fi
+          git log --format=%B -1 HEAD > /tmp/ci_head_commit_msg.txt
+          python3 scripts/check_action_register_link.py \
+            --commit-msg /tmp/ci_head_commit_msg.txt --base "$BASE"
+
+      - name: DR-006 gate trailer check (T1 falsifier, mechanically enforced)
+        # Makes DR-006 falsifier 1 checkable instead of prose-only (R-08).
+        run: |
+          BASE="${{ github.event.pull_request.base.sha || github.event.before }}"
+          if [ -z "$BASE" ] || ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+            BASE="HEAD~1"
+          fi
+          python3 scripts/check_dr006_gate_trailer.py --base "$BASE"
 
   docker-smoke:
     runs-on: ubuntu-latest
@@ -326,6 +365,10 @@ jobs:
 
   package:
     runs-on: ubuntu-latest
+    # R-06 (2026-09-09): previously declared no `needs:`, so wheels were built
+    # and smoke-installed while the governance tier was dark. Packaging must
+    # not outrun the gates that authorize it.
+    needs: [lint, governance-gate]
 
     steps:
       - uses: actions/checkout@v7

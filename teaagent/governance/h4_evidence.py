@@ -31,6 +31,26 @@ H4_SURFACES = ('approval', 'subagent_launch')
 _FLAT_H4_PAYLOAD_KEYS = frozenset(
     {'surface', 'mode', 'allowed', 'enforced', 'reason', 'context', 'details'}
 )
+#: Provenance value for organic receipts; anything else explicit is treated as synthetic.
+H4_ORGANIC_PROVENANCE = 'organic'
+
+#: Audit event types that indicate the approval shadow surface was reached.
+_REACHABILITY_APPROVAL_EVENTS = frozenset(
+    {
+        'approval_denied',
+        'approval_granted',
+        'approval_requested',
+        'tool_call_approved',
+        'tool_call_blocked',
+        'tool_call_denied',
+        'tool_call_pending_approval',
+    }
+)
+
+#: Audit event types that indicate the subagent-launch shadow surface was reached.
+_REACHABILITY_SUBAGENT_EVENTS = frozenset(
+    {'subagent_lineage', 'subagent_review_artifact'}
+)
 
 
 @dataclass(frozen=True)
@@ -97,15 +117,31 @@ class H4EvidenceReport:
     This is candidate evidence only. ``coverage`` and ``candidates`` are facts
     derived from the audit log; whether the window *passes* criterion 1 is an
     owner verdict recorded elsewhere, not a field here.
+
+    ``reachable_runs`` counts distinct organic runs that contained a marker
+    event showing an H4 shadow surface was reached (approval decision,
+    destructive/mutating tool call, or subagent launch). Runs whose only H4
+    receipts are explicitly synthetic are excluded from this denominator.
     """
 
     since: Optional[str]
     until: Optional[str]
     total_events: int
     observed_events: int
+    synthetic_excluded: int
     skipped_malformed: int
+    reachable_runs: int
     candidates: list[H4DenialCandidate] = field(default_factory=list)
     coverage: list[SurfaceCoverage] = field(default_factory=list)
+
+    @property
+    def verdict(self) -> str:
+        """Observation-window status: ``unexercised``, ``clean``, or ``needs_review``."""
+        if self.observed_events == 0 and self.reachable_runs == 0:
+            return 'unexercised'
+        if self.observed_events == 0:
+            return 'clean'
+        return 'needs_review'
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -114,10 +150,13 @@ class H4EvidenceReport:
             'until': self.until,
             'total_events': self.total_events,
             'observed_events': self.observed_events,
+            'synthetic_excluded': self.synthetic_excluded,
+            'reachable_runs': self.reachable_runs,
             'skipped_malformed': self.skipped_malformed,
             'candidate_count': len(self.candidates),
             'candidates': [c.to_dict() for c in self.candidates],
             'coverage': [c.to_dict() for c in self.coverage],
+            'verdict': self.verdict,
             'note': (
                 'Candidate evidence only. owner_verdict/owner_note are owner-only; '
                 'agents must not classify false positives (ADR-0031 exit criterion 1).'
@@ -146,6 +185,39 @@ def _is_h4_event(event: dict[str, Any], payload: dict[str, Any]) -> bool:
     # frozen h4_governance_shadow analysis key-set. A looser surface+allowed
     # fallback would accidentally ingest unrelated governance records.
     return _FLAT_H4_PAYLOAD_KEYS.issubset(payload)
+
+
+def _is_synthetic_payload(payload: dict[str, Any]) -> bool:
+    """Return True when the receipt carries a non-organic provenance marker.
+
+    Missing provenance is treated as organic so legacy events remain valid.
+    """
+    provenance = payload.get('provenance')
+    return isinstance(provenance, str) and provenance != H4_ORGANIC_PROVENANCE
+
+
+def _is_reachability_marker(event: dict[str, Any], payload: dict[str, Any]) -> bool:
+    """Return True when an event shows an H4 shadow surface was reached.
+
+    Approval decisions, destructive/mutating tool calls, and subagent launches
+    are the real-world signals that a run exercised the shadow code paths.
+    """
+    event_type = event.get('event_type')
+    if event_type in _REACHABILITY_APPROVAL_EVENTS:
+        return True
+    if event_type in _REACHABILITY_SUBAGENT_EVENTS:
+        return True
+    if event_type == 'tool_call_started':
+        annotations = payload.get('annotations')
+        if isinstance(annotations, dict) and (
+            annotations.get('destructive') is True
+            or annotations.get('mutating') is True
+        ):
+            return True
+        tool_name = payload.get('tool_name', '')
+        if isinstance(tool_name, str) and tool_name.startswith('subagent_'):
+            return True
+    return False
 
 
 def _parse_ts(value: Any) -> Optional[datetime]:
@@ -245,6 +317,8 @@ def extract_denial_candidates(
         payload = _payload_of(event)
         if not _is_h4_event(event, payload):
             continue
+        if _is_synthetic_payload(payload):
+            continue
         if payload.get('allowed') is not False:
             continue
         moment = _parse_ts(event.get('created_at') or payload.get('created_at'))
@@ -283,8 +357,22 @@ def build_h4_evidence_report(
     """Assemble the deterministic ADR-0031 criterion-1 evidence bundle."""
     since_dt, until_dt = _parse_window(since, until)
 
+    # Runs whose H4 receipts are explicitly synthetic do not count as organic
+    # reachability, even if they also contain non-H4 reachability markers.
+    synthetic_run_ids: set[str] = set()
+    for event in events:
+        payload = _payload_of(event)
+        if _is_h4_event(event, payload) and _is_synthetic_payload(payload):
+            moment = _parse_ts(event.get('created_at') or payload.get('created_at'))
+            if _in_window(moment, since_dt, until_dt):
+                run_id = event.get('run_id')
+                if run_id is not None:
+                    synthetic_run_ids.add(run_id)
+
     observed = 0
+    synthetic_excluded = 0
     skipped = 0
+    reachable_run_ids: set[str] = set()
     per_surface_weeks: dict[str, dict[str, int]] = {}
     per_surface_denials: dict[str, int] = {}
     per_surface_observed: dict[str, int] = {}
@@ -292,31 +380,46 @@ def build_h4_evidence_report(
 
     for event in events:
         payload = _payload_of(event)
-        if not _is_h4_event(event, payload):
+        if _is_h4_event(event, payload):
+            if _is_synthetic_payload(payload):
+                moment = _parse_ts(event.get('created_at') or payload.get('created_at'))
+                if _in_window(moment, since_dt, until_dt):
+                    synthetic_excluded += 1
+                continue
+            surface = payload.get('surface')
+            allowed = payload.get('allowed')
+            if (
+                not isinstance(surface, str)
+                or surface not in H4_SURFACES
+                or not isinstance(allowed, bool)
+            ):
+                # An h4 event that lacks the frozen analysis keys (e.g. L0-stripped)
+                # cannot be adjudicated; count it rather than silently dropping it.
+                skipped += 1
+                continue
+            moment = _parse_ts(event.get('created_at') or payload.get('created_at'))
+            if not _in_window(moment, since_dt, until_dt):
+                continue
+            observed += 1
+            run_id = event.get('run_id')
+            if run_id is not None:
+                reachable_run_ids.add(run_id)
+            per_surface_observed[surface] = per_surface_observed.get(surface, 0) + 1
+            if not allowed:
+                per_surface_denials[surface] = per_surface_denials.get(surface, 0) + 1
+            if moment is not None:
+                key = _iso_week_key(moment)
+                weeks = per_surface_weeks.setdefault(surface, {})
+                weeks[key] = weeks.get(key, 0) + 1
+                week_moments.setdefault(surface, []).append(moment)
             continue
-        surface = payload.get('surface')
-        allowed = payload.get('allowed')
-        if (
-            not isinstance(surface, str)
-            or surface not in H4_SURFACES
-            or not isinstance(allowed, bool)
-        ):
-            # An h4 event that lacks the frozen analysis keys (e.g. L0-stripped)
-            # cannot be adjudicated; count it rather than silently dropping it.
-            skipped += 1
+        if _is_reachability_marker(event, payload):
+            moment = _parse_ts(event.get('created_at') or payload.get('created_at'))
+            if _in_window(moment, since_dt, until_dt):
+                run_id = event.get('run_id')
+                if run_id is not None and run_id not in synthetic_run_ids:
+                    reachable_run_ids.add(run_id)
             continue
-        moment = _parse_ts(event.get('created_at') or payload.get('created_at'))
-        if not _in_window(moment, since_dt, until_dt):
-            continue
-        observed += 1
-        per_surface_observed[surface] = per_surface_observed.get(surface, 0) + 1
-        if not allowed:
-            per_surface_denials[surface] = per_surface_denials.get(surface, 0) + 1
-        if moment is not None:
-            key = _iso_week_key(moment)
-            weeks = per_surface_weeks.setdefault(surface, {})
-            weeks[key] = weeks.get(key, 0) + 1
-            week_moments.setdefault(surface, []).append(moment)
 
     coverage: list[SurfaceCoverage] = []
     for surface in sorted(per_surface_observed):
@@ -342,7 +445,9 @@ def build_h4_evidence_report(
         until=until,
         total_events=len(events),
         observed_events=observed,
+        synthetic_excluded=synthetic_excluded,
         skipped_malformed=skipped,
+        reachable_runs=len(reachable_run_ids),
         candidates=candidates,
         coverage=coverage,
     )

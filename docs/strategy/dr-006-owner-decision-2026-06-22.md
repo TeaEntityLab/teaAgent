@@ -64,10 +64,11 @@ Agents completed permitted work. DR-001 acceptance = owner testimony only.
 
 | Signal | Decision failed |
 | --- | --- |
-| Friction log stays 0; competitive-tagged **feature** work ships without `owner-override` | T1 lip service |
+| `feat:` commit touching `teaagent/` has no commit message trailer (`Gate:` or `Constraint:`) whose value cites one of `friction-driven`, `governance-gap`, `owner-override` — mechanical check in `scripts/check_dr006_gate_trailer.py` | T1 lip service |
 | Release tagged off-main with stale generated docs and no local `--check` | T5 split gate broken |
 | New UX tickets cite `competitive-positioning-plan` without friction ID | T1 not enforced |
 | Quarterly survey skipped while README makes fresh comparison claims | T5 docs track broken |
+**Amendment (2026-09-09):** Falsifier 1 is now enforced mechanically by `scripts/check_dr006_gate_trailer.py`. `Gate:` is the canonical trailer; `Constraint:` trailers containing an accepted gate token are accepted during the transition because they were already in use (e.g. `87d1c61`).
 
 ---
 

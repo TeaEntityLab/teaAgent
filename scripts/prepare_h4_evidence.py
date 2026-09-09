@@ -83,7 +83,10 @@ def main(argv: list[str] | None = None) -> int:
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(rendered + '\n', encoding='utf-8')
         print(
-            f'H4 evidence packet: {report.observed_events} observed events, '
+            f'H4 evidence packet: {report.verdict}, '
+            f'{report.observed_events} observed events, '
+            f'{report.reachable_runs} reachable run(s), '
+            f'{report.synthetic_excluded} synthetic excluded, '
             f'{len(report.candidates)} denial candidate(s) -> {out}'
         )
     else:

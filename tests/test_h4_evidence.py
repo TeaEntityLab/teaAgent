@@ -55,22 +55,26 @@ def _disk_event(
     created_at: str | None = '2026-07-01T12:00:00+00:00',
     run_id: str = 'run-1',
     event_id: str = 'evt-1',
+    provenance: str | None = None,
 ) -> dict[str, Any]:
     """Build a record in the on-disk shape: fields nested under 'payload'."""
+    payload: dict[str, Any] = {
+        'surface': surface,
+        'mode': mode,
+        'allowed': allowed,
+        'enforced': False,
+        'reason': reason,
+        'context': context if context is not None else {'action': 'approve_tool'},
+        'details': [],
+    }
+    if provenance is not None:
+        payload['provenance'] = provenance
     return {
         'event_id': event_id,
         'event_type': event_type,
         'run_id': run_id,
         'created_at': created_at,
-        'payload': {
-            'surface': surface,
-            'mode': mode,
-            'allowed': allowed,
-            'enforced': False,
-            'reason': reason,
-            'context': context if context is not None else {'action': 'approve_tool'},
-            'details': [],
-        },
+        'payload': payload,
     }
 
 
@@ -381,3 +385,94 @@ def test_cli_invalid_window_fails_cleanly() -> None:
         )
         assert result.returncode == 2
         assert 'since must be <= until' in result.stderr
+
+
+def test_synthetic_provenance_excludes_event_from_organic_counts() -> None:
+    """A synthetic-demo tag removes the receipt from organic evidence counts."""
+    events = [
+        _disk_event(
+            allowed=False,
+            provenance='synthetic-demo',
+            event_id='syn-1',
+            run_id='run-syn',
+        ),
+        _disk_event(allowed=False, event_id='org-1', run_id='run-org'),
+    ]
+    report = build_h4_evidence_report(events)
+    assert report.observed_events == 1
+    assert report.synthetic_excluded == 1
+    assert [c.event_id for c in report.candidates] == ['org-1']
+
+
+def test_extract_denial_candidates_skip_synthetic() -> None:
+    """Synthetic receipts are not returned as candidates."""
+    events = [
+        _disk_event(
+            allowed=False,
+            provenance='synthetic-demo',
+            event_id='syn-1',
+        ),
+        _disk_event(allowed=False, event_id='org-1'),
+    ]
+    candidates = extract_denial_candidates(events)
+    assert [c.event_id for c in candidates] == ['org-1']
+
+
+def test_unexercised_and_clean_verdicts() -> None:
+    """0 observed / 0 reachable is unexercised; 0 observed / N>0 is clean."""
+    no_marker = build_h4_evidence_report([])
+    assert no_marker.observed_events == 0
+    assert no_marker.reachable_runs == 0
+    assert no_marker.verdict == 'unexercised'
+
+    events = [
+        {
+            'event_type': 'tool_call_started',
+            'run_id': 'run-reachable',
+            'created_at': '2026-07-02T12:00:00+00:00',
+            'payload': {
+                'tool_name': 'workspace_write_file',
+                'annotations': {'destructive': True},
+            },
+        }
+    ]
+    report = build_h4_evidence_report(events)
+    assert report.observed_events == 0
+    assert report.reachable_runs == 1
+    assert report.verdict == 'clean'
+
+
+def test_untagged_legacy_events_count_as_organic() -> None:
+    """Receipts without a provenance marker are organic and become candidates."""
+    events = [_disk_event(allowed=False, event_id='legacy-1', run_id='run-legacy')]
+    report = build_h4_evidence_report(events)
+    assert report.observed_events == 1
+    assert report.synthetic_excluded == 0
+    assert len(report.candidates) == 1
+    assert report.verdict == 'needs_review'
+
+
+def test_synthetic_run_markers_are_not_counted_as_organic_reachable() -> None:
+    """A run that only produces synthetic H4 receipts has 0 organic reachability."""
+    events = [
+        _disk_event(
+            allowed=False,
+            provenance='synthetic-demo',
+            event_id='syn-1',
+            run_id='run-syn',
+        ),
+        {
+            'event_type': 'tool_call_started',
+            'run_id': 'run-syn',
+            'created_at': '2026-07-02T12:00:00+00:00',
+            'payload': {
+                'tool_name': 'workspace_write_file',
+                'annotations': {'destructive': True},
+            },
+        },
+    ]
+    report = build_h4_evidence_report(events)
+    assert report.observed_events == 0
+    assert report.synthetic_excluded == 1
+    assert report.reachable_runs == 0
+    assert report.verdict == 'unexercised'

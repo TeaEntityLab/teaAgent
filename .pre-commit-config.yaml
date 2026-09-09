@@ -78,6 +78,16 @@ repos:
         language: system
         pass_filenames: false
         stages: [commit-msg]
+      - id: check-dr006-gate-trailer
+        name: check-dr006-gate-trailer
+        # DR-006 T1 falsifier, mechanically enforced (R-08): a `feat:` commit
+        # touching teaagent/ must cite its scheduling gate as a
+        # `Gate: friction-driven|governance-gap|owner-override` trailer.
+        # Same argv shape as CI so local green cannot diverge from CI green.
+        entry: python3 scripts/check_dr006_gate_trailer.py --commit-msg .git/COMMIT_EDITMSG
+        language: system
+        pass_filenames: false
+        stages: [commit-msg]
       - id: check-github-url-consistency
         name: check-github-url-consistency
         # Enforce one canonical GitHub URL (U-P0-1).

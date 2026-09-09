@@ -797,10 +797,21 @@ def validate_current_truth_framing(
         errors.append(
             'docs/INDEX.md Current Truth must frame current use as owner-operated.'
         )
-    if 'owner-operator is the current validated persona' not in roadmap_header:
+    # The gate previously hardcoded 'owner-operator is the current validated
+    # persona'. The 2026-09-09 review found that claim unsupported by the run
+    # store (415 runs / 6 synthetic prompts / zero organic owner tasks), so a
+    # gate demanding it forced the doc to assert something evidence did not
+    # support. Ledger R-05: require the persona to be NAMED and scoped, and
+    # accept the honest 'target persona' framing alongside the stronger claim.
+    _PERSONA_FRAMINGS = (
+        'owner-operator is the current validated persona',
+        'owner-operator remains the **target** persona',
+        'owner-operator remains the target persona',
+    )
+    if not any(framing in roadmap_header for framing in _PERSONA_FRAMINGS):
         errors.append(
-            'docs/roadmap-status.md must name owner-operator as the current '
-            'validated persona.'
+            'docs/roadmap-status.md must name the owner-operator persona and '
+            'its evidence status (validated, or target pending evidence).'
         )
     if 'not current goals' not in roadmap_header:
         errors.append(

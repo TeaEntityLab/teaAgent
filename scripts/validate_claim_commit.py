@@ -14,6 +14,15 @@ _CLAIM_RE = re.compile(
 _ROADMAP_UNCHANGED = re.compile(
     r'^Roadmap-Status:\s*unchanged\s*$', re.IGNORECASE | re.MULTILINE
 )
+# A claim-style commit that ACTUALLY updates docs/roadmap-status.md previously had
+# no truthful trailer available: the only accepted token was `unchanged`, so the
+# gate forced an inaccurate declaration (2026-09-09, ledger R-06 — same defect
+# class as the persona check that demanded an unsupported claim). Accept an
+# explicit `updated`/`restated` declaration, which must name what changed.
+_ROADMAP_UPDATED = re.compile(
+    r'^Roadmap-Status:\s*(?:updated|restated)\b\s*\S.*$',
+    re.IGNORECASE | re.MULTILINE,
+)
 
 
 def validate_claim_commit_message(
@@ -22,7 +31,7 @@ def validate_claim_commit_message(
     errors: list[str] = []
     if not _CLAIM_RE.search(message):
         return errors
-    if _ROADMAP_UNCHANGED.search(message):
+    if _ROADMAP_UNCHANGED.search(message) or _ROADMAP_UPDATED.search(message):
         return errors
     root = repo_root or Path.cwd()
     roadmap = root / 'docs' / 'roadmap-status.md'
@@ -30,9 +39,10 @@ def validate_claim_commit_message(
         errors.append('Claim-style commit requires docs/roadmap-status.md to exist.')
         return errors
     errors.append(
-        'Commit message matches horizon/milestone claim pattern but lacks '
-        'Roadmap-Status: unchanged trailer and docs/roadmap-status.md was not '
-        'verified in this hook. Update roadmap or add Roadmap-Status: unchanged.'
+        'Commit message matches horizon/milestone claim pattern but lacks a '
+        'Roadmap-Status trailer. Add exactly "Roadmap-Status: unchanged" when '
+        'no horizon/milestone status moved, or "Roadmap-Status: updated <what '
+        'changed>" when this commit edits docs/roadmap-status.md.'
     )
     return errors
 
