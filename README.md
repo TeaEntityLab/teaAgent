@@ -141,13 +141,13 @@ TeaAgent includes persistent memory features to learn from past mistakes and syn
 
 ### 8. Self-Healing Validation (Beta)
 
-Static analysis validation (ruff, mypy, tsc, eslint) is integrated with the agent runner and workflow engine:
+Static analysis validation (ruff, mypy, tsc, eslint) runs after an agent run via the configured validation profile (post-run; it does not gate commits):
 
 **Validation Tools:**
 - Auto-detects available tools (ruff, mypy, tsc, eslint)
 - Runs the configured validation profile after an agent run (post-run; it does not gate commits)
 - Supports Python, TypeScript, and JavaScript projects
-- Enable with `--validate` on `agent run` or via workflow self-healing steps
+- Enable with `--validate` on `agent run`. (Workflow self-healing steps are quarantined as legacy-competitive On Hold per DR-006 — see `docs/adr/0043-legacy-competitive-surface-quarantine.md` — and are not current capabilities.)
 
 See [maturity-matrix.md](docs/maturity-matrix.md) for surface status and test pointers.
 
@@ -184,7 +184,7 @@ Self-healing validation is described in [section 8](#8-self-healing-validation-b
 - Success metrics tracking (accuracy, speed, etc.)
 - Hot-reload support for iterative improvement
 
-**Remote JIT Approval:**
+**Remote JIT Approval (quarantined as legacy-competitive On Hold per DR-006 — see `docs/adr/0043-legacy-competitive-surface-quarantine.md` — not a current capability):**
 - SSE-based remote approval server for destructive tool requests
 - 3-minute timeout with safe abort
 - Approval queue management for multi-agent workflows
@@ -217,7 +217,7 @@ CLI / TUI  →  AgentRunner (decision loop)  →  ToolRegistry  →  Workspace T
 - **Context Compaction**: Automatic context compression at 75-92% token usage (Claude Code compatible).
 - **Plan Mode**: Read-only exploration mode for safe codebase analysis with plan-before-write enforcement.
 - **ACP Adapter**: Agent Client Protocol integration for VS Code, Zed, and JetBrains IDEs.
-- **Multi-Agent Coordination**: TaskCoordinator for classification/routing, AgentFactory for dynamic agent generation with evolutionary prompt tuning, ToolPermissionManager for safety control, WorkflowEngine for multi-step execution with self-healing validation, ContextBus for cross-sandbox Delta sharing, JITApprovalServer for remote approval with timeout, and CentralizedApprovalQueue for aggregated subagent approvals.
+- **Multi-Agent Coordination**: TaskCoordinator for classification/routing, AgentFactory for dynamic agent generation with evolutionary prompt tuning, ToolPermissionManager for safety control, ContextBus for cross-sandbox Delta sharing, and CentralizedApprovalQueue for aggregated subagent approvals. WorkflowEngine (multi-step execution) and JITApprovalServer (remote approval) are quarantined as legacy-competitive On Hold per DR-006 with a 2026-12-09 disposition — see `docs/adr/0043-legacy-competitive-surface-quarantine.md` — and are not current capabilities.
 
 See [docs/architecture.md](docs/architecture.md) for component details, data flow, and extension points.
 
