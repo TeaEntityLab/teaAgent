@@ -1,6 +1,6 @@
 # Backlog Priority
 
-> **Last reviewed:** 2026-09-09
+> **Last reviewed:** 2026-09-12
 > **Review trigger:** Backlog priorities or shipped/beta status claims change.
 > **Scheduling gate (2026-08-26):** DR-006 remains authoritative. EFX-001–003
 > are in-progress P0 `governance-gap` remediations on existing seams; no
@@ -12,6 +12,13 @@
 > DR-006 lane that can generate organic events/friction/BG-001;
 > H2/H5/H6/WDH-002/EFX-FUTURE remain Hold — see
 > `.omx/artifacts/claude-you-are-an-external-advisor-for-teaagent-a-harness-first-own-2026-08-31T06-14-02-585Z.md`.
+> **Review 2026-09-12:** no priority or shipped/beta change; DR-006 falsifier 1
+> is now mechanically checkable via `scripts/check_dr006_gate_trailer.py` —
+> measured 8 post-DR-006 `feat` commits touching `teaagent/`, 1 citing a gate
+> (`87d1c61` governance-gap); retrospective only since the gate landed
+> 2026-09-09, and backlog-row coverage was not re-audited in this pass.
+> Falsifier window closes 2026-09-22. ADR-0031 expiry arrives today with no
+> dogfood booked (see roadmap-status H4 row); that decision is the owner's.
 > **Quarantine (2026-09-09, ADR-0043):** the 2026-09-09 Socratic roadmap/intent
 > panel found pre-2026-06-13 code implementing the harness-first §2 non-goals
 > (remote/federated multi-agent execution; general-purpose workflow engine) still

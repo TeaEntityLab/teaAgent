@@ -12,7 +12,7 @@
 > **Status:** Active for already-authorized verification and dated decision
 > preparation. Held rows remain held.
 >
-> **Last reviewed:** 2026-09-01 (re-affirmed: Horizon A reconciled with falsifier + T5, B/C drafted `horizon-b-…` `horizon-c-…`; queue empty, 6681 green, no new friction, no dogfood scheduled — see §6.1.3 + §6.3)
+> **Last reviewed:** 2026-09-12 (re-affirmed: queue still empty pending owner decisions — ADR-0031 undecided, EFX live-proof unauthorized, no dogfood booked; roadmap-status and backlog-priority touched same day for expiry-day evidence only, no sequencing change)
 
 > **Review trigger:** EFX live-proof evidence lands; ADR-0031 is decided; a
 > qualifying DR-006 signal is recorded; or an authority document changes.
