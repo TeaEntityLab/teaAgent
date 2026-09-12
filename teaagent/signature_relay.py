@@ -1,10 +1,4 @@
-"""HTTP relay for WAN multi-sig approval requests and peer signatures.
-
-Quarantine notice (ADR-0043, 2026-09-09): legacy-competitive, On Hold per
-DR-006. No new feature work without a dated owner-override; no present-tense
-capability claims. Disposition review expires 2026-12-09 (promote or delete).
-See docs/adr/0043-legacy-competitive-surface-quarantine.md.
-"""
+"""HTTP relay for WAN multi-sig approval requests and peer signatures."""
 
 from __future__ import annotations
 

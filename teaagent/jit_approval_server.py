@@ -5,12 +5,6 @@ This module implements the Cooragent remote JIT approval server that:
 2. Provides web interface for approval/rejection
 3. Implements 3-minute timeout with safe abort
 4. Integrates with ToolPermissionManager for approval flow
-
-Quarantine notice (ADR-0043, 2026-09-09): M4 carve-out surface, On Hold per
-DR-006. Covered by the background-lifecycle/operator-cockpit carve-out ONLY
-if a dogfood session is scheduled; otherwise delete. No new feature work
-without a dated owner-override. Disposition review expires 2026-12-09.
-See docs/adr/0043-legacy-competitive-surface-quarantine.md.
 """
 
 from __future__ import annotations
