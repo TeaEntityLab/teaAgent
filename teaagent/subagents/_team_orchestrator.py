@@ -156,7 +156,6 @@ def load_team_defs(root: Path) -> dict[str, TeamDef]:
                     max_iterations=spec.get('max_iterations', 5),
                     max_tool_calls=spec.get('max_tool_calls', 8),
                     isolation=spec.get('isolation', 'worktree'),
-                    effort=spec.get('effort'),
                 )
             )
         teams[data['name']] = TeamDef(

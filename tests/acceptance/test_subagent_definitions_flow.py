@@ -70,6 +70,11 @@ def test_yaml_agent_definition(tmp_path):
         'max_iterations: 10\n'
         'disallowed_tools:\n'
         '  - workspace_run_shell_mutate\n'
+        # Unknown keys such as the removed per-def `effort:` knob must not
+        # break loading: def authors may still carry it in existing YAML, and
+        # the loader ignores what SubagentDef does not declare. (effort was
+        # deleted 2026-09-12 as a silent no-op — parsed, stored, never
+        # consumed by runner or llm, which expose no effort parameter.)
         'effort: high\n',
         encoding='utf-8',
     )
@@ -79,7 +84,7 @@ def test_yaml_agent_definition(tmp_path):
     assert d.max_iterations == 10
     assert d.disallowed_tools is not None
     assert 'workspace_run_shell_mutate' in d.disallowed_tools
-    assert d.effort == 'high'
+    assert not hasattr(d, 'effort')
 
 
 def test_json_agent_definition(tmp_path):

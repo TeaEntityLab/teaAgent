@@ -22,7 +22,6 @@ class SubagentDef:
     max_depth: int = 1
     isolation: str = DEFAULT_SUBAGENT_ISOLATION
     background: bool = False
-    effort: Optional[str] = None
 
 
 @dataclass(frozen=True)

@@ -48,7 +48,6 @@ def load_subagent_defs(root: Path) -> dict[str, SubagentDef]:
                 disallowed_tools = frozenset(dnames)
         isolation = str(data.get('isolation', 'shared'))
         background = bool(data.get('background', False))
-        effort = data.get('effort')
         system_prompt = str(data.get('system_prompt', ''))
         if not system_prompt:
             system_prompt = str(data.get('prompt', ''))
@@ -67,7 +66,6 @@ def load_subagent_defs(root: Path) -> dict[str, SubagentDef]:
             max_depth=int(data.get('max_depth', 1)),
             isolation=isolation,
             background=background,
-            effort=effort,
         )
     return defs
 
