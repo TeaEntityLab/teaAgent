@@ -3,6 +3,11 @@
 This module provides data structures for peer-to-peer consensus
 in multi-agent swarms, including identity, proposals, votes,
 and consensus state tracking.
+
+Quarantine notice (ADR-0043, 2026-09-09): legacy-competitive, On Hold per
+DR-006. No new feature work without a dated owner-override. Disposition
+review expires 2026-12-09. See
+docs/adr/0043-legacy-competitive-surface-quarantine.md.
 """
 
 from __future__ import annotations

@@ -6,6 +6,12 @@ This module implements the Cooragent workflow engine that:
 3. Shows unified diff when prompts are modified
 4. Manages workflow state and resumption
 5. Self-healing validation loops with ruff/mypy/pytest (Phase 5)
+
+Quarantine notice (ADR-0043, 2026-09-09): legacy-competitive, On Hold per
+DR-006. Strongest deletion candidate: zero production callers, execution
+simulated. No new feature work without a dated owner-override; no
+present-tense capability claims. Disposition review expires 2026-12-09.
+See docs/adr/0043-legacy-competitive-surface-quarantine.md.
 """
 
 from __future__ import annotations
