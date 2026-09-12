@@ -8,7 +8,10 @@ from pathlib import Path
 
 
 def _load_module():
-    script = Path(__file__).resolve().parents[1] / 'scripts' / 'report_docs_aging.py'
+    scripts_dir = Path(__file__).resolve().parents[1] / 'scripts'
+    if str(scripts_dir) not in sys.path:
+        sys.path.insert(0, str(scripts_dir))
+    script = scripts_dir / 'report_docs_aging.py'
     spec = spec_from_file_location('report_docs_aging_test', script)
     assert spec and spec.loader
     module = module_from_spec(spec)
@@ -121,3 +124,24 @@ def test_check_docs_aging_dashboard_passes_for_repo() -> None:
         output_path=output_path,
     )
     assert errors == []
+
+
+def test_corpus_cost_section_counts_full_docs_tree(tmp_path: Path) -> None:
+    """B-04: corpus-cost signal must walk all of docs/, not the curated
+    registry — and flag working-tier docs unreferenced by INDEX.md."""
+    module = _load_module()
+    docs = tmp_path / 'docs'
+    docs.mkdir()
+    (docs / 'INDEX.md').write_text('# Index\n\n[linked](linked.md)\n', encoding='utf-8')
+    (docs / 'linked.md').write_text('# Linked\n', encoding='utf-8')
+    (docs / 'orphan.md').write_text('# Orphan\n', encoding='utf-8')
+    (docs / 'archive').mkdir()
+    (docs / 'archive' / 'old-2020-01-01.md').write_text('# Old\n', encoding='utf-8')
+
+    lines = module._corpus_cost_section(tmp_path)
+    text = '\n'.join(lines)
+    assert 'Total docs:** 4' in text
+    assert 'Live corpus (non-archive):** 3' in text
+    assert 'unreferenced by INDEX.md:** 1' in text
+    assert 'orphan.md' in text
+    assert 'linked.md' not in text.split('Dead-weight')[-1]

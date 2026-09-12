@@ -225,7 +225,12 @@ jobs:
         run: bandit -r teaagent/ -c pyproject.toml --severity-level medium
 
       - name: Audit test quality
-        run: python3 scripts/audit_test_quality.py --fail-on severe
+        # severe: placeholder/mock-only/security-no-assertions (existing).
+        # untyped: G6 ratchet — fails when untyped count exceeds the recorded
+        # baseline (458 at 2026-09-12); tolerates the backlog, blocks growth.
+        run: |
+          python3 scripts/audit_test_quality.py --fail-on severe
+          python3 scripts/audit_test_quality.py --fail-on untyped
 
       - name: Test assertion regression gate (A1)
         # Fails if the change weakens/deletes existing test assertions.

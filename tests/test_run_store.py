@@ -369,3 +369,42 @@ def test_rebuild_index() -> None:
         # list_runs should now use the index
         summaries = store.list_runs()
         assert len(summaries) == 3
+
+
+def test_run_origin_round_trips_through_index() -> None:
+    """B-08: origin on run_started must survive summarize() -> to_dict ->
+    _read_index, and absent origin must default to 'unknown' (never 'owner')."""
+    with tempfile.TemporaryDirectory() as tmp:
+        store = RunStore(tmp)
+
+        # Run with explicit origin
+        audit = store.audit_logger()
+        audit.record('run_started', 'run-owner', task='real work', origin='owner')
+        audit.record('run_completed', 'run-owner', answer='done', metadata={})
+        result = RunResult(
+            run_id='run-owner',
+            final_answer=FinalAnswer('done'),
+            iterations=1,
+            tool_calls=0,
+            status='completed',
+        )
+        store.logger_for_result(result, audit)
+
+        # Run without origin
+        audit2 = store.audit_logger()
+        audit2.record('run_started', 'run-plain', task='other work')
+        audit2.record('run_completed', 'run-plain', answer='done', metadata={})
+        result2 = RunResult(
+            run_id='run-plain',
+            final_answer=FinalAnswer('done'),
+            iterations=1,
+            tool_calls=0,
+            status='completed',
+        )
+        store.logger_for_result(result2, audit2)
+
+        summaries = {s.run_id: s for s in store.list_runs()}
+        assert summaries['run-owner'].origin == 'owner'
+        assert summaries['run-plain'].origin == 'unknown'
+        # to_dict carries it
+        assert summaries['run-owner'].to_dict()['origin'] == 'owner'

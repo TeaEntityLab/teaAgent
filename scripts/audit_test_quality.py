@@ -79,7 +79,7 @@ class FileMetrics:
         self.skip_decorators: dict[str, bool] = {}  # test_name -> has_skip
         self.skip_reasons: dict[str, bool] = {}  # test_name -> has explicit skip reason
         self.mock_counts: dict[str, int] = {}  # test_name -> mock count
-        self.test_type: str = 'contract'  # default test type
+        self.test_type: str = 'untyped'  # default test type (no silent contract)
         self.test_types_per_function: dict[str, str] = {}  # test_name -> type
 
 
@@ -308,9 +308,9 @@ def classify_test_type(file_path: Path, source_text: str | None = None) -> str:
     3. If path contains tests/acceptance/ → "behavior"
     4. If path contains tests/lifecycle/ → "lifecycle"
     5. If filename contains "adversarial" → "adversarial"
-    6. Otherwise → "contract" (default)
+    6. Otherwise → "untyped" (no silent default; G6/TASK-003 honesty)
 
-    Valid types: contract, behavior, adversarial, lifecycle
+    Valid types: contract, behavior, adversarial, lifecycle, untyped
     """
     # Check for explicit pytestmark or comment override in source
     if source_text:
@@ -345,7 +345,7 @@ def classify_test_type(file_path: Path, source_text: str | None = None) -> str:
     if 'adversarial' in file_path.name:
         return 'adversarial'
 
-    return 'contract'
+    return 'untyped'
 
 
 def metrics_to_json(all_metrics: list[FileMetrics], total_nodes: int) -> dict[str, Any]:
@@ -481,7 +481,7 @@ def metrics_to_markdown(all_metrics: list[FileMetrics], total_nodes: int) -> str
             test_count + len(metrics.test_functions),
         )
 
-    for test_type in ('contract', 'behavior', 'adversarial', 'lifecycle'):
+    for test_type in ('contract', 'behavior', 'adversarial', 'lifecycle', 'untyped'):
         if test_type in type_stats:
             file_count, test_count = type_stats[test_type]
             lines.append(f'| {test_type} | {file_count} | {test_count} |')
@@ -606,6 +606,13 @@ def metrics_to_markdown(all_metrics: list[FileMetrics], total_nodes: int) -> str
     return '\n'.join(lines)
 
 
+#: G6 ratchet baseline (B-03, 2026-09-12): untyped-file count when the silent
+#: 'contract' default was removed. `--fail-on untyped` fails when the count
+#: exceeds this — tolerates the existing backlog, blocks the next untyped file.
+#: Lower this constant as files get typed; at 0 the gate is absolute.
+UNTYPED_BASELINE = 458
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description='Audit test quality')
     parser.add_argument(
@@ -625,9 +632,13 @@ def main() -> int:
     )
     parser.add_argument(
         '--fail-on',
-        choices=['none', 'severe'],
+        choices=['none', 'severe', 'untyped'],
         default='none',
-        help='Exit non-zero when severe findings are present. Default is report-only.',
+        help=(
+            'Exit non-zero when findings are present. "severe" = placeholder/'
+            'mock-only/security-no-assertions; "untyped" = any file without an '
+            'explicit or path-derived type (G6 ratchet; enable when count is 0).'
+        ),
     )
 
     args = parser.parse_args()
@@ -706,6 +717,25 @@ def main() -> int:
     if args.fail_on == 'severe' and severe_findings:
         print(f'Severe test quality findings: {len(severe_findings)}', file=sys.stderr)
         return 1
+
+    if args.fail_on == 'untyped':
+        untyped = [
+            _repo_relative(m.path)
+            for m in all_metrics
+            if not m.has_syntax_error and m.test_type == 'untyped'
+        ]
+        if len(untyped) > UNTYPED_BASELINE:
+            print(
+                f'Untyped test files: {len(untyped)} exceeds baseline '
+                f'{UNTYPED_BASELINE} (G6 ratchet: type new tests with '
+                f'pytest.mark.test_type or # test-type: marker)',
+                file=sys.stderr,
+            )
+            return 1
+        print(
+            f'Untyped test files: {len(untyped)} (baseline {UNTYPED_BASELINE})',
+            file=sys.stderr,
+        )
 
     return 0
 

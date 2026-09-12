@@ -238,7 +238,7 @@ belonged on the spine.
 ## Full Event Taxonomy (M0 + Planned)
 
 ```
-RUN_STARTED              # Run begins; payload: run_id, task, model, etc.
+RUN_STARTED              # Run begins; payload: run_id, task, model, origin (owner|agent|fixture|synthetic|unknown; default unknown — never silently 'owner'), etc.
 SESSION_START            # Session begins; equivalent public hook: SessionStart
 PLAN_RESOLVED            # Plan loaded/validated
 ITERATION_STARTED        # Iteration loop begins

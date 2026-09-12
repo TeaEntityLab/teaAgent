@@ -26,6 +26,7 @@ class RunSummary:
     pending_approval: Optional[dict[str, Any]] = None
     warnings: list[str] = field(default_factory=list)
     token_pressure: str = 'unknown'
+    origin: str = 'unknown'
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -41,6 +42,7 @@ class RunSummary:
             'pending_approval': self.pending_approval,
             'warnings': self.warnings,
             'token_pressure': self.token_pressure,
+            'origin': self.origin,
         }
 
 
@@ -149,6 +151,7 @@ class RunStore(AbstractStore[list[dict[str, Any]]]):
                         pending_approval=data.get('pending_approval'),
                         warnings=data.get('warnings') or [],
                         token_pressure=data.get('token_pressure', 'unknown'),
+                        origin=data.get('origin', 'unknown'),
                     )
                 )
             except (json.JSONDecodeError, KeyError, TypeError):
@@ -420,16 +423,16 @@ class RunStore(AbstractStore[list[dict[str, Any]]]):
         warnings = []
         pending_approval = None
         token_pressure = 'unknown'
+        run_origin = 'unknown'
         total_tokens = 0
 
         for event in events:
             event_type = event.get('event_type')
             payload = event.get('payload', {})
-            if not isinstance(payload, dict):
-                payload = {}
             if event_type == 'run_started':
                 task = payload.get('task', '')
                 status = 'running'
+                run_origin = payload.get('origin', 'unknown')
             elif event_type == 'run_completed':
                 status = 'completed'
                 final_answer = payload.get('answer')
@@ -512,8 +515,8 @@ class RunStore(AbstractStore[list[dict[str, Any]]]):
             cost_cents=cost_cents,
             resumable=resumable,
             pending_approval=pending_approval,
-            warnings=warnings,
             token_pressure=token_pressure,
+            origin=run_origin,
         )
 
     def health_report(self) -> dict[str, Any]:

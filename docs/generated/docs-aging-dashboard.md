@@ -4,7 +4,7 @@
 
 **Stale threshold:** 90 days since `Last reviewed`
 **Current-truth docs scanned:** 17
-**Needs attention (working tier only):** 4
+**Needs attention (working tier only):** 5
 **Archive-tier docs (exempt from staleness):** 0
 
 Regenerate: `python3 scripts/report_docs_aging.py`
@@ -16,6 +16,12 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 | Document | Status | Last reviewed | File mtime | Notes |
 | --- | --- | --- | --- | --- |
 | `docs/INDEX.md` | stale_by_mtime | 2026-08-27 | 2026-09-09 | Missing owner banner; File modified after last reviewed date |
+
+### governance
+
+| Document | Status | Last reviewed | File mtime | Notes |
+| --- | --- | --- | --- | --- |
+| `docs/maturity-matrix.md` | stale_by_mtime | 2026-08-27 | 2026-09-12 | Missing owner banner; File modified after last reviewed date |
 
 ### project
 
@@ -33,7 +39,7 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 
 | Document | Status | Last reviewed | File mtime | Notes |
 | --- | --- | --- | --- | --- |
-| `docs/acceptance.md` | stale_by_mtime | 2026-08-26 | 2026-09-09 | File modified after last reviewed date |
+| `docs/acceptance.md` | stale_by_mtime | 2026-08-26 | 2026-09-12 | File modified after last reviewed date |
 
 ## Review Triggers (Current-Truth Docs)
 
@@ -56,3 +62,33 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 | `docs/governance/README.md` | governance | working | Governance index or process entry points change. |
 | `docs/plans/ticket-plans/index.md` | daily-driver | working | Ticket closure status or execution order changes. |
 | `docs/analysis/active-findings-status-ledger-2026-06-06.md` | daily-driver | working | Finding closure status or new CG/AG/DS ids. |
+
+## Corpus Cost (G5 Signal)
+
+**Total docs:** 642 (baseline 582 at diagnosis, delta +60)
+**Live corpus (non-archive):** 377
+**Working-tier docs unreferenced by INDEX.md:** 328
+
+Dead-weight candidates (working tier, not linked from INDEX.md):
+
+- `DOCUMENTATION_STRATEGY.md`
+- `adr/0001-p0-framework.md`
+- `adr/0002-p1-primitives.md`
+- `adr/0003-p2-code-mode-sandbox.md`
+- `adr/0004-oauth-dpop.md`
+- `adr/0005-mcp-streamable-http.md`
+- `adr/0006-oauth-store-keyring.md`
+- `adr/0007-anp-adapter-boundary.md`
+- `adr/0008-p4-strategic-posture.md`
+- `adr/0009-5-loop-governance-system.md`
+- `adr/0010-circular-dependencies.md`
+- `adr/0011-approval-manager-refactoring.md`
+- `adr/0012-tight-coupling.md`
+- `adr/0013-backend-abstraction.md`
+- `adr/0014-error-handling.md`
+- `adr/0015-configuration-plugin.md`
+- `adr/0016-tool-dependency-injection.md`
+- `adr/0017-backend-adapter-interfaces.md`
+- `adr/0018-async-from-sync-pattern.md`
+- `adr/0019-phase-4-federated-swarm-consensus.md`
+- ... and 308 more

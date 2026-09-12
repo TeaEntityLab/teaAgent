@@ -6,7 +6,7 @@ resource: "urn:teaagent:doc:docs/acceptance.md"
 tags: ["teaagent", "acceptance", "testing", "constitution"]
 teaagent:
   source_path: "docs/acceptance.md"
-  source_sha256: "0402e93919d8364066ecd0abcfd9a983c9b1519438c18ccba56bcd0cda703593"
+  source_sha256: "e8e1b850950d3f27ab282d3889c6e296be4f0cec115de459a7fa7a8cf03542a0"
   docs_tier: "constitution"
   authority: "canonical"
   lifecycle: "current"

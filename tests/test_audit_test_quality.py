@@ -327,13 +327,14 @@ def test_classify_test_type_path_heuristic_adversarial():
     assert test_type == 'adversarial'
 
 
-def test_classify_test_type_default_contract():
-    """Test that other files default to contract type."""
+def test_classify_test_type_default_untyped():
+    """Unmarked files classify as untyped — G6 honesty (B-03): no silent
+    'contract' fallback, so 'every test typed' can actually fail."""
     from audit_test_quality import classify_test_type
 
     test_path = Path('/repo/tests/test_some_unit.py')
     test_type = classify_test_type(test_path)
-    assert test_type == 'contract'
+    assert test_type == 'untyped'
 
 
 def test_classify_test_type_explicit_pytestmark_override():

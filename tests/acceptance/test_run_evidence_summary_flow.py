@@ -419,3 +419,64 @@ def test_evidence_summary_changed_files(tmp_path):
     assert bundle.run_id == run_id
     # Changed files would be extracted from file_changed events
     # This test verifies the structure supports it
+
+
+def test_run_receipt_answers_three_questions_within_one_screen(tmp_path):
+    """G2: the human receipt must answer why-allowed / what-changed / how-undo
+    within one screen. Budget reuses the existing DEFAULT_PAGINATION_LINES (50)
+    rather than inventing a height. Falsifier: a receipt that answers all three
+    but exceeds the budget must FAIL; one missing how-undo must FAIL."""
+    from teaagent.cli._handlers._agent.output import DEFAULT_PAGINATION_LINES
+
+    run_id = 'run-onescreen-001'
+    store = RunStore(tmp_path)
+    audit_path = store.run_path(run_id)
+    audit = AuditLogger(path=audit_path)
+
+    audit.record('run_started', run_id, task='one-screen task', model='gpt-4')
+    audit.record(
+        'tool_call_completed',
+        run_id,
+        tool_name='workspace_write_file',
+        arguments={'path': 'out.txt', 'content': 'x'},
+    )
+    audit.record(
+        'approval_requested',
+        run_id,
+        call_id='call-1',
+        tool_name='workspace_write_file',
+        auto_approved=False,
+    )
+    audit.record(
+        'approval_granted',
+        run_id,
+        call_id='call-1',
+        tool_name='workspace_write_file',
+        auto_approved=False,
+    )
+    audit.record('file_changed', run_id, path='out.txt', operation='write')
+    audit.record(
+        'run_completed', run_id, answer='done', total_tokens=10, total_cost=0.001
+    )
+
+    receipt = build_run_receipt(store, run_id, tmp_path)
+    lines = receipt.splitlines()
+
+    # why-allowed: approvals are visible with their decision
+    assert any(line.startswith('Approvals:') for line in lines), (
+        'receipt must surface why the run was allowed (approvals section)'
+    )
+    # what-changed: files touched or commands run are visible
+    assert any(
+        line.startswith('Files touched:') or line.startswith('Commands run:')
+        for line in lines
+    ), 'receipt must surface what changed'
+    # how-undo: rollback/undo line is always emitted
+    assert any(line.startswith('Rollback/undo:') for line in lines), (
+        'receipt must surface how to undo'
+    )
+    # one screen: composed output fits the existing pagination budget
+    assert len(lines) <= DEFAULT_PAGINATION_LINES, (
+        f'receipt is {len(lines)} lines; one-screen budget is '
+        f'{DEFAULT_PAGINATION_LINES}'
+    )

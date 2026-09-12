@@ -34,6 +34,13 @@ _OWNER_SURFACE = re.compile(r'>\s*\*\*Owns:\*\*\s*(.+?)(?:\n|$)', re.IGNORECASE)
 
 STALE_DAYS = 90
 
+#: Total docs/*.md count when harness-first §2 diagnosed the corpus as costing
+#: more to keep truthful than it returns. The G5 corpus-cost signal anchors to
+#: this baseline; growth past it without offsetting deletions is the failure.
+CORPUS_BASELINE_COUNT = 582
+
+_INDEX_LINK = re.compile(r'\(([^)]+\.md)(?:#[^)]*)?\)|`([^`]+\.md)`')
+
 
 def _is_archive_tier(rel_path: str) -> bool:
     """Return True if doc is archive-tier (dated, not in working override)."""
@@ -295,7 +302,62 @@ def generate_docs_aging_dashboard(
             f'| `{row.rel_path}` | {row.owner} | {row.tier} | {row.review_trigger} |'
         )
     lines.append('')
+
+    lines.extend(_corpus_cost_section(repo_root))
     return '\n'.join(lines)
+
+
+def _corpus_cost_section(repo_root: Path) -> list[str]:
+    """G5 corpus-cost signal: live-corpus size vs the diagnosed baseline, plus
+    working-tier docs unreferenced by docs/INDEX.md (dead-weight candidates).
+
+    Read-only: reports the cost side of "carries its weight"; it deletes
+    nothing and gates nothing.
+    """
+    docs_root = repo_root / 'docs'
+    all_docs = sorted(docs_root.rglob('*.md'))
+    total = len(all_docs)
+    live = [
+        p for p in all_docs if not _is_archive_tier(p.relative_to(docs_root).as_posix())
+    ]
+
+    index_path = docs_root / 'INDEX.md'
+    referenced: set[str] = set()
+    if index_path.is_file():
+        for match in _INDEX_LINK.finditer(index_path.read_text(encoding='utf-8')):
+            raw = match.group(1) or match.group(2) or ''
+            normalized = raw.lstrip('./').lstrip('/')
+            if normalized.startswith('docs/'):
+                normalized = normalized[len('docs/') :]
+            referenced.add(normalized)
+
+    unreferenced = [
+        p.relative_to(docs_root).as_posix()
+        for p in live
+        if p.name != 'INDEX.md'
+        and p.relative_to(docs_root).as_posix() not in referenced
+    ]
+
+    delta = total - CORPUS_BASELINE_COUNT
+    sign = '+' if delta >= 0 else ''
+    lines = [
+        '## Corpus Cost (G5 Signal)',
+        '',
+        f'**Total docs:** {total} (baseline {CORPUS_BASELINE_COUNT} at diagnosis, '
+        f'delta {sign}{delta})',
+        f'**Live corpus (non-archive):** {len(live)}',
+        f'**Working-tier docs unreferenced by INDEX.md:** {len(unreferenced)}',
+        '',
+    ]
+    if unreferenced:
+        lines.append('Dead-weight candidates (working tier, not linked from INDEX.md):')
+        lines.append('')
+        for rel in unreferenced[:20]:
+            lines.append(f'- `{rel}`')
+        if len(unreferenced) > 20:
+            lines.append(f'- ... and {len(unreferenced) - 20} more')
+        lines.append('')
+    return lines
 
 
 def write_docs_aging_dashboard(

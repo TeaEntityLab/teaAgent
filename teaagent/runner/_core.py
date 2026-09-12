@@ -441,6 +441,14 @@ class AgentRunner:
         }
         if run_started_extra:
             started_payload.update(run_started_extra)
+        if 'origin' not in started_payload:
+            # B-08: run provenance. Callers may pass origin via
+            # run_started_extra; otherwise honor TEAAGENT_RUN_ORIGIN so an
+            # owner shell alias can mark organic runs. Default 'unknown' —
+            # never silently claim 'owner'.
+            import os
+
+            started_payload['origin'] = os.environ.get('TEAAGENT_RUN_ORIGIN', 'unknown')
         self.event_spine.emit(RunEventType.RUN_STARTED, current_run_id, started_payload)
         return (
             current_run_id,
