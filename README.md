@@ -184,7 +184,7 @@ Self-healing validation is described in [section 8](#8-self-healing-validation-b
 - Success metrics tracking (accuracy, speed, etc.)
 - Hot-reload support for iterative improvement
 
-**Remote JIT Approval (quarantined as legacy-competitive On Hold per DR-006 — see `docs/adr/0043-legacy-competitive-surface-quarantine.md` — not a current capability):**
+**Remote JIT Approval (M4 carve-out surface On Hold per DR-006 — covered only if a dogfood session is scheduled, otherwise delete; see `docs/adr/0043-legacy-competitive-surface-quarantine.md` — not a current capability):**
 - SSE-based remote approval server for destructive tool requests
 - 3-minute timeout with safe abort
 - Approval queue management for multi-agent workflows
@@ -217,7 +217,7 @@ CLI / TUI  →  AgentRunner (decision loop)  →  ToolRegistry  →  Workspace T
 - **Context Compaction**: Automatic context compression at 75-92% token usage (Claude Code compatible).
 - **Plan Mode**: Read-only exploration mode for safe codebase analysis with plan-before-write enforcement.
 - **ACP Adapter**: Agent Client Protocol integration for VS Code, Zed, and JetBrains IDEs.
-- **Multi-Agent Coordination**: TaskCoordinator for classification/routing, AgentFactory for dynamic agent generation with evolutionary prompt tuning, ToolPermissionManager for safety control, ContextBus for cross-sandbox Delta sharing, and CentralizedApprovalQueue for aggregated subagent approvals. WorkflowEngine (multi-step execution) and JITApprovalServer (remote approval) are quarantined as legacy-competitive On Hold per DR-006 with a 2026-12-09 disposition — see `docs/adr/0043-legacy-competitive-surface-quarantine.md` — and are not current capabilities.
+- **Multi-Agent Coordination**: TaskCoordinator for classification/routing, AgentFactory for dynamic agent generation with evolutionary prompt tuning, ToolPermissionManager for safety control, ContextBus for cross-sandbox Delta sharing, and CentralizedApprovalQueue for aggregated subagent approvals. WorkflowEngine (multi-step execution) is quarantined as legacy-competitive On Hold per DR-006 with a 2026-12-09 disposition, and JITApprovalServer (remote approval) is an M4 carve-out surface On Hold pending a scheduled dogfood session — see `docs/adr/0043-legacy-competitive-surface-quarantine.md` — neither is a current capability.
 
 See [docs/architecture.md](docs/architecture.md) for component details, data flow, and extension points.
 
