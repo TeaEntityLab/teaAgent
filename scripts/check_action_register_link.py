@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """Pre-commit hook: require staged changes or commit message to reference an action ID.
 
+Origin (2026-09-09 CI-dark review): this gate passed locally via
+``--commit-msg`` while CI ran it with ``--base`` only, so docs-only commits
+with the ID solely in the message passed pre-commit and failed CI; see
+docs/reviews/roadmap-intent-socratic-2026-09-09.md. Both invocations now
+carry both arguments. Read that failure before weakening this gate.
+
 Enforces review-system.md G9 — every PR/commit must reference an ID from
 docs/retrospective/06-action-register.md or register a new action.
 

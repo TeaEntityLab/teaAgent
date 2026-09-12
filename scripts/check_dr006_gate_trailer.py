@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """DR-006 T1 gate trailer check.
 
+Origin (ledger R-08, 2026-09-09 review): 7 of 8 post-DR-006 ``feat:`` commits
+touching ``teaagent/`` cited no scheduling gate, making falsifier 1
+mechanically undecidable; see
+docs/reviews/roadmap-intent-socratic-2026-09-09.md. Read that failure before
+weakening this gate.
+
 Mechanically enforces DR-006 falsifier 1: a ``feat:`` commit that touches
 ``teaagent/`` must cite its scheduling gate in a ``Gate:`` or ``Constraint:``
 trailer whose value contains one of the accepted DR-006 gate tokens.
