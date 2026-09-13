@@ -1910,7 +1910,8 @@ class TUITests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             result = _get_cached_symbols(Path(tmpdir))
-        self.assertIsInstance(result, list)
+        # An empty repo has no symbols to cache.
+        self.assertEqual(result, [])
 
     # ── Memory failures handlers ──────────────────────────────────────────────
 

@@ -153,8 +153,9 @@ def test_builder_handles_syntax_errors() -> None:
         # Should not raise exception
         builder.build_from_directory(['.py'])
 
-        # Should return empty or partial results
-        assert isinstance(builder.get_nodes(), list)
+        # A syntax error is handled gracefully: nothing parseable is extracted.
+        assert builder.get_nodes() == []
+        assert builder.get_edges() == []
 
 
 def test_ontology_graph_without_store() -> None:

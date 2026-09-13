@@ -4,7 +4,7 @@
 import os
 import tempfile
 import time
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -353,6 +353,12 @@ class TestDockerAvailability:
     def test_is_docker_available_returns_bool(self):
         result = is_docker_available()
         assert isinstance(result, bool)
+        # Behavioral: return value tracks the `docker --version` exit code.
+        with patch('subprocess.run') as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            assert is_docker_available() is True
+            mock_run.return_value = MagicMock(returncode=1)
+            assert is_docker_available() is False
 
 
 def test_mcp_trust_policy_persistence():

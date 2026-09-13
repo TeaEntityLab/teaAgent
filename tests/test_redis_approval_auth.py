@@ -34,19 +34,21 @@ class TestRequireRedisBindAuth:
             require_redis_bind_auth('10.0.0.1', None, False)
 
     def test_non_loopback_with_password_accepted(self) -> None:
-        # Should not raise.
-        require_redis_bind_auth('10.0.0.1', 's3cret', False)
+        # A non-empty password authenticates a non-loopback host: the guard
+        # accepts it and returns None instead of raising.
+        assert require_redis_bind_auth('10.0.0.1', 's3cret', False) is None
 
     def test_non_loopback_with_ssl_accepted(self) -> None:
-        # Should not raise.
-        require_redis_bind_auth('redis.example.com', None, True)
+        # SSL/TLS encrypts a non-loopback host: the guard accepts it.
+        assert require_redis_bind_auth('redis.example.com', None, True) is None
 
     def test_non_loopback_with_password_and_ssl_accepted(self) -> None:
         require_redis_bind_auth('redis.example.com', 's3cret', True)
 
     def test_loopback_without_auth_accepted(self) -> None:
         for host in ('localhost', '127.0.0.1', '::1', '[::1]'):
-            require_redis_bind_auth(host, None, False)
+            # Loopback hosts are exempt from the auth requirement.
+            assert require_redis_bind_auth(host, None, False) is None
 
     def test_empty_password_treated_as_unauthenticated(self) -> None:
         with pytest.raises(ValueError):
@@ -164,6 +166,8 @@ class TestResolveApprovalBackendHybridAuth:
 
         backend = resolve_approval_backend(tmp_path)
         assert backend is not None
+        # An authenticated non-loopback config resolves to the hybrid backend.
+        assert type(backend).__name__ == 'HybridApprovalCoordinationBackend'
 
     def test_non_loopback_with_ssl_accepted(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
@@ -181,6 +185,8 @@ class TestResolveApprovalBackendHybridAuth:
 
         backend = resolve_approval_backend(tmp_path)
         assert backend is not None
+        # A TLS-encrypted non-loopback config resolves to the hybrid backend.
+        assert type(backend).__name__ == 'HybridApprovalCoordinationBackend'
 
     def test_loopback_without_auth_accepted(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
@@ -198,3 +204,5 @@ class TestResolveApprovalBackendHybridAuth:
 
         backend = resolve_approval_backend(tmp_path)
         assert backend is not None
+        # A loopback config (no auth) still resolves to the hybrid backend.
+        assert type(backend).__name__ == 'HybridApprovalCoordinationBackend'

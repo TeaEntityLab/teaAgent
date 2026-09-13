@@ -83,8 +83,11 @@ def test_in_memory_audit_not_affected_by_redaction_config():
     cfg = RedactionConfig(bearer_tokens=False)
     audit = AuditLogger(redaction_config=cfg)
     event = audit.record('msg', 'r1', note='Bearer abc123456789')
-    # In-memory event still redacts content (redaction is always applied to payload)
-    assert isinstance(event.payload['note'], str)
+    # bearer_tokens=False is honored for the in-memory payload too, so the
+    # token survives unredacted (config IS applied to in-memory events).
+    assert event.payload['note'] == 'Bearer abc123456789'
+    assert event.event_type == 'msg'
+    assert event.run_id == 'r1'
 
 
 def test_aws_key_redacted_by_default(tmp_path):

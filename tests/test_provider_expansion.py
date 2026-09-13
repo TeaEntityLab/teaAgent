@@ -57,6 +57,7 @@ def test_new_providers_use_openai_compatible_adapter() -> None:
             adapter,
             OpenAICompatibleAdapter,
         ), f'{provider} should use OpenAICompatibleAdapter'
+        assert adapter.provider == provider
 
 
 def test_total_provider_count() -> None:

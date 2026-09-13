@@ -62,6 +62,9 @@ class TestToolRegistration:
             assert isinstance(tool.output_schema, dict), (
                 f"Tool '{name}' output_schema is not a dict"
             )
+            assert 'type' in tool.output_schema, (
+                f"Tool '{name}' output_schema missing 'type'"
+            )
 
     def test_all_tools_have_annotations(self, registry: ToolRegistry) -> None:
         """Each tool must have annotations (safety metadata)."""
@@ -69,6 +72,15 @@ class TestToolRegistration:
             tool = registry.get(name)
             assert isinstance(tool.annotations, ToolAnnotations), (
                 f"Tool '{name}' annotations is not a ToolAnnotations instance"
+            )
+            assert tool.annotations.security_tier in {
+                'Low',
+                'Medium',
+                'High',
+                'Critical',
+            }, (
+                f"Tool '{name}' has invalid security_tier "
+                f'{tool.annotations.security_tier!r}'
             )
 
     def test_all_tools_have_handlers(self, registry: ToolRegistry) -> None:

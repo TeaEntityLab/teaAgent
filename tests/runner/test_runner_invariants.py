@@ -344,7 +344,9 @@ class TestApprovalInvariant:
     def test_approval_manager_is_importable_from_subagents(self) -> None:
         from teaagent.approval_manager import ApprovalManager
 
-        assert ApprovalManager is not None
+        assert isinstance(ApprovalManager, type)
+        assert ApprovalManager.__name__ == 'ApprovalManager'
+        assert hasattr(ApprovalManager, 'assert_allowed')
 
 
 class TestEvidenceCollectors:
@@ -376,6 +378,9 @@ class TestEvidenceCollectors:
             }
         )
         assert isinstance(budget_evidence, RunnerEvidenceBundle)
+        assert budget_evidence.iterations_used == result.iterations
+        assert budget_evidence.tool_calls_used == result.tool_calls
+        assert budget_evidence.budget_exceeded is False
 
     def test_collect_budget_rejects_bad_type(self) -> None:
         with pytest.raises(TypeError, match='Unsupported runner type'):

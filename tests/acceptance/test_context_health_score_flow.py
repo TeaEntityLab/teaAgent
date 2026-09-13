@@ -245,9 +245,11 @@ class TestMemoryConfidence:
             {'created_at': now - 100},
             {'created_at': now - 800_000},
         ]
-        # Verify fallback to created_at when updated_at is missing
-        assert isinstance(_compute_memory_confidence(entries), str), (
-            'Expected string result when using created_at fallback'
+        # created_at fallback keeps the recent entry recent → one recent,
+        # one stale (>7d) → 'green'. If the fallback were absent, both would
+        # read as age=now (very old) → 'red'.
+        assert _compute_memory_confidence(entries) == 'green', (
+            'Expected green when created_at fallback marks one entry recent'
         )
 
     def test_exception_returns_unknown(self) -> None:
@@ -264,10 +266,9 @@ class TestMemoryConfidence:
 
     def test_handles_missing_timestamp(self) -> None:
         entries = [{'title': 'no timestamp'}]
-        # No timestamp → age = now - 0 = very old → red
-        # Verify string result when timestamp is missing
-        assert isinstance(_compute_memory_confidence(entries), str), (
-            'Expected string result when timestamp is missing'
+        # No timestamp → age = now - 0 → far older than 7 days → red.
+        assert _compute_memory_confidence(entries) == 'red', (
+            'Expected red when entries have no timestamp (treated as very old)'
         )
 
 

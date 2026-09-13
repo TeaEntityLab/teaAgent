@@ -200,9 +200,20 @@ def test_raises_import_error_without_psycopg2() -> None:
 
 
 def test_conn_factory_bypasses_import_check() -> None:
+    import teaagent.oauth21._pg_store as pg_mod
+
     db = _FakeDB()
-    store = PostgreSQLOAuthStore('unused', _conn_factory=db.conn)
-    assert store is not None
+    original = pg_mod.HAS_PSYCOPG2
+    try:
+        # Even with psycopg2 "missing", supplying a conn factory skips the guard.
+        pg_mod.HAS_PSYCOPG2 = False
+        store = PostgreSQLOAuthStore('unused', _conn_factory=db.conn)
+    finally:
+        pg_mod.HAS_PSYCOPG2 = original
+    assert isinstance(store, PostgreSQLOAuthStore)
+    # The store is functional through the injected factory.
+    store.register_client(OAuth21Client('c1', 's1', frozenset(['https://x/cb'])))
+    assert store.get_client('c1').client_id == 'c1'
 
 
 def test_register_and_get_client() -> None:

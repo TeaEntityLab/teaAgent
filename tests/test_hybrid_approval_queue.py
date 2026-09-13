@@ -87,6 +87,10 @@ class TestHybridApprovalQueueStore:
 
             assert store.file_store is not None
             assert store.redis_store is not None
+            # The provided redis_config is wired into the redis store.
+            assert store.redis_store.config is redis_config
+            assert store.redis_store.config.host == 'localhost'
+            assert store.redis_store.config.port == 6379
 
     def test_save_request_file_only(self, temp_workspace, sample_request):
         """Test saving request with file store only."""

@@ -283,8 +283,14 @@ def test_acp_client_send_request() -> None:
 
 
 def test_create_acp_server_factory() -> None:
-    server = create_acp_server(_FakeRegistry(), _FakeRunner())
+    registry = _FakeRegistry()
+    runner = _FakeRunner()
+    server = create_acp_server(registry, runner)
     assert isinstance(server, ACPServer)
+    # Factory wires the given registry/runner into the returned server.
+    assert server._agent_runner is runner
+    server.initialize({})
+    assert server.list_tools() == registry.mcp_metadata()
 
 
 def test_run_acp_server_handles_valid_json() -> None:

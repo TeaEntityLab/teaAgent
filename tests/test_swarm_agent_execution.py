@@ -44,3 +44,11 @@ def test_swarm_manager_with_agent_execution_factory() -> None:
             tmpdir, config=config, adapter=adapter
         )
         assert manager._subagent_manager is not None
+        # The factory builds and binds a workspace tool registry so that
+        # executing subagents have real tools available.
+        registry = manager._subagent_manager._parent_registry
+        tool_names = set(registry.list_tools())
+        assert 'workspace_write_file' in tool_names
+        assert 'workspace_read_file' in tool_names
+        # No subagent definitions are registered until tasks are added.
+        assert manager._subagent_manager.list_defs() == []

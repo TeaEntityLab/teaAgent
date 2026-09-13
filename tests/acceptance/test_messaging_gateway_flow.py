@@ -71,6 +71,14 @@ def test_gateway_dispatch_message() -> None:
 def test_gateway_adapter_protocol() -> None:
     adapter = _TestAdapter()
     assert isinstance(adapter, GatewayAdapter)
+    # Behavioral: the adapter fulfils the GatewayAdapter contract end to end.
+    assert adapter.platform_name == 'test'
+    adapter.start()
+    assert adapter.started is True
+    assert adapter.send_message('chan-1', 'hi') is True
+    assert adapter.sent == [('chan-1', 'hi')]
+    adapter.stop()
+    assert adapter.stopped is True
 
 
 def test_gateway_telegram_adapter_import() -> None:
@@ -99,3 +107,8 @@ def test_gateway_discord_adapter_protocol() -> None:
 
     adapter = DiscordAdapter(token='test.token')
     assert isinstance(adapter, GatewayAdapter)
+    # Behavioral: protocol members are concretely present and platform is fixed.
+    assert adapter.platform_name == 'discord'
+    assert callable(adapter.start)
+    assert callable(adapter.stop)
+    assert callable(adapter.send_message)

@@ -325,6 +325,11 @@ class TestExemptionDetector:
                 changed_files=['src/main.py'],
             )
             assert receipt is not None, f"'{task}' should be detected as small task"
+            # Behavioral: the receipt classifies the task as a small clear task
+            # and waives the plan requirement at low risk.
+            assert receipt.reason == 'small_clear_task', f"'{task}' reason mismatch"
+            assert receipt.risk_level == 'low', f"'{task}' risk_level mismatch"
+            assert receipt.task_description == task
 
     def test_known_pattern_keywords_list(self):
         pattern_tasks = [

@@ -123,9 +123,7 @@ class TestPermissionModeTransitions:
         assume(mode == PermissionMode.READ_ONLY)
         enforcer = PermissionModeEnforcer(permission_mode=mode)
         result = enforcer.check(tool_name='write_file', destructive=True)
-        assert result is not None, (
-            'READ_ONLY should block destructive tools, got None (allowed)'
-        )
+        assert result == "Tool 'write_file' is blocked by read-only permission mode."
 
     @given(tool_name_st)
     def test_read_only_blocks_all_tools_without_read_only_gate(
@@ -135,6 +133,7 @@ class TestPermissionModeTransitions:
         enforcer = PermissionModeEnforcer(permission_mode=PermissionMode.READ_ONLY)
         result = enforcer.check(tool_name=tool_name, destructive=True)
         assert result is not None
+        assert result == f"Tool '{tool_name}' is blocked by read-only permission mode."
 
     @given(tool_name_st)
     def test_workspace_write_blocks_non_workspace_destructive(

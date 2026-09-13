@@ -72,6 +72,8 @@ def test_disk_error_property_set(tmp_path):
 
     assert audit.disk_error is not None
     assert isinstance(audit.disk_error, OSError)
+    # The captured error is exactly the ENOSPC raised during fsync.
+    assert audit.disk_error.errno == errno.ENOSPC
 
 
 def test_disk_error_property_none_on_success(tmp_path):

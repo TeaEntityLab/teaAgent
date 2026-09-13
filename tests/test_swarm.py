@@ -375,9 +375,10 @@ def test_swarm_task_with_consensus_required():
         # Since we don't have actual voting mechanism in test, this will fallback
         report = manager.execute_swarm()
 
-        # Task should be filtered out if consensus not reached
-        # For now, we just verify the mechanism is called
-        assert report is not None
+        # Consensus is not reached (no voting mechanism), so the consensus-required
+        # task is filtered out and never executed.
+        assert report.total_subagents == 0
+        assert report.results == []
 
 
 def test_swarm_task_without_consensus():

@@ -19,7 +19,8 @@ except ImportError:
 def test_is_wasm_available():
     """Test checking WASM availability."""
     available = is_wasm_available()
-    # This will be False unless wasmer is installed
+    # is_wasm_available reflects the module-level wasmer detection flag.
+    assert available == WASMER_AVAILABLE
     assert isinstance(available, bool)
 
 

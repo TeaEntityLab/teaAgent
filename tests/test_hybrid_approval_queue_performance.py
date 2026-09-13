@@ -168,7 +168,11 @@ class TestHybridApprovalQueuePerformance:
             for i in range(reads_per_thread):
                 request_id = f'req-{(thread_id * reads_per_thread + i) % num_requests}'
                 request = store.get_request('parent-1', request_id)
-                assert request is not None
+                # Concurrent reads must return the exact request that was stored,
+                # with its payload intact (no cross-request corruption).
+                assert request.request_id == request_id
+                assert request.tool_name == 'write_file'
+                assert request.parent_run_id == 'parent-1'
 
         # Run concurrent reads
         start_time = time.time()
@@ -266,7 +270,10 @@ class TestHybridApprovalQueuePerformance:
         start_time = time.time()
         for batch_id in range(num_batches):
             batch = store.get_batch('parent-1', f'batch-{batch_id}')
-            assert batch is not None
+            # Each round-trip must preserve batch identity and status.
+            assert batch.batch_id == f'batch-{batch_id}'
+            assert batch.parent_run_id == 'parent-1'
+            assert batch.status == ApprovalRequestStatus.PENDING
 
         batch_read_time = time.time() - start_time
 
@@ -320,16 +327,23 @@ class TestHybridApprovalQueuePerformance:
             request = sample_request_factory(f'req-{i}')
             store.save_request('parent-1', request)
 
-            # Read
+            # Read: the round-trip returns the exact saved request.
             retrieved = store.get_request('parent-1', f'req-{i}')
-            assert retrieved is not None
+            assert retrieved.request_id == f'req-{i}'
+            assert retrieved.status == ApprovalRequestStatus.PENDING
 
-            # Update
-            store.update_request_status(
+            # Update: status flip is acknowledged.
+            updated = store.update_request_status(
                 'parent-1',
                 f'req-{i}',
                 ApprovalRequestStatus.APPROVED,
             )
+            assert updated is True
+
+        # After the mixed workload every request reflects its final APPROVED state.
+        final = store.get_request('parent-1', f'req-{num_operations - 1}')
+        assert final.status == ApprovalRequestStatus.APPROVED
+        assert final.approved_at is not None
 
         mixed_time = time.time() - start_time
 

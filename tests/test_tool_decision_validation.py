@@ -141,6 +141,10 @@ def test_subclass_of_agent_harness_error():
 
     exc = InvalidToolDecision('test')
     assert isinstance(exc, AgentHarnessError)
+    assert issubclass(InvalidToolDecision, AgentHarnessError)
+    # The rendered message keeps the caller text and appends remediation guidance.
+    assert str(exc).startswith('test')
+    assert 'structurally invalid tool decision' in str(exc)
 
 
 def _make_runner() -> AgentRunner:

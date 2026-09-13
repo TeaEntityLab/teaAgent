@@ -488,5 +488,21 @@ def test_detect_ci_oidc_token_none() -> None:
 
 def test_sigstore_availability_flag() -> None:
     """Test that SIGSTORE_AVAILABLE flag is set correctly."""
-    # This test just checks the flag is a boolean
+    # The flag must reflect whether sigstore's public signing/verification API
+    # actually imports — not merely be a boolean.
+    try:
+        from sigstore.sign import Signer  # noqa: F401
+        from sigstore.verify import Verifier as _V  # noqa: F401
+        from sigstore.verify.policy import Identity  # noqa: F401
+
+        expected = True
+    except ImportError:
+        expected = False
+
     assert isinstance(SIGSTORE_AVAILABLE, bool)
+    assert SIGSTORE_AVAILABLE is expected
+    # When the flag is set, the concrete signer class must be importable too.
+    if SIGSTORE_AVAILABLE:
+        from teaagent.sigstore_signer import SigstoreSigner as _Signer
+
+        assert _Signer is not None

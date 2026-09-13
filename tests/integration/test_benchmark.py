@@ -70,8 +70,13 @@ def test_benchmark_baseline_comparison():
     baseline = BenchmarkBaseline(p50_ms=10.0, p95_ms=20.0)
     suite = BenchmarkSuite(name='compare', cases=_make_cases())
     result = run_benchmark(suite, runner=_fast_runner, baseline=baseline)
-    # regression_detected is a bool
-    assert isinstance(result.regression_detected(baseline), bool)
+    detected = result.regression_detected(baseline)
+    # regression_detected forwards this result's own p50/p95 to the baseline's
+    # margin-scaled thresholds (p50 * 1.5, p95 * 2.0).
+    assert detected == baseline.is_regression(result.p50_ms, result.p95_ms)
+    assert detected in (True, False)
+    # The 10ms fast runner is genuinely measured (time.sleep(0.01) => >=10ms).
+    assert result.p50_ms >= 10.0
 
 
 def test_no_regression_when_fast():

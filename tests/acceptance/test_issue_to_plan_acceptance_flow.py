@@ -130,9 +130,38 @@ Affected files: cache.py
 
 def test_command_suggester_safe_default():
     """Test that command suggester defaults to safe permission modes."""
-    # This would test CommandSuggester with a mock plan
-    # For now, verify the class exists
-    assert CommandSuggester is not None
+
+    def _plan(*, ambiguity_score: float, risks=None, affected_files=None):
+        return PlanArtifact(
+            id='p1',
+            title='t',
+            goal='Fix the bug',
+            approach='a',
+            steps=[],
+            affected_files=affected_files or [],
+            risks=risks or [],
+            created_at='2026-01-01',
+            ambiguity_score=ambiguity_score,
+        )
+
+    suggester = CommandSuggester()
+
+    # Low-ambiguity, low-risk plan defaults to the non-destructive 'prompt' mode.
+    default = suggester.suggest(_plan(ambiguity_score=10.0))
+    assert default.permission_mode == 'prompt'
+    assert '--permission-mode prompt' in default.command
+    assert default.command.startswith('teaagent run --task')
+
+    # High-ambiguity plans escalate to the safest 'read_only' mode.
+    assert suggester.recommend_mode(_plan(ambiguity_score=80.0)) == 'read_only'
+
+    # It never suggests an unattended/auto-approving mode.
+    for mode in (
+        suggester.recommend_mode(_plan(ambiguity_score=10.0)),
+        suggester.recommend_mode(_plan(ambiguity_score=80.0)),
+        suggester.recommend_mode(_plan(ambiguity_score=10.0, risks=['security issue'])),
+    ):
+        assert mode in ('prompt', 'read_only')
 
 
 def test_acceptance_checklist_generation():

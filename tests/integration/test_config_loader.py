@@ -70,7 +70,8 @@ def test_defaults_used_when_no_files(tmp_path):
     with patch.dict(os.environ, {}, clear=False):
         rc = ConfigResolver(workspace_root=tmp_path, user_home=tmp_path).resolve()
     # Config resolver returns a ResolvedConfig; no error
-    assert isinstance(rc, ResolvedConfig)
+    assert rc.get('permission_mode') == 'prompt'
+    assert rc.get('max_iterations') == 10
 
 
 def test_workspace_config_loaded(tmp_path):
@@ -340,7 +341,7 @@ def test_invalid_type_for_bool_config(tmp_path):
     rc = ConfigResolver(workspace_root=tmp_path, user_home=tmp_path).resolve()
     # Should attempt coercion
     result = rc.get('code_analysis_enabled')
-    assert result is not None
+    assert result is False
 
 
 def test_null_value_in_config(tmp_path):
@@ -378,7 +379,7 @@ def test_invalid_json_array_for_list_config(tmp_path):
     rc = ConfigResolver(workspace_root=tmp_path, user_home=tmp_path).resolve()
     # Should attempt to parse as CSV
     result = rc.get('skill_search_dirs')
-    assert result is not None
+    assert result == ['not', 'a', 'list', 'format']
 
 
 def test_nonexistent_workspace_path():
@@ -388,7 +389,8 @@ def test_nonexistent_workspace_path():
     rc = ConfigResolver(workspace_root='/nonexistent/path/that/does/not/exist')
     result = rc.resolve()
     # Should not crash and return a valid config
-    assert isinstance(result, type(result))
+    assert isinstance(result, ResolvedConfig)
+    assert result.get('permission_mode') == 'prompt'
 
 
 def test_config_with_unknown_keys(tmp_path):
@@ -422,7 +424,7 @@ def test_env_var_with_whitespace(tmp_path):
         rc = ConfigResolver(workspace_root=tmp_path, user_home=tmp_path).resolve()
     # Should preserve or trim whitespace
     result = rc.get('permission_mode')
-    assert result is not None
+    assert result == '  allow  '
 
 
 def test_negative_value_for_int_config(tmp_path):
@@ -468,7 +470,8 @@ def test_config_file_is_directory(tmp_path):
     (cfg_dir / 'config.json').mkdir()  # Create as directory instead of file
     rc = ConfigResolver(workspace_root=tmp_path, user_home=tmp_path).resolve()
     # Should not crash
-    assert isinstance(rc, type(rc))
+    assert isinstance(rc, ResolvedConfig)
+    assert rc.get('permission_mode') == 'prompt'
 
 
 def test_permission_denied_on_config_file(tmp_path):
@@ -482,7 +485,7 @@ def test_permission_denied_on_config_file(tmp_path):
         cfg_file.chmod(0o000)
         rc = ConfigResolver(workspace_root=tmp_path, user_home=tmp_path).resolve()
         # Should handle permission error gracefully
-        assert isinstance(rc, type(rc))
+        assert rc.get('permission_mode') == 'prompt'
     finally:
         # Restore permissions for cleanup
         with contextlib.suppress(BaseException):
@@ -499,7 +502,7 @@ def test_config_with_special_characters(tmp_path):
     rc = ConfigResolver(workspace_root=tmp_path, user_home=tmp_path).resolve()
     # Should handle special characters
     result = rc.get('model')
-    assert result is not None
+    assert result == 'gpt-4o\n\t\r'
 
 
 def test_config_with_unicode_characters(tmp_path):
@@ -512,7 +515,7 @@ def test_config_with_unicode_characters(tmp_path):
     rc = ConfigResolver(workspace_root=tmp_path, user_home=tmp_path).resolve()
     # Should handle unicode
     result = rc.get('model')
-    assert result is not None
+    assert result == '模型-模型-🤖'
 
 
 def test_list_config_with_single_item(tmp_path):
@@ -549,7 +552,7 @@ def test_list_config_with_mixed_types(tmp_path):
     rc = ConfigResolver(workspace_root=tmp_path, user_home=tmp_path).resolve()
     # Should handle mixed types
     result = rc.get('skill_search_dirs')
-    assert result is not None
+    assert result == ['path1', 123, None, True]
 
 
 def test_env_var_override_with_invalid_type(tmp_path):
@@ -574,7 +577,8 @@ def test_config_resolver_with_relative_path():
     rc = ConfigResolver(workspace_root='.')
     result = rc.resolve()
     # Should handle relative path
-    assert isinstance(result, type(result))
+    assert isinstance(result, ResolvedConfig)
+    assert result.get('permission_mode') == 'prompt'
 
 
 def test_config_resolver_with_absolute_path():
@@ -585,7 +589,8 @@ def test_config_resolver_with_absolute_path():
     rc = ConfigResolver(workspace_root=abs_path)
     result = rc.resolve()
     # Should handle absolute path
-    assert isinstance(result, type(result))
+    assert isinstance(result, ResolvedConfig)
+    assert result.get('permission_mode') == 'prompt'
 
 
 # ---------------------------------------------------------------------------

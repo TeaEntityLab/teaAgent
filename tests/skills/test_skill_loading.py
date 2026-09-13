@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from teaagent.skill_loader import (
@@ -41,12 +42,27 @@ def test_load_skills_from_nonexistent_dir() -> None:
     """Loading skills from a non-existent root does not crash."""
     skills = load_skills(root=Path('/nonexistent/path'))
     assert isinstance(skills, list)
+    # A missing project root contributes no skills of its own: every skill
+    # returned is a valid, uniquely-named Skill sourced from an existing path.
+    assert all(s.name and isinstance(s.name, str) for s in skills)
+    assert len({s.name for s in skills}) == len(skills)
+    assert all('/nonexistent/path' not in str(s.path) for s in skills)
 
 
 def test_load_skills_with_relative_root(tmp_path: Path) -> None:
     """Relative workspace roots work for skill discovery."""
-    skills = load_skills(root=tmp_path)
+    skill_dir = tmp_path / '.opencode' / 'skill' / 'rel-skill'
+    skill_dir.mkdir(parents=True)
+    (skill_dir / 'SKILL.md').write_text(
+        '---\nname: rel-skill\ndescription: A relative-root discovery test skill\n---\n'
+        '# Rel Skill\n',
+        encoding='utf-8',
+    )
+    relative_root = Path(os.path.relpath(tmp_path))
+    assert not relative_root.is_absolute()
+    skills = load_skills(root=relative_root)
     assert isinstance(skills, list)
+    assert 'rel-skill' in {s.name for s in skills}
 
 
 def test_load_skills_with_skill_file(tmp_path: Path) -> None:

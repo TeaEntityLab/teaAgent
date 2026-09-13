@@ -41,6 +41,9 @@ def test_persists_across_instances() -> None:
         SQLiteAgentRegistry(path).register(_card('beta'))
         loaded = SQLiteAgentRegistry(path).get('beta')
         assert loaded is not None
+        assert loaded.name == 'beta'
+        assert loaded.version == '1.0'
+        assert loaded.description == 'beta agent'
 
 
 def test_deregister_removes() -> None:

@@ -322,14 +322,24 @@ def test_console_only():
     )
     assert sink is not None
     assert tracer is not None
-    sink.force_flush()
+    # console=True wires exactly one span processor backed by a
+    # ConsoleSpanExporter, and the pipeline flushes successfully.
+    processors = sink.tracer_provider._active_span_processor._span_processors  # type: ignore[attr-defined]
+    assert [type(p.span_exporter).__name__ for p in processors] == [
+        'ConsoleSpanExporter'
+    ]
+    assert sink.force_flush() is True
 
 
 @pytest.mark.skipif(not HAS_OTEL, reason='opentelemetry packages not installed')
 def test_missing_otlp_endpoint_ok():
     sink, tracer = configure_telemetry(TelemetryConfig(service_name='test'))
     assert sink is not None
-    sink.force_flush()
+    # No endpoint and no console => no span exporters are wired, yet the sink
+    # is functional and flushing is a successful no-op.
+    processors = sink.tracer_provider._active_span_processor._span_processors  # type: ignore[attr-defined]
+    assert list(processors) == []
+    assert sink.force_flush() is True
 
 
 @pytest.mark.skipif(not HAS_OTEL, reason='opentelemetry packages not installed')
@@ -361,6 +371,13 @@ def test_metrics_provider_uses_console_reader_when_requested():
     try:
         assert sink is not None
         assert provider is not None
+        # console=True wires exactly one PeriodicExportingMetricReader backed by
+        # a ConsoleMetricExporter.
+        readers = provider._sdk_config.metric_readers
+        assert len(readers) == 1
+        assert (
+            type(readers[0]._exporter).__name__ == 'ConsoleMetricExporter'  # type: ignore[attr-defined]
+        )
         provider.force_flush(timeout_millis=100)
     finally:
         provider.shutdown()

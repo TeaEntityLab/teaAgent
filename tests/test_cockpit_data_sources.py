@@ -28,6 +28,7 @@ def test_workflow_data_source_get_workflows(root_path):
     source = WorkflowDataSource(root_path)
     workflows = source.get_workflows(limit=10)
     assert isinstance(workflows, list)
+    assert len(workflows) <= 10
     for workflow in workflows:
         assert isinstance(workflow, WorkflowRow)
 
@@ -63,6 +64,7 @@ def test_cost_data_source_get_costs(root_path):
     source = CostDataSource(root_path)
     costs = source.get_costs(limit=10)
     assert isinstance(costs, list)
+    assert len(costs) <= 10
 
 
 def test_cost_data_source_get_costs_uses_run_timestamp_period(root_path):
@@ -165,6 +167,7 @@ def test_memory_data_source_get_memories(root_path):
     source = MemoryDataSource(root_path)
     memories = source.get_memories(limit=10)
     assert isinstance(memories, list)
+    assert len(memories) <= 10
 
 
 def test_memory_data_source_get_memory_count(root_path):
@@ -196,6 +199,7 @@ def test_background_data_source_get_background_runs(root_path):
     source = BackgroundDataSource(root_path)
     background_runs = source.get_background_runs(limit=10)
     assert isinstance(background_runs, list)
+    assert len(background_runs) <= 10
 
 
 def test_background_data_source_get_background_run_count(root_path):
@@ -227,6 +231,7 @@ def test_approval_data_source_get_approvals(root_path):
     source = ApprovalDataSource(root_path)
     approvals = source.get_approvals(limit=10)
     assert isinstance(approvals, list)
+    assert all(a.status in {'pending', 'quarantined'} for a in approvals)
 
 
 def test_approval_data_source_get_approval_count(root_path):
@@ -257,6 +262,7 @@ def test_cockpit_data_manager_get_workflows(root_path):
     manager = CockpitDataManager(root_path)
     workflows = manager.get_workflows(limit=10)
     assert isinstance(workflows, list)
+    assert len(workflows) <= 10
 
 
 def test_cockpit_data_manager_get_costs(root_path):
@@ -264,6 +270,7 @@ def test_cockpit_data_manager_get_costs(root_path):
     manager = CockpitDataManager(root_path)
     costs = manager.get_costs(limit=10)
     assert isinstance(costs, list)
+    assert len(costs) <= 10
 
 
 def test_cockpit_data_manager_get_memories(root_path):
@@ -271,6 +278,7 @@ def test_cockpit_data_manager_get_memories(root_path):
     manager = CockpitDataManager(root_path)
     memories = manager.get_memories(limit=10)
     assert isinstance(memories, list)
+    assert len(memories) <= 10
 
 
 def test_cockpit_data_manager_get_approvals(root_path):
@@ -278,6 +286,7 @@ def test_cockpit_data_manager_get_approvals(root_path):
     manager = CockpitDataManager(root_path)
     approvals = manager.get_approvals(limit=10)
     assert isinstance(approvals, list)
+    assert all(a.status in {'pending', 'quarantined'} for a in approvals)
 
 
 def test_cockpit_data_manager_get_background_runs(root_path):
@@ -285,3 +294,4 @@ def test_cockpit_data_manager_get_background_runs(root_path):
     manager = CockpitDataManager(root_path)
     background_runs = manager.get_background_runs(limit=10)
     assert isinstance(background_runs, list)
+    assert len(background_runs) <= 10

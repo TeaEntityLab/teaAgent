@@ -60,10 +60,10 @@ def test_marketplace_get_by_name() -> None:
 
 def test_marketplace_client_init() -> None:
     client = MarketplaceClient()
-    assert client is not None
+    assert client._url == 'https://agentskills.io/api/v1/skills'
 
     client_custom = MarketplaceClient('https://example.com/api')
-    assert client_custom is not None
+    assert client_custom._url == 'https://example.com/api'
 
 
 def test_marketplace_client_fetch_no_network() -> None:

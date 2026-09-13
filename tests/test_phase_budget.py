@@ -59,7 +59,15 @@ def test_phase_values() -> None:
 
 
 def test_phase_is_str_enum() -> None:
+    import json
+
     assert isinstance(Phase.PLAN, str)
+    # str-enum semantics: a member compares equal to its raw string value...
+    assert Phase.PLAN == 'plan'
+    # ...behaves like a str...
+    assert Phase.SYNTHESIS.startswith('synth')
+    # ...and serializes to the plain string, not an enum repr.
+    assert json.dumps(Phase.EXECUTE) == '"execute"'
 
 
 def test_creates_with_required_fields() -> None:

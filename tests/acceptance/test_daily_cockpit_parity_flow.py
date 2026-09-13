@@ -109,12 +109,15 @@ def test_cockpit_state_from_run_store():
         # Build cockpit state from run store
         state = CockpitState()
 
-        # Verify state can be created
-        assert state is not None
-        assert state.approvals is not None
-        assert state.budget is not None
-        assert state.harness_health is not None
-        assert state.recoverable is not None
+        # A default CockpitState reports concrete "no data yet" state: no
+        # approvals, unknown budget/health, and nothing recoverable.
+        assert state.approvals.pending_count == 0
+        assert state.approvals.blocked_count == 0
+        assert state.budget.status == BudgetStatus.UNKNOWN
+        assert state.harness_health.overall == HealthStatus.UNKNOWN
+        assert state.harness_health.errors == []
+        assert state.recoverable.has_undo_journal is False
+        assert state.recoverable.last_run_id is None
 
 
 def test_cockpit_state_blockers_before_warnings():

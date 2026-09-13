@@ -292,33 +292,54 @@ class TestTypeSafety:
     """Tests for type safety improvements."""
 
     def test_sandbox_branch_name_type_handling(self):
-        """Test that sandbox branch name is type-safe."""
-        import re
-        from pathlib import Path
+        """Test that sandbox branch name is coerced to a type-safe string."""
+        import argparse
+        from unittest.mock import patch
 
-        root = Path(__file__).parent.parent
-        agent_path = (
-            root / 'teaagent' / 'cli' / '_handlers' / '_agent' / 'experiment.py'
-        )
-        source = agent_path.read_text(encoding='utf-8')
+        from teaagent.cli._handlers._agent import experiment as exp
 
-        # Verify getattr with default None is used to safely access _branch_name
-        getattr_match = re.search(
-            r"getattr\(\s*sandbox\s*,\s*'_branch_name'\s*,\s*None\s*\)",
-            source,
-        )
-        assert getattr_match is not None, (
-            '_branch_name should be accessed via getattr(sandbox, "_branch_name", None)'
-        )
+        class _FakeSandbox:
+            def __init__(self, branch_name):
+                self._branch_name = branch_name
 
-        # Verify str() conversion is applied when the value is used
-        str_conv_match = re.search(
-            r'str\(\s*branch_name\s*\)\s+if\s+branch_name\s+is\s+not\s+None',
-            source,
-        )
-        assert str_conv_match is not None, (
-            'branch_name should be converted via str() when not None for type safety'
-        )
+        class _NoBranchSandbox:
+            pass
+
+        class _FakeStack:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            def start_all(self, auto_stash=False):
+                return {'with_branch': True, 'no_attr': True, 'no_sandbox': True}
+
+            def get_sandbox(self, opt):
+                return {
+                    'with_branch': _FakeSandbox(12345),
+                    'no_attr': _NoBranchSandbox(),
+                    'no_sandbox': None,
+                }[opt]
+
+        captured: list[dict] = []
+        args = argparse.Namespace(root='.', git_sandbox_auto_stash=False)
+        with (
+            patch.object(exp, 'ParallelExperimentStack', _FakeStack),
+            patch.object(exp, 'print_json', captured.append),
+        ):
+            rc = exp._execute_parallel_experiment(
+                args, 'do a thing', 'with_branch,no_attr,no_sandbox'
+            )
+
+        assert rc == 0
+        started = [p for p in captured if p['status'] == 'parallel_experiments_started']
+        assert len(started) == 1
+        branches = started[0]['branches']
+        # A non-str _branch_name is coerced to str() for type safety.
+        assert branches['with_branch'] == '12345'
+        assert type(branches['with_branch']) is str
+        # A missing _branch_name attribute falls back to None via getattr default.
+        assert branches['no_attr'] is None
+        # An option with no sandbox yields None.
+        assert branches['no_sandbox'] is None
 
 
 class TestErrorRecovery:

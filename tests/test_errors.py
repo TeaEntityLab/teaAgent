@@ -22,6 +22,9 @@ def test_categories_are_string_enum() -> None:
 def test_category_is_instance_of_str() -> None:
     for category in ErrorCategory:
         assert isinstance(category, str)
+        assert category == category.value
+        assert str(category) == category.value
+        assert category.value == category.name.lower()
 
 
 def test_agent_harness_error_is_exception() -> None:
@@ -84,6 +87,8 @@ def test_model_logic_errors_create_failed_model_logic_status() -> None:
 def test_all_reason_codes_are_strings() -> None:
     for code in DenialReasonCode:
         assert isinstance(code, str)
+        assert code == code.value
+        assert code.value == code.name.lower()
 
 
 def test_read_only_mode_code() -> None:

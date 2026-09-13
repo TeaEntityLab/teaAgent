@@ -33,6 +33,10 @@ def test_each_profile_returns_code_mode_sandbox() -> None:
     for profile in SandboxProfile:
         sb = profile.default_sandbox()
         assert isinstance(sb, CodeModeSandbox), f'{profile} returned wrong type'
+        # Every profile yields a usable sandbox with positive concrete limits.
+        assert sb.timeout_seconds > 0
+        assert sb.memory_bytes > 0
+        assert sb.max_output_bytes > 0
 
 
 def test_local_and_ci_always_no_warnings() -> None:
@@ -44,10 +48,25 @@ def test_local_and_ci_always_no_warnings() -> None:
 def test_production_returns_list() -> None:
     warnings = SandboxProfile.PRODUCTION.validate_runtime_support()
     assert isinstance(warnings, list)
+    # Only the two known RLIMIT warnings may ever appear.
+    known = {
+        'RLIMIT_AS unavailable — memory limits will not be enforced in PRODUCTION profile',
+        'RLIMIT_CPU unavailable — CPU limits will not be enforced in PRODUCTION profile',
+    }
+    assert set(warnings) <= known
 
 
 def test_production_warnings_are_strings() -> None:
-    warnings = SandboxProfile.PRODUCTION.validate_runtime_support()
+    import resource
+    from unittest.mock import patch
+
+    # Force RLIMIT probing to fail so PRODUCTION actually emits its warnings.
+    with patch.object(resource, 'getrlimit', side_effect=ValueError('boom')):
+        warnings = SandboxProfile.PRODUCTION.validate_runtime_support()
+    assert warnings == [
+        'RLIMIT_AS unavailable — memory limits will not be enforced in PRODUCTION profile',
+        'RLIMIT_CPU unavailable — CPU limits will not be enforced in PRODUCTION profile',
+    ]
     for w in warnings:
         assert isinstance(w, str)
 
@@ -62,6 +81,8 @@ def test_all_three_profiles_exist() -> None:
 def test_profiles_are_strings() -> None:
     for profile in SandboxProfile:
         assert isinstance(profile.value, str)
+    # The enum exposes exactly the three known profile identifiers.
+    assert {p.value for p in SandboxProfile} == {'local', 'ci', 'production'}
 
 
 def test_sandbox_profile_imported_from_code_mode() -> None:

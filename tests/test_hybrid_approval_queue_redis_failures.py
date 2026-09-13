@@ -167,6 +167,12 @@ class TestHybridApprovalQueueRedisFailures:
             # Verify saved to file
             retrieved = store.get_request('parent-1', 'req-123')
             assert retrieved is not None
+            # Behavioral: OOM on the Redis write falls back to file storage,
+            # preserving the request payload intact.
+            assert retrieved.request_id == 'req-123'
+            assert retrieved.tool_name == 'write_file'
+            assert retrieved.subagent_name == 'test-subagent'
+            assert retrieved.status == ApprovalRequestStatus.PENDING
 
     def test_redis_intermittent_failures(self, temp_workspace, sample_request):
         """Test handling of intermittent Redis failures."""
@@ -213,6 +219,11 @@ class TestHybridApprovalQueueRedisFailures:
             # Verify data integrity
             retrieved = store.get_request('parent-1', 'req-123')
             assert retrieved is not None
+            # Behavioral: data survives intermittent Redis failures intact.
+            assert retrieved.request_id == 'req-123'
+            assert retrieved.subagent_id == 'subagent-1'
+            assert retrieved.parent_run_id == 'parent-1'
+            assert retrieved.status == ApprovalRequestStatus.PENDING
 
     def test_redis_slow_response(self, temp_workspace, sample_request):
         """Test handling of slow Redis responses."""

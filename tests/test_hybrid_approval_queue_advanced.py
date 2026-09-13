@@ -195,6 +195,9 @@ class TestHybridApprovalQueueAdvanced:
         # Should still be available
         retrieved = store.get_request('parent-1', 'req-123')
         assert retrieved is not None
+        assert retrieved.request_id == 'req-123'
+        assert retrieved.status == ApprovalRequestStatus.PENDING
+        assert retrieved.tool_name == 'write_file'
 
     def test_priority_queue_enabled(self, temp_workspace, sample_request):
         """Test priority queue support."""
@@ -361,6 +364,9 @@ class TestHybridApprovalQueueAdvanced:
         # (file store should still work)
         retrieved = store.get_request('parent-1', 'req-123')
         assert retrieved is not None
+        assert retrieved.request_id == 'req-123'
+        assert retrieved.parent_run_id == 'parent-1'
+        assert retrieved.status == ApprovalRequestStatus.PENDING
 
     def test_deduplication_window_cleanup(self, temp_workspace, sample_request):
         """Test that old deduplication hashes are cleaned up."""

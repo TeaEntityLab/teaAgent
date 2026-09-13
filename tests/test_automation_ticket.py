@@ -157,14 +157,14 @@ class TestAutomationTicketNegativeTests:
         long_task = 'x' * 100000
         errors = validate_automation_task(long_task)
         # Should handle gracefully
-        assert isinstance(errors, list)
+        assert errors == []
 
     def test_validate_automation_task_with_special_characters(self) -> None:
         """Test that special characters are handled."""
         special_task = '你好世界🌍\n\t\r\0test'
         errors = validate_automation_task(special_task)
         # Should handle gracefully
-        assert isinstance(errors, list)
+        assert errors == []
 
     def test_validate_automation_spec_with_missing_required_fields(self) -> None:
         """Test that missing required fields are detected."""
@@ -187,7 +187,7 @@ class TestAutomationTicketNegativeTests:
         spec = _spec(permission_mode='invalid-mode', allowed_toolsets=())
         result = resolve_allowed_toolsets(spec)
         # Should handle gracefully
-        assert isinstance(result, tuple)
+        assert result == ('read-only',)
 
     def test_compute_automation_provenance_digest_with_none_spec(self) -> None:
         """Test that None spec is handled."""
@@ -231,7 +231,8 @@ class TestAutomationTicketNegativeTests:
             spec, task='', collector_summary='summary'
         )
         # Should handle gracefully
-        assert isinstance(prompt, str)
+        assert prompt.startswith('## Scheduled automation task')
+        assert 'Fresh-session contract' in prompt
 
     def test_resolve_chained_task_with_nonexistent_handoff(
         self, tmp_path: Path
@@ -266,21 +267,21 @@ def test_validate_automation_task_with_very_long_task() -> None:
     long_task = 'test ' * 100000
     errors = validate_automation_task(long_task)
     # Should handle gracefully (may or may not reject based on length limits)
-    assert isinstance(errors, list)
+    assert errors == []
 
 
 def test_validate_automation_task_with_null_bytes() -> None:
     """Test that null bytes in task are handled."""
     errors = validate_automation_task('test\x00task')
     # Should handle gracefully
-    assert isinstance(errors, list)
+    assert errors == []
 
 
 def test_validate_automation_task_with_control_characters() -> None:
     """Test that control characters in task are handled."""
     errors = validate_automation_task('test\x01\x02\x03task')
     # Should handle gracefully
-    assert isinstance(errors, list)
+    assert errors == []
 
 
 def test_validate_automation_spec_with_none_automation_id() -> None:
@@ -288,7 +289,7 @@ def test_validate_automation_spec_with_none_automation_id() -> None:
     spec = _spec(automation_id=None)
     report = validate_automation_spec(spec, root='/tmp')
     # Should handle gracefully
-    assert isinstance(report.errors, list)
+    assert report.errors == []
 
 
 def test_validate_automation_spec_with_very_long_automation_id() -> None:
@@ -296,7 +297,7 @@ def test_validate_automation_spec_with_very_long_automation_id() -> None:
     spec = _spec(automation_id='a' * 10000)
     report = validate_automation_spec(spec, root='/tmp')
     # Should handle gracefully
-    assert isinstance(report.errors, list)
+    assert report.errors == []
 
 
 def test_validate_automation_spec_with_special_characters_in_automation_id() -> None:
@@ -304,7 +305,7 @@ def test_validate_automation_spec_with_special_characters_in_automation_id() -> 
     spec = _spec(automation_id='test/\\:*?"<>|')
     report = validate_automation_spec(spec, root='/tmp')
     # Should handle gracefully
-    assert isinstance(report.errors, list)
+    assert report.errors == []
 
 
 def test_validate_automation_spec_with_unicode_in_automation_id() -> None:
@@ -312,7 +313,7 @@ def test_validate_automation_spec_with_unicode_in_automation_id() -> None:
     spec = _spec(automation_id='test-中文-🔐')
     report = validate_automation_spec(spec, root='/tmp')
     # Should handle gracefully
-    assert isinstance(report.errors, list)
+    assert report.errors == []
 
 
 def test_validate_automation_spec_with_very_long_name() -> None:
@@ -320,7 +321,7 @@ def test_validate_automation_spec_with_very_long_name() -> None:
     spec = _spec(name='a' * 100000)
     report = validate_automation_spec(spec, root='/tmp')
     # Should handle gracefully
-    assert isinstance(report.errors, list)
+    assert report.errors == []
 
 
 def test_validate_automation_spec_with_empty_name() -> None:
@@ -328,7 +329,7 @@ def test_validate_automation_spec_with_empty_name() -> None:
     spec = _spec(name='')
     report = validate_automation_spec(spec, root='/tmp')
     # Should handle gracefully
-    assert isinstance(report.errors, list)
+    assert report.errors == []
 
 
 def test_validate_automation_spec_with_invalid_schedule_format() -> None:
@@ -336,7 +337,7 @@ def test_validate_automation_spec_with_invalid_schedule_format() -> None:
     spec = _spec(schedule='not-a-valid-schedule')
     report = validate_automation_spec(spec, root='/tmp')
     # Should handle gracefully
-    assert isinstance(report.errors, list)
+    assert report.errors == []
 
 
 def test_validate_automation_spec_with_very_long_schedule() -> None:
@@ -344,7 +345,7 @@ def test_validate_automation_spec_with_very_long_schedule() -> None:
     spec = _spec(schedule='every ' + '1m ' * 10000)
     report = validate_automation_spec(spec, root='/tmp')
     # Should handle gracefully
-    assert isinstance(report.errors, list)
+    assert report.errors == []
 
 
 def test_validate_automation_spec_with_negative_max_cost() -> None:
@@ -352,7 +353,7 @@ def test_validate_automation_spec_with_negative_max_cost() -> None:
     spec = _spec(max_cost_cents=-100)
     report = validate_automation_spec(spec, root='/tmp')
     # Should handle gracefully
-    assert isinstance(report.errors, list)
+    assert report.errors == ['max_cost_cents must be >= 0']
 
 
 def test_validate_automation_spec_with_very_large_max_cost() -> None:
@@ -360,7 +361,7 @@ def test_validate_automation_spec_with_very_large_max_cost() -> None:
     spec = _spec(max_cost_cents=10**15)
     report = validate_automation_spec(spec, root='/tmp')
     # Should handle gracefully
-    assert isinstance(report.errors, list)
+    assert report.errors == []
 
 
 def test_validate_automation_spec_with_negative_max_runtime() -> None:
@@ -368,7 +369,7 @@ def test_validate_automation_spec_with_negative_max_runtime() -> None:
     spec = _spec(max_runtime_seconds=-100)
     report = validate_automation_spec(spec, root='/tmp')
     # Should handle gracefully
-    assert isinstance(report.errors, list)
+    assert report.errors == ['max_runtime_seconds must be >= 0']
 
 
 def test_validate_automation_spec_with_very_large_max_runtime() -> None:
@@ -376,7 +377,7 @@ def test_validate_automation_spec_with_very_large_max_runtime() -> None:
     spec = _spec(max_runtime_seconds=10**15)
     report = validate_automation_spec(spec, root='/tmp')
     # Should handle gracefully
-    assert isinstance(report.errors, list)
+    assert report.errors == []
 
 
 def test_validate_automation_spec_with_zero_max_iterations() -> None:
@@ -384,7 +385,7 @@ def test_validate_automation_spec_with_zero_max_iterations() -> None:
     spec = _spec(max_iterations=0)
     report = validate_automation_spec(spec, root='/tmp')
     # Should handle gracefully
-    assert isinstance(report.errors, list)
+    assert report.errors == []
 
 
 def test_validate_automation_spec_with_negative_max_iterations() -> None:
@@ -392,7 +393,7 @@ def test_validate_automation_spec_with_negative_max_iterations() -> None:
     spec = _spec(max_iterations=-10)
     report = validate_automation_spec(spec, root='/tmp')
     # Should handle gracefully
-    assert isinstance(report.errors, list)
+    assert report.errors == []
 
 
 def test_validate_automation_spec_with_very_large_max_iterations() -> None:
@@ -400,7 +401,7 @@ def test_validate_automation_spec_with_very_large_max_iterations() -> None:
     spec = _spec(max_iterations=10**15)
     report = validate_automation_spec(spec, root='/tmp')
     # Should handle gracefully
-    assert isinstance(report.errors, list)
+    assert report.errors == []
 
 
 def test_build_automation_dry_run_payload_with_invalid_permission_mode() -> None:
@@ -417,7 +418,7 @@ def test_build_automation_dry_run_payload_with_none_permission_mode() -> None:
     spec = _spec(permission_mode=None)
     payload = build_automation_dry_run_payload(spec, root='/tmp')
     # Should handle gracefully
-    assert isinstance(payload['ticket']['ready'], bool)
+    assert payload['ticket']['ready'] is True
 
 
 def test_build_automation_dry_run_payload_with_readonly_root() -> None:
@@ -433,7 +434,7 @@ def test_build_automation_dry_run_payload_with_readonly_root() -> None:
             spec = _spec()
             payload = build_automation_dry_run_payload(spec, root=str(readonly_dir))
             # Should handle gracefully
-            assert isinstance(payload['ticket']['ready'], bool)
+            assert payload['ticket']['ready'] is True
         except PermissionError:
             # Permission errors are expected for readonly directories
             pass
@@ -446,7 +447,7 @@ def test_resolve_allowed_toolsets_with_invalid_mode() -> None:
     spec = _spec(permission_mode='invalid-mode')
     toolsets = resolve_allowed_toolsets(spec)
     # Should handle gracefully (may return empty or default)
-    assert isinstance(toolsets, tuple)
+    assert toolsets == ('read-only',)
 
 
 def test_resolve_allowed_toolsets_with_none_mode() -> None:
@@ -454,7 +455,7 @@ def test_resolve_allowed_toolsets_with_none_mode() -> None:
     spec = _spec(permission_mode=None)
     toolsets = resolve_allowed_toolsets(spec)
     # Should handle gracefully
-    assert isinstance(toolsets, tuple)
+    assert toolsets == ('read-only',)
 
 
 def test_compute_automation_provenance_digest_with_none_spec() -> None:
@@ -468,7 +469,8 @@ def test_compute_automation_provenance_digest_with_empty_spec() -> None:
     spec = _spec(automation_id='', name='', task='')
     digest = compute_automation_provenance_digest(spec)
     # Should handle gracefully
-    assert isinstance(digest, str)
+    assert digest.startswith('sha256:')
+    assert len(digest) == 71
 
 
 def test_validate_automation_runtime_integrity_with_none_spec() -> None:
@@ -483,7 +485,7 @@ def test_validate_automation_runtime_integrity_with_missing_digest() -> None:
     # Remove digest if it exists
     errors = validate_automation_runtime_integrity(spec, root='/tmp')
     # Should handle gracefully
-    assert isinstance(errors, list)
+    assert errors == ['automation provenance_digest is missing']
 
 
 def test_validate_automation_spec_with_unicode_in_task() -> None:
@@ -491,7 +493,7 @@ def test_validate_automation_spec_with_unicode_in_task() -> None:
     spec = _spec(task='test中文🔐task')
     report = validate_automation_spec(spec, root='/tmp')
     # Should handle gracefully
-    assert isinstance(report.errors, list)
+    assert report.errors == []
 
 
 def test_validate_automation_spec_with_very_long_acceptance_criteria() -> None:
@@ -499,7 +501,7 @@ def test_validate_automation_spec_with_very_long_acceptance_criteria() -> None:
     spec = _spec(acceptance_criteria='a' * 100000)
     report = validate_automation_spec(spec, root='/tmp')
     # Should handle gracefully
-    assert isinstance(report.errors, list)
+    assert report.errors == []
 
 
 def test_validate_automation_spec_with_invalid_delivery_mode() -> None:
@@ -507,7 +509,7 @@ def test_validate_automation_spec_with_invalid_delivery_mode() -> None:
     spec = _spec(delivery='invalid-delivery')
     report = validate_automation_spec(spec, root='/tmp')
     # Should handle gracefully
-    assert isinstance(report.errors, list)
+    assert report.errors == ['delivery must be one of background_log, none, webhook']
 
 
 def test_validate_automation_spec_with_invalid_context_from() -> None:
@@ -515,7 +517,7 @@ def test_validate_automation_spec_with_invalid_context_from() -> None:
     spec = _spec(context_from='invalid-context')
     report = validate_automation_spec(spec, root='/tmp')
     # Should handle gracefully
-    assert isinstance(report.errors, list)
+    assert report.errors == ["context_from automation 'invalid-context' not found"]
 
 
 def test_validate_automation_spec_with_empty_selected_skills() -> None:
@@ -523,7 +525,7 @@ def test_validate_automation_spec_with_empty_selected_skills() -> None:
     spec = _spec(selected_skills=())
     report = validate_automation_spec(spec, root='/tmp')
     # Should handle gracefully
-    assert isinstance(report.errors, list)
+    assert report.errors == []
 
 
 def test_validate_automation_spec_with_duplicate_selected_skills() -> None:
@@ -531,4 +533,5 @@ def test_validate_automation_spec_with_duplicate_selected_skills() -> None:
     spec = _spec(selected_skills=('skill1', 'skill1', 'skill2'))
     report = validate_automation_spec(spec, root='/tmp')
     # Should handle gracefully
-    assert isinstance(report.errors, list)
+    assert any('unknown selected_skills' in err for err in report.errors)
+    assert any('did not load any skill content' in err for err in report.errors)

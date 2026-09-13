@@ -244,8 +244,18 @@ def test_split_pane_method() -> None:
             root=tmp,
             input_fn=lambda _p: '',
         )
-        result = tui._should_use_split_pane()
-        assert isinstance(result, bool)
+        with patch(
+            'teaagent.tui.core.shutil.get_terminal_size', return_value=(120, 30)
+        ):
+            assert tui._should_use_split_pane() is True
+        with patch(
+            'teaagent.tui.core.shutil.get_terminal_size', return_value=(119, 30)
+        ):
+            assert tui._should_use_split_pane() is False
+        with patch(
+            'teaagent.tui.core.shutil.get_terminal_size', return_value=(120, 29)
+        ):
+            assert tui._should_use_split_pane() is False
 
 
 def test_state_panel_no_error() -> None:

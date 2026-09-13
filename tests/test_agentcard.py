@@ -349,8 +349,12 @@ def test_register_with_none_name() -> None:
         name='', version='1.0', description='', capabilities=frozenset(), tools=()
     )
     registry.register(card)
-    # Should register with empty name
-    assert registry.get('') is not None
+    # Empty name registers and round-trips the exact card under the '' key.
+    got = registry.get('')
+    assert got is card
+    assert got.name == ''
+    assert got.version == '1.0'
+    assert [c.name for c in registry.list_cards()] == ['']
 
 
 def test_get_nonexistent_card() -> None:

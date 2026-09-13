@@ -248,3 +248,8 @@ def test_create_cockpit_renderer_factory():
     renderer = create_cockpit_renderer()
     assert isinstance(renderer, CockpitScreenRenderer)
     assert isinstance(renderer.config, CockpitScreenConfig)
+    # Factory returns the default cockpit config.
+    assert renderer.config.current_tab == CockpitTab.WORKFLOWS
+    assert renderer.config.width == 80
+    assert renderer.config.height == 24
+    assert renderer.config.show_help is True

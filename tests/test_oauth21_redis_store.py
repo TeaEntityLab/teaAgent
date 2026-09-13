@@ -102,8 +102,25 @@ def test_redis_oauth_store_import_guard_raises_import_error_without_redis() -> N
 def test_redis_oauth_store_import_guard_client_injection_bypasses_import_check() -> (
     None
 ):
-    store = RedisOAuthStore(_client=_FakeRedis())
-    assert store is not None
+    import teaagent.oauth21._redis_store as redis_mod
+
+    original = redis_mod.HAS_REDIS
+    try:
+        redis_mod.HAS_REDIS = False
+        # Injecting a client bypasses the HAS_REDIS import guard: no ImportError.
+        store = RedisOAuthStore(_client=_FakeRedis())
+    finally:
+        redis_mod.HAS_REDIS = original
+    # The injected client is functional end-to-end.
+    store.register_client(
+        OAuth21Client(
+            client_id='inject-1',
+            client_secret='secret',
+            redirect_uris=frozenset(['https://client.example/cb']),
+            scope='mcp',
+        )
+    )
+    assert store.get_client('inject-1').client_id == 'inject-1'
 
 
 def test_redis_oauth_store_client_register_and_get_client() -> None:
@@ -220,7 +237,11 @@ def test_redis_oauth_store_code_prune_is_noop() -> None:
     code = _make_code()
     store.save_code(code)
     store.prune(now=time.time(), code_ttl_cutoff=time.time() + 9999, nonce_ttl=1)
-    assert store.consume_code(code.code) is not None
+    consumed = store.consume_code(code.code)
+    # Prune with a far-future cutoff must not remove the still-valid code.
+    assert consumed is not None
+    assert consumed.code == code.code
+    assert consumed.client_id == 'client-1'
 
 
 def test_redis_oauth_store_nonce_save_and_get_nonce() -> None:

@@ -23,8 +23,8 @@ def test_invalid_pid_returns_false() -> None:
 
 def test_init_process_alive() -> None:
     """Test that init process (PID 1) is handled correctly."""
-    # PID 1 should exist on most Unix systems
-    # but we handle permission errors gracefully
+    # PID 1 (init/launchd) always exists on Unix. os.kill(1, 0) either
+    # succeeds (→ True) or raises EPERM which is handled as True (process
+    # exists but we lack permission). Either way the process is alive.
     result = is_process_alive(1)
-    # Either True (exists) or False (permission denied handled as False)
-    assert isinstance(result, bool)
+    assert result is True

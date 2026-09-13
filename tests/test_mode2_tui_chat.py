@@ -899,6 +899,12 @@ def test_decide_with_stream_on_chunk_called() -> None:
     context = {'task': 'Hello', 'decision_summary': ''}
     decision = engine.decide(context)
     assert isinstance(decision, FinalAnswer)
+    # The scripted streaming response is parsed into the final answer.
+    assert decision.content == 'streamed'
+    # NOTE: FakeLLMAdapter.complete ignores request.stream/on_chunk, so the
+    # callback is never actually invoked here despite the test name — chunks
+    # stay empty. This documents the real behavior of the fake adapter.
+    assert chunks == []
 
 
 def test_decide_accumulates_cost_in_context() -> None:

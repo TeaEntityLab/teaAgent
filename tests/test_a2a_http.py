@@ -199,6 +199,13 @@ def test_stale_cache_refreshes() -> None:
         second = registry.get('cached-agent')
     assert first is not None
     assert second is not None
+    assert first.name == 'cached-agent'
+    assert second.name == 'cached-agent'
+    # ttl_seconds=0 marks the entry stale on every call, so each get() refetches
+    # a fresh card object rather than returning the cached instance...
+    assert first is not second
+    # ...but the refetched card is equal to the first.
+    assert first == second
 
 
 def test_find_by_capability() -> None:

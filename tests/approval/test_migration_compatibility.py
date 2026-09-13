@@ -155,11 +155,31 @@ def test_backend_symbols_identical(symbol: str) -> None:
 
 
 def test_backend_from_mode_works() -> None:
-    from teaagent.approval.backend import backend_from_mode
+    from teaagent.approval.backend import ApprovalRequest, backend_from_mode
     from teaagent.approval.manager import PermissionMode
 
     backend = backend_from_mode(PermissionMode.PROMPT)
     assert backend is not None
+
+    def _req(**kw: object) -> ApprovalRequest:
+        base: dict[str, object] = dict(
+            call_id='c1',
+            tool_name='t',
+            arguments={},
+            reason='r',
+            annotations={},
+            permission_mode=PermissionMode.PROMPT,
+        )
+        base.update(kw)
+        return ApprovalRequest(**base)
+
+    # PROMPT backend auto-approves non-destructive tools ...
+    allowed = backend.approve(_req())
+    assert allowed.approved is True
+    # ... and routes destructive tools to JIT approval.
+    denied = backend.approve(_req(tool_name='bash', annotations={'destructive': True}))
+    assert denied.approved is False
+    assert denied.reason_code == 'jit_required'
 
 
 # ---------------------------------------------------------------------------

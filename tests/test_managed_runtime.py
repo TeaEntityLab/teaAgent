@@ -40,11 +40,20 @@ class UnhealthyRuntime:
 
 
 def test_fake_satisfies_protocol() -> None:
-    assert isinstance(FakeRuntime(), ManagedRuntimeAdapter)
+    runtime = FakeRuntime()
+    assert isinstance(runtime, ManagedRuntimeAdapter)
+    # The protocol methods are usable and behave as a healthy runtime.
+    assert runtime.run_task('anything', context={}) == 'done'
+    assert runtime.health_check() is True
 
 
 def test_unhealthy_satisfies_protocol() -> None:
-    assert isinstance(UnhealthyRuntime(), ManagedRuntimeAdapter)
+    runtime = UnhealthyRuntime()
+    assert isinstance(runtime, ManagedRuntimeAdapter)
+    # health_check reports unhealthy and run_task raises.
+    assert runtime.health_check() is False
+    with pytest.raises(RuntimeError, match='runtime down'):
+        runtime.run_task('x', context={})
 
 
 def test_run_returns_managed_run_result() -> None:
@@ -84,7 +93,8 @@ def test_run_empty_context_defaults_to_dict() -> None:
 
     runner = ManagedAgentRunner(ContextCapture())
     runner.run('task')
-    assert isinstance(received[0], dict)
+    # An omitted context is normalized to an empty dict, not None.
+    assert received[0] == {}
 
 
 def test_runtime_name_defaults_to_class_name() -> None:

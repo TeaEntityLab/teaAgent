@@ -369,41 +369,47 @@ class TestCodeQualityFixes:
 class TestLoggingImprovements:
     """Tests for logging improvements."""
 
-    def test_import_error_logging(self):
+    def test_import_error_logging(self, caplog, monkeypatch):
         """Test that ImportError in workspace_tools is logged."""
-        import re
-        from pathlib import Path
+        import logging
+        import sys
 
-        root = Path(__file__).parent.parent
-        files_path = root / 'teaagent' / 'workspace_tools' / '_files.py'
-        source = files_path.read_text(encoding='utf-8')
+        from teaagent.workspace_tools import _files
 
-        # Search for 'except ImportError:' followed (within a few lines) by
-        # a logger.debug(...) or logger.warning(...) call
-        pattern = r'except\s+ImportError\s*:.*?logger\.(?:debug|warning|info|error)\('
-        match = re.search(pattern, source, re.DOTALL)
-        assert match is not None, (
-            'Expected workspace_tools/_files.py to log when ImportError is caught'
-        )
+        # Force the browser_tools import inside the guarded block to raise
+        # ImportError so the except branch actually runs.
+        monkeypatch.setitem(sys.modules, 'teaagent.browser_tools', None)
 
-    def test_exception_context_logging(self):
+        class _DummyRegistry:
+            pass
+
+        with caplog.at_level(logging.DEBUG, logger=_files.logger.name):
+            _files._register_browser_tools_if_available(_DummyRegistry())
+
+        # Behavioral: the ImportError path emits a debug log rather than
+        # silently swallowing the failure.
+        assert 'Browser tools not available' in caplog.text
+        assert 'Playwright not installed' in caplog.text
+
+    def test_exception_context_logging(self, caplog):
         """Test that exception messages include context (sink class name)."""
-        import re
-        from pathlib import Path
+        import logging
 
-        root = Path(__file__).parent.parent
-        audit_path = root / 'teaagent' / 'audit.py'
-        source = audit_path.read_text(encoding='utf-8')
+        from teaagent.audit import AuditLogger
 
-        # Check for pattern where sink class name is included in exception
-        # logging: f'Audit sink {sink.__class__.__name__} failed: {exc}'
-        match = re.search(
-            r'sink\.__class__\.__name__',
-            source,
-        )
-        assert match is not None, (
-            'Expected audit.py to log sink class name in exception messages'
-        )
+        class BoomSink:
+            def __call__(self, event):
+                raise RuntimeError('sink exploded')
+
+        audit = AuditLogger()
+        audit.add_sink(BoomSink())
+        with caplog.at_level(logging.ERROR, logger='teaagent.audit'):
+            audit.record('test_event', 'run-1')
+
+        # Behavioral: the failing sink's class name and error text appear in
+        # the emitted log, giving operators the context they need.
+        assert 'BoomSink' in caplog.text
+        assert 'sink exploded' in caplog.text
 
     def test_docstring_expansion(self):
         """Test that _apply_audit_level docstring is expanded."""

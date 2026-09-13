@@ -183,6 +183,10 @@ class TestHybridApprovalQueueBatches:
             # Verify saved to file
             retrieved = store.get_batch('parent-1', 'batch-1')
             assert retrieved is not None
+            # Fallback file store preserved the batch identity and status.
+            assert retrieved.batch_id == 'batch-1'
+            assert retrieved.parent_run_id == 'parent-1'
+            assert retrieved.status == ApprovalRequestStatus.PENDING
 
     def test_batch_deletion(self, temp_workspace):
         """Test deleting batches."""
@@ -321,9 +325,15 @@ class TestHybridApprovalQueueBatches:
         # Verify both exist
         retrieved_request = store.get_request('parent-1', 'req-123')
         assert retrieved_request is not None
+        assert retrieved_request.request_id == 'req-123'
+        assert retrieved_request.tool_name == 'write_file'
+        assert retrieved_request.subagent_name == 'test-subagent'
+        assert retrieved_request.status == ApprovalRequestStatus.PENDING
 
         retrieved_batch = store.get_batch('parent-1', 'batch-1')
         assert retrieved_batch is not None
+        assert retrieved_batch.batch_id == 'batch-1'
+        assert retrieved_batch.status == ApprovalRequestStatus.PENDING
 
     def test_batch_denied_status(self, temp_workspace):
         """Test batch with denied status."""

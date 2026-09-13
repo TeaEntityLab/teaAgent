@@ -36,6 +36,8 @@ def test_aci_sync_wrapper(sample_retriever, tmp_path):
     )
 
     assert isinstance(result, str)
+    # 'test task' matches neither document → no context injected.
+    assert result == ''
 
 
 def test_aci_with_retriever(sample_retriever, tmp_path):
@@ -47,6 +49,9 @@ def test_aci_with_retriever(sample_retriever, tmp_path):
     )
 
     assert isinstance(result, str)
+    # The 'authentication' query surfaces the JWT/auth document via RAG.
+    assert result.startswith('RAG Context:')
+    assert 'Authentication refactoring involves updating JWT tokens' in result
 
 
 def test_aci_empty_retriever(tmp_path):
@@ -57,3 +62,5 @@ def test_aci_empty_retriever(tmp_path):
     result = run_aci_injector_sync('test task', empty_retriever, cache_db)
 
     assert isinstance(result, str)
+    # No documents to retrieve → nothing injected.
+    assert result == ''

@@ -464,7 +464,7 @@ def test_golden_audit_fixture_failed_run(tmp_path: Path) -> None:
 # (run_started, iteration_started, tool_call_started, tool_call_completed,
 # iteration_started, run_completed) retain their shape.
 _GOLDEN_COMPLETED_CONTRACT: list[tuple[str, tuple[str, ...]]] = [
-    ('run_started', ('replayed_observations', 'task')),
+    ('run_started', ('origin', 'replayed_observations', 'task')),
     ('iteration_started', ('iteration',)),
     (
         'tool_call_requested',
@@ -663,6 +663,9 @@ def test_plan_gate_interceptor_shadow_mode_does_not_raise() -> None:
     # Should NOT raise in shadow mode.
     interceptor(event)
     assert interceptor.last_decision is not None
+    # Behavioral: shadow mode records the same denial strict mode would raise.
+    assert 'require a bound plan' in interceptor.last_decision
+    assert 'plan' in interceptor.last_decision.lower()
 
 
 def test_plan_gate_interceptor_allows_non_write_tool() -> None:

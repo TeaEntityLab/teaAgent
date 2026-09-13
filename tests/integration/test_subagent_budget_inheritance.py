@@ -43,7 +43,11 @@ def test_subagent_respects_max_iterations(tmp_path):
     )
     # Run a direct call; subagent internally gets max_iterations=5 as default
     result = run_chat_agent(config, 'delegate something', adapter=adapter)
-    assert result is not None
+    assert result.status == 'completed'
+    assert result.final_answer.content == 'subagent done'
+    # Config caps the parent run at max_iterations=1; the run must not exceed it.
+    assert result.iterations == 1
+    assert result.iterations <= config.max_iterations
 
 
 def test_subagent_failure_returns_error_dict(tmp_path):
@@ -62,7 +66,10 @@ def test_subagent_tool_registered_when_enabled(tmp_path):
     )
     registry = ToolRegistry()
     register_subagent_tool(registry, adapter=adapter, config=config, depth=0)
-    assert registry.get('subagent') is not None
+    tool = registry.get('subagent')
+    assert tool.name == 'subagent'
+    assert callable(tool.handler)
+    assert 'delegate' in tool.description.lower()
 
 
 def test_subagent_tool_not_registered_at_max_depth(tmp_path):
@@ -115,7 +122,22 @@ def test_subagent_jit_approval_isolation_sec06(tmp_path):
     # Run a parent task that would normally create JIT approvals
     # The subagent spawned inside should not inherit them
     result = run_chat_agent(config, 'simple task', adapter=adapter)
-    assert result is not None
+    assert result.status == 'completed'
+
+    # Behavioral proof of the isolation contract: a parent coordinator with a
+    # session grant does NOT share state with a coordinator built the way
+    # SubagentManager.run_subagent builds one (jit_state=None -> fresh state).
+    parent_jit = JITApprovalState()
+    parent_jit.approve_session('workspace_write_file')
+    parent_coord = RunnerApprovalCoordinator(
+        approval_policy=ApprovalPolicy(), jit_state=parent_jit
+    )
+    subagent_coord = RunnerApprovalCoordinator(
+        approval_policy=ApprovalPolicy(), jit_state=None
+    )
+    assert parent_coord.jit_state.is_tool_session_approved('workspace_write_file')
+    assert not subagent_coord.jit_state.is_tool_session_approved('workspace_write_file')
+    assert len(subagent_coord.jit_state.session_approved_tools) == 0
 
     # The isolation is enforced by:
     # 1. SubagentManager.run_subagent doesn't pass jit_state to sub_config

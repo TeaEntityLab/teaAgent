@@ -556,6 +556,10 @@ def test_cli_with_invalid_root_path() -> None:
         exit_code = main(['agent', 'card', '--root', '/nonexistent/path'])
         # Should handle gracefully
         assert isinstance(exit_code, int)
+        assert exit_code == 0
+        card = json.loads(output.getvalue())
+        assert card['name'] == 'teaagent'
+        assert isinstance(card['tools'], list) and card['tools']
 
 
 def test_cli_with_negative_max_iterations() -> None:
@@ -578,6 +582,11 @@ def test_cli_with_negative_max_iterations() -> None:
             )
             # Should handle negative value
             assert isinstance(exit_code, int)
+            assert exit_code == 0
+            result = json.loads(output.getvalue())
+            assert result['ok'] is True
+            # Negative values are persisted verbatim, not silently clamped.
+            assert result['max_iterations'] == -1
 
 
 def test_cli_with_negative_max_tool_calls() -> None:
@@ -600,6 +609,10 @@ def test_cli_with_negative_max_tool_calls() -> None:
             )
             # Should handle negative value
             assert isinstance(exit_code, int)
+            assert exit_code == 0
+            result = json.loads(output.getvalue())
+            assert result['ok'] is True
+            assert result['max_tool_calls'] == -1
 
 
 def test_cli_with_empty_api_key() -> None:
@@ -618,8 +631,10 @@ def test_cli_with_empty_api_key() -> None:
                     '',
                 ]
             )
-            # Should handle empty key
+            # An empty API key aborts init: exit 1, no config written.
             assert isinstance(exit_code, int)
+            assert exit_code == 1
+            assert not (Path(tmp) / '.teaagent' / 'config.json').exists()
 
 
 def test_cli_with_special_characters_in_api_key() -> None:
@@ -638,8 +653,11 @@ def test_cli_with_special_characters_in_api_key() -> None:
                     'sk-test\n\t\r\0',
                 ]
             )
-            # Should handle special characters
+            # The embedded NUL in the key aborts init: main() catches the
+            # 'embedded null byte' error and returns exit 1 with no success JSON.
             assert isinstance(exit_code, int)
+            assert exit_code == 1
+            assert output.getvalue().strip() == ''
 
 
 def test_cli_with_very_long_agent_name() -> None:
@@ -660,6 +678,10 @@ def test_cli_with_very_long_agent_name() -> None:
             )
         # Should handle long name
         assert isinstance(exit_code, int)
+        assert exit_code == 0
+        card = json.loads(output.getvalue())
+        # The agent name flows verbatim into the card, however long.
+        assert card['name'] == long_name
 
 
 def test_cli_with_unicode_agent_name() -> None:
@@ -679,6 +701,9 @@ def test_cli_with_unicode_agent_name() -> None:
             )
         # Should handle unicode
         assert isinstance(exit_code, int)
+        assert exit_code == 0
+        card = json.loads(output.getvalue())
+        assert card['name'] == '你好世界🌍'
 
 
 def test_cli_with_invalid_endpoint_url() -> None:
@@ -698,6 +723,10 @@ def test_cli_with_invalid_endpoint_url() -> None:
             )
         # Should handle invalid URL
         assert isinstance(exit_code, int)
+        assert exit_code == 0
+        card = json.loads(output.getvalue())
+        # The endpoint is stored verbatim; the card command does not validate URLs.
+        assert card['endpoint'] == 'not-a-valid-url'
 
 
 def test_cli_with_permission_denied_directory() -> None:
@@ -713,6 +742,9 @@ def test_cli_with_permission_denied_directory() -> None:
                 exit_code = main(['agent', 'card', '--root', str(readonly)])
             # Should handle permission error
             assert isinstance(exit_code, int)
+            assert exit_code == 0
+            card = json.loads(output.getvalue())
+            assert card['name'] == 'teaagent'
         finally:
             readonly.chmod(0o755)
 
@@ -725,6 +757,9 @@ def test_cli_with_nonexistent_config_file() -> None:
             exit_code = main(['run', 'gpt', 'test', '--root', tmp])
         # Should handle missing config
         assert isinstance(exit_code, int)
+        assert exit_code == 1
+        result = json.loads(output.getvalue())
+        assert result['audit_summary']['event_counts'].get('run_failed') == 1
 
 
 def test_cli_with_corrupted_config_file() -> None:
@@ -740,6 +775,9 @@ def test_cli_with_corrupted_config_file() -> None:
             exit_code = main(['run', 'gpt', 'test', '--root', tmp])
         # Should handle corrupted config
         assert isinstance(exit_code, int)
+        assert exit_code == 1
+        result = json.loads(output.getvalue())
+        assert result['audit_summary']['event_counts'].get('run_failed') == 1
 
 
 def test_cli_with_empty_task() -> None:
@@ -766,6 +804,9 @@ def test_cli_with_empty_task() -> None:
             exit_code = main(['run', 'gpt', '', '--root', tmp])
         # Should handle empty task
         assert isinstance(exit_code, int)
+        # An empty task is rejected before any run output is produced.
+        assert exit_code == 1
+        assert output.getvalue().strip() == ''
 
 
 def test_cli_parser_with_invalid_flag_combination() -> None:
@@ -801,3 +842,8 @@ def test_cli_with_very_long_task() -> None:
             exit_code = main(['run', 'gpt', long_task, '--root', tmp])
         # Should handle long task
         assert isinstance(exit_code, int)
+        # A long task is accepted and a run is attempted (unlike an empty task).
+        assert exit_code == 1
+        result = json.loads(output.getvalue())
+        assert 'run_id' in result
+        assert result['audit_summary']['event_counts'].get('run_started') == 1

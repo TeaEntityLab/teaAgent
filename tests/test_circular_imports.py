@@ -14,8 +14,9 @@ def test_import_policy_then_approval_manager() -> None:
     policy = importlib.import_module('teaagent.policy')
     approval_manager = importlib.import_module('teaagent.approval_manager')
 
-    assert policy is not None
-    assert approval_manager is not None
+    assert hasattr(policy, 'PermissionMode')
+    assert hasattr(approval_manager, 'ApprovalManager')
+    assert policy.ApprovalManager is approval_manager.ApprovalManager
 
 
 def test_import_approval_manager_then_policy() -> None:
@@ -27,8 +28,9 @@ def test_import_approval_manager_then_policy() -> None:
     approval_manager = importlib.import_module('teaagent.approval_manager')
     policy = importlib.import_module('teaagent.policy')
 
-    assert approval_manager is not None
-    assert policy is not None
+    assert hasattr(approval_manager, 'ApprovalManager')
+    assert hasattr(policy, 'PermissionMode')
+    assert policy.ApprovalManager is approval_manager.ApprovalManager
 
 
 def test_runner_approval_helper_is_not_named_approval_manager() -> None:

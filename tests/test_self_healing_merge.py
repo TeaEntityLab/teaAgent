@@ -50,8 +50,8 @@ def test_run_lsp_validation_python_file() -> None:
         test_file.write_text('def test(): pass\n')
 
         errors = run_lsp_validation(Path(tmp), 'test.py')
-        # Should be empty or minimal for valid code
-        assert isinstance(errors, str)
+        # Valid Python produces no linter diagnostics.
+        assert errors == ''
 
 
 def test_run_lsp_validation_invalid_python() -> None:
@@ -63,7 +63,15 @@ def test_run_lsp_validation_invalid_python() -> None:
 
         errors = run_lsp_validation(Path(tmp), 'test.py')
         # Should detect syntax error (if ruff/mypy available)
-        assert isinstance(errors, str)
+        import shutil
+
+        if shutil.which('ruff') or shutil.which('mypy'):
+            # A linter is available: the syntax error must be reported.
+            assert errors != ''
+            assert 'syntax' in errors.lower()
+        else:
+            # No linter available: validation degrades to empty output.
+            assert errors == ''
 
 
 def test_run_lsp_validation_non_python() -> None:

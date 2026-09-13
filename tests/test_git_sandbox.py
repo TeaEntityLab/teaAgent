@@ -1295,6 +1295,8 @@ def test_is_worktree_clean_with_nonexistent_path() -> None:
     # Should handle gracefully without crashing
     result = is_worktree_clean(nonexistent)
     assert isinstance(result, bool)
+    # A path outside any repo cannot be verified clean, so it reports False.
+    assert result is False
 
 
 def test_is_worktree_clean_with_no_git_repo(tmp_path: Path) -> None:
@@ -1303,6 +1305,8 @@ def test_is_worktree_clean_with_no_git_repo(tmp_path: Path) -> None:
     # Should handle gracefully
     result = is_worktree_clean(tmp_path)
     assert isinstance(result, bool)
+    # A non-git directory is not a clean worktree.
+    assert result is False
 
 
 def test_stash_pop_with_nonexistent_path() -> None:
@@ -1350,6 +1354,8 @@ def test_is_git_repository_with_symlink_loop(tmp_path: Path) -> None:
     # Should not hang or crash
     result = is_git_repository(tmp_path)
     assert isinstance(result, bool)
+    # A plain tmp dir (even with a self-referential symlink) is not a repo.
+    assert result is False
 
 
 def test_is_worktree_clean_with_corrupted_git_index(tmp_path: Path) -> None:
@@ -1375,6 +1381,8 @@ def test_is_worktree_clean_with_corrupted_git_index(tmp_path: Path) -> None:
     try:
         result = is_worktree_clean(tmp_path)
         assert isinstance(result, bool)
+        # A corrupted index yields a non-clean verdict rather than crashing.
+        assert result is False
     except (subprocess.SubprocessError, ValueError):
         # May fail on corrupted index
         pass
@@ -1544,7 +1552,8 @@ def test_git_sandbox_with_very_long_run_id(tmp_path: Path) -> None:
     try:
         sandbox = GitBranchSandbox(tmp_path, run_id=long_run_id)
         # Should handle gracefully (may truncate or fail)
-        assert sandbox is not None
+        # An over-long run_id is accepted; the sandbox recognises the repo.
+        assert sandbox.is_available() is True
     except (subprocess.SubprocessError, ValueError):
         # May fail on too-long branch name
         pass
@@ -1581,7 +1590,9 @@ def test_git_sandbox_with_special_characters_in_run_id(tmp_path: Path) -> None:
     try:
         sandbox = GitBranchSandbox(tmp_path, run_id=special_run_id)
         # Should handle gracefully (may sanitize or fail)
-        assert sandbox is not None
+        # Special characters are sanitised out of the branch name; the
+        # constructor still recognises the underlying git repo.
+        assert sandbox.is_available() is True
     except (subprocess.SubprocessError, ValueError):
         # May fail on invalid characters
         pass
@@ -1618,7 +1629,8 @@ def test_git_sandbox_with_unicode_in_run_id(tmp_path: Path) -> None:
     try:
         sandbox = GitBranchSandbox(tmp_path, run_id=unicode_run_id)
         # Should handle gracefully (may sanitize or fail)
-        assert sandbox is not None
+        # Unicode is sanitised out of the branch name; the repo is recognised.
+        assert sandbox.is_available() is True
     except (subprocess.SubprocessError, ValueError):
         # May fail on unicode in branch name
         pass
@@ -1663,7 +1675,10 @@ def test_git_sandbox_with_detached_head(tmp_path: Path) -> None:
         sandbox = GitBranchSandbox(tmp_path, run_id='test-run')
         start_result = sandbox.start()
         # May fail or succeed depending on implementation
-        assert start_result is not None
+        # From a detached HEAD, start() succeeds and records HEAD as origin.
+        assert start_result.success is True
+        assert start_result.branch_name == 'teaagent-sandbox-test-run'
+        assert start_result.original_branch == 'HEAD'
     except (subprocess.SubprocessError, ValueError):
         # May fail on detached HEAD
         pass
@@ -1696,7 +1711,9 @@ def test_git_sandbox_with_corrupted_git_config(tmp_path: Path) -> None:
     try:
         sandbox = GitBranchSandbox(tmp_path, run_id='test-run')
         # May fail or work with corrupted config
-        assert sandbox is not None
+        # A corrupted git config makes git commands fail, so the sandbox
+        # reports itself unavailable rather than crashing at construction.
+        assert sandbox.is_available() is False
     except (subprocess.SubprocessError, ValueError):
         # May fail on corrupted config
         pass
@@ -1752,8 +1769,20 @@ def test_git_transaction_sink_with_readonly_repository(tmp_path: Path) -> None:
 
     try:
         sink = GitTransactionSink(tmp_path)
-        # Should handle gracefully
+        # Construction is lazy, so a read-only repo is handled: the sink
+        # tracks then discards a pending non-destructive tool call without
+        # needing write access to the repository.
         assert sink is not None
+        from teaagent.audit import AuditEvent
+
+        sink(
+            AuditEvent(
+                'tool_call_started', 'run1', {'tool_name': 'read', 'call_id': 'c1'}
+            )
+        )
+        assert sink._pending == {'c1': {'tool_name': 'read'}}
+        sink(AuditEvent('tool_call_failed', 'run1', {'call_id': 'c1'}))
+        assert sink._pending == {}
     except (subprocess.SubprocessError, ValueError, PermissionError):
         # May fail on readonly repository
         pass

@@ -44,7 +44,12 @@ def cleanup_browser():
 
 
 def test_has_playwright_is_bool() -> None:
+    import importlib.util
+
+    # The flag must mirror whether the playwright package is importable.
+    expected = importlib.util.find_spec('playwright') is not None
     assert isinstance(HAS_PLAYWRIGHT, bool)
+    assert HAS_PLAYWRIGHT is expected
 
 
 def test_all_tools_registered_when_disabled(empty_tool_registry: ToolRegistry) -> None:
@@ -60,7 +65,11 @@ def test_all_tools_registered_when_disabled(empty_tool_registry: ToolRegistry) -
         'browser_evaluate',
     ]
     for name in expected_tools:
-        assert empty_tool_registry.get(name) is not None
+        tool = empty_tool_registry.get(name)
+        assert tool.name == name
+        assert callable(tool.handler)
+    # register_browser_tools registers exactly the browser tool set, nothing else.
+    assert sorted(empty_tool_registry.list_tools()) == sorted(expected_tools)
 
 
 def test_disabled_tool_returns_install_error(empty_tool_registry: ToolRegistry) -> None:

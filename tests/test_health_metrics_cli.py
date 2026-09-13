@@ -51,18 +51,27 @@ def test_credentials_rotate_dry_run(capsys):
 
 
 def test_types_package_reexports():
+    from teaagent.approval.manager import PermissionMode as CanonicalPermissionMode
+    from teaagent.audit import AuditEvent as CanonicalAuditEvent
+    from teaagent.tools import ToolRegistry as CanonicalToolRegistry
     from teaagent.types import AuditEvent, PermissionMode, ToolRegistry
 
-    assert AuditEvent is not None
-    assert PermissionMode is not None
-    assert ToolRegistry is not None
+    assert AuditEvent is CanonicalAuditEvent
+    assert PermissionMode is CanonicalPermissionMode
+    assert ToolRegistry is CanonicalToolRegistry
 
 
 def test_approval_package_reexports():
     from teaagent.approval import ApprovalManager, PermissionMode
+    from teaagent.approval.manager import (
+        ApprovalManager as CanonicalApprovalManager,
+    )
+    from teaagent.approval.manager import (
+        PermissionMode as CanonicalPermissionMode,
+    )
 
-    assert ApprovalManager is not None
-    assert PermissionMode is not None
+    assert ApprovalManager is CanonicalApprovalManager
+    assert PermissionMode is CanonicalPermissionMode
 
 
 def test_verify_setup_missing_config(tmp_path):

@@ -51,6 +51,12 @@ def test_context_pressure_score_empty_workspace() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         score = compute_context_pressure(Path(tmpdir) / 'nonexistent')
         assert isinstance(score, ContextPressureScore)
+        # Behavioral: a missing workspace yields an empty, low-pressure score.
+        assert score.usage_level == 'green'
+        assert score.files_pinned == 0
+        assert score.memory_count == 0
+        assert score.recent_runs == 0
+        assert score.large_artifacts == []
 
 
 def test_context_pressure_to_dict() -> None:

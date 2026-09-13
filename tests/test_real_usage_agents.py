@@ -25,7 +25,7 @@ import tempfile
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
 from conftest import FakeAdapter
@@ -1782,6 +1782,13 @@ class McpHttpScenarios(unittest.TestCase):
         server, store = build_mcp_http_server(registry)
         self.assertIsInstance(server, ThreadingHTTPServer)
         self.assertIsInstance(store, MCPSessionStore)
+        # Defaults: bound to loopback on the default MCP port.
+        self.assertEqual(server.server_address, ('127.0.0.1', 7330))
+        # The session store manages a create/has/remove lifecycle.
+        session_id = store.create()
+        self.assertTrue(store.has(session_id))
+        self.assertTrue(store.remove(session_id))
+        self.assertFalse(store.has(session_id))
         server.server_close()
 
     def test_o2_server_initialization_with_auth_token(self) -> None:
@@ -1798,6 +1805,17 @@ class McpHttpScenarios(unittest.TestCase):
         )
         self.assertIsInstance(server, ThreadingHTTPServer)
         self.assertIsNotNone(store)
+        # The auth_token is wired into request auth: a correct bearer token
+        # passes; missing or incorrect tokens are rejected.
+        handler = cast(Any, server.RequestHandlerClass).__new__(
+            server.RequestHandlerClass
+        )
+        handler.headers = {'Authorization': 'Bearer secret-token-123'}
+        self.assertTrue(handler._check_auth())
+        handler.headers = {}
+        self.assertFalse(handler._check_auth())
+        handler.headers = {'Authorization': 'Bearer wrong'}
+        self.assertFalse(handler._check_auth())
         server.server_close()
 
     def test_o3_build_mcp_http_server_with_oauth_config(self) -> None:
@@ -1819,6 +1837,17 @@ class McpHttpScenarios(unittest.TestCase):
         )
         self.assertIsInstance(server, ThreadingHTTPServer)
         self.assertIsNotNone(store)
+        # The oauth_server is wired: an unauthenticated request is rejected
+        # (unlike the no-auth default, which allows all).
+        handler = cast(Any, server.RequestHandlerClass).__new__(
+            server.RequestHandlerClass
+        )
+        handler.headers = {}
+        handler.command = 'POST'
+        handler.path = '/'
+        handler.server = server
+        handler.connection = None
+        self.assertFalse(handler._check_auth())
         server.server_close()
 
 
@@ -1983,6 +2012,12 @@ class TelemetryScenarios(unittest.TestCase):
         sink, tracer = configure_telemetry(config)
         self.assertIsInstance(sink, OTelAuditSink)
         self.assertIsNotNone(tracer)
+        # The service identity from the config is wired into the tracer's
+        # resource, and the sink exposes its tracer provider.
+        resource = cast(Any, tracer).resource
+        self.assertEqual(resource.attributes['service.name'], 'test-agent')
+        self.assertEqual(resource.attributes['service.version'], '2.0.0')
+        self.assertIsNotNone(sink.tracer_provider)
         sink.shutdown()
 
 

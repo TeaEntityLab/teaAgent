@@ -259,8 +259,8 @@ def test_malformed_skill_missing_frontmatter(tmp_path, monkeypatch):
     skill_file.write_text('# Just a header\nNo frontmatter here', encoding='utf-8')
 
     skills = load_skills(tmp_path)
-    # Should either skip or handle gracefully
-    assert isinstance(skills, list)
+    # Malformed skill (no frontmatter) is skipped entirely.
+    assert skills == []
 
 
 def test_malformed_skill_invalid_yaml_frontmatter(tmp_path, monkeypatch):
@@ -281,8 +281,8 @@ def test_malformed_skill_invalid_yaml_frontmatter(tmp_path, monkeypatch):
     )
 
     skills = load_skills(tmp_path)
-    # Should handle gracefully without crashing
-    assert isinstance(skills, list)
+    # Malformed skill (invalid YAML frontmatter) is skipped entirely.
+    assert skills == []
 
 
 def test_malformed_skill_empty_file(tmp_path, monkeypatch):
@@ -299,8 +299,8 @@ def test_malformed_skill_empty_file(tmp_path, monkeypatch):
     skill_file.write_text('', encoding='utf-8')
 
     skills = load_skills(tmp_path)
-    # Should handle gracefully
-    assert isinstance(skills, list)
+    # Empty SKILL.md is skipped entirely.
+    assert skills == []
 
 
 def test_malformed_skill_missing_name(tmp_path, monkeypatch):
@@ -318,5 +318,5 @@ def test_malformed_skill_missing_name(tmp_path, monkeypatch):
     skill_file.write_text('---\ndescription: test\n---\n\nContent', encoding='utf-8')
 
     skills = load_skills(tmp_path)
-    # Should handle gracefully
-    assert isinstance(skills, list)
+    # Skill missing the required name field is skipped entirely.
+    assert skills == []

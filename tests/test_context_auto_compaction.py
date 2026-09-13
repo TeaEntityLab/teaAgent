@@ -99,3 +99,5 @@ def test_compaction_manager_token_estimation() -> None:
     # Should estimate tokens automatically
     result = manager.check_and_compact(context, current_tokens=None)
     assert result is not None
+    # Token estimation kicked in and compaction shrank the observation list.
+    assert len(result.context['observations']) < len(context['observations'])

@@ -442,8 +442,10 @@ class UserAuth:
 
         # Test symbol completion
         completions = complete_symbol('@log', root)
-        # This may return empty if code ontology fails, but should not crash
         assert isinstance(completions, list)
+        # @log matches the login/logout defs (case-insensitive prefix),
+        # sorted and deduplicated, each returned with an @ prefix.
+        assert completions == ['@login', '@logout']
 
 
 def test_complete_symbol_no_match():
@@ -453,6 +455,8 @@ def test_complete_symbol_no_match():
 
         completions = complete_symbol('@nonexistent', root)
         assert isinstance(completions, list)
+        # No symbol in the workspace starts with this prefix.
+        assert completions == []
 
 
 def test_show_interactive_diff_basic(capsys, monkeypatch, git_repo_with_commit: Path):

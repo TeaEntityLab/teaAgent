@@ -272,10 +272,13 @@ class TestContextPackNegativeTests:
 
             try:
                 pack = build_context_pack('test', root=readonly)
-                # Should handle gracefully
-                assert pack is not None
+                # Graceful success: a usable, serializable pack for the task.
+                payload = pack.to_dict()
+                assert payload['task'] == 'test'
+                assert 'candidate_files' in payload
             except PermissionError:
-                # Permission errors are expected for readonly directories
+                # Graceful failure: a clean PermissionError (not an opaque crash)
+                # is the only other acceptable outcome for an unreadable root.
                 pass
             finally:
                 readonly.chmod(0o755)

@@ -192,6 +192,11 @@ def test_config_empty_workspace_is_safe(tmp_path: Path) -> None:
     result = resolver.resolve()
     assert isinstance(result.values, dict)
     assert isinstance(result.sources, dict)
+    # Behavioral: with no config files present, every value comes from the
+    # built-in defaults, and permission_mode falls back to 'prompt'.
+    assert result.get('permission_mode') == 'prompt'
+    assert result.source('permission_mode').value == 'default'
+    assert {s.value for s in result.sources.values()} == {'default'}
 
 
 def test_config_show_produces_lines(tmp_path: Path) -> None:
