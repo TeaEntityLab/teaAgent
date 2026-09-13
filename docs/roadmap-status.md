@@ -8,12 +8,13 @@
 > **Does not own:** Daily-user command recommendations (`daily-driver-current-status.md`)
 > or historical review reasoning in dated analysis files.
 >
-> **Last reviewed:** 2026-09-12
+> **Last reviewed:** 2026-09-13
 
 **Last updated:** 2026-09-09 (Socratic roadmap/intent panel, 7 lenses, record [reviews/roadmap-intent-socratic-2026-09-09.md](reviews/roadmap-intent-socratic-2026-09-09.md); owner adopted all 10 ledger items. Corrections landed: G1/G3/G4/G5/G6 rows restated from `Complete`/`Pending` to their evidenced state; ADR-0031 criterion 1 restated as **unexercised, not clean** — `scripts/prepare_h4_evidence.py` now reports a reachability denominator and a `verdict`, and for the 2026-08-13→2026-09-11 window it returns `unexercised` with **0 observed / 0 reachable runs**; across all recorded history only **4 of 415 runs** ever reached an H4 surface at all, because `.teaagent/runs/runs-index.jsonl` holds just 6 distinct synthetic benchmark/smoke prompts and **zero organic owner tasks**, so `0 observed` carries no information about false-positive rate; criterion 2 passes **vacuously** (0 workspace policies, 0 roles, 0 declarations); `promotion_ready` is a hardcoded literal in `teaagent/governance/h4_decision_packet.py`, not an evaluated metric; criterion 4 remains human sign-off. Promotion on 2026-09-12 is arithmetically unreachable — only `extend` (valid only with a dated dogfood session booked) or `revert`. Synthetic demo receipts are now stamped `provenance='synthetic-demo'` and excluded from candidates, so the "demo synthetic ≠ C1" rule is code-enforced rather than prose-only. EFX-001–003 remain In Progress with live-provider proof pending. The owner-operator remains the **target** persona; active operational validation is unevidenced in the run store. Per harness-first §4.2 raw suite counts are not quality claims; DR-006 gate citation is now enforced by `scripts/check_dr006_gate_trailer.py`, and non-goal surfaces are quarantined under [ADR-0043](adr/0043-legacy-competitive-surface-quarantine.md))
 
 **Review 2026-09-12 (ADR-0031 expiry day):** decision window closed 2026-09-11 with verdict `unexercised` (0 observed / 0 reachable, re-verified today); no dogfood session booked, zero new runs (latest run 2026-08-31) and zero new friction entries — promotion unreachable, decision is the owner's today (extend-with-booked-session or revert). Falsifier-1 now mechanical via `check_dr006_gate_trailer.py`: 8 post-DR-006 `feat` commits touching `teaagent/`, 1 cites a gate (`87d1c61`); retrospective only, the gate landed 2026-09-09. DR-006 falsifier window closes 2026-09-22. No horizon or milestone status moved by this review.
 **Update 2026-09-12 (goals-review instruments):** the 5-lens goals Socratic panel (record `.teaagent/reviews/goals-socratic-2026-09-12/synthesis-record.md`, gitignored) ruled the goal set directionally right but badly measured; owner approved the instrument items. Landed: `scripts/prepare_g1_evidence.py` (G1 denominator+verdict, `unexercised` today), G2 one-screen acceptance test, G6 `untyped` classification + `--fail-on untyped` ratchet (458 untyped), G5 corpus-cost section in the aging dashboard, and `origin` on `run_started`/runs-index (B-08; `TEAAGENT_RUN_ORIGIN` or `run_started_extra`, default `unknown`). Goal-text items (B-05/B-07/B-10), deletions (B-06/B-09), and B-11 remain owner-gated.
+**Update 2026-09-13 (agentflow v8.2.0 survey delta):** re-surveyed `agfnow/agentflow` at `fcb6878` (v8.2.0) against the 2026-09-12 pin `b2935f5`; record `.teaagent/reviews/agentflow-structures-2026-09-12/delta-2026-09-13-v8.2.0.md` (gitignored). Prior consensus undisturbed — no agentflow structural machinery adopted. New intake section below adds AGF-001 (cross-host skill conflict audit, Proposed — owner approval + DR-006 gate), AGF-002 (incident citations on two uncited guards, Proposed — scripts-commit fold), AGF-003 (run-store retention, Hold — premature at zero organic traffic), AGF-004 (per-skill version field, Hold — no consumer). No horizon, milestone, goal, or EFX status moved.
 **Prior update:** 2026-08-31 (advisor: H4 extend only if dogfood scheduled for organic events else revert, 0 organic ≠ promotion, demo synthetic ≠ C1; EFX promote only on live proof; M4 dogfood is the only DR-006 lane that can generate organic events/friction/BG-001. Suite observation at `bf07bc8`: `6681 passed, 0 failed, 26 skipped` via sharded `pytest -n auto --dist worksteal`, 6707 collected — recorded as a historical observation only, **not** a quality claim, per harness-first §4.2; see [suite truncation analysis](analysis/suite-truncation-root-cause-2026-06-10.md))
 
 > **Canonical source of truth.** All other status docs (`docs/security/risk-register-and-threat-model-2026-06-02.md`, `docs/analysis/defeat-scenarios-and-cascade-effects-2026-06-02.md`, `docs/analysis/active-findings-status-ledger-2026-06-06.md`) defer to this document for overall completion status. Per-item test evidence lives in the risk register §9.
@@ -88,6 +89,23 @@ Evidence and adoption status:
 [Durable-Effect Roadmap Socratic Review](analysis/durable-effect-roadmap-socratic-review-2026-08-25.md).
 Current execution sequence (non-authoritative):
 [Current Roadmap Execution Plan](plans/current-roadmap-execution-plan-2026-08-26.md).
+
+## Roadmap-Neutral Intake - Agentflow v8.2.0 Survey Delta
+
+Survey-derived candidates from the agentflow `b2935f5`→`fcb6878` (v8.2.0)
+delta review, 2026-09-13 (record:
+`.teaagent/reviews/agentflow-structures-2026-09-12/delta-2026-09-13-v8.2.0.md`,
+gitignored). These do not reopen or renumber H0-H6. `Proposed` means documented
+and not accepted as implementation-ready; none is scheduled without owner
+approval under DR-006. Mechanisms serving existing goals (suggested-default
+questions → G1; qualifying-path review rule → EFX-002 conformance) are noted in
+the delta record, not listed as rows.
+
+| ID | Work Item | Implementation Status | Scheduling | Confidence | Required Exit Evidence |
+|----|-----------|-----------------------|------------|------------|------------------------|
+| AGF-001 | Cross-host skill conflict audit: extend `skill explain` (or add `skill audit --inventory`) to enumerate foreign skill roots and Codex/Claude plugin caches read-only, plus a once-per-conflict semantic warning protocol (quote both clauses, name consequence, state which instruction wins) | Absent — `skill explain` covers own-root load/shadow/token report only | Proposed — owner approval + DR-006 gate classification required (`governance-gap` arguable: skills are reviewed supply-chain assets) | Medium | Inventory acceptance test over fixture roots; conflict-warning text contract test; no execution of inspected skills |
+| AGF-003 | Run-store retention/prune policy for completed inactive records (agentflow `completion-cleanup` analog: opt-in, Trash-equivalent, age-gated) | Absent — no retention in `run_store.py`/`run_logging.py` | On Hold — premature at zero organic delivery traffic; re-propose when organic runs exist | Low | Retention policy spec + prune acceptance test over fixture run store |
+| AGF-004 | `metadata.version` (or equivalent) field in SKILL.md frontmatter as single per-skill version source | Absent — frontmatter is `name`/`description` only | On Hold — no consumer asks for per-skill versions; revisit if marketplace ships independently versioned skills | Low | Version field parsed + surfaced in `skill explain` |
 
 ## Milestones
 
