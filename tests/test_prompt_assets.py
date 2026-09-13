@@ -1,3 +1,4 @@
+# test-type: contract
 """Behavior-preservation tests for skill-owned LLM prompt assets (ADR-0041 Phase 2).
 
 The substantive LLM prompts for ``teaagent.domain.coordinator`` and

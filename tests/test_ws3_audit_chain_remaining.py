@@ -1,3 +1,4 @@
+# test-type: behavior
 """WS3-002 remaining audit-chain tests for untested functions.
 
 Covers: last_chain_hash(), read_audit_events(), _last_chain_hash_full(),

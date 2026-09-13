@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for UX1.3: One-Command Undo with Diff Preview."""
 
 from __future__ import annotations

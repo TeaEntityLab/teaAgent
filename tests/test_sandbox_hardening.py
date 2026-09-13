@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: adversarial
 from unittest.mock import MagicMock, patch
 
 import pytest

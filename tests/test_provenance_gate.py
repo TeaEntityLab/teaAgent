@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 from teaagent.provenance_gate import (
     PersistenceSubstrate,
     ProvenanceSourceKind,

@@ -1,3 +1,4 @@
+# test-type: contract
 """WS3-004 cost state taxonomy tests."""
 
 from __future__ import annotations

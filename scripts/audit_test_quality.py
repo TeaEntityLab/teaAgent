@@ -606,11 +606,11 @@ def metrics_to_markdown(all_metrics: list[FileMetrics], total_nodes: int) -> str
     return '\n'.join(lines)
 
 
-#: G6 ratchet baseline (B-03, 2026-09-12): untyped-file count when the silent
-#: 'contract' default was removed. `--fail-on untyped` fails when the count
-#: exceeds this — tolerates the existing backlog, blocks the next untyped file.
-#: Lower this constant as files get typed; at 0 the gate is absolute.
-UNTYPED_BASELINE = 458
+#: G6 ratchet baseline (B-03, 2026-09-12; zeroed 2026-09-13): untyped-file
+#: count when the silent 'contract' default was removed. `--fail-on untyped`
+#: fails when the count exceeds this. All 458 backlog files were typed
+#: 2026-09-13 — the gate is now absolute: any new untyped file fails CI.
+UNTYPED_BASELINE = 0
 
 
 def main() -> int:

@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for TeamOrchestrator concurrent dispatch."""
 
 from __future__ import annotations

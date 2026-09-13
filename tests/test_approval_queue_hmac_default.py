@@ -1,3 +1,4 @@
+# test-type: adversarial
 """Tests for ADR-0034: approval-queue HMAC mandatory by default.
 
 Covers:

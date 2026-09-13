@@ -1,3 +1,4 @@
+# test-type: contract
 """Tests for evidence completeness checklist and categories."""
 
 import json

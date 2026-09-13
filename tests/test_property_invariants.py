@@ -1,3 +1,4 @@
+# test-type: contract
 """Property-based tests for critical invariants.
 
 Uses hypothesis to verify core invariants hold under arbitrary inputs.

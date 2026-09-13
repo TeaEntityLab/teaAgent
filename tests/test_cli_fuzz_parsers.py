@@ -1,3 +1,4 @@
+# test-type: behavior
 """Fuzz CLI argument parsing with hypothesis."""
 
 from __future__ import annotations

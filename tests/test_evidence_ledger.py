@@ -1,3 +1,4 @@
+# test-type: contract
 """Tests for scripts/validate_evidence_ledger.py.
 
 The 2026-09-12 agentflow-structures panel found the delivery evidence-ledger

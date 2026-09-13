@@ -1,3 +1,4 @@
+# test-type: lifecycle
 """Cross-process approval queue persistence tests."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for TUI split-screen layout."""
 
 from __future__ import annotations

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 import json
 from typing import Any, Iterator
 from unittest.mock import patch

@@ -1,3 +1,4 @@
+# test-type: behavior
 """Unit tests for the shared governed-execution layer (ADR 0041 Phase 1).
 
 These assert the extracted enforcement behaves exactly as the inline

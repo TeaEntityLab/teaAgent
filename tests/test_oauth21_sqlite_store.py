@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: contract
 import sqlite3
 import tempfile
 import time

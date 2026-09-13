@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for acp_adapter, plugin_system, and plan_mode modules."""
 
 from __future__ import annotations

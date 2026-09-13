@@ -1,3 +1,4 @@
+# test-type: adversarial
 """Tests for P1/P2 remediation (security_env, concurrency hardening)."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# test-type: behavior
 """Acceptance tests for Tree-Sitter + KnowledgeGraph integration."""
 
 from __future__ import annotations

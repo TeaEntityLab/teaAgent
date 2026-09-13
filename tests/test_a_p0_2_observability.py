@@ -1,3 +1,4 @@
+# test-type: contract
 """Regression tests for classified A-P0-2 observability degradation."""
 
 from __future__ import annotations

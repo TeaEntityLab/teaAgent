@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: lifecycle
 import io
 import json
 import sys

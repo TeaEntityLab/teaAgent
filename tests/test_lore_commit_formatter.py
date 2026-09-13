@@ -1,3 +1,4 @@
+# test-type: behavior
 """Acceptance tests for Lore-compliant commit message generation."""
 
 from __future__ import annotations

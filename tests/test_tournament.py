@@ -1,3 +1,4 @@
+# test-type: behavior
 """Integration tests for tournament selection features."""
 
 from __future__ import annotations

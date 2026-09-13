@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for JIT (Just-In-Time) privilege escalation in policy module."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# test-type: behavior
 """IT-4: MCPToolAdapter registers remote MCP tools into ToolRegistry.
 
 Uses a live ``A2ADiscoveryServer`` + ``MCPHTTPClient`` pattern to spin up a

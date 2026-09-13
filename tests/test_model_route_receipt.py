@@ -1,3 +1,5 @@
+# test-type: behavior
+
 """Tests for model route receipt evidence extraction."""
 
 import tempfile

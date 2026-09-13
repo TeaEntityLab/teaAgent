@@ -1,3 +1,4 @@
+# test-type: behavior
 """IT: undo_applied events append to run audit logs with intact hash chain."""
 
 from __future__ import annotations

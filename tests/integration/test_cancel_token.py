@@ -1,3 +1,4 @@
+# test-type: lifecycle
 """IT-2: AgentRunner respects a cancel token set from another thread.
 
 Verifies that setting the ``threading.Event`` cancel token causes the runner

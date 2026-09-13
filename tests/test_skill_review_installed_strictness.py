@@ -1,3 +1,4 @@
+# test-type: behavior
 """G-P2-5: Skill review installed-skill strictness tests.
 
 Ensures that an oversized ``SKILL.md`` is an ERROR for installed

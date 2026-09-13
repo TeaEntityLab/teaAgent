@@ -1,3 +1,4 @@
+# test-type: behavior
 """Unit tests for LLM provider fallback resilience."""
 
 from __future__ import annotations

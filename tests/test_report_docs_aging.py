@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for documentation aging dashboard."""
 
 from __future__ import annotations

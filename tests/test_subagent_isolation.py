@@ -1,3 +1,4 @@
+# test-type: adversarial
 """Tests for subagent workspace isolation (shared vs worktree)."""
 
 from __future__ import annotations

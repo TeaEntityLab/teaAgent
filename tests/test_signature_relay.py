@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for HTTP signature relay (P4.3b WAN multi-sig)."""
 
 from __future__ import annotations

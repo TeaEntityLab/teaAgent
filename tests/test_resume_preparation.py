@@ -1,3 +1,4 @@
+# test-type: lifecycle
 """Unit tests for shared resume preparation."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for goal CLI handlers."""
 
 import argparse

@@ -1,3 +1,4 @@
+# test-type: behavior
 """G-P1-3: ``multisig_fallback`` audit event when agent_id is missing.
 
 When multi-sig quorum is enabled but the session has no ``agent_id`` set,

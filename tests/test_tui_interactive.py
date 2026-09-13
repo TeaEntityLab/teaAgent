@@ -1,3 +1,4 @@
+# test-type: behavior
 """Acceptance tests for prompt_toolkit TUI integration."""
 
 from __future__ import annotations

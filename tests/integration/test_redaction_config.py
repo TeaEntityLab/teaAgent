@@ -1,3 +1,4 @@
+# test-type: behavior
 """IT: Configurable PII redaction.
 
 RedactionConfig lets operators toggle which string patterns are redacted in

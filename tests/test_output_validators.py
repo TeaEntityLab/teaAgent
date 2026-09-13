@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for output artifact validators."""
 
 from __future__ import annotations

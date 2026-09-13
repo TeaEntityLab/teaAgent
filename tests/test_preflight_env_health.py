@@ -1,3 +1,4 @@
+# test-type: behavior
 """Acceptance tests for Pre-flight Environment Health Checks."""
 
 from __future__ import annotations

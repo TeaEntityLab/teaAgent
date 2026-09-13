@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 import os
 from collections.abc import Iterator
 from pathlib import Path

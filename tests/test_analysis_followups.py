@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for analysis-report follow-ups (rate limit, SSH policy, OAuth map, paths)."""
 
 from __future__ import annotations

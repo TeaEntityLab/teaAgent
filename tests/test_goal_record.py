@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for GoalRecord, GoalStore, and goal lifecycle audit events."""
 
 from __future__ import annotations

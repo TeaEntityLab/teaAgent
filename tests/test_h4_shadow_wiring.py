@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for H4 shadow wiring (WDA-002 / WDA-003)."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for multi-agent swarm orchestration."""
 
 from __future__ import annotations

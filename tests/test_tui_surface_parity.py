@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for TUI surface parity features: approve --selector, progress <run_id>, receipt <run_id>."""
 
 from __future__ import annotations

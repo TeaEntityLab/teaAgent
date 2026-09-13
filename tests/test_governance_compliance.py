@@ -1,3 +1,4 @@
+# test-type: contract
 """Verify code compliance with AGENTS.md governance rules.
 
 Rules tested:

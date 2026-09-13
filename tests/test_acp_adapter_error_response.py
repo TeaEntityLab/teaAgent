@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: contract
 import io
 import json
 from unittest import mock

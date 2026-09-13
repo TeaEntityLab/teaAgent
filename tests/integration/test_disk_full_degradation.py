@@ -1,3 +1,4 @@
+# test-type: behavior
 """IT: Graceful disk-full degradation in AuditLogger.
 
 When a write raises OSError (e.g. ENOSPC) in explicit best-effort mode the logger:

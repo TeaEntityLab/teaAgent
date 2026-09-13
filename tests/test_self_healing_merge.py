@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for self-healing merge with LSP feedback (TASK-009)."""
 
 from __future__ import annotations

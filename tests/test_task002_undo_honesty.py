@@ -1,3 +1,4 @@
+# test-type: behavior
 """TASK-002 verify-first: undo wording and behavior honesty.
 
 Acceptance criterion (roadmap-work-items-2026-06-04, TASK-002):

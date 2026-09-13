@@ -1,3 +1,4 @@
+# test-type: behavior
 """IT-8: WebhookAuditSink delivers events to an HTTP endpoint.
 
 Spins up a minimal HTTP server in-process to capture requests and verify

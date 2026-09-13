@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 import http.client
 import json
 import tempfile

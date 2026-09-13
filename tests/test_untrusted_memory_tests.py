@@ -1,3 +1,4 @@
+# test-type: adversarial
 """CPP-P1-004 — Untrusted-source memory tests.
 
 Every web/tool/MCP output that reaches MEMORY substrate must go through the

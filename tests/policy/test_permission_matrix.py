@@ -1,3 +1,4 @@
+# test-type: contract
 """Permission mode matrix for destructive tool governance."""
 
 from __future__ import annotations

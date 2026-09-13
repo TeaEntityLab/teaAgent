@@ -1,3 +1,4 @@
+# test-type: behavior
 """Unit tests for hybrid approval queue store."""
 
 from __future__ import annotations

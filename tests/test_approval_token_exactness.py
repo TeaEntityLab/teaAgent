@@ -1,3 +1,4 @@
+# test-type: adversarial
 """WS3-006 approval-token exactness for destructive tools."""
 
 from __future__ import annotations

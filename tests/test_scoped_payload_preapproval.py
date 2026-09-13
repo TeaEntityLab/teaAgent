@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for scoped payload digest preapproval mechanism (TASK-008)."""
 
 from __future__ import annotations

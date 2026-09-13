@@ -1,3 +1,4 @@
+# test-type: behavior
 """G-P2-1: directory-snapshot isolation acknowledgment flag tests.
 
 Ensures that ``directory-snapshot`` isolation is gated behind the

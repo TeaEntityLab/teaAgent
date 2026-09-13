@@ -1,3 +1,4 @@
+# test-type: adversarial
 """S-P2-3: GitBranchSandbox run_id sanitization tests.
 
 Ensures that a ``run_id`` containing unsafe characters (path separators, shell

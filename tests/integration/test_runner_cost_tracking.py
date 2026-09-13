@@ -1,3 +1,4 @@
+# test-type: behavior
 """IT-1: Runner accumulates token usage and cost across multiple LLM calls.
 
 Verifies that ``RunResult.cost_cents``, ``input_tokens``, and ``output_tokens``

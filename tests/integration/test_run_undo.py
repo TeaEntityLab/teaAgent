@@ -1,3 +1,4 @@
+# test-type: behavior
 """IT: Run undo journal.
 
 UndoJournal acts as an AuditLogger sink.  On every tool_call_started event

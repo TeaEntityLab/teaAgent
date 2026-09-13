@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch

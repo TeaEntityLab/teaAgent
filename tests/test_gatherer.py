@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for ContextGatherer with turn limits."""
 
 import logging

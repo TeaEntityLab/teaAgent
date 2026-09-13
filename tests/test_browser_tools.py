@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for browser automation tools."""
 
 from __future__ import annotations

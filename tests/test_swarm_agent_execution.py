@@ -1,3 +1,4 @@
+# test-type: behavior
 """Swarm execution via SubagentManager."""
 
 from __future__ import annotations

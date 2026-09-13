@@ -1,3 +1,4 @@
+# test-type: adversarial
 """Tests for non-loopback Redis approval queue authentication/TLS enforcement.
 
 Verifies S-P1-2: a non-loopback Redis approval queue must be authenticated

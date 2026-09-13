@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for command snippet inventory generation."""
 
 from __future__ import annotations

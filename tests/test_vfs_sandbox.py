@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for in-memory VFS sandbox (TASK-010)."""
 
 from __future__ import annotations

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: lifecycle
 import json
 from pathlib import Path
 from unittest.mock import MagicMock

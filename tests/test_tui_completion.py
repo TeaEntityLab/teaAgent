@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for teaagent.tui._completion module.
 
 Covers:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: lifecycle
 import pytest
 
 from teaagent.ergonomics.session_stream import _is_terminal, stream_run_events

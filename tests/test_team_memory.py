@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 import tempfile
 
 from teaagent.memory.team_memory import TeamMemory

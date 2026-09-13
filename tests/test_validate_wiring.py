@@ -1,3 +1,4 @@
+# test-type: contract
 """Tests for scripts/validate_wiring.py."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# test-type: contract
 """G1 evidence denominator tests (B-01).
 
 Falsifier: a `frictionless` verdict while the runs index shows zero organic

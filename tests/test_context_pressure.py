@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 import dataclasses
 import tempfile
 from pathlib import Path

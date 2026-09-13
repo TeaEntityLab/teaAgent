@@ -1,3 +1,4 @@
+# test-type: contract
 """TASK-003 verify-first: cost truth on the daily surfaces.
 
 Acceptance criterion (roadmap-work-items-2026-06-04, TASK-003):

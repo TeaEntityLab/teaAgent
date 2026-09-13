@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 import pytest
 
 from teaagent.automation_templates import get_automation_template

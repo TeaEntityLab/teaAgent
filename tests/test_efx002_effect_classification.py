@@ -1,3 +1,4 @@
+# test-type: contract
 """EFX-002: built-in external mutations fail closed in constrained modes."""
 
 from __future__ import annotations

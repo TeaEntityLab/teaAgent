@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for changelog display (TASK-H6-003-04)."""
 
 from tempfile import TemporaryDirectory

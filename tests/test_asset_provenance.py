@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for dynamic asset provenance (CPP-P0-006)."""
 
 from __future__ import annotations

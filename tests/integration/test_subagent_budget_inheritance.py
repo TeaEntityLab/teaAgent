@@ -1,3 +1,4 @@
+# test-type: behavior
 """IT-10: Subagent budget is correctly constrained and independent of parent.
 
 Verifies that:

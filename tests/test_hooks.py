@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for pre/post action hooks."""
 
 from __future__ import annotations

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path

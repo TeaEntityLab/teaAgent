@@ -1,3 +1,4 @@
+# test-type: contract
 """Shared-invariant tests (ADR 0040).
 
 Scope of what is machine-checked here:

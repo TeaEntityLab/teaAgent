@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for automatic context compaction features."""
 
 from __future__ import annotations

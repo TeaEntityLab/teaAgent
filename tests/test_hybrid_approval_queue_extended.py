@@ -1,3 +1,4 @@
+# test-type: behavior
 """Extended feature tests for hybrid approval queue."""
 
 from __future__ import annotations

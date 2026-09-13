@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for cockpit screen rendering (TASK-H4-001-01)."""
 
 import pytest

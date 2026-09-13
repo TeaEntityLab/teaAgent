@@ -1,3 +1,4 @@
+# test-type: contract
 """Tests for S-P1-1: ``check_scope_budget`` fail-closed behaviour."""
 
 from __future__ import annotations

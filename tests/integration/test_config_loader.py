@@ -1,3 +1,4 @@
+# test-type: behavior
 """IT: Config layering and workspace profile.
 
 ConfigResolver merges values across layers (env > workspace > user > defaults)

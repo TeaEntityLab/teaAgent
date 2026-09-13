@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for release evidence bundle generation."""
 
 import json

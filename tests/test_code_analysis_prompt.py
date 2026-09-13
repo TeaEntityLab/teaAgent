@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 from teaagent.code_analysis import extract_candidate_paths, get_lsp_context
 from teaagent.code_analysis._types import CodeReference
 

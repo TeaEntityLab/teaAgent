@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for skill activation record extraction (DSK-P1-002)."""
 
 import tempfile

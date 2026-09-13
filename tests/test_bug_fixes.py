@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for bug fixes applied to the codebase.
 
 This test suite validates the bug fixes for medium-severity issues

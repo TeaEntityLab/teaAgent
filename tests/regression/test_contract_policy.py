@@ -1,3 +1,4 @@
+# test-type: adversarial
 """Regression contract: file/workspace policy must always enforce boundaries.
 
 This is an indestructible contract — if this test fails, path-escalation or

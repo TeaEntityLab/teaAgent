@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 import io
 import tempfile
 from contextlib import redirect_stderr

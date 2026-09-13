@@ -1,3 +1,4 @@
+# test-type: behavior
 """Integration tests for centralized subagent approval queue wiring."""
 
 from __future__ import annotations

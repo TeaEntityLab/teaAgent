@@ -1,3 +1,4 @@
+# test-type: adversarial
 """Adversarial fuzz tests for governance loops.
 
 This module provides fuzz tests for the core governance loops:

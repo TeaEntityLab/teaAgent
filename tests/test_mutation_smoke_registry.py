@@ -1,3 +1,4 @@
+# test-type: contract
 """Keep the A3 mutation-smoke registry in sync with the code it mutates.
 
 scripts/run_mutation_smoke.py injects exact-substring mutations into the L3 trust

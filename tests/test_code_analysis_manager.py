@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 from teaagent.code_analysis._config import CodeAnalysisConfig
 from teaagent.code_analysis._manager import LSPServerManager
 

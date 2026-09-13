@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 import argparse
 from contextlib import ExitStack
 from unittest.mock import patch

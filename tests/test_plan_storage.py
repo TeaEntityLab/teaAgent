@@ -1,3 +1,5 @@
+# test-type: behavior
+
 """Unit tests for plan storage module."""
 
 from datetime import datetime

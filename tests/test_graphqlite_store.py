@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 from subprocess import CompletedProcess
 from unittest.mock import patch
 

@@ -1,3 +1,4 @@
+# test-type: contract
 """WS3-002 strict audit-chain verification tests."""
 
 from __future__ import annotations

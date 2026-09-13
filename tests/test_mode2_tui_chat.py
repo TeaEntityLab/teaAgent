@@ -1,3 +1,4 @@
+# test-type: behavior
 """Comprehensive tests for TUI pipeline, ChatSessionController, ModelDecisionEngine
 edge cases, and permission mode transitions.
 

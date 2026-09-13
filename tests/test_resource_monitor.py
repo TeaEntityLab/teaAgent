@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for resource monitoring module."""
 
 from __future__ import annotations

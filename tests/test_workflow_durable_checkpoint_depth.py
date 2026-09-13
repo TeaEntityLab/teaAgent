@@ -1,3 +1,4 @@
+# test-type: lifecycle
 """Tests for durable checkpoints and depth limit enforcement in WorkflowEngine."""
 
 from __future__ import annotations

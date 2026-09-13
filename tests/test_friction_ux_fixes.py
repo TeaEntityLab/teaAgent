@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for owner-friction UX fixes (F1–F8)."""
 
 from __future__ import annotations

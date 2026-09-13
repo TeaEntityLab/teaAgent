@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for release documentation evidence bundle."""
 
 from __future__ import annotations

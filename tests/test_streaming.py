@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 import argparse
 
 from teaagent.streaming.content_filter import DecisionContentStreamer

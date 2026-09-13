@@ -1,3 +1,4 @@
+# test-type: contract
 """G-P0-1 (ADR-0039): audit schema conformance tests.
 
 Validates that sample chained audit events written by ``AuditLogger``

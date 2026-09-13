@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for interactive intent clarification (U-P1-1).
 
 Verifies that --clarify triggers interactive prompting when needs_clarification

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: adversarial
 from pathlib import Path
 
 from teaagent.skill_writer import SkillDraft, SkillWriter

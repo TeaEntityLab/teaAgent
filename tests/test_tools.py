@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: contract
 import pytest
 
 from teaagent.types import ToolAnnotations, ToolRegistry, ToolValidationError

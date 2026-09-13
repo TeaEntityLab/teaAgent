@@ -1,3 +1,4 @@
+# test-type: contract
 """WDC-004 terminology freeze."""
 
 from __future__ import annotations

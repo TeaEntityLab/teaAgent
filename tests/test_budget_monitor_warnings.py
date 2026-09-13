@@ -1,3 +1,4 @@
+# test-type: behavior
 """G-P2-3: BudgetMonitor iteration and tool-call warning tests.
 
 Ensures that iteration and tool-call consumption emit warnings at the same

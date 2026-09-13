@@ -1,3 +1,4 @@
+# test-type: lifecycle
 """Integration tests for live context anchors features."""
 
 from __future__ import annotations

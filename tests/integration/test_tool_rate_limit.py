@@ -1,3 +1,4 @@
+# test-type: behavior
 """IT-3: ToolRegistry rate limiter blocks calls that exceed the quota.
 
 Verifies the sliding-window enforcement, concurrency safety, and that the

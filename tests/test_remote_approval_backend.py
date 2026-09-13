@@ -1,3 +1,4 @@
+# test-type: behavior
 """WDE-001 remote approval backend cross-process grant."""
 
 from __future__ import annotations

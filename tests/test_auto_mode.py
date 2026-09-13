@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for auto mode: fully autonomous execution with safety budget."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# test-type: contract
 """SURF-011: surface capability registry stays internally consistent."""
 
 from __future__ import annotations

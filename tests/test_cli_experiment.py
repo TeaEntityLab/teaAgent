@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for CLI experiment commands."""
 
 from __future__ import annotations

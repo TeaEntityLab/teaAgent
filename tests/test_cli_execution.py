@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for CLI execution abstraction layer."""
 
 from __future__ import annotations

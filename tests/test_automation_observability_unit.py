@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 from dataclasses import replace
 
 from teaagent.automation_chain import persist_automation_handoff

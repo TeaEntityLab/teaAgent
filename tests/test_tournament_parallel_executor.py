@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for tournament parallel executor and subagent manager wiring."""
 
 from __future__ import annotations

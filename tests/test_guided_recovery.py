@@ -1,3 +1,4 @@
+# test-type: behavior
 """Unit tests for guided recovery module."""
 
 import pytest

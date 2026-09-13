@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: contract
 import tempfile
 from datetime import datetime, timedelta, timezone
 

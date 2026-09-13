@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for session 3 improvement items: lazy imports, CLI errors, caches."""
 
 from __future__ import annotations

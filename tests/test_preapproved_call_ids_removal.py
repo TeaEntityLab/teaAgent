@@ -1,3 +1,4 @@
+# test-type: contract
 """G-P2-2: ``preapproved_call_ids`` removal — payload_digest is the only path.
 
 After the deprecation window, call-id-based preapproval

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 from teaagent.automations import AutomationSpec
 from teaagent.chat_agent import ChatAgentConfig
 from teaagent.ergonomics.background_run import build_agent_run_command

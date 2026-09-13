@@ -1,3 +1,4 @@
+# test-type: behavior
 """CLI coverage for teaagent.cli._handlers._ergonomics."""
 
 from __future__ import annotations

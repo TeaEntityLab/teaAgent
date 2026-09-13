@@ -1,3 +1,4 @@
+# test-type: contract
 """Tests for S-P1-3: SHA-256 line-hash format with CRC migration."""
 
 from __future__ import annotations

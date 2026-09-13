@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: contract
 import pytest
 
 from teaagent.schema import validate_object_schema

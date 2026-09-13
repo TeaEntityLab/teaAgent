@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for federated sync CLI (TASK-011)."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for git write-operation tools."""
 
 from __future__ import annotations

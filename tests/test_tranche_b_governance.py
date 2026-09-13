@@ -1,3 +1,4 @@
+# test-type: adversarial
 """Tranche B governance loop tests."""
 
 from __future__ import annotations

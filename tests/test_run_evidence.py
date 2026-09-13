@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for run evidence bundle extraction."""
 
 import re

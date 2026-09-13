@@ -1,3 +1,4 @@
+# test-type: contract
 """Regression contract: destructive-tool approval must never be bypassed.
 
 This is an indestructible contract — if this test fails, the approval

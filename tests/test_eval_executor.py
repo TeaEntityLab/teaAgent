@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for real model-output execution seam in EvalRunner."""
 
 from __future__ import annotations

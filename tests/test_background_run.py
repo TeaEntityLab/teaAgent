@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: lifecycle
 import json
 import sys
 import time

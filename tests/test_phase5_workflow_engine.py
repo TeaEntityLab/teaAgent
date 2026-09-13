@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 from teaagent.agent_factory import AgentFactory
 from teaagent.coordinator import WorkflowStep
 from teaagent.plugin_system import PluginRegistry

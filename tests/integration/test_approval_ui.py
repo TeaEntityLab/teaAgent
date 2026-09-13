@@ -1,3 +1,4 @@
+# test-type: behavior
 """IT: DiffApprovalHandler — interactive approval with diff preview.
 
 Verifies that the handler:

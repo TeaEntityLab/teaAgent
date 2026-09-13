@@ -1,3 +1,4 @@
+# test-type: adversarial
 """SEC-05/09/14 tier-1 hardening regression tests."""
 
 from __future__ import annotations

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: lifecycle
 from pathlib import Path
 
 from teaagent.swarm import SubagentTask, SwarmManager

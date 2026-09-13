@@ -1,3 +1,4 @@
+# test-type: behavior
 """HTTP remote approval backend integration (WDE-001)."""
 
 from __future__ import annotations

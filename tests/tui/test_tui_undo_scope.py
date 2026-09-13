@@ -1,3 +1,4 @@
+# test-type: behavior
 """U-P2-3: TUI undo-scope divergence fix tests.
 
 The TUI ``/undo`` must match the CLI ``agent undo`` journal-first scope:

@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for tool dependency injection implementation."""
 
 import tempfile

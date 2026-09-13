@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for run progress summaries."""
 
 from __future__ import annotations

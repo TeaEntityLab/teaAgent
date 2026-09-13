@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 from teaagent.llm import (
     FakeLLMAdapter,
     LLMMessage,

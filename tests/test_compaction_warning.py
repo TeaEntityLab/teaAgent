@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for proactive context compaction warning (UX2.2)."""
 
 from __future__ import annotations

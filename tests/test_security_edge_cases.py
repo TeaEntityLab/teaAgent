@@ -1,3 +1,4 @@
+# test-type: adversarial
 """Edge case tests for security fixes."""
 
 from __future__ import annotations

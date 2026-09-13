@@ -1,3 +1,4 @@
+# test-type: lifecycle
 """Tests for agent chaining, subagent orchestration, team orchestration,
 swarm execution, automation chains, and workflow engine scenarios.
 

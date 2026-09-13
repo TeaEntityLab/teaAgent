@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 import asyncio
 
 from teaagent.approval import JITApprovalServer

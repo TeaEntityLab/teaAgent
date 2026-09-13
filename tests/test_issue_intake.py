@@ -1,3 +1,4 @@
+# test-type: behavior
 """Unit tests for issue intake module."""
 
 from datetime import datetime

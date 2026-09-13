@@ -1,3 +1,4 @@
+# test-type: lifecycle
 """Tests for unified background runner (ultrawork deprecation)."""
 
 from __future__ import annotations

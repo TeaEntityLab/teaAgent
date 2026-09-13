@@ -1,3 +1,4 @@
+# test-type: behavior
 """IT: Ultrawork completion notification.
 
 When a background worker stops, NotifyConfig triggers a webhook POST and/or

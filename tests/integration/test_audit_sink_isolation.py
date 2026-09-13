@@ -1,3 +1,4 @@
+# test-type: behavior
 """IT-6: Audit sink failure isolation — a crashing sink must not crash the run.
 
 Verifies that:

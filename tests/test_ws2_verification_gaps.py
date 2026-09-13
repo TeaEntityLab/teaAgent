@@ -1,3 +1,4 @@
+# test-type: adversarial
 """WDE-003 named WS2 verification gap closures."""
 
 from __future__ import annotations

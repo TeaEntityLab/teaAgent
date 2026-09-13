@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 from pathlib import Path
 
 from teaagent.skill_candidate_artifacts import write_candidate_artifacts

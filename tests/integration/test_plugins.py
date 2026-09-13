@@ -1,3 +1,4 @@
+# test-type: behavior
 """IT: Plugin loader via entry-points.
 
 load_plugins() scans the 'teaagent.tools' entry-point group and calls each

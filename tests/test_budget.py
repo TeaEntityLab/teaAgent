@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: contract
 from dataclasses import FrozenInstanceError
 from unittest.mock import patch
 

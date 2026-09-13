@@ -1,3 +1,4 @@
+# test-type: behavior
 """Real CLI/TUI behavioral parity tests — CG-17 fix.
 
 These tests drive the actual TUI entry point (TeaAgentTUI) and verify it

@@ -1,3 +1,4 @@
+# test-type: contract
 """IT-9: Error classes include actionable hint messages.
 
 Verifies that the ``hint`` attribute is set on concrete error instances and

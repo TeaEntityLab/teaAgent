@@ -1,3 +1,4 @@
+# test-type: behavior
 """Real Redis failure scenario tests for hybrid approval queue."""
 
 from __future__ import annotations

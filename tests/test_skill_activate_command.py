@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 import argparse
 import json
 from pathlib import Path

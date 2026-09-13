@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for Slack/Discord native notifications."""
 
 from __future__ import annotations

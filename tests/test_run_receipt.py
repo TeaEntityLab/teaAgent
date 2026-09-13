@@ -1,3 +1,4 @@
+# test-type: contract
 """Tests for human-readable run receipts."""
 
 from __future__ import annotations

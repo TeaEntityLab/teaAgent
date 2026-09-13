@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for role-based model routing resolution.
 
 Verifies that the model routing system resolves the correct model/provider

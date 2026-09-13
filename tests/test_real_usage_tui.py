@@ -1,3 +1,4 @@
+# test-type: behavior
 """Real-usage TUI interactive scenarios (Perspective 2).
 
 Tests simulate how a local user operates TeaAgent through the TUI:

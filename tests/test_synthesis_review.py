@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory

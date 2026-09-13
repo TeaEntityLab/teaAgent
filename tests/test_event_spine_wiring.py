@@ -1,3 +1,4 @@
+# test-type: contract
 """Tests for the ADR 0032 M7 event-spine wiring guard.
 
 Covers the realized-architecture invariant: one typed lifecycle path

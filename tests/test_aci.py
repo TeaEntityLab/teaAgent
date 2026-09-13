@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for ACI (Anticipatory Context Injection) with timeout protection."""
 
 import pytest

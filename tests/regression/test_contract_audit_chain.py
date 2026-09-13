@@ -1,3 +1,4 @@
+# test-type: contract
 """Regression contract: audit chain integrity must never be broken.
 
 This is an indestructible contract — if this test fails, the audit log

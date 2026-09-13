@@ -1,3 +1,4 @@
+# test-type: lifecycle
 """Tests for time-travel replay CLI (TASK-012)."""
 
 from __future__ import annotations

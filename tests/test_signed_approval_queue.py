@@ -1,3 +1,4 @@
+# test-type: adversarial
 """WDE-002 signed approval queue writes."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# test-type: lifecycle
 """Acceptance tests for resume/background lifecycle (P1-A-004).
 
 Tests cover:

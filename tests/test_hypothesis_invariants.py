@@ -1,3 +1,4 @@
+# test-type: contract
 """Hypothesis property-based tests for governance invariants.
 
 Tests cover four critical invariant domains:

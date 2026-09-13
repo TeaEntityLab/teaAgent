@@ -1,3 +1,4 @@
+# test-type: adversarial
 """Regression tests for central CLI JSON output redaction (CodeQL #39).
 
 `teaagent.cli._output.print_json` is the shared logging sink for CLI handlers.

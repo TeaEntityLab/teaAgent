@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for federated graph sync protocol."""
 
 from __future__ import annotations

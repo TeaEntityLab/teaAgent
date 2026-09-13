@@ -1,3 +1,4 @@
+# test-type: contract
 """Unit tests for the built-in rss-summary skill."""
 
 from __future__ import annotations

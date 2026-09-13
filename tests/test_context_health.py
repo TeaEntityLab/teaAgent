@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for long-session context health tests (TASK-H5-001-04)."""
 
 import pytest

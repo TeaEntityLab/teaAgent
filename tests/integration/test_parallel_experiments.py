@@ -1,3 +1,4 @@
+# test-type: behavior
 """Integration tests for parallel experiments workflow."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for cockpit run-status sub-states in the TUI state panel."""
 
 from __future__ import annotations

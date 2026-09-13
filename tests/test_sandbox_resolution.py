@@ -1,3 +1,4 @@
+# test-type: lifecycle
 """Tests for git sandbox lifecycle audit and evidence extraction."""
 
 from __future__ import annotations

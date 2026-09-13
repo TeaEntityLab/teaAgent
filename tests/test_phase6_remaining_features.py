@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for remaining Phase 4-6 maturity-matrix gaps."""
 
 from __future__ import annotations

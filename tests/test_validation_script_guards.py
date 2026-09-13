@@ -1,3 +1,4 @@
+# test-type: behavior
 """Guard tests for validation scripts that had zero test coverage.
 
 These scripts are pre-commit gates — bugs in them silently block or

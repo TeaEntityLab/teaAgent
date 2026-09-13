@@ -1,3 +1,4 @@
+# test-type: behavior
 """IT: Benchmark latency/cost tracking."""
 
 from __future__ import annotations

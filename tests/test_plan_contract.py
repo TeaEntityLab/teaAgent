@@ -1,3 +1,4 @@
+# test-type: contract
 """Unit tests for plan artifact binding."""
 
 from __future__ import annotations

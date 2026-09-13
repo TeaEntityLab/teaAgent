@@ -1,3 +1,4 @@
+# test-type: adversarial
 """Tests for security fixes applied to the codebase.
 
 This test suite validates the security improvements made to address

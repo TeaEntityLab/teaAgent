@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for the teaagent permission explain CLI command (US-016)."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# test-type: behavior
 """SEC-11: partial undo warning when shell-mutating tools were used."""
 
 from __future__ import annotations

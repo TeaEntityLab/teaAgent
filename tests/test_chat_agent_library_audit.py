@@ -1,3 +1,4 @@
+# test-type: behavior
 """S-P0-3 (ADR-0035): library audit durability tests.
 
 When ``run_chat_agent`` is called without an explicit ``audit`` logger it

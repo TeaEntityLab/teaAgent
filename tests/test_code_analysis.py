@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 from teaagent.code_analysis import (
     CodeAnalysisConfig,
     extract_tree_sitter_relations,

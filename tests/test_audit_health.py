@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for teaagent.audit_health (assess_audit_health, format_audit_health, AuditDurabilityHealth)
 and SEC-12 3-strikes fsync failure escalation in AuditLogger."""
 

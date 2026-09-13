@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from unittest import mock

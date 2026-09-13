@@ -1,3 +1,4 @@
+# test-type: behavior
 """AC: REPL displays answers and reports status correctly (P0-1, fixes CG-01)."""
 
 from __future__ import annotations

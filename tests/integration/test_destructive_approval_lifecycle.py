@@ -1,3 +1,4 @@
+# test-type: lifecycle
 """IT-12: Full destructive-tool approval lifecycle — pause, approve, deny, timeout.
 
 Covers:

@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for health, metrics, and credentials CLI commands."""
 
 from __future__ import annotations

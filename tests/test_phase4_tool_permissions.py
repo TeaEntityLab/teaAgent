@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 from teaagent.tool_permissions import (
     PermissionRequest,
     ToolPermission,

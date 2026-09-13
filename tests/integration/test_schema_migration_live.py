@@ -1,3 +1,4 @@
+# test-type: behavior
 """IT-14: Schema migration framework handles live non-empty databases.
 
 Verifies that:

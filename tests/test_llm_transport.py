@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 import json
 import os
 from unittest.mock import MagicMock, patch

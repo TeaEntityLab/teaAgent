@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for consensus CLI handlers."""
 
 import argparse

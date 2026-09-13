@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for delta update mechanism (TASK-H6-003-02)."""
 
 import pytest

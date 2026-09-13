@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 

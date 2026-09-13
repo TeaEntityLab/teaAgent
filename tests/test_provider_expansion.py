@@ -1,3 +1,4 @@
+# test-type: contract
 """Tests for expanded provider support."""
 
 from __future__ import annotations

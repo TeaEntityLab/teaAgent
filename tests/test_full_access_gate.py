@@ -1,3 +1,4 @@
+# test-type: adversarial
 """Full-access gate tests for P0-TR-001.
 
 `allow_all_destructive` must be inert in non-full-access modes (notably

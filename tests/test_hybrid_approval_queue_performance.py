@@ -1,3 +1,4 @@
+# test-type: behavior
 """Performance and stress tests for hybrid approval queue."""
 
 from __future__ import annotations

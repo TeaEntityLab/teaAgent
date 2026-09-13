@@ -1,3 +1,4 @@
+# test-type: contract
 """Guard: action-ID regex must match double-digit IDs (G-P2-10 regression).
 
 The original ``[0-9]`` pattern silently failed on ``G-P2-10`` because the

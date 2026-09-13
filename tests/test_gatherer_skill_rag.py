@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 import pytest
 
 from teaagent.plan_mode import ContextGatherer, InsufficientContextError

@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for code ontology AST parsing and graph construction."""
 
 from __future__ import annotations

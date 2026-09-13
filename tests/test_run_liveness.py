@@ -1,3 +1,4 @@
+# test-type: lifecycle
 """Tests for durable run liveness files."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# test-type: behavior
 """P0-A-001 & P0-A-003: Headless command-path tests for TUI semantic parity.
 
 These tests verify that TUI commands (ask, run, /cost, /undo, root, resume)

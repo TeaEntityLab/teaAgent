@@ -1,3 +1,4 @@
+# test-type: behavior
 """IT: A2A delegation carries W3C traceparent header.
 
 Every A2AClient.delegate() call may carry a traceparent header so that the

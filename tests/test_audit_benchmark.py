@@ -1,3 +1,4 @@
+# test-type: behavior
 """Performance benchmarks for audit chain operations (TST-009)."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for test quality mode behavior in validate_docs_consistency."""
 
 from __future__ import annotations

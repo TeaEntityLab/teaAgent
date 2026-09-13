@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for consensus engine history listing."""
 
 import tempfile

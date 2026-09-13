@@ -1,3 +1,4 @@
+# test-type: adversarial
 """S-P2-2: explicit symlink rejection in ``_assert_paths_in_workspace``.
 
 Defense in depth — the approval gate rejects symlinked path targets even

@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for risk-adaptive spec exemption system (CPP-P1-005)."""
 
 from __future__ import annotations

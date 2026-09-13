@@ -1,3 +1,4 @@
+# test-type: adversarial
 """IT: Audit hash-chain integrity.
 
 Each event persisted by AuditLogger carries a SHA-256 hash of the previous

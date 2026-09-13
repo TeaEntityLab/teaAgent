@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for readable pending approval selectors."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# test-type: adversarial
 """IT-15: DPoP replay cache is correct under concurrent access.
 
 Verifies that:

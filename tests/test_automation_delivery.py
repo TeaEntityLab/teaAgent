@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 import json
 import urllib.error
 from http.server import BaseHTTPRequestHandler, HTTPServer

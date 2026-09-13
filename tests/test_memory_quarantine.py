@@ -1,3 +1,4 @@
+# test-type: behavior
 """CPP-P0-003 — Memory write quarantine for agent-created durable project memory."""
 
 from __future__ import annotations

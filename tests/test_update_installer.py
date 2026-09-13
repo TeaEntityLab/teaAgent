@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for update application mechanism (TASK-H6-003-03)."""
 
 import json

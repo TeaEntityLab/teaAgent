@@ -1,3 +1,4 @@
+# test-type: behavior
 """Guard for H4 shadow demo scaffold (ADR-0031 criterion 1 exercisable).
 
 Runs scripts/exercise_h4_shadow_demo.py as a subprocess and asserts it

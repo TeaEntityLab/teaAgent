@@ -1,3 +1,4 @@
+# test-type: adversarial
 """TASK-005 verify-first: harden trust boundaries for extensions and MCP.
 
 Acceptance criterion (roadmap-work-items-2026-06-04, TASK-005):

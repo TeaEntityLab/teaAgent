@@ -1,3 +1,4 @@
+# test-type: lifecycle
 """IT-11: Run can be checkpointed and resumed from the last saved context.
 
 Verifies that:

@@ -1,3 +1,4 @@
+# test-type: lifecycle
 """Integration tests for TSB lifecycle workflow (publish → verify → extract)."""
 
 from __future__ import annotations

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 from teaagent.approval import format_denial_message
 from teaagent.types import DenialReasonCode, ToolPermissionError
 

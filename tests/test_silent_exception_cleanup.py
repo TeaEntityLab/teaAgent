@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for A-P0-2: silent exception sites now log at ERROR.
 
 Each test asserts that a previously-silent ``except Exception: pass``

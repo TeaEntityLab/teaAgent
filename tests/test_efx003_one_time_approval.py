@@ -1,3 +1,4 @@
+# test-type: adversarial
 """EFX-003: one-time approvals bind payload digest and are consumed."""
 
 from __future__ import annotations

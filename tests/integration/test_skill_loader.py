@@ -1,3 +1,4 @@
+# test-type: behavior
 """IT-5: Skill loader discovers SKILL.md files and injects them into prompts.
 
 Covers: project-level skills, user-level skills, deduplication (project wins),

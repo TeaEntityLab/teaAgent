@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: contract
 from teaagent.code_mode import SandboxProfile
 from teaagent.code_mode._types import CodeModeSandbox
 

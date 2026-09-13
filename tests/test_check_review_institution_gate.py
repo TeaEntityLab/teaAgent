@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 import os
 import subprocess
 import sys

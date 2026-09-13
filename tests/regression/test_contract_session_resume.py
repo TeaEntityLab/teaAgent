@@ -1,3 +1,4 @@
+# test-type: lifecycle
 """Regression contract: session resume must always preserve context.
 
 This is an indestructible contract — if this test fails, resumed runs

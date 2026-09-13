@@ -1,3 +1,4 @@
+# test-type: behavior
 """TASK-001 verify-first: TUI / CLI semantic drift.
 
 Acceptance criterion (roadmap-work-items-2026-06-04, TASK-001):

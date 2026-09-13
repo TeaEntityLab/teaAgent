@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for hybrid approval queue fixes - thread safety, persistence, and integration."""
 
 import tempfile

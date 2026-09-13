@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 import test_support
 
 

@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for LongResultEnvelope helpers."""
 
 import hashlib

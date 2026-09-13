@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for subagent parent-child lineage and batch metadata."""
 
 from __future__ import annotations

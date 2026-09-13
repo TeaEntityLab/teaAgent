@@ -1,3 +1,4 @@
+# test-type: behavior
 """IT-13: Streaming LLM path interacts correctly with tool dispatch and audit.
 
 Verifies that:

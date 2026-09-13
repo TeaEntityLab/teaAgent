@@ -1,3 +1,4 @@
+# test-type: adversarial
 """Tests for MCP trust policy management."""
 
 import os

@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for GatewayIntakeParser."""
 
 from __future__ import annotations

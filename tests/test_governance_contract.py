@@ -1,3 +1,4 @@
+# test-type: contract
 """Contract tests for the provider-agnostic governance metadata layer (W11)."""
 
 from __future__ import annotations

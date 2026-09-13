@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 import urllib.error
 import urllib.request
 

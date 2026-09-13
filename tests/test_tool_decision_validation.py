@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: contract
 from teaagent.runner import (
     AgentRunner,
     FinalAnswer,

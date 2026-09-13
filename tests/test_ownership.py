@@ -1,3 +1,4 @@
+# test-type: lifecycle
 """Tests for WorkspaceRegistry with file_lock and PID takeover."""
 
 import os

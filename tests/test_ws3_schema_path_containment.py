@@ -1,3 +1,4 @@
+# test-type: adversarial
 """WS3-003 schema and path-containment coverage."""
 
 from __future__ import annotations

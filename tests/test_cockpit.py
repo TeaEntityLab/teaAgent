@@ -1,3 +1,4 @@
+# test-type: contract
 """Tests for operator cockpit state model."""
 
 import time

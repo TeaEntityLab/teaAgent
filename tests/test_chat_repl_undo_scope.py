@@ -1,3 +1,4 @@
+# test-type: behavior
 """AC: REPL undo cannot destroy un-agented work (P0-2, fixes CG-02)."""
 
 from __future__ import annotations

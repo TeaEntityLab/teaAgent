@@ -1,3 +1,4 @@
+# test-type: adversarial
 """Tests for multi-tenant isolation, directory partitioning, and tool mismatch protection."""
 
 from __future__ import annotations

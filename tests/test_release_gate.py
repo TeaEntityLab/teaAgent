@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for release pipeline integration (TASK-H5-001-06)."""
 
 from pathlib import Path

@@ -1,3 +1,4 @@
+# test-type: behavior
 """Phase B: the check-high-risk-paths gate (review-system.md §4.2 / G4).
 
 High-risk path changes (scripts/high_risk_paths.yaml) must be accompanied by a

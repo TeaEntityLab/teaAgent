@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for policy-based routing (TASK-H4-002-04)."""
 
 from tempfile import TemporaryDirectory

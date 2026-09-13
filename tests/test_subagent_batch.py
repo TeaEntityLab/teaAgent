@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for parallel subagent batch execution."""
 
 from __future__ import annotations

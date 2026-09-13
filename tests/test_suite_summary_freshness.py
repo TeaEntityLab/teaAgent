@@ -1,3 +1,4 @@
+# test-type: behavior
 """WDB-004 suite summary freshness validator."""
 
 from __future__ import annotations

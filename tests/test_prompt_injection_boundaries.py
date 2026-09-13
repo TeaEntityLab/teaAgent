@@ -1,3 +1,4 @@
+# test-type: adversarial
 """WS3-005 prompt-injection trust boundary checks.
 
 Covers all 4 enforced code boundaries from:

@@ -1,3 +1,4 @@
+# test-type: adversarial
 """DSK-P0-002: Direct Active-Skill Write Quarantine tests.
 
 Verify that writes to active skill directories are blocked in the

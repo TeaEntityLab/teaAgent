@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: lifecycle
 import tempfile
 from pathlib import Path
 

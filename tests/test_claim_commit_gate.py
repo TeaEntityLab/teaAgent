@@ -1,3 +1,4 @@
+# test-type: behavior
 """WDB-002 claim-commit gate fixtures."""
 
 from __future__ import annotations

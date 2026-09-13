@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for SSH vote relay, WASM CI helpers, and multi-tenant control plane."""
 
 from __future__ import annotations

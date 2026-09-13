@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for the inline-TODO catalog "implicit deferral" resolutions.
 
 Each test maps to a row that was previously listed as *review-needed* in

@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for code quality improvements and refactoring.
 
 This test suite validates the code quality improvements including

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 import pytest
 
 from teaagent.agent_factory import AgentFactory, AgentSpecification

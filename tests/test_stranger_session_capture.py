@@ -1,3 +1,4 @@
+# test-type: behavior
 """WDH-002 stranger session capture tooling."""
 
 from __future__ import annotations

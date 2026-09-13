@@ -1,3 +1,4 @@
+# test-type: contract
 """Compatibility tests for the approval module migration (A-P1-4 / ADR-0030).
 
 Asserts that importing from the legacy root-level paths and the new

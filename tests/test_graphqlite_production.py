@@ -1,3 +1,4 @@
+# test-type: behavior
 from __future__ import annotations
 
 from teaagent import Document, KnowledgeGraph

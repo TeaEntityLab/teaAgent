@@ -1,3 +1,4 @@
+# test-type: behavior
 """Basic tests for skill discovery and loading from known directories."""
 
 from __future__ import annotations

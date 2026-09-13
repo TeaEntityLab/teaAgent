@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for prompt regression suite (TASK-H5-001-02)."""
 
 import pytest

@@ -1,3 +1,4 @@
+# test-type: adversarial
 """Tests for WS2-001/003/004 subagent isolation and policy guards."""
 
 from __future__ import annotations

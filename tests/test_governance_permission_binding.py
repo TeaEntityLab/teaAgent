@@ -1,3 +1,4 @@
+# test-type: contract
 """Roadmap A2: structural CV-8 enforcement for L3 trust modules.
 
 Makes "every module that can grant/escalate a permission has a spec-linked permission

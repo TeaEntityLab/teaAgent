@@ -1,3 +1,4 @@
+# test-type: adversarial
 """SEC-13: Integration coverage for critical security paths without mocks.
 
 Pins end-to-end wiring for audit HMAC verification, chat-agent cost tracking,

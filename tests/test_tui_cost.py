@@ -1,3 +1,4 @@
+# test-type: behavior
 """P0-B-002: TUI cost accumulation and display state tests.
 
 Tests for:

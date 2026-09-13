@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 from teaagent.ergonomics.human_output import (
     build_readiness_items,
     format_readiness_summary,

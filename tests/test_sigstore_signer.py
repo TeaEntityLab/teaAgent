@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for Sigstore keyless signing and TSB provenance verification."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# test-type: behavior
 """IT: Run export and import.
 
 export_run() creates a tar.gz archive of one run's audit log.

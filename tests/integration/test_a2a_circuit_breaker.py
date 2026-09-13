@@ -1,3 +1,4 @@
+# test-type: behavior
 """IT: A2A FederatedAgentRegistry circuit breaker.
 
 After ``failure_threshold`` consecutive fetch failures for one endpoint the

@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for scope-creep detection tests (TASK-H5-001-05)."""
 
 import pytest

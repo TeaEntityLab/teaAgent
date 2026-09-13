@@ -1,3 +1,4 @@
+# test-type: behavior
 """WDC-002/003 conversation UX snapshots."""
 
 from __future__ import annotations

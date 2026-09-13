@@ -1,3 +1,4 @@
+# test-type: lifecycle
 """Tests for automation lifecycle management."""
 
 import tempfile

@@ -1,3 +1,4 @@
+# test-type: behavior
 """ADR-0033 / S-P0-1: auto-mode approval authority and audit event.
 
 Asserts that auto mode no longer escalates allowlisted destructive tools to

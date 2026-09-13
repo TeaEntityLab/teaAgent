@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for DSK-P1-001 behavioral skill eval harness."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for FocusStackManager and auto-local compression."""
 
 from teaagent.context import CompactionManager

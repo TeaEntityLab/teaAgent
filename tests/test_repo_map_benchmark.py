@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for repo-map benchmark automation (TASK-H5-001-03)."""
 
 from pathlib import Path

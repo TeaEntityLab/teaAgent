@@ -1,3 +1,4 @@
+# test-type: lifecycle
 """Tests for GitBranchSandbox git-native checkpointing."""
 
 from __future__ import annotations

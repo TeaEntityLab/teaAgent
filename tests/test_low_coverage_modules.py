@@ -1,3 +1,4 @@
+# test-type: behavior
 """Additional tests for low-coverage modules: llm, telemetry, code_mode."""
 
 from __future__ import annotations

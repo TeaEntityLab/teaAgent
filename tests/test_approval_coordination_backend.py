@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for durable approval coordination backends (WS2-005)."""
 
 from __future__ import annotations

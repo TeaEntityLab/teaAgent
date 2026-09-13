@@ -1,3 +1,4 @@
+# test-type: contract
 """SURF-001: shared run-state schema across surfaces."""
 
 from __future__ import annotations

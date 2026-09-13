@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 import json
 from datetime import date, timedelta
 from pathlib import Path

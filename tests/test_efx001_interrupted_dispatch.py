@@ -1,3 +1,4 @@
+# test-type: lifecycle
 """EFX-001: unmatched mutating dispatch is UNKNOWN and not blindly retried."""
 
 from __future__ import annotations

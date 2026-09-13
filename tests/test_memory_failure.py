@@ -1,3 +1,4 @@
+# test-type: behavior
 """Integration tests for failure experience loop features."""
 
 from __future__ import annotations

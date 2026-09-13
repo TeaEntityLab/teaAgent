@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for ChatSessionController persistence error handling (P1-C).
 
 Verifies that store save failures and undo save failures are logged as

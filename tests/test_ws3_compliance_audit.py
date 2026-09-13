@@ -1,3 +1,4 @@
+# test-type: contract
 """WS3-001 compliance mode tests."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# test-type: contract
 """WDF-002 import compatibility for folded H4/H5 modules."""
 
 from __future__ import annotations

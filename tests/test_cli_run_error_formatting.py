@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for CLI agent run error formatting (U-P1-2).
 
 Verifies that task-resolution, plan-gate, and background error paths route

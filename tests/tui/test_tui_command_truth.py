@@ -1,3 +1,4 @@
+# test-type: contract
 """U-P0-2 (ADR-0038): TUI command-truth tests.
 
 Asserts that HELP_TEXT does not advertise commands that do not behave as

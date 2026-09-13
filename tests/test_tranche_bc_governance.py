@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tranche B/C governance extension tests."""
 
 from __future__ import annotations

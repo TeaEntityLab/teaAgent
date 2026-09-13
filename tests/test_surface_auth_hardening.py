@@ -1,3 +1,4 @@
+# test-type: adversarial
 """Bearer token, mTLS bind rules, and per-tenant control plane authZ."""
 
 from __future__ import annotations

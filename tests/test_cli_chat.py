@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for CLI chat REPL handler."""
 
 from __future__ import annotations

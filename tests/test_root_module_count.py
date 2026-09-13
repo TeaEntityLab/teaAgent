@@ -1,3 +1,4 @@
+# test-type: contract
 """WDF-001 root module freeze."""
 
 from __future__ import annotations

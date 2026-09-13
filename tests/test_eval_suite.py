@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for eval suite framework (TASK-H5-001-01)."""
 
 from pathlib import Path

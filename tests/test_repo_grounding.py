@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for spec grounding — repository grounding check for spec-to-plan transitions."""
 
 from __future__ import annotations

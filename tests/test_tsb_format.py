@@ -1,3 +1,4 @@
+# test-type: contract
 """Tests for Provenanced Skill Bundle (TSB) format and verification."""
 
 from __future__ import annotations

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 import io
 import json
 from contextlib import redirect_stdout

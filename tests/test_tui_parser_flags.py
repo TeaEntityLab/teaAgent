@@ -1,3 +1,4 @@
+# test-type: contract
 """U-P2-2: TUI parser flag alignment tests.
 
 Ensures the ``tui`` subcommand exposes the same budget/resource flags as

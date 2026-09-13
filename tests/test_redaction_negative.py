@@ -1,3 +1,4 @@
+# test-type: adversarial
 """Negative test cases for redaction.py module (PII redaction).
 
 Tests edge cases, malformed inputs, boundary conditions, and error handling

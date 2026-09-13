@@ -1,3 +1,4 @@
+# test-type: behavior
 """U-P1-6: TUI typo-confirmation gate tests.
 
 In chat mode, an unknown command (likely a typo) must NOT be silently forwarded

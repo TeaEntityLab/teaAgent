@@ -1,3 +1,4 @@
+# test-type: behavior
 """Real-usage agent chaining & automated execution scenarios (Perspective 1).
 
 Tests simulate how TeaAgent is used in automated/CI/backend contexts:

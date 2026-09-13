@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for run evidence summary extraction."""
 
 import tempfile

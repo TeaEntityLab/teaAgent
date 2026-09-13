@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for the A1 test-assertion-regression gate (scripts/check_test_assertion_regression.py)."""
 
 from __future__ import annotations

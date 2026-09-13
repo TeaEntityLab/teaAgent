@@ -1,3 +1,4 @@
+# test-type: adversarial
 """SEC-10: Verify inspect-safe shell allowlist cannot read sensitive files.
 
 cat, head, and tail must NOT be in _INSPECT_EXECUTABLES because they can

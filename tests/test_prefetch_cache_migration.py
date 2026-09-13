@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for prefetch_cache migration."""
 
 from __future__ import annotations

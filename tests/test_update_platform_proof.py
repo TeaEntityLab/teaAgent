@@ -1,3 +1,4 @@
+# test-type: lifecycle
 """WDA-005 update platform proof."""
 
 from __future__ import annotations

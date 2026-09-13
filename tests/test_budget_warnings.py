@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 import logging
 
 from teaagent.budget_monitor import BudgetAction, BudgetMonitor

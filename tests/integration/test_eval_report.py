@@ -1,3 +1,4 @@
+# test-type: behavior
 """IT: Eval HTML report generation."""
 
 from __future__ import annotations

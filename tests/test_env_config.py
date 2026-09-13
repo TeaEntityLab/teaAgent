@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for environment configuration and lockfile management."""
 
 from __future__ import annotations

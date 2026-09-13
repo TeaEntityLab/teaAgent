@@ -1,3 +1,4 @@
+# test-type: behavior
 """IT: MigrationRunner dry-run mode.
 
 dry_run=True previews which migrations would run without executing any SQL or

@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for release eval gate wiring (WDA-004 / WDD-001)."""
 
 from __future__ import annotations

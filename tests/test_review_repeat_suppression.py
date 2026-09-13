@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: behavior
 from teaagent.subagents._synthesis_review import (
     ReviewFinding,
     ReviewFindingState,

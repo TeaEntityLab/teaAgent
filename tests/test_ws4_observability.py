@@ -1,3 +1,4 @@
+# test-type: behavior
 """WS4 observability and operations tests."""
 
 from __future__ import annotations

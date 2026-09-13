@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# test-type: adversarial
 import pytest
 
 from teaagent.code_mode._child_process import ChildProcessCodeModeBackend

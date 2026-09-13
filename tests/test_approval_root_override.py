@@ -1,3 +1,4 @@
+# test-type: contract
 """P0-D-001: Explicit root priority — --root always wins over saved state."""
 
 from __future__ import annotations

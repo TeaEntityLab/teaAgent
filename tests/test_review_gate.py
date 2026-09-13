@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for SCL-P1-005 review gate enforcement and WaiverRecord,
 plus SCL-P1-006 ReviewGate packet and CLI gate integration."""
 

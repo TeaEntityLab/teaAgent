@@ -1,3 +1,4 @@
+# test-type: contract
 """WS5 integration and extension boundary tests."""
 
 from __future__ import annotations

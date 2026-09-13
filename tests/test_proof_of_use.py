@@ -1,3 +1,4 @@
+# test-type: behavior
 from teaagent.proof_of_use import (
     ProofOfUse,
     ProofOfUseBundle,

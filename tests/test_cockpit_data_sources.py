@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for cockpit data sources (TASK-H4-001-02)."""
 
 from pathlib import Path

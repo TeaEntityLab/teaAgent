@@ -1,3 +1,4 @@
+# test-type: contract
 """Vocabulary compliance tests for background/resume terminology (WS1-005).
 
 Ensures that code strings match the canonical vocabulary defined in

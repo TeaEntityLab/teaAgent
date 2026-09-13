@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for branch-aware memory isolation (TASK-007)."""
 
 from __future__ import annotations

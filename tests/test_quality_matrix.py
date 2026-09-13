@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for dynamic test-driven quality matrix (TASK-008)."""
 
 from __future__ import annotations

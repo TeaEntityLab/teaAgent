@@ -1,3 +1,4 @@
+# test-type: adversarial
 """Tests for governance hardening: SSH redaction, AST fuzz, HMAC queue, PermissionMode."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for Role-Based Access Control (TASK-H4-002-02)."""
 
 from datetime import datetime, timedelta, timezone

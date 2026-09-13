@@ -1,3 +1,4 @@
+# test-type: behavior
 """P0-C-002: Regression tests for undo mechanism labeling."""
 
 from __future__ import annotations

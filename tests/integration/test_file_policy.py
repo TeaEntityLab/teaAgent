@@ -1,3 +1,4 @@
+# test-type: behavior
 """IT-7: FilePolicy deny rules block tool calls before ApprovalPolicy.
 
 Covers: rule matching, argument_pattern glob, tool_pattern glob, rule ordering

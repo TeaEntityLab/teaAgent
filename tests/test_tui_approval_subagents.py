@@ -1,3 +1,4 @@
+# test-type: behavior
 """Tests for teaagent.tui._approval_subagents."""
 
 from __future__ import annotations

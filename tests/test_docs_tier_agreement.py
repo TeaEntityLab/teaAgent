@@ -1,3 +1,4 @@
+# test-type: contract
 """Cross-generator agreement for documentation tier classification."""
 
 from __future__ import annotations

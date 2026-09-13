@@ -1,3 +1,4 @@
+# test-type: contract
 """Acceptance test for HADS (Human-AI Document Standard) compliance."""
 
 from __future__ import annotations
