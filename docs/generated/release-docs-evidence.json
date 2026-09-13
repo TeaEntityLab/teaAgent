@@ -1,11 +1,11 @@
 {
   "ok": true,
-  "created_at": "2026-09-13T10:33:24+00:00",
+  "created_at": "2026-09-13T11:15:05+00:00",
   "repo_root": "/Users/teee/dev/teaagent",
   "git": {
     "branch": "main",
-    "commit": "c83d32cc7605ee85aaf8cb26ef8696f279152613",
-    "dirty": false
+    "commit": "1826dbd9e8b863144a84c070ef4317e9b3f10fef",
+    "dirty": true
   },
   "commands": [
     {
