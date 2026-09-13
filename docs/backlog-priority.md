@@ -82,6 +82,9 @@ was met on 2026-06-22; completing that intake does not authorize new work.
 | EFX-001 ambiguous mutating-tool dispatch | `governance-gap` | **In progress (2026-08-25)** — runner commits `pending_effect` before execute; unmatched non-idempotent starts become `OUTCOME_UNKNOWN` and refuse blind redispatch (`tests/test_efx001_interrupted_dispatch.py`, `tests/acceptance/test_efx_durable_effect_flow.py`). Live GitHub/browser/provider proof still required for Complete |
 | AGF-001 cross-host skill conflict audit (agentflow v8.2.0 delta) | `governance-gap` | **Done (2026-09-13)** — `teaagent skill audit` inventories active + foreign roots, marks `loadable`, reports collisions, embeds conflict protocol; `tests/test_skill_audit_inventory.py` |
 | AGF-002 inline incident citations on two uncited guards | `governance-gap` | **Done (verified 2026-09-13)** — `Origin:` paragraphs present in both guards since `86fa25ea` |
+| VND-001 live supervisor/monitor lane (vendor survey 2026-09-13) | `governance-gap` | **Proposed** — owner approval + DR-006 classification; audit is post-hoc today, all three vendors now ship supervisor layers |
+| VND-002 insider-threat class in threat-model | `governance-gap` | **Proposed** — docs-only, folds into next authorized docs slice |
+| VND-003 agent-autonomy metrics | `legacy-competitive` | **Hold** — zero organic runs to measure; re-propose when M4 dogfood lands |
 | AGF-003 run-store retention/prune policy | `legacy-competitive` | **Hold** — premature at zero organic delivery traffic |
 | AGF-004 per-skill version field in SKILL.md frontmatter | `legacy-competitive` | **Hold** — no consumer; revisit if marketplace ships versioned skills |
 
