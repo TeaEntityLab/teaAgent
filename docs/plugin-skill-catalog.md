@@ -26,6 +26,17 @@ Each skill package is a directory containing `SKILL.md` with YAML frontmatter
 (`name`, `description` required). `REFERENCE.md` and examples are encouraged
 for progressive disclosure.
 
+### Cross-host audit (AGF-001)
+
+`teaagent skill audit --root .` inventories `SKILL.md` files across the active
+search path **and** foreign roots (`.agents/skills`, `~/.codex/plugins`,
+`~/.claude/plugins/cache`, project plugin dirs) without loading them. Output
+marks each entry `loadable` (in the TeaAgent search path) vs foreign-only,
+reports same-name collisions, and embeds the conflict-warning protocol:
+warn once per distinct conflict, quote both clauses, name the consequence and
+which instruction wins under host priority. Semantic conflict assessment is
+the caller's job — the command is inventory-only.
+
 ## Plugin discovery paths
 
 | Order | Path | Manifest |

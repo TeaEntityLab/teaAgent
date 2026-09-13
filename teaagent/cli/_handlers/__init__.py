@@ -229,6 +229,7 @@ from ._sandbox import (
 )
 from ._skill import (
     skill_activate_command,
+    skill_audit_command,
     skill_candidate_eval_command,
     skill_candidate_eval_real_command,
     skill_candidate_install_command,
@@ -406,6 +407,7 @@ __all__ = [
     'workspace_tools_metadata',
     'skill_activate_command',
     'skill_candidate_install_command',
+    'skill_audit_command',
     'skill_explain_command',
     'skill_health_command',
     'skill_candidate_list_command',

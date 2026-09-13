@@ -19,9 +19,11 @@
 > 2026-09-09, and backlog-row coverage was not re-audited in this pass.
 > Falsifier window closes 2026-09-22. ADR-0031 expiry arrives today with no
 > dogfood booked (see roadmap-status H4 row); that decision is the owner's.
-> **Review 2026-09-13:** agentflow v8.2.0 survey delta added AGF-001..004
-> (2 Proposed, 2 Hold); no priority or shipped/beta status change. ADR-0031
-> owner decision remains outstanding past its 2026-09-12 review date.
+> **Review 2026-09-13:** agentflow v8.2.0 survey delta added AGF-001..004;
+> AGF-001 (cross-host skill conflict audit) and AGF-002 (guard incident
+> citations) are **Done** under owner "implement governance gaps" direction;
+> AGF-003/004 remain Hold. EFX-001–003 still need live-provider proof;
+> ADR-0031 owner decision remains outstanding past its 2026-09-12 review date.
 > **Quarantine (2026-09-09, ADR-0043):** the 2026-09-09 Socratic roadmap/intent
 > panel found pre-2026-06-13 code implementing the harness-first §2 non-goals
 > (remote/federated multi-agent execution; general-purpose workflow engine) still
@@ -78,11 +80,8 @@ was met on 2026-06-22; completing that intake does not authorize new work.
 | Community-pain-point CPP follow-on work | `legacy-competitive` | Listed implementation rows are historical `Complete`; follow-on scheduling is **held** without friction, governance-gap proof, or owner override |
 | Consensus validation (ADR-0029) | `governance-gap` | **Deleted/quarantined (2026-07-22)** — owner-ratified Option D executed; no production importers; feature intent and git recovery path preserved in ADR-0029 disposition spec |
 | EFX-001 ambiguous mutating-tool dispatch | `governance-gap` | **In progress (2026-08-25)** — runner commits `pending_effect` before execute; unmatched non-idempotent starts become `OUTCOME_UNKNOWN` and refuse blind redispatch (`tests/test_efx001_interrupted_dispatch.py`, `tests/acceptance/test_efx_durable_effect_flow.py`). Live GitHub/browser/provider proof still required for Complete |
-| EFX-002 effect classification and approval escalation | `governance-gap` | **In progress (2026-08-25)** — GitHub/browser mutators are local `external_effect`; Prompt/read-only/workspace-write fail closed; MCP hints cannot relax policy (`tests/test_efx002_effect_classification.py`, `tests/acceptance/test_efx_durable_effect_flow.py`). Live GitHub/browser/provider proof still required for Complete |
-| EFX-003 one-time approval identity and consumption | `governance-gap` | **In progress (2026-08-25)** — omitted call IDs include payload digest; one-time grants bind digest and consume at `assert_allowed` (`tests/test_efx003_one_time_approval.py`, `tests/acceptance/test_efx_durable_effect_flow.py`). Live GitHub/browser/provider proof still required for Complete |
-| EFX-FUTURE generic external-effect settlement | `legacy-competitive` / `owner-override` | **Hold** — ADR-0042 remains binding; exactly-once, generic ledger/outbox/reconciliation, fencing, actor supervision, and distributed leases need a new owner promise and sink-enforced evidence |
-| AGF-001 cross-host skill conflict audit (agentflow v8.2.0 delta) | `legacy-competitive` | **Proposed** — owner approval + DR-006 gate classification required; see roadmap-status AGF intake |
-| AGF-002 inline incident citations on two uncited guards | `governance-gap` | **Proposed** — fold into next authorized scripts commit (agentflow panel A-07) |
+| AGF-001 cross-host skill conflict audit (agentflow v8.2.0 delta) | `governance-gap` | **Done (2026-09-13)** — `teaagent skill audit` inventories active + foreign roots, marks `loadable`, reports collisions, embeds conflict protocol; `tests/test_skill_audit_inventory.py` |
+| AGF-002 inline incident citations on two uncited guards | `governance-gap` | **Done (verified 2026-09-13)** — `Origin:` paragraphs present in both guards since `86fa25ea` |
 | AGF-003 run-store retention/prune policy | `legacy-competitive` | **Hold** — premature at zero organic delivery traffic |
 | AGF-004 per-skill version field in SKILL.md frontmatter | `legacy-competitive` | **Hold** — no consumer; revisit if marketplace ships versioned skills |
 

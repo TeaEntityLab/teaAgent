@@ -1048,3 +1048,192 @@ def get_skill_health(root: str | Path) -> dict:
         'warnings': diagnostics.get('warnings', []),
         'skipped': diagnostics.get('skipped', []),
     }
+
+
+# ---------------------------------------------------------------------------
+# Cross-host skill audit (AGF-001)
+#
+# Origin: agentflow v8.2.0 shipped `agf skills audit` — a read-only inventory
+# of every discoverable skill root plus Codex/Claude plugin caches, paired
+# with a semantic conflict-assessment prompt. TeaAgent's `skill explain`
+# covers only the roots this harness actually loads from; a skill installed
+# for another host (or cached by a plugin manager) can still collide with a
+# TeaAgent skill by name or by instruction without ever appearing in that
+# report. This audit is inventory-only: it never imports, executes, or loads
+# inspected skills into the active set.
+
+# Roots scanned in addition to the normal load roots. These are foreign-host
+# locations: skills found here are NOT loaded by TeaAgent, but they share the
+# owner's instruction surface and can conflict semantically.
+_FOREIGN_AUDIT_DIRS = [
+    '.agents/skills',
+    '.codex/plugins',
+    '.claude/plugins',
+]
+_FOREIGN_AUDIT_USER_DIRS = [
+    Path.home() / '.agents' / 'skills',
+    Path.home() / '.codex' / 'plugins',
+    Path.home() / '.claude' / 'plugins' / 'cache',
+]
+
+SKILL_CONFLICT_PROTOCOL = (
+    'Skill conflict protocol: when another loaded or installed skill observably '
+    'conflicts with TeaAgent instructions on scope, mutation authority, '
+    'delegation, or closeout, warn once per distinct conflict: identify both '
+    'instruction paths, quote the relevant clauses, state the concrete '
+    'consequence, and name which instruction applies under host priority. '
+    'Installed does not mean active; do not scan unrelated skills during '
+    'normal work, and never execute inspected skills or their hooks.'
+)
+
+
+@dataclass(frozen=True)
+class SkillAuditEntry:
+    """One discovered SKILL.md, whether loadable by TeaAgent or foreign."""
+
+    name: str
+    path: Path
+    source_root: Path
+    host: str  # 'teaagent' | 'claude' | 'codex' | 'opencode' | 'agents' | 'builtin'
+    loadable: bool  # True only for roots in the active search path
+
+
+@dataclass(frozen=True)
+class SkillAuditCollision:
+    """Same skill name resolved from more than one root."""
+
+    name: str
+    paths: tuple[str, ...]
+
+
+def _audit_host_for_root(root: Path, project_root: Path) -> str:
+    text = str(root)
+    if root == _BUILTIN_SKILL_DIR:
+        return 'builtin'
+    for marker, host in (
+        ('.claude', 'claude'),
+        ('.codex', 'codex'),
+        ('.opencode', 'opencode'),
+        ('.agents', 'agents'),
+        ('.config', 'teaagent'),
+    ):
+        if marker in text:
+            return host
+    return 'teaagent'
+
+
+def audit_skill_inventory(
+    root: str | Path,
+    *,
+    source_profile: SkillSourceProfile = 'extended',
+    extra_skill_dirs: Optional[list[Path]] = None,
+) -> dict[str, object]:
+    """Read-only cross-host skill inventory.
+
+    Scans the active search path (extended profile: includes codex/gemini/
+    hermes roots) plus foreign plugin caches and ``.agents/skills`` roots.
+    Returns a JSON-serializable report; never loads skill bodies, never
+    executes hooks, and marks ``loadable`` so callers can distinguish
+    "installed for another host" from "active in TeaAgent".
+    """
+    root_path = Path(root).resolve()
+    loadable_dirs = discover_skill_search_dirs(
+        root_path,
+        extra_skill_dirs=extra_skill_dirs,
+        source_profile=source_profile,
+    )
+    foreign_dirs: list[Path] = []
+    for rel in _FOREIGN_AUDIT_DIRS:
+        candidate = root_path / rel
+        if candidate.is_dir():
+            foreign_dirs.append(candidate)
+    for user_dir in _FOREIGN_AUDIT_USER_DIRS:
+        if user_dir.is_dir():
+            foreign_dirs.append(user_dir)
+
+    entries: list[SkillAuditEntry] = []
+    issues: list[dict[str, str]] = []
+
+    def _walk(base: Path, loadable: bool) -> None:
+        visited: set[Path] = set()
+        stack = [base]
+        while stack:
+            current = stack.pop()
+            try:
+                real = current.resolve()
+            except OSError:
+                real = current
+            if real in visited:
+                continue
+            visited.add(real)
+            try:
+                children = sorted(current.iterdir())
+            except OSError as exc:
+                issues.append({'path': str(current), 'error': type(exc).__name__})
+                continue
+            for child in children:
+                if child.name in {'.git', 'node_modules', '__pycache__'}:
+                    continue
+                try:
+                    if child.is_dir():
+                        stack.append(child)
+                    elif child.name == _SKILL_FILENAME and child.is_file():
+                        entries.append(
+                            SkillAuditEntry(
+                                name=child.parent.name,
+                                path=child,
+                                source_root=base,
+                                host=_audit_host_for_root(base, root_path),
+                                loadable=loadable,
+                            )
+                        )
+                except OSError as exc:
+                    issues.append({'path': str(child), 'error': type(exc).__name__})
+
+    for directory in loadable_dirs:
+        _walk(directory, loadable=True)
+    for directory in foreign_dirs:
+        _walk(directory, loadable=False)
+
+    by_name: dict[str, list[SkillAuditEntry]] = {}
+    for entry in entries:
+        by_name.setdefault(entry.name, []).append(entry)
+    collisions = tuple(
+        SkillAuditCollision(
+            name=name,
+            paths=tuple(sorted(str(item.path) for item in items)),
+        )
+        for name, items in sorted(by_name.items())
+        if len({str(item.path) for item in items}) > 1
+    )
+
+    return {
+        'status': 'ok',
+        'root': str(root_path),
+        'skills': [
+            {
+                'name': item.name,
+                'path': str(item.path),
+                'source_root': str(item.source_root),
+                'host': item.host,
+                'loadable': item.loadable,
+            }
+            for item in sorted(entries, key=lambda e: (e.name, str(e.path)))
+        ],
+        'collisions': [
+            {'name': item.name, 'paths': list(item.paths)} for item in collisions
+        ],
+        'searched_loadable_roots': [str(path) for path in loadable_dirs],
+        'searched_foreign_roots': [str(path) for path in foreign_dirs],
+        'issues': issues,
+        'assessment': 'not_performed',
+        'conflict_protocol': SKILL_CONFLICT_PROTOCOL,
+        'limitations': [
+            'Installed or cached does not mean enabled or active; `loadable` '
+            'marks only membership in the TeaAgent search path.',
+            'Semantic conflict assessment is not performed by this command; '
+            'apply conflict_protocol to suspected collisions.',
+            'Ancestor projects, remote catalogs, and unobservable runtime '
+            'hooks are outside this inventory.',
+        ],
+    }

@@ -35,6 +35,13 @@ def register(
     )
     explain.set_defaults(func=handlers['explain'])
 
+    audit = subs.add_parser(
+        'audit',
+        help='Read-only cross-host skill inventory: foreign roots, plugin caches, name collisions.',
+    )
+    audit.add_argument('--root', default='.', help='Workspace root.')
+    audit.set_defaults(func=handlers['audit'])
+
     candidate = subs.add_parser('candidate', help='Skill candidate workflow.')
     candidate_subs = candidate.add_subparsers(
         dest='skill_candidate_command', required=True

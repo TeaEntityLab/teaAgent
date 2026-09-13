@@ -16,6 +16,14 @@ def _print_json(value: Any) -> None:
     print(json.dumps(value, ensure_ascii=False, sort_keys=True))
 
 
+def skill_audit_command(args: argparse.Namespace) -> int:
+    from teaagent.skill_loader import audit_skill_inventory
+
+    report = audit_skill_inventory(args.root, source_profile='extended')
+    _print_json(report)
+    return 0
+
+
 def skill_explain_command(args: argparse.Namespace) -> int:
     prompt_mode: Literal['eager', 'index_only'] = (
         'index_only' if getattr(args, 'skill_index_only', False) else 'eager'

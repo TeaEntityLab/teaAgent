@@ -1059,3 +1059,13 @@ Install requires passing offline eval and review first. Candidate bundles carry
 sidecars are skipped at load time if their provenance digest no longer matches.
 Personal installs require explicit attestation and record install scope/time in
 `provenance.json`.
+
+### Cross-host skill audit
+
+`teaagent skill audit --root .` prints a read-only JSON inventory of every
+discoverable `SKILL.md`: the active search path (extended profile) plus
+foreign roots (`.agents/skills`, Codex/Claude plugin caches). Entries carry
+`host` and `loadable` so "installed for another host" is distinguishable from
+"active in TeaAgent"; same-name collisions are listed under `collisions`.
+The command never loads skill bodies or executes hooks, and emits the
+conflict-warning protocol verbatim for the caller to apply.
