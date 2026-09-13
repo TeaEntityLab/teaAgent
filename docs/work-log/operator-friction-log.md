@@ -15,7 +15,9 @@ UX work tied to real harness use instead of competitor feature parity.
 
 - Owner evidence entries: 5, all closed (F2/F3/F6/F7/F8).
 - Open unvalidated hypotheses: 3 (approval call-id hunting, run-id confusion,
-  config-source confusion).
+  config-source confusion) — all three now carry verified closure evidence
+  (2026-09-14) and need only owner validation to close; the epistemology-gap
+  hypothesis is resolved by DR-006 ratification and likewise awaits owner sign-off.
 - Owner-validated/promoted hypotheses retained for provenance: 3 (F2/F3/F7).
 - Governance-process hypothesis resolved by DR-006: 1.
 - Direction implication: none of the retained hypotheses is open roadmap demand;
@@ -188,14 +190,15 @@ fields only when the entry is promoted to work.
 **Target:** any five "yes" answers → five evidence entries (TASK-007 / DR-001 7b).
 
 **Owner batch result (2026-06-22):** F2, F3, F6, F7, F8 confirmed → five evidence entries recorded above. F1/F4/F5 not confirmed.
-
 ### 2026-06-22 - Approval via call_id hunting [hypothesis]
 
 - **Type:** hypothesis
 - **Source:** [hypothesis: UX survey 2026-06-06 + retrospective 04-ux-usability, 2026-06-22]
 - **One-line capture:** Blocked runs may require `approvals pending` → extract `call_id` → `approve` instead of inline "approve this edit."
 - **Status:** open
+- **Closure evidence:** `teaagent approval pending --human` prints a numbered list and `teaagent approval approve --selector N` approves by number — no call_id hunting needed (`teaagent/approval_selectors.py`, `tests/test_approval_selectors.py`; verified `approval approve --help` marks `call_id` positional as legacy, "Prefer --selector N"). Awaiting owner validation to close.
 - **Promoted to:** n/a
+
 
 ### 2026-06-22 - agent run JSON errors without hints [hypothesis]
 
@@ -205,15 +208,15 @@ fields only when the entry is promoted to work.
 - **Status:** open
 - **Closure evidence:** Owner evidence F7 (2026-06-22)
 - **Promoted to:** [Owner evidence: agent run errors without hints](#2026-06-22---agent-run-errors-without-hints-f7)
-
 ### 2026-06-22 - Run id passed as task [hypothesis]
 
 - **Type:** hypothesis
 - **Source:** [hypothesis: owner capture batch (F5), 2026-06-22]
 - **One-line capture:** `agent run <run_id>` or `--background <run_id>` may be confused with task text; owner did not confirm in the capture batch (F5 not confirmed).
 - **Status:** open
-- **Closure evidence:** n/a (guard implemented defensively: `run.py` run-id + background guards, `tests/test_cli_run_error_formatting.py`); awaiting owner validation
+- **Closure evidence:** Guard verified live 2026-09-14 — `teaagent run <existing-run-id>` exits with `Error [RUN_ID]` and the corrective hint (`agent resume`/`interactive-review`); `tests/test_resume_lifecycle.py::test_background_rejects_existing_run_id_in_task_position` and `test_background_rejects_existing_run_id_in_provider_position` pin the guard. Awaiting owner validation to close.
 - **Promoted to:** n/a
+
 
 ## Competitor-Derived Hypotheses
 
@@ -234,14 +237,13 @@ fields only when the entry is promoted to work.
 - **Status:** open
 - **Closure evidence:** Owner evidence F3 (2026-06-22)
 - **Promoted to:** [Owner evidence: JSON before plain-language receipt (F3)](#2026-06-22---json-before-plain-language-receipt-f3)
-
 ### 2026-06-22 - Config source confusion ("why is it read-only")
 
 - **Type:** hypothesis
 - **Source:** [hypothesis: harness-first direction §5.2 / V8 lesson, 2026-06-22]
 - **One-line capture:** Effective permission mode may be unclear without `teaagent doctor config` provenance view.
 - **Status:** open
-- **Closure evidence:** TASK-005 / `teaagent doctor config` (2026-06-14); owner must still confirm in real use
+- **Closure evidence:** `teaagent doctor config` verified live 2026-09-14 — prints every key with its source (`default` / `config:config.json` / env), e.g. `permission_mode` shows `config:config.json`; `tests/test_workspace_defaults_toml.py::test_resolve_config_provenance_layers` pins the provenance resolution. Awaiting owner validation to close.
 - **Promoted to:** n/a
 
 ### 2026-06-22 - Epistemology gap (friction log vs competitor backlog)
@@ -250,8 +252,9 @@ fields only when the entry is promoted to work.
 - **Source:** [hypothesis: direction-review-agenda-2026-06-22, 2026-06-22]
 - **One-line capture:** Backlog may still prioritize competitive-survey items while owner friction log has zero evidence entries.
 - **Status:** open
-- **Closure evidence:** DR-006 T1 Option B+ ratified 2026-06-22
+- **Closure evidence:** DR-006 T1 Option B+ ratified 2026-06-22 — the scheduling gate now requires friction-driven/governance-gap/owner-override for `feat:` work, mechanically enforcing the evidence-first ordering this hypothesis worried about. Awaiting owner validation to close.
 - **Promoted to:** [DR-006 Owner Decision](../strategy/dr-006-owner-decision-2026-06-22.md)
+
 
 Add further hypotheses only after a dated source is captured through the
 [Signal-to-Acceptance-Gap Process](../processes/signal-to-acceptance-gap.md).
