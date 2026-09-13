@@ -257,9 +257,12 @@ def test_cross_module_permission_mode_identity() -> None:
 
 def test_legacy_imports_work_unchanged() -> None:
     """The exact import patterns used by existing code must still work."""
-    from teaagent.approval_backend import ApprovalBackend  # noqa: F401
-    from teaagent.approval_manager import ApprovalManager  # noqa: F401
-    from teaagent.approval_selectors import (  # noqa: F401
-        collect_pending_approval_views,
-    )
-    from teaagent.approval_ui import DiffApprovalHandler  # noqa: F401
+    from teaagent.approval_backend import ApprovalBackend
+    from teaagent.approval_manager import ApprovalManager
+    from teaagent.approval_selectors import collect_pending_approval_views
+    from teaagent.approval_ui import DiffApprovalHandler
+
+    assert ApprovalBackend is not None
+    assert ApprovalManager is not None
+    assert callable(collect_pending_approval_views)
+    assert DiffApprovalHandler is not None

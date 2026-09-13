@@ -11,7 +11,7 @@ from teaagent.types import BudgetExceededError, RunBudget
 
 def test_default_values_are_valid() -> None:
     budget = RunBudget()
-    budget.validate()
+    assert budget.validate() is None
 
 
 def test_zero_iterations_raises() -> None:
@@ -37,7 +37,7 @@ def test_negative_tool_calls_raises() -> None:
 
 def test_zero_tool_calls_is_valid() -> None:
     budget = RunBudget(max_tool_calls=0)
-    budget.validate()
+    assert budget.validate() is None
 
 
 def test_negative_cost_raises() -> None:
@@ -80,4 +80,4 @@ def test_budget_is_frozen() -> None:
 
 def test_custom_valid_budget() -> None:
     budget = RunBudget(max_iterations=5, max_tool_calls=3, max_estimated_cost_cents=50)
-    budget.validate()
+    assert budget.validate() is None

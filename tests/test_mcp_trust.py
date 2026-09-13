@@ -158,7 +158,12 @@ class TestCheckMCPServerTrustAtCallTime:
 
     def test_unknown_server_passes_through(self, tmp_path):
         """Unknown server should not raise — delegated to existing tool-filter hook."""
-        check_mcp_server_trust_at_call_time(tmp_path, 'some_tool', 'unknown_server')
+        # Unknown server delegates to the tool-filter hook: the guard returns
+        # None rather than raising HookError.
+        result = check_mcp_server_trust_at_call_time(
+            tmp_path, 'some_tool', 'unknown_server'
+        )
+        assert result is None
 
     def test_not_trusted_server_raises(self, tmp_path):
         """A server that exists but is not trusted must raise HookError."""
@@ -214,7 +219,11 @@ class TestCheckMCPServerTrustAtCallTime:
             )
             save_mcp_trust_policy(tmp_path, policy)
 
-            check_mcp_server_trust_at_call_time(tmp_path, 'any_tool', 'good_srv')
+            # A trusted, unexpired server passes the guard, which returns None.
+            result = check_mcp_server_trust_at_call_time(
+                tmp_path, 'any_tool', 'good_srv'
+            )
+            assert result is None
         finally:
             del os.environ['TEAAGENT_MCP_TRUST_KEY']
 

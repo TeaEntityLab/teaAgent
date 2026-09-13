@@ -52,15 +52,25 @@ class TestPlanBeforeWriteFuzz:
         """Test that --skip-plan-check allows writes without plan."""
         context = {}  # No plan contract
 
-        # Should allow with skip_plan_check=True
-        assert_write_allowed(
+        # Should allow (returns None, no raise) with skip_plan_check=True
+        result = assert_write_allowed(
             tool_name='workspace_write_file',
             permission_mode=PermissionMode.WORKSPACE_WRITE,
             context=context,
             require_plan=False,
             skip_plan_check=True,  # Explicit override
         )
-        # No exception raised
+        assert result is None
+        # Without the override, the identical call is blocked — confirming the
+        # override is what permits the write.
+        with pytest.raises(ToolPermissionError):
+            assert_write_allowed(
+                tool_name='workspace_write_file',
+                permission_mode=PermissionMode.WORKSPACE_WRITE,
+                context=context,
+                require_plan=False,
+                skip_plan_check=False,
+            )
 
     def test_read_only_mode_blocks_all_writes(self):
         """Test that read-only mode blocks all write tools regardless of plan."""
@@ -70,13 +80,15 @@ class TestPlanBeforeWriteFuzz:
         # This test documents that plan gate only enforces plan requirement, not permission mode
         for tool in WRITE_TOOLS:
             # In read-only mode, plan gate doesn't block - ApprovalPolicy handles that
-            assert_write_allowed(
+            result = assert_write_allowed(
                 tool_name=tool,
                 permission_mode=PermissionMode.READ_ONLY,
                 context=context,
                 require_plan=True,
                 skip_plan_check=False,
             )
+            # Plan gate is a no-op for READ_ONLY mode: it never blocks here.
+            assert result is None
 
     def test_malformed_plan_contract_rejected(self):
         """Test that malformed plan contracts are rejected."""

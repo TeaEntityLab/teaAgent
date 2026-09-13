@@ -54,11 +54,16 @@ def test_plan_gate_blocks_write_without_plan() -> None:
 
 
 def test_plan_gate_allows_write_with_plan_contract() -> None:
-    assert_write_allowed(
-        tool_name='workspace_apply_patch',
-        permission_mode=PermissionMode.PROMPT,
-        context={'plan_contract': {'content_hash': 'abc123', 'rel_path': 'plan.md'}},
-        require_plan=True,
+    assert (
+        assert_write_allowed(
+            tool_name='workspace_apply_patch',
+            permission_mode=PermissionMode.PROMPT,
+            context={
+                'plan_contract': {'content_hash': 'abc123', 'rel_path': 'plan.md'}
+            },
+            require_plan=True,
+        )
+        is None
     )
 
 

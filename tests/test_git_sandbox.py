@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import contextlib
 import subprocess
 from pathlib import Path
 from unittest.mock import patch
@@ -1312,31 +1311,31 @@ def test_is_worktree_clean_with_no_git_repo(tmp_path: Path) -> None:
 def test_stash_pop_with_nonexistent_path() -> None:
     """Test that nonexistent path is handled."""
     nonexistent = Path('/nonexistent/path')
-    # Should handle gracefully without crashing
-    with contextlib.suppress(subprocess.SubprocessError, FileNotFoundError):
-        stash_pop(nonexistent)
+    # A nonexistent working directory has no git repo to pop from: returns False.
+    assert stash_pop(nonexistent) is False
 
 
 def test_stash_pop_with_no_git_repo(tmp_path: Path) -> None:
     """Test that non-git directory is handled."""
-    # Should handle gracefully without crashing
-    with contextlib.suppress(subprocess.SubprocessError, FileNotFoundError):
-        stash_pop(tmp_path)
+    # A non-git directory has no stash to pop: returns False.
+    assert stash_pop(tmp_path) is False
 
 
 def test_git_transaction_sink_with_nonexistent_path() -> None:
     """Test that GitTransactionSink handles nonexistent path."""
     nonexistent = Path('/nonexistent/path')
-    # Should handle gracefully without crashing
-    with contextlib.suppress(subprocess.SubprocessError, FileNotFoundError):
-        GitTransactionSink(nonexistent)
+    # Construction is lazy and never touches the filesystem, so a
+    # nonexistent path is accepted and the sink starts with no pending work.
+    sink = GitTransactionSink(nonexistent)
+    assert sink._pending == {}
 
 
 def test_git_transaction_sink_with_no_git_repo(tmp_path: Path) -> None:
     """Test that GitTransactionSink handles non-git directory."""
-    # Should handle gracefully without crashing
-    with contextlib.suppress(subprocess.SubprocessError, ValueError):
-        GitTransactionSink(tmp_path)
+    # Construction is lazy: a non-git directory is accepted and the sink
+    # starts with no pending transactions.
+    sink = GitTransactionSink(tmp_path)
+    assert sink._pending == {}
 
 
 # ── Additional negative test cases for git_sandbox.py ───────────────────────
@@ -1835,4 +1834,17 @@ def test_git_sandbox_concurrent_operations(tmp_path: Path) -> None:
     for t in threads:
         t.join()
 
-    # Should handle concurrent operations without crashing
+    # Concurrent sandbox creation is serialized by the module lock, so the
+    # repository survives intact and each thread's unique sandbox branch is
+    # created without corrupting the original commit.
+    assert is_git_repository(tmp_path)
+    assert (tmp_path / 'test.txt').exists()
+    branch_listing = subprocess.run(
+        ['git', 'branch', '--list', 'teaagent-sandbox-*'],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    sandbox_branches = [line for line in branch_listing.splitlines() if line.strip()]
+    assert len(sandbox_branches) == len(threads)

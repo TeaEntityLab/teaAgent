@@ -135,7 +135,14 @@ def test_audit_consumer_durability_failure_is_isolated_without_compliance(
     monkeypatch.setattr(audit, 'record', failing_record)
     register_audit_consumer(spine, audit)
 
+    # A downstream consumer proves the failing audit consumer did not halt the spine.
+    ran: list[str] = []
+    spine.register_consumer(lambda _: ran.append('downstream'), name='downstream')
+
+    # Non-compliance audit failure is isolated: emit must not raise.
     spine.emit(RunEventType.RUN_STARTED, 'run-1', {'task': 'test'})
+
+    assert ran == ['downstream']
 
 
 def test_audit_consumer_durability_failure_propagates_with_compliance(

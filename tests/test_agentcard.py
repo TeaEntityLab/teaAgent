@@ -94,7 +94,10 @@ def test_deregister_removes() -> None:
 
 
 def test_deregister_missing_is_noop() -> None:
-    InMemoryAgentRegistry().deregister('ghost')
+    registry = InMemoryAgentRegistry()
+    registry.deregister('ghost')
+    assert registry.get('ghost') is None
+    assert registry.list_cards() == []
 
 
 def test_list_cards() -> None:
@@ -367,6 +370,8 @@ def test_deregister_nonexistent_card() -> None:
     """Test that deregistering nonexistent card is no-op."""
     registry = InMemoryAgentRegistry()
     registry.deregister('nonexistent')  # Should not raise
+    assert registry.get('nonexistent') is None
+    assert registry.list_cards() == []
 
 
 def test_find_by_capability_with_empty_registry() -> None:

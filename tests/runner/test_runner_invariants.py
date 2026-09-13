@@ -146,7 +146,7 @@ class TestBudgetInvariant:
     def test_assert_budget_invariant_positive(self) -> None:
         primary = RunnerEvidenceBundle(max_iterations=5, max_tool_calls=5)
         secondary = RunnerEvidenceBundle(max_iterations=3, max_tool_calls=3)
-        assert_budget_invariant(primary, secondary)
+        assert assert_budget_invariant(primary, secondary) is None
 
     def test_clamped_budget_roundtrip(self) -> None:
         c = compute_clamped_budget(7, 9, 5, 4)
@@ -215,7 +215,7 @@ class TestAuditInvariant:
             'iteration_started',
             'run_completed',
         ]
-        assert_audit_invariant(primary_events, secondary_events)
+        assert assert_audit_invariant(primary_events, secondary_events) is None
 
     def test_assert_audit_invariant_missing_run_completed(self) -> None:
         with pytest.raises(AssertionError):
@@ -225,9 +225,12 @@ class TestAuditInvariant:
             )
 
     def test_assert_audit_events_match_symmetric(self) -> None:
-        assert_audit_events_match(
-            ['run_started', 'iteration_started', 'run_completed'],
-            ['run_started', 'iteration_started', 'run_completed'],
+        assert (
+            assert_audit_events_match(
+                ['run_started', 'iteration_started', 'run_completed'],
+                ['run_started', 'iteration_started', 'run_completed'],
+            )
+            is None
         )
 
     def test_tool_call_invariant_present(self, tmp_path: Path) -> None:
@@ -339,7 +342,7 @@ class TestApprovalInvariant:
         assert evidence.approval_events == []
 
     def test_assert_approval_invariant_none(self) -> None:
-        assert_approval_invariant([], [])
+        assert assert_approval_invariant([], []) is None
 
     def test_approval_manager_is_importable_from_subagents(self) -> None:
         from teaagent.approval_manager import ApprovalManager

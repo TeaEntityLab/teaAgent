@@ -1679,13 +1679,25 @@ class GitSandboxScenarios(unittest.TestCase):
         from teaagent.sandbox import GitBranchSandbox, GitTransactionSink
         from teaagent.types import AuditEvent
 
+        def _commit_count(path: Path) -> int:
+            out = subprocess.run(
+                ['git', 'rev-list', '--count', 'HEAD'],
+                cwd=path,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            return int(out.stdout.strip())
+
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             _init_temp_git_repo(root)
             sandbox = GitBranchSandbox(root=root, run_id='test-run-n4')
             sink = GitTransactionSink(sandbox=sandbox)
+            base_commits = _commit_count(root)
 
-            # Sink processes tool events without raising
+            # A completed workspace_write_file with real changes is committed as
+            # a transaction tagged with its call id.
             sink(
                 AuditEvent(
                     event_type='tool_call_started',
@@ -1693,6 +1705,7 @@ class GitSandboxScenarios(unittest.TestCase):
                     payload={'tool_name': 'workspace_write_file', 'call_id': 'call-1'},
                 )
             )
+            (root / 'written.txt').write_text('new content\n', encoding='utf-8')
             sink(
                 AuditEvent(
                     event_type='tool_call_completed',
@@ -1700,6 +1713,18 @@ class GitSandboxScenarios(unittest.TestCase):
                     payload={'tool_name': 'workspace_write_file', 'call_id': 'call-1'},
                 )
             )
+            self.assertEqual(_commit_count(root), base_commits + 1)
+            last_subject = subprocess.run(
+                ['git', 'log', '-1', '--pretty=%s'],
+                cwd=root,
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout.strip()
+            self.assertIn('call-1', last_subject)
+
+            # A failed workspace_write_file discards its pending transaction: no
+            # new commit is created even though the worktree was dirtied.
             sink(
                 AuditEvent(
                     event_type='tool_call_started',
@@ -1707,6 +1732,7 @@ class GitSandboxScenarios(unittest.TestCase):
                     payload={'tool_name': 'workspace_write_file', 'call_id': 'call-2'},
                 )
             )
+            (root / 'discarded.txt').write_text('doomed\n', encoding='utf-8')
             sink(
                 AuditEvent(
                     event_type='tool_call_failed',
@@ -1714,6 +1740,7 @@ class GitSandboxScenarios(unittest.TestCase):
                     payload={'tool_name': 'workspace_write_file', 'call_id': 'call-2'},
                 )
             )
+            self.assertEqual(_commit_count(root), base_commits + 1)
 
     def test_n5_stash_save_and_pop(self) -> None:
         """stash_save and stash_pop correctly save and restore dirty state."""
@@ -2469,16 +2496,29 @@ class PlanEnforcementScenarios(unittest.TestCase):
     def test_m2_skip_plan_check_bypasses_enforcement(self) -> None:
         """PlanValidator with skip_plan_check=True allows writes without plan."""
         from teaagent.governance.plan_gate import assert_write_allowed
-        from teaagent.types import PermissionMode
+        from teaagent.types import PermissionMode, ToolPermissionError
 
-        # Should NOT raise
-        assert_write_allowed(
+        # Baseline: without the override, a workspace-write with no bound plan is
+        # blocked, proving the guard is active.
+        with self.assertRaises(ToolPermissionError):
+            assert_write_allowed(
+                tool_name='workspace_write_file',
+                permission_mode=PermissionMode.WORKSPACE_WRITE,
+                context={},
+                require_plan=False,
+                skip_plan_check=False,
+            )
+
+        # skip_plan_check=True bypasses the guard: the call is allowed and returns
+        # None instead of raising.
+        result = assert_write_allowed(
             tool_name='workspace_write_file',
             permission_mode=PermissionMode.WORKSPACE_WRITE,
             context={},
             require_plan=False,
             skip_plan_check=True,
         )
+        self.assertIsNone(result)
 
     def test_m3_plan_validator_contract_exists(self) -> None:
         """PlanValidator stores and returns the plan contract."""

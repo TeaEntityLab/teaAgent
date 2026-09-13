@@ -223,7 +223,7 @@ def test_navigate_error_returns_status() -> None:
     assert result['status'] == 'error'
 
 
-@pytest.mark.skip('Performance test — run manually')
+@pytest.mark.skip(reason='Performance test — run manually')
 def test_registration_all_tools() -> None:
     """When Playwright is available, register real handlers, not stubs."""
     registry = ToolRegistry()

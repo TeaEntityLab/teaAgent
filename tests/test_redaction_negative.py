@@ -151,12 +151,8 @@ def test_redaction_config_multiple_extra_patterns():
 def test_redaction_config_frozen_dataclass():
     """Test that RedactionConfig is frozen (immutable)."""
     cfg = RedactionConfig()
-    try:
+    with pytest.raises((AttributeError, TypeError)):
         cfg.bearer_tokens = False
-        raise AssertionError('Should not be able to modify frozen dataclass')
-    except (AttributeError, TypeError):
-        # Expected for frozen dataclass
-        pass
 
 
 def test_redaction_config_extra_pattern_with_compiled_regex():

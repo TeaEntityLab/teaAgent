@@ -97,17 +97,15 @@ def test_reconcile_marks_runtime_cap_exceeded(tmp_path) -> None:
         f'Expected running_background_id to be None after termination, got {updated.running_background_id}'
     )
 
-    # Verify cleanup: background process files should be cleaned up after termination
+    # Verify cleanup: after the runtime cap is exceeded and the process is
+    # terminated, the background record is retained but must show evidence of
+    # termination (exit_code recorded or the alive flag cleared) so no orphaned
+    # "still running" state is left behind.
     bg_json_file = bg_dir / 'bg1.json'
-    # After runtime cap exceeded and process terminated, the background file should be cleaned up
-    # or marked as terminated. We verify explicit cleanup to prevent orphaned state.
-    if bg_json_file.exists():
-        record_after = json.loads(bg_json_file.read_text(encoding='utf-8'))
-        # The file may still exist but must show evidence of termination
-        # (e.g., exit_code set, or alive=False). This is a hard requirement.
-        assert 'exit_code' in record_after or not record_after.get('alive', True), (
-            f'Background process must show evidence of termination, got: {record_after}'
-        )
-    else:
-        # File was cleaned up - this is the ideal case
-        assert True, 'Background file cleaned up successfully'
+    assert bg_json_file.exists(), (
+        'Terminated background record should be retained with termination evidence'
+    )
+    record_after = json.loads(bg_json_file.read_text(encoding='utf-8'))
+    assert 'exit_code' in record_after or not record_after.get('alive', True), (
+        f'Background process must show evidence of termination, got: {record_after}'
+    )

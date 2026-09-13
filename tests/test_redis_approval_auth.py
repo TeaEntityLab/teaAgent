@@ -43,7 +43,9 @@ class TestRequireRedisBindAuth:
         assert require_redis_bind_auth('redis.example.com', None, True) is None
 
     def test_non_loopback_with_password_and_ssl_accepted(self) -> None:
-        require_redis_bind_auth('redis.example.com', 's3cret', True)
+        # Password + SSL both satisfy the guard for a non-loopback host: it
+        # accepts and returns None.
+        assert require_redis_bind_auth('redis.example.com', 's3cret', True) is None
 
     def test_loopback_without_auth_accepted(self) -> None:
         for host in ('localhost', '127.0.0.1', '::1', '[::1]'):

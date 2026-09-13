@@ -242,8 +242,10 @@ class TestJITApprovalServer:
             permission_manager=permission_manager, timeout_seconds=180
         )
 
-        # Should not raise an exception
+        # Approving a nonexistent request is a no-op: no record is created.
         server.approve_request('nonexistent')
+
+        assert server.get_request_status('nonexistent') is None
 
     def test_reject_nonexistent_request(self):
         """Test rejecting a nonexistent request (should not crash)."""
@@ -252,8 +254,10 @@ class TestJITApprovalServer:
             permission_manager=permission_manager, timeout_seconds=180
         )
 
-        # Should not raise an exception
+        # Rejecting a nonexistent request is a no-op: no record is created.
         server.reject_request('nonexistent')
+
+        assert server.get_request_status('nonexistent') is None
 
     def test_cleanup_old_requests(self):
         """Test cleanup of old requests."""

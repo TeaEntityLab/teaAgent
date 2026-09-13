@@ -61,7 +61,12 @@ def test_delete_removes_entry() -> None:
 
 def test_delete_missing_is_noop() -> None:
     store = InMemoryCheckpointStore()
-    store.delete('ghost')  # must not raise
+    store.save('real', {'task': 't', 'observations': []})
+    # Deleting an absent run_id returns None and does not raise.
+    assert store.delete('ghost') is None
+    assert store.load('ghost') is None
+    # Existing entries are left untouched by the no-op delete.
+    assert store.load('real') is not None
 
 
 def test_overwrite_updates_snapshot() -> None:

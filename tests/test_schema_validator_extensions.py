@@ -21,7 +21,7 @@ def test_enum_accepts_valid_value() -> None:
         'properties': {'color': {'type': 'string', 'enum': ['red', 'green', 'blue']}},
         'required': ['color'],
     }
-    validate_object_schema(schema, {'color': 'green'}, label='input')
+    assert validate_object_schema(schema, {'color': 'green'}, label='input') is None
 
 
 def test_enum_rejects_invalid_value() -> None:
@@ -56,7 +56,9 @@ def test_pattern_accepts_matching_string() -> None:
         'properties': {'slug': {'type': 'string', 'pattern': r'^[a-z-]+$'}},
         'required': ['slug'],
     }
-    validate_object_schema(schema, {'slug': 'hello-world'}, label='input')
+    assert (
+        validate_object_schema(schema, {'slug': 'hello-world'}, label='input') is None
+    )
 
 
 def test_pattern_rejects_non_matching_string() -> None:
@@ -95,7 +97,9 @@ def test_additional_properties_true_allows_extra_fields() -> None:
         'properties': {'name': {'type': 'string'}},
         'required': ['name'],
     }
-    validate_object_schema(schema, {'name': 'x', 'extra': 1}, label='tool')
+    assert (
+        validate_object_schema(schema, {'name': 'x', 'extra': 1}, label='tool') is None
+    )
 
 
 def test_additional_properties_schema_validates_extra_fields() -> None:
@@ -128,8 +132,8 @@ def test_one_of_accepts_exactly_one_match() -> None:
         },
         'required': ['value'],
     }
-    validate_object_schema(schema, {'value': 'hello'}, label='input')
-    validate_object_schema(schema, {'value': 42}, label='input')
+    assert validate_object_schema(schema, {'value': 'hello'}, label='input') is None
+    assert validate_object_schema(schema, {'value': 42}, label='input') is None
 
 
 def test_one_of_rejects_no_match() -> None:
@@ -182,8 +186,8 @@ def test_any_of_accepts_at_least_one_match() -> None:
         },
         'required': ['value'],
     }
-    validate_object_schema(schema, {'value': 'hello'}, label='input')
-    validate_object_schema(schema, {'value': 42}, label='input')
+    assert validate_object_schema(schema, {'value': 'hello'}, label='input') is None
+    assert validate_object_schema(schema, {'value': 42}, label='input') is None
 
 
 def test_any_of_rejects_no_match() -> None:
@@ -297,8 +301,13 @@ def _batch_input_schema() -> dict:
 
 def test_batch_items_accepts_valid_task() -> None:
     schema = _batch_input_schema()
-    validate_object_schema(
-        schema, {'tasks': [{'task': 'do thing', 'isolation': 'shared'}]}, label='batch'
+    assert (
+        validate_object_schema(
+            schema,
+            {'tasks': [{'task': 'do thing', 'isolation': 'shared'}]},
+            label='batch',
+        )
+        is None
     )
 
 
@@ -428,7 +437,7 @@ def test_format_ignores_unknown_format() -> None:
         'properties': {'x': {'type': 'string', 'format': 'frobnicate'}},
         'required': ['x'],
     }
-    validate_object_schema(schema, {'x': 'anything'}, label='input')
+    assert validate_object_schema(schema, {'x': 'anything'}, label='input') is None
 
 
 def test_ref_resolves_local_definition() -> None:

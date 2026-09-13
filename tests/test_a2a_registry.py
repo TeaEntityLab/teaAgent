@@ -56,7 +56,13 @@ def test_deregister_removes() -> None:
 
 def test_deregister_missing_is_noop() -> None:
     with tempfile.TemporaryDirectory() as tmp:
-        SQLiteAgentRegistry(Path(tmp) / 'agents.db').deregister('ghost')
+        reg = SQLiteAgentRegistry(Path(tmp) / 'agents.db')
+        reg.register(_card('kept'))
+        # Deregistering an agent that was never registered is a silent no-op:
+        # it returns None, does not raise, and leaves existing agents untouched.
+        assert reg.deregister('ghost') is None
+        assert reg.get('ghost') is None
+        assert reg.get('kept') is not None
 
 
 def test_overwrite_upserts() -> None:

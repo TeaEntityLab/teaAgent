@@ -1046,7 +1046,7 @@ def test_multi_sig_quorum_without_agent_id() -> None:
 
 
 @pytest.mark.skip(
-    'Multi-sig quorum requires federated_sync P2P broadcast — integration test, not unit-testable'
+    reason='Multi-sig quorum requires federated_sync P2P broadcast — integration test, not unit-testable'
 )
 def test_multi_sig_quorum_stub_returns_false() -> None:
     """Verify stub implementation returns False (no quorum)."""
@@ -1203,8 +1203,12 @@ def test_del_shuts_down_signature_executor() -> None:
 
 def test_del_is_safe_to_call_twice() -> None:
     policy = ApprovalPolicy()
+    executor = policy._signature_executor
     policy.__del__()
     policy.__del__()  # must not raise
+    # The executor stays shut down after repeated __del__ calls.
+    with pytest.raises(RuntimeError):
+        executor.submit(lambda: None)
 
 
 def test_prompt_auto_denies_on_timeout() -> None:

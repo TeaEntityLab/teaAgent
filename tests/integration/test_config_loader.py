@@ -566,10 +566,14 @@ def test_env_var_override_with_invalid_type(tmp_path):
 
 def test_clear_config_cache():
     """Test that config cache can be cleared."""
+    from teaagent import config_loader
     from teaagent.config_loader import clear_config_cache
 
-    # Should not crash
-    clear_config_cache()
+    # Seed the module-level cache, then confirm clearing empties it.
+    config_loader._CONFIG_CACHE[('seed', 'seed')] = (0.0, 0.0, object())
+    assert len(config_loader._CONFIG_CACHE) > 0
+    assert clear_config_cache() is None
+    assert len(config_loader._CONFIG_CACHE) == 0
 
 
 def test_config_resolver_with_relative_path():

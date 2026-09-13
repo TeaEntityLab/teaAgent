@@ -8,6 +8,8 @@ import importlib.util
 import sys
 from pathlib import Path
 
+import pytest
+
 # ---------------------------------------------------------------------------
 # Safe import to avoid pre-existing teaagent.__init__ circular import
 # ---------------------------------------------------------------------------
@@ -560,14 +562,9 @@ def test_validate_output_with_nonexistent_path():
 
 
 def test_validate_output_with_none_artifact_path():
-    """Test that None artifact path is handled."""
-    try:
+    """Test that a None artifact path raises TypeError (not silently accepted)."""
+    with pytest.raises(TypeError):
         validate_output(None)
-        # Should handle None gracefully or raise appropriate error
-        assert True
-    except (TypeError, AttributeError):
-        # Expected if None is not handled
-        pass
 
 
 def test_validation_result_with_invalid_severity():

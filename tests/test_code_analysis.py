@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 # test-type: behavior
 from teaagent.code_analysis import (
     CodeAnalysisConfig,
@@ -23,11 +25,8 @@ def test_code_analysis_tools_not_registered_when_disabled(tmp_path):
         'code_tree_sitter_relations',
         'code_relations_to_graph',
     ):
-        try:
+        with pytest.raises(KeyError):
             registry.get(name)
-            raise AssertionError(f'{name} should not exist when disabled')
-        except KeyError:
-            pass
 
 
 def test_code_analysis_tools_registered_and_callable(tmp_path):
@@ -133,8 +132,5 @@ def test_extract_tree_sitter_relations_non_python_parser_failure_raises(
         raise RuntimeError('boom')
 
     monkeypatch.setattr(_treesitter, '_try_tree_sitter_parse', _raise)
-    try:
+    with pytest.raises(RuntimeError):
         extract_tree_sitter_relations(str(sample))
-        raise AssertionError('expected non-python parser failure to raise')
-    except RuntimeError:
-        pass

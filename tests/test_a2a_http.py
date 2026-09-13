@@ -97,6 +97,10 @@ def test_stop_is_idempotent() -> None:
     server.start()
     server.stop()
     server.stop()  # should not raise
+    # After stopping, the underlying HTTP server is torn down and the reported
+    # port reverts to the configured fallback (0).
+    assert server._server is None
+    assert server.port == 0
 
 
 def test_from_card_uses_endpoint() -> None:

@@ -335,7 +335,7 @@ def test_prompt_blocked() -> None:
 
 
 def test_no_error() -> None:
-    _raise_provider_error('openai', {'choices': []})
+    assert _raise_provider_error('openai', {'choices': []}) is None
 
 
 # ---------------------------------------------------------------------------
@@ -509,6 +509,6 @@ def test_no_resource_module() -> None:
             cpu_seconds=5,
             memory_bytes=100_000_000,
         )
-        _apply_resource_limits(sandbox)
+        assert _apply_resource_limits(sandbox) is None
     finally:
         cp.resource = original

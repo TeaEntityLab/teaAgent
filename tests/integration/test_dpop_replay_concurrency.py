@@ -65,17 +65,25 @@ def test_dpop_replay_cache_blocks_reuse():
 def test_dpop_replay_cache_different_jtis_do_not_interfere():
     """Different JTIs should all succeed (no cross-contamination)."""
     from teaagent.oauth21._replay import DPoPReplayCache
+    from teaagent.oauth21._types import InvalidDPoPError
 
     cache = DPoPReplayCache()
     now = time.time()
     jtis = [uuid.uuid4().hex for _ in range(5)]
     for jti in jtis:
-        cache.remember_once(jti, iat=now, now=now, ttl=60.0)  # must not raise
+        cache.remember_once(jti, iat=now, now=now, ttl=60.0)  # all distinct: no raise
+
+    # Each distinct jti was recorded independently: re-using any one now raises,
+    # proving all five were stored without cross-contamination.
+    for jti in jtis:
+        with pytest.raises(InvalidDPoPError):
+            cache.remember_once(jti, iat=now, now=now, ttl=60.0)
 
 
 def test_dpop_replay_cache_expired_entry_evicted():
     """After TTL, the eviction logic removes the entry (no raise on expiry check)."""
     from teaagent.oauth21._replay import DPoPReplayCache
+    from teaagent.oauth21._types import InvalidDPoPError
 
     cache = DPoPReplayCache()
     jti = uuid.uuid4().hex
@@ -84,10 +92,14 @@ def test_dpop_replay_cache_expired_entry_evicted():
     # Record the jti with a timestamp 2 minutes in the past
     cache.remember_once(jti, iat=old_time, now=old_time, ttl=60.0)
 
-    # Now call with current time; the old entry should be evicted by the TTL sweep
-    # and the same jti can be used again
+    # Now call with current time; the stale entry is swept by the TTL sweep,
+    # so the same jti can be recorded again without raising.
     now = time.time()
-    cache.remember_once(jti, iat=now, now=now, ttl=60.0)  # must not raise
+    cache.remember_once(jti, iat=now, now=now, ttl=60.0)  # eviction => no raise
+
+    # The freshly-recorded entry is now active: an immediate reuse is blocked.
+    with pytest.raises(InvalidDPoPError):
+        cache.remember_once(jti, iat=now, now=now, ttl=60.0)
 
 
 def test_dpop_replay_cache_missing_jti_raises():

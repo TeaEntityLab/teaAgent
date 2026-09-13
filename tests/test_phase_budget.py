@@ -158,7 +158,7 @@ def test_valid_phase_budgets_pass_validation() -> None:
             ),
         },
     )
-    budget.validate()
+    assert budget.validate() is None
 
 
 def test_phase_budget_max_iterations_less_than_one_raises() -> None:

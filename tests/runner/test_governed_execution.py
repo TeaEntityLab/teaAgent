@@ -40,7 +40,8 @@ def _context(budget: RunBudget) -> tuple[GovernedExecutionContext, AuditLogger]:
 
 def test_enforce_cost_budget_allows_under_cap() -> None:
     ctx, _ = _context(RunBudget(max_estimated_cost_cents=100))
-    enforce_cost_budget(ctx, 50.0)  # no raise
+    # Under the cap: returns None without raising.
+    assert enforce_cost_budget(ctx, 50.0) is None
 
 
 def test_enforce_cost_budget_raises_over_cap() -> None:
@@ -58,7 +59,8 @@ def test_enforce_cost_budget_zero_cap_rejects_any_spend() -> None:
 
 def test_enforce_cost_budget_no_cap_never_raises() -> None:
     ctx, _ = _context(RunBudget(max_estimated_cost_cents=None))
-    enforce_cost_budget(ctx, 1_000_000.0)  # no cap configured
+    # No cap configured: any spend returns None without raising.
+    assert enforce_cost_budget(ctx, 1_000_000.0) is None
 
 
 def test_enforce_budget_warnings_emits_once_per_level() -> None:

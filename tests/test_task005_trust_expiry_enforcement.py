@@ -111,5 +111,5 @@ def test_active_server_tool_is_allowed_at_call_time(mcp_trust_setup):
         tmp,
         MCPServerTrust(trusted=True, allowed_tools=['srv_tool'], expires_at=_ACTIVE),
     )
-    # Should not raise.
-    registry.hook_registry.run_pre_hooks('srv_tool', {})
+    # Allowed at call time: pre-hooks pass the args through unchanged, no raise.
+    assert registry.hook_registry.run_pre_hooks('srv_tool', {}) == {}

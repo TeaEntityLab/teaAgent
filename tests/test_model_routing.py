@@ -5,6 +5,8 @@ import io
 import json
 from contextlib import redirect_stdout
 
+import pytest
+
 from teaagent import classify_task, route_model
 from teaagent.cli import main
 from teaagent.model_routing import analyze_complexity, estimate_tokens
@@ -315,12 +317,8 @@ def test_model_route_frozen():
         model='gpt-4o',
         reason='test',
     )
-    try:
+    with pytest.raises((AttributeError, TypeError)):
         route.category = 'review'
-        raise AssertionError('Should not be able to modify frozen dataclass')
-    except (AttributeError, TypeError):
-        # Expected for frozen dataclass
-        pass
 
 
 def test_model_route_default_values():

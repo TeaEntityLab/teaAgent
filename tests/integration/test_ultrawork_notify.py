@@ -91,8 +91,8 @@ def test_fire_notification_webhook_failure_silent():
         pid=1,
         started_at='2026-01-01T00:00:00+00:00',
     )
-    # Must not raise
-    fire_notification(cfg, rec, event='stopped')
+    # Unreachable webhook is swallowed silently: no raise, returns None.
+    assert fire_notification(cfg, rec, event='stopped') is None
 
 
 def test_fire_notification_both_webhook_and_shell(tmp_path):

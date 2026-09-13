@@ -121,8 +121,15 @@ class TUITests(unittest.TestCase):
     def test_tui_state_save_ignores_os_write_failures(self) -> None:
         tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit')
 
-        with patch.object(Path, 'write_text', side_effect=PermissionError('denied')):
-            tui._save_tui_state()
+        with patch.object(
+            Path, 'write_text', side_effect=PermissionError('denied')
+        ) as mock_write:
+            result = tui._save_tui_state()
+
+        # The write was attempted but the PermissionError was swallowed rather
+        # than propagated.
+        self.assertTrue(mock_write.called)
+        self.assertIsNone(result)
 
     def test_tui_agent_settings_and_ask(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1658,14 +1665,17 @@ class TUITests(unittest.TestCase):
         output: list[str] = []
         tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
         with (
-            patch.object(tui, '_start_file_watcher'),
-            patch.object(tui, '_stop_file_watcher'),
+            patch.object(tui, '_start_file_watcher') as mock_start,
+            patch.object(tui, '_stop_file_watcher') as mock_stop,
         ):
-            # Pin should try to start watcher
+            # Pin fails (file does not exist) -> watcher is never started.
             tui._handle_pin(['nonexistent.py'])
-            # unpin should not call stop since pin failed
+            # unpin should not call stop since pin failed.
             tui._handle_unpin(['nonexistent.py'])
-        # Just verify no exceptions — real FileWatcher isn't instantiated
+        mock_start.assert_not_called()
+        mock_stop.assert_not_called()
+        self.assertIn('error: file not found: nonexistent.py', output)
+        self.assertIn('error: file not pinned: nonexistent.py', output)
 
     def test_run_tui_function(self) -> None:
 

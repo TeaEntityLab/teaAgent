@@ -70,12 +70,14 @@ def test_non_symlink_path_within_root_is_allowed() -> None:
     with TemporaryDirectory() as tmp:
         (Path(tmp) / 'sub').mkdir()
         manager = _manager(tmp)
-        # Should not raise.
-        manager._assert_paths_in_workspace(
+        # A non-symlink path inside the root is allowed: the guard returns
+        # None instead of raising ToolPermissionError.
+        result = manager._assert_paths_in_workspace(
             'workspace_write_file',
             'call-3',
             {'path': 'sub/file.txt'},
         )
+        assert result is None
 
 
 def test_symlink_resolving_inside_root_still_rejected() -> None:

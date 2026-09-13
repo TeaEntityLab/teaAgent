@@ -306,22 +306,30 @@ def test_post_hook_returning_none_preserves_original_result() -> None:
     assert result == {'value': 42}
 
 
-def test_shell_command_hook_runs_on_matching_tool() -> None:
+def test_shell_command_hook_runs_on_matching_tool(tmp_path) -> None:
+    marker = tmp_path / 'hook_ran'
     registry = HookRegistry()
     registry.register_post_hook(
-        shell_command_hook('echo hook_ran', on_tools=frozenset({'my_tool'}))
+        shell_command_hook(f'touch {marker}', on_tools=frozenset({'my_tool'}))
     )
-    # Should not raise
-    registry.run_post_hooks('my_tool', {}, {})
+    result = registry.run_post_hooks('my_tool', {}, {})
+    # Tool name matches, so the hook fires: the shell command runs and creates
+    # the marker, while the post-hook leaves the tool result unchanged.
+    assert marker.exists()
+    assert result == {}
 
 
-def test_shell_command_hook_skips_non_matching_tool() -> None:
+def test_shell_command_hook_skips_non_matching_tool(tmp_path) -> None:
+    marker = tmp_path / 'should_not_exist'
     registry = HookRegistry()
     registry.register_post_hook(
-        shell_command_hook('exit 1', on_tools=frozenset({'my_tool'}))
+        shell_command_hook(f'touch {marker}', on_tools=frozenset({'my_tool'}))
     )
-    # Should not raise because tool name doesn't match
-    registry.run_post_hooks('other_tool', {}, {})
+    result = registry.run_post_hooks('other_tool', {}, {})
+    # Tool name does not match, so the hook is skipped: the command never runs
+    # (no marker created) and the original result is returned unchanged.
+    assert not marker.exists()
+    assert result == {}
 
 
 def test_shell_command_hook_fails_on_bad_command() -> None:

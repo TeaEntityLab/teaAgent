@@ -312,17 +312,17 @@ class TestFileWatcher:
 
         callback_called = []
 
-        def test_callback(file_path: str, event_type: str) -> None:
+        def record_event(file_path: str, event_type: str) -> None:
             callback_called.append((file_path, event_type))
 
         watcher = FileWatcher(
             root=temp_root,
-            callback=test_callback,
+            callback=record_event,
             debounce_ms=100,
         )
 
         assert watcher.root == temp_root.resolve()
-        assert watcher.callback == test_callback
+        assert watcher.callback == record_event
         assert watcher.debounce_ms == 100
         assert watcher.is_running() is False
 

@@ -512,7 +512,12 @@ def test_m6_fold_equals_legacy_on_failure_run():
             'created_at': '2026-06-13T11:00:03+00:00',
         },
     ]
-    _assert_fold_matches_legacy(events, 'r-fail')
+    bundle = _assert_fold_matches_legacy(events, 'r-fail')
+    # Guard against a vacuous pass: the failed run must carry its command and
+    # the auto-derived run_failure/tool_error gaps through the fold.
+    assert bundle.commands_run and {'run_failure', 'tool_error'} <= {
+        g.category for g in bundle.known_gaps
+    }
 
 
 def test_m6_fold_equals_legacy_on_cancelled_run() -> None:
@@ -541,7 +546,9 @@ def test_m6_fold_equals_legacy_on_cancelled_run() -> None:
             'created_at': '2026-06-13T11:30:02+00:00',
         },
     ]
-    _assert_fold_matches_legacy(events, 'r-cancel')
+    bundle = _assert_fold_matches_legacy(events, 'r-cancel')
+    # Guard against a vacuous pass: the cancelled run must preserve its command.
+    assert bundle.commands_run and bundle.commands_run[0].command == 'pytest -q'
 
 
 def test_m6_fold_equals_legacy_on_pending_approval_run():
@@ -560,7 +567,11 @@ def test_m6_fold_equals_legacy_on_pending_approval_run():
             'created_at': '2026-06-13T12:00:01+00:00',
         },
     ]
-    _assert_fold_matches_legacy(events, 'r-pend')
+    bundle = _assert_fold_matches_legacy(events, 'r-pend')
+    # Guard against a vacuous pass: the pending (unresolved) approval folds
+    # through as an unapproved, undenied approval record.
+    assert bundle.approvals and not bundle.approvals[0].approved
+    assert not bundle.approvals[0].denied
 
 
 def test_m6_fold_equals_legacy_on_paused_run() -> None:
@@ -579,7 +590,14 @@ def test_m6_fold_equals_legacy_on_paused_run() -> None:
             'created_at': '2026-06-13T12:00:01+00:00',
         },
     ]
-    _assert_fold_matches_legacy(events, 'r-paused')
+    bundle = _assert_fold_matches_legacy(events, 'r-paused')
+    # Guard against a vacuous pass: run_paused must survive as a typed event
+    # (not dropped as unknown) and still fold into a bundle for this run.
+    from teaagent.runner._events import RunEventType, read_run_events_from_audit
+
+    typed = read_run_events_from_audit(events)
+    assert any(e.type == RunEventType.RUN_PAUSED for e in typed)
+    assert bundle.run_id == 'r-paused'
 
 
 def test_build_run_evidence_bundle_legacy_flag_matches_event_stream() -> None:

@@ -13,7 +13,7 @@ def test_accepts_valid_object_with_required_field() -> None:
         'properties': {'name': {'type': 'string'}},
         'required': ['name'],
     }
-    validate_object_schema(schema, {'name': 'hello'}, label='input')
+    assert validate_object_schema(schema, {'name': 'hello'}, label='input') is None
 
 
 def test_accepts_valid_object_with_optional_field_omitted() -> None:
@@ -22,7 +22,7 @@ def test_accepts_valid_object_with_optional_field_omitted() -> None:
         'properties': {'name': {'type': 'string'}},
         'required': [],
     }
-    validate_object_schema(schema, {}, label='input')
+    assert validate_object_schema(schema, {}, label='input') is None
 
 
 def test_rejects_non_object_schema() -> None:
@@ -102,7 +102,7 @@ def test_accepts_string_or_integer_when_no_type_specified() -> None:
         'properties': {'data': {}},
         'required': ['data'],
     }
-    validate_object_schema(schema, {'data': 'anything'}, label='input')
+    assert validate_object_schema(schema, {'data': 'anything'}, label='input') is None
 
 
 def test_accepts_array_field() -> None:
@@ -111,7 +111,7 @@ def test_accepts_array_field() -> None:
         'properties': {'items': {'type': 'array'}},
         'required': ['items'],
     }
-    validate_object_schema(schema, {'items': [1, 2, 3]}, label='input')
+    assert validate_object_schema(schema, {'items': [1, 2, 3]}, label='input') is None
 
 
 def test_validates_array_item_type_when_items_schema_is_present() -> None:
@@ -155,7 +155,7 @@ def test_accepts_boolean_field() -> None:
         'properties': {'flag': {'type': 'boolean'}},
         'required': ['flag'],
     }
-    validate_object_schema(schema, {'flag': False}, label='input')
+    assert validate_object_schema(schema, {'flag': False}, label='input') is None
 
 
 def test_accepts_number_as_int_or_float() -> None:
@@ -164,7 +164,7 @@ def test_accepts_number_as_int_or_float() -> None:
         'properties': {'x': {'type': 'number'}, 'y': {'type': 'number'}},
         'required': ['x', 'y'],
     }
-    validate_object_schema(schema, {'x': 1, 'y': 2.5}, label='input')
+    assert validate_object_schema(schema, {'x': 1, 'y': 2.5}, label='input') is None
 
 
 def test_label_appears_in_error_message() -> None:
