@@ -48,14 +48,20 @@ def test_h4_shadow_demo_emits_two_denial_candidates(tmp_path: Path) -> None:
         assert payload.get('surface') in {'approval', 'subagent_launch'}
         assert payload.get('provenance') == 'synthetic-demo'
 
-    # Also verify prepare_h4_evidence sees 2 candidates
+    # Also verify prepare_h4_evidence sees 2 candidates. The window must cover
+    # the demo's own timestamps: fixed `since` (start of the ADR-0031 window),
+    # `until` = today so the test stays green after 2026-09-11.
+    from datetime import date
+
     from teaagent.governance.h4_evidence import (
         build_h4_evidence_report,
         load_events_from_paths,
     )
 
     report = build_h4_evidence_report(
-        load_events_from_paths([output]), since='2026-08-13', until='2026-09-11'
+        load_events_from_paths([output]),
+        since='2026-08-13',
+        until=date.today().isoformat(),
     )
     assert report.observed_events == 0
     assert report.synthetic_excluded == 2

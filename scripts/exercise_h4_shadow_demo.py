@@ -129,13 +129,20 @@ def main() -> int:
                 f'Wrote {len(events)} audit events ({len(h4_events)} h4_governance_shadow) to {output}'
             )
             # Quick local validation: prepare_h4_evidence should find at least one denial
+            # Window must cover the demo's own timestamps: use a fixed `since`
+            # (start of the ADR-0031 observation window) and today's date as
+            # `until` so the demo stays green after the original window closed.
+            from datetime import date
+
             from teaagent.governance.h4_evidence import (
                 build_h4_evidence_report,
                 load_events_from_paths,
             )
 
             report = build_h4_evidence_report(
-                load_events_from_paths([output]), since='2026-08-13', until='2026-09-11'
+                load_events_from_paths([output]),
+                since='2026-08-13',
+                until=date.today().isoformat(),
             )
             print(
                 f'Demo evidence: verdict={report.verdict}, '
