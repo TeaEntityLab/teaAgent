@@ -131,6 +131,8 @@ class TestRequireRelayBindAuth:
         from teaagent.surface_auth import SurfaceAuthPolicy
 
         policy = SurfaceAuthPolicy()
-        require_relay_bind_auth('0.0.0.0', policy)
-        # Verify that the policy was used without error
-        assert policy is not None
+        # Non-loopback bind is permitted when a policy is present (returns None)
+        assert require_relay_bind_auth('0.0.0.0', policy) is None
+        # And the same non-loopback host still fails closed without one
+        with pytest.raises(ValueError, match='non-loopback'):
+            require_relay_bind_auth('0.0.0.0', None)

@@ -144,7 +144,8 @@ def test_tools_forwarded_in_context() -> None:
 def test_empty_context_passed_as_dict() -> None:
     cap = _ContextCapture()
     ManagedAgentRunner(cap).run('task')
-    assert isinstance(cap.received[0], dict)
+    # No context argument → runtime receives an empty dict, not None or missing key
+    assert cap.received[0] == {}
 
 
 def test_context_merged_correctly() -> None:

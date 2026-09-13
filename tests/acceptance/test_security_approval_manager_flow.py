@@ -156,9 +156,11 @@ def test_approve_once_then_assert_allowed():
 def test_shutdown_does_not_raise():
     mgr = ApprovalManager()
     mgr.shutdown()
-    # Verify that a new manager can be created after shutdown
+    # Shutdown is idempotent — a second call must not raise either
+    mgr.shutdown()
+    # A new manager created after shutdown is functional, not just non-None
     mgr2 = ApprovalManager()
-    assert mgr2 is not None
+    assert not mgr2.get_jit_state().is_call_approved('any-call')
 
 
 def test_empty_signature_fails():

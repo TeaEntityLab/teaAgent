@@ -398,11 +398,11 @@ def test_returns_isoformat_string() -> None:
     assert '+00:00' in ts
 
 
-def test_verify_valid_chain(tmp_path: Path) -> None:
-    """Verify that a valid hash chain passes verification."""
+def test_verify_chain_detects_tampered_hashes(tmp_path: Path) -> None:
+    """Verify that a chain with tampered/dummy hashes fails verification."""
     audit_path = tmp_path / 'audit.jsonl'
 
-    # Write valid chained events
+    # Write structurally chained events with dummy (non-computed) hashes
     events = [
         {
             'event_id': 'e1',
@@ -426,11 +426,12 @@ def test_verify_valid_chain(tmp_path: Path) -> None:
 
     audit_path.write_text('\n'.join(json.dumps(e) for e in events), encoding='utf-8')
 
-    # Note: This will fail hash verification since we're using dummy hashes
-    # In a real test, we'd compute actual hashes
     result = verify_audit_chain(audit_path)
-    # The chain structure is valid even if hashes don't match
-    assert result is not None
+    # Dummy hashes must be detected as tampering, not accepted
+    assert not result.valid
+    assert result.event_count == 2
+    assert result.total_hash_mismatches == 2
+    assert result.error is not None and 'hash mismatch' in result.error
 
 
 def test_verify_detects_tampered_chain(tmp_path: Path) -> None:
@@ -812,28 +813,27 @@ def test_logger_with_invalid_json_in_existing_file() -> None:
 
 
 def test_record_with_none_event_type() -> None:
-    """Test that None event_type is handled gracefully."""
+    """Test that None event_type is recorded verbatim (no crash, no coercion)."""
     logger = AuditLogger()
-    # Should handle None gracefully or convert to string
     event = logger.record(None, 'run-1')
-    assert event is not None
+    assert event.event_type is None
+    assert event.run_id == 'run-1'
 
 
 def test_record_with_none_run_id() -> None:
-    """Test that None run_id is handled gracefully."""
+    """Test that None run_id is recorded verbatim (no crash, no coercion)."""
     logger = AuditLogger()
-    # Should handle None gracefully or convert to string
     event = logger.record('test', None)
-    assert event is not None
+    assert event.run_id is None
+    assert event.event_type == 'test'
 
 
 def test_record_with_invalid_payload_types() -> None:
-    """Test that invalid payload types are handled."""
+    """Test that a non-serializable payload value is preserved in-memory."""
     logger = AuditLogger()
-    # Test with function (should be converted to string or rejected)
     event = logger.record('test', 'run-1', payload={'func': str})
-    # Should handle gracefully
-    assert event is not None
+    # In-memory event keeps the value verbatim; serialization is a separate concern
+    assert event.payload['payload']['func'] is str
 
 
 def test_sink_with_non_callable() -> None:
@@ -893,7 +893,6 @@ def test_concurrent_write_to_same_file() -> None:
 def test_redaction_with_malformed_patterns() -> None:
     """Test that malformed sensitive patterns don't crash redaction."""
     logger = AuditLogger()
-    # Test with various edge cases
     event = logger.record(
         'test',
         'run-1',
@@ -904,8 +903,13 @@ def test_redaction_with_malformed_patterns() -> None:
             'none_value': None,
         },
     )
-    # Should not crash
-    assert event is not None
+    inner = event.payload['payload']
+    # Sensitive-named keys are redacted even when values are malformed
+    assert inner['partial_token'] == '[redacted]'
+    # Non-matching values pass through untouched
+    assert inner['malformed_jwt'] == 'not.a.jwt'
+    assert inner['empty_string'] == ''
+    assert inner['none_value'] is None
 
 
 def test_truncation_with_exactly_max_length() -> None:
@@ -923,16 +927,10 @@ def test_truncation_with_max_length_plus_one() -> None:
     logger = AuditLogger()
     over_length_string = 'x' * (MAX_AUDIT_STRING_LENGTH + 1)
     event = logger.record('test', 'run-1', stdout=over_length_string)
-    # Check if truncation is applied (implementation-dependent)
-    # The key is that it doesn't crash and handles the long string
-    assert event is not None
-    # If truncation is applied, it should have the marker
-    if event.payload['stdout'].endswith(AUDIT_TRUNCATED):
-        # Truncation was applied
-        pass
-    else:
-        # No truncation - also acceptable
-        pass
+    stdout = event.payload['stdout']
+    # Truncation is applied: marker present, length bounded
+    assert stdout.endswith(AUDIT_TRUNCATED)
+    assert len(stdout) <= MAX_AUDIT_STRING_LENGTH + len(AUDIT_TRUNCATED)
 
 
 def test_empty_file_read() -> None:
@@ -965,7 +963,8 @@ def test_verify_chain_with_nonexistent_file() -> None:
         nonexistent_path = Path(tmp) / 'nonexistent.jsonl'
         result = verify_audit_chain(nonexistent_path)
         # Nonexistent file is treated as empty chain, which is valid
-        assert result is not None
+        assert result.valid
+        assert result.event_count == 0
 
 
 def test_verify_chain_with_empty_file() -> None:
@@ -1010,9 +1009,10 @@ def test_verify_chain_with_missing_hash_field() -> None:
         audit_path.write_text(json.dumps(event_data), encoding='utf-8')
 
         result = verify_audit_chain(audit_path)
-        # Missing hash is treated as legacy event, may still be valid
-        # The key is that it doesn't crash
-        assert result is not None
+        # Missing hash is treated as a legacy event: still valid, but counted
+        assert result.valid
+        assert result.event_count == 1
+        assert result.total_legacy_events == 1
 
 
 def test_verify_chain_with_tampered_event_id() -> None:
@@ -1038,12 +1038,12 @@ def test_verify_chain_with_tampered_event_id() -> None:
 
 
 def test_audit_logger_with_invalid_audit_level() -> None:
-    """Test that invalid audit level is handled (may not raise error)."""
-    # The current implementation may not validate audit_level strictly
-    # Test that it doesn't crash with an invalid value
+    """Test that an unrecognized audit level is stored verbatim and still records."""
     logger = AuditLogger(audit_level='INVALID_LEVEL')
-    assert logger is not None
-    # The invalid level may be accepted or handled gracefully
+    event = logger.record('test', 'run-1')
+    # The invalid level is not validated at construction, but recording still works
+    assert event.event_type == 'test'
+    assert len(logger.events) == 1
 
 
 def test_audit_logger_l3_without_cryptography() -> None:
@@ -1084,29 +1084,35 @@ def test_audit_logger_with_none_path() -> None:
 
 
 def test_audit_event_with_invalid_types_in_payload() -> None:
-    """Test that payload with invalid types is handled gracefully."""
+    """Test that payload with non-serializable types is preserved in-memory."""
     logger = AuditLogger()
-    # Test with various invalid types
     event = logger.record(
         'test',
         'run-1',
         payload={
-            'circular_ref': None,  # Will be set to create circular reference
-            'lambda_func': lambda x: x,  # Function
-            'class_obj': object(),  # Class instance
+            'circular_ref': None,
+            'lambda_func': lambda x: x,
+            'class_obj': object(),
         },
     )
-    # Should handle gracefully (may convert to string or skip)
-    assert event is not None
+    inner = event.payload['payload']
+    assert inner['circular_ref'] is None
+    assert callable(inner['lambda_func'])
+    assert inner['lambda_func'](7) == 7
 
 
-@pytest.mark.skip(
-    reason='Circular references cause recursion errors in JSON serialization'
-)
 def test_audit_event_with_circular_payload_reference() -> None:
-    """Test that circular references in payload don't cause infinite loops."""
-    assert True  # skipped via decorator — assertion never runs
-    assert True  # skipped via decorator
+    """Circular payload references raise RecursionError, not a silent hang."""
+    logger = AuditLogger()
+    circular: dict = {}
+    circular['self'] = circular
+    # Known limitation: redaction walks the payload recursively — a circular
+    # reference must fail fast with RecursionError, not hang or corrupt state
+    with pytest.raises(RecursionError):
+        logger.record('test', 'run-1', payload=circular)
+    # The logger remains usable after the rejected record
+    event = logger.record('test', 'run-1', payload={'ok': True})
+    assert event.payload['payload']['ok'] is True
 
 
 def test_audit_redaction_with_none_values() -> None:
@@ -1121,14 +1127,15 @@ def test_audit_redaction_with_none_values() -> None:
             'normal_field': 'value',
         },
     )
-    # Should not crash with None values
-    assert event is not None
-    # The payload may be wrapped or modified by redaction, just check event exists
-    assert event.payload is not None
+    inner = event.payload['payload']
+    # None values pass through (nothing to redact); non-sensitive keys untouched
+    assert inner['api_key'] is None
+    assert inner['password'] is None
+    assert inner['normal_field'] == 'value'
 
 
 def test_audit_redaction_with_empty_strings() -> None:
-    """Test that empty strings are handled during redaction."""
+    """Test that empty strings in sensitive-named keys are redacted."""
     logger = AuditLogger()
     event = logger.record(
         'test',
@@ -1139,8 +1146,11 @@ def test_audit_redaction_with_empty_strings() -> None:
             'token': '',
         },
     )
-    # Should not crash with empty strings
-    assert event is not None
+    inner = event.payload['payload']
+    # Sensitive-named keys are redacted even when the value is empty
+    assert inner['api_key'] == '[redacted]'
+    assert inner['password'] == '[redacted]'
+    assert inner['token'] == '[redacted]'
 
 
 def test_audit_redaction_with_nested_none_values() -> None:
@@ -1151,8 +1161,9 @@ def test_audit_redaction_with_nested_none_values() -> None:
         'run-1',
         payload={'nested': {'deep': {'api_key': None, 'value': 'test'}}},
     )
-    # Should handle nested None values gracefully
-    assert event is not None
+    deep = event.payload['payload']['nested']['deep']
+    assert deep['api_key'] is None
+    assert deep['value'] == 'test'
 
 
 def test_audit_logger_with_path_as_string() -> None:
@@ -1235,15 +1246,10 @@ def test_audit_event_with_empty_dict_payload() -> None:
 
 
 def test_audit_event_with_list_payload() -> None:
-    """Test that list payload is handled (even if not expected)."""
+    """Test that a list value inside the payload is preserved verbatim."""
     logger = AuditLogger()
-    # List payload may not be standard but should not crash
-    try:
-        event = logger.record('test', 'run-1', payload={'items': [1, 2, 3]})
-        assert event is not None
-    except (TypeError, ValueError):
-        # If it rejects list payload, that's also acceptable
-        pass
+    event = logger.record('test', 'run-1', payload={'items': [1, 2, 3]})
+    assert event.payload['payload']['items'] == [1, 2, 3]
 
 
 def test_audit_to_json_with_none_optional_fields() -> None:

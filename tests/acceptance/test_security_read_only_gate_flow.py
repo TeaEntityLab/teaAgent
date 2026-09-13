@@ -87,6 +87,9 @@ def test_workspace_apply_patch_blocked():
     assert reason is not None, (
         'Expected workspace_apply_patch to be blocked in read-only mode'
     )
+    assert 'read-only' in reason.lower(), (
+        f'Expected block reason to cite read-only mode, got: {reason}'
+    )
 
 
 def test_workspace_edit_at_hash_blocked():
@@ -99,6 +102,9 @@ def test_workspace_edit_at_hash_blocked():
     # Security-critical: edit tools must be blocked in read-only mode
     assert reason is not None, (
         'Expected workspace_edit_at_hash to be blocked in read-only mode'
+    )
+    assert 'read-only' in reason.lower(), (
+        f'Expected block reason to cite read-only mode, got: {reason}'
     )
 
 
@@ -114,6 +120,9 @@ def test_workspace_run_shell_mutate_blocked():
     assert reason is not None, (
         'Expected workspace_run_shell_mutate to be blocked in read-only mode'
     )
+    assert 'read-only' in reason.lower(), (
+        f'Expected block reason to cite read-only mode, got: {reason}'
+    )
 
 
 def test_workspace_run_shell_blocked():
@@ -126,6 +135,9 @@ def test_workspace_run_shell_blocked():
     # Security-critical: shell tools must be blocked in read-only mode
     assert reason is not None, (
         'Expected workspace_run_shell to be blocked in read-only mode'
+    )
+    assert 'read-only' in reason.lower(), (
+        f'Expected block reason to cite read-only mode, got: {reason}'
     )
 
 
@@ -140,6 +152,9 @@ def test_destructive_tool_blocked():
     # Security-critical: destructive tools without read_only=True must be blocked
     assert reason is not None, (
         'Expected destructive tool without read_only=True to be blocked'
+    )
+    assert 'read-only' in reason.lower(), (
+        f'Expected block reason to cite read-only mode, got: {reason}'
     )
 
 
@@ -183,8 +198,10 @@ def test_mutating_handler_source_detected():
         'mutating_tool',
         _mutating_handler,
     )
-    # Security-critical: mutating handlers should be detected and blocked
     assert reason is not None, 'Expected mutating handler to be detected and blocked'
+    assert 'write operations' in reason, (
+        f'Expected block reason to cite write operations, got: {reason}'
+    )
 
 
 def test_safe_handler_passes():
