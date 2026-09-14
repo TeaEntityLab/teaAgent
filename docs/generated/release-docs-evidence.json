@@ -1,17 +1,17 @@
 {
-  "ok": true,
-  "created_at": "2026-09-14T23:19:39+00:00",
+  "ok": false,
+  "created_at": "2026-09-14T23:21:08+00:00",
   "repo_root": "/Users/teee/dev/teaagent",
   "git": {
     "branch": "main",
-    "commit": "2eb65f50f323caf3bda586664dd47ce5bd4b7a33",
+    "commit": "22e4919e4aad2f3a1fbe721cd0c58a48703ba26b",
     "dirty": true
   },
   "commands": [
     {
       "cmd": "/opt/homebrew/opt/python@3.14/bin/python3.14 scripts/validate_docs_consistency.py",
-      "exit_code": 0,
-      "stdout": "Risk register evidence coverage: 29/29 rows verified (100%)\nTicket index evidence coverage: 21/21 rows verified (100%)\nDocs consistency check passed.\n",
+      "exit_code": 1,
+      "stdout": "Risk register evidence coverage: 29/29 rows verified (100%)\nTicket index evidence coverage: 21/21 rows verified (100%)\nERROR: Code reference _approval_manager.py:134 points to missing file _approval_manager.py\n",
       "stderr": ""
     },
     {

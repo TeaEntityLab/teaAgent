@@ -42,7 +42,7 @@
 | G12 | `--approve-call-id` deprecated and ignored but still accepted — a stale flag silently does nothing. |
 | G13 | `doctor all` `ok:False` counts unconfigured optional providers as failure — an operator can't tell "no providers configured" from "something broken". (Docs frame it as a readiness gate — may be intended.) |
 | G14 | ANP dead surface — `agent run` ANP path is a stub. |
-| G15 | **No reject/cancel path for pending approvals.** `approval` offers only `approve` (executes the call); `runs`/`agent` expose no `reject`/`cancel`/`abort`. An operator who wants to *decline* a pending destructive call has no surface — approve it or leave it pending forever. The deny/reject half of the approval decision is missing. |
+| G15 | **No CLI reject/cancel for a queued pending approval** (refined). `tool_call_denied` IS emitted (`teaagent/runner/_approval_manager.py:134`) when `approval_handler` returns `False` (interactive decline), and `pending_approval_for_run` clears on it — the deny lifecycle is fully built. Missing is only a **CLI command** to deny a *queued/headless* pending approval: `approval` exposes `approve` but no `deny`/`reject` for an already-paused run. A small, well-scoped `feat:` — `approval deny <call_id>` recording `tool_call_denied`. |
 | G16 | **Pending-approval durability asymmetry — no expiry on main path.** The subagent approval queue auto-times-out (`pending_request_timeout_seconds: 3600`), but the main `tool_call_pending_approval`/`run_paused` path has no expiry — `pending_approval_for_run` clears only on approve/deny/complete/fail, so a paused run that never resumes stays pending forever. With G15 (no reject), a declined-but-unactionable approval lingers indefinitely. |
 
 ## Denial candidate (owner adjudication)
