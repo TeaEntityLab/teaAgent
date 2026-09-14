@@ -480,6 +480,8 @@ def approval_approve_command(args: argparse.Namespace) -> int:  # noqa: C901
                 tool_name=pending_approval.get('tool_name')
                 if pending_approval
                 else grant.get('tool_name', 'unknown'),
+                authority_type='cli_approval',
+                approved_by='operator',
             )
             print_json(build_approval_granted_payload(grant))
             return 0
