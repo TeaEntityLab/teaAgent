@@ -46,6 +46,7 @@ def chat_command(args: argparse.Namespace) -> int:
             provider=provider,
             model=model,
             root=args.root if hasattr(args, 'root') else '.',
+            _root_explicit=True,
             allow_destructive=allow_destructive,
             permission_mode=parse_permission_mode(permission_mode_str),
             chat=True,

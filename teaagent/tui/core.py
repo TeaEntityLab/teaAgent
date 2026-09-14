@@ -66,6 +66,7 @@ class TeaAgentTUI:
         provider: Optional[str] = None,
         model: Optional[str] = None,
         root: str | Path = '.',
+        _root_explicit: bool = False,
         allow_destructive: bool = False,
         permission_mode: PermissionMode = PermissionMode.PROMPT,
         input_fn: Optional[InputFn] = None,
@@ -87,7 +88,7 @@ class TeaAgentTUI:
         self.model = model
         self.route_model_enabled = False
         self.root = Path(root).resolve()
-        self._root_explicit: bool = False
+        self._root_explicit = _root_explicit
         self.allow_destructive = allow_destructive
         self.permission_mode = permission_mode
         self.progress = True
@@ -626,7 +627,7 @@ class TeaAgentTUI:
                     raw_command = self._session.prompt(self._prompt())
                 else:
                     raw_command = input(self._prompt())
-            except (EOFError, KeyboardInterrupt):
+            except (EOFError, KeyboardInterrupt, OSError):
                 self._stop_file_watcher()
                 self.output_fn('bye')
                 self._save_tui_state()

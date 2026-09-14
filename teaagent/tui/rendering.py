@@ -110,6 +110,7 @@ def run_tui(
     provider: Optional[str] = None,
     model: Optional[str] = None,
     root: str | Path = '.',
+    _root_explicit: bool = False,
     allow_destructive: bool = False,
     permission_mode: PermissionMode = PermissionMode.PROMPT,
     chat: bool = False,
@@ -126,7 +127,6 @@ def run_tui(
     skill_search_dirs: Optional[list[str]] = None,
     memory_limit: int = 5,
     max_estimated_cost_cents: int | None = 500,
-    # TASK-DD2-001: initial task from `teaagent chat "task"` positional arg
     initial_task: Optional[str] = None,
 ) -> int:
     tui = TeaAgentTUI(
@@ -134,6 +134,7 @@ def run_tui(
         provider=provider,
         model=model,
         root=root,
+        _root_explicit=_root_explicit,
         allow_destructive=allow_destructive,
         permission_mode=permission_mode,
         input_fn=input_fn,
@@ -151,8 +152,6 @@ def run_tui(
     if chat:
         tui.chat = True
         tui._chat_explicit = True
-    if str(root) != '.':
-        tui._root_explicit = True
     return tui.run(
         run_setup=run_setup,
         setup_write_env=setup_write_env,

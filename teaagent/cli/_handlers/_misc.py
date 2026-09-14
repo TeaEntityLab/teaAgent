@@ -6,7 +6,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from teaagent.approval import parse_permission_mode
 from teaagent.code_ontology import CodeOntologyGraph
@@ -25,11 +25,17 @@ def clarify_command(args: argparse.Namespace) -> int:
 
 
 def start_tui(args: argparse.Namespace) -> int:
+    from teaagent.ergonomics.workspace_defaults import _UNSET
+
+    raw_root = getattr(args, 'root', None)
+    root_explicit = raw_root is not _UNSET
+    root: str = cast(str, raw_root) if root_explicit else '.'
     return run_tui(
         database=args.database,
         provider=args.provider,
         model=args.model,
-        root=args.root,
+        root=root,
+        _root_explicit=root_explicit,
         allow_destructive=args.allow_destructive,
         permission_mode=parse_permission_mode(args.permission_mode),
         chat=getattr(args, 'chat', False),

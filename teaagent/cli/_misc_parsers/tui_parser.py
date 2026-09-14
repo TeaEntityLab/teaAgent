@@ -1,8 +1,7 @@
-from __future__ import annotations
-
 import argparse
 from typing import Callable
 
+from teaagent.ergonomics.workspace_defaults import _UNSET
 from teaagent.llm import available_providers
 from teaagent.types import PermissionMode
 
@@ -29,7 +28,7 @@ def _tui(
     p.add_argument(
         '--model', default=None, help='Default model override for ask commands.'
     )
-    p.add_argument('--root', default='.', help='Workspace root for ask commands.')
+    p.add_argument('--root', default=_UNSET, help='Workspace root for ask commands.')
     p.add_argument(
         '--allow-destructive',
         action='store_true',
