@@ -462,15 +462,40 @@ class GitBranchSandbox:
         return self.rollback()
 
     def keep(self) -> GitSandboxResult:
-        """Keep sandbox branch for manual review."""
-        # Just pop stash if we auto-stashed, leave branch active
-        if self._stash_id:
-            stash_pop(self._root, self._stash_id)
-        return GitSandboxResult(
-            success=True,
-            branch_name=self._branch_name,
-            original_branch=self._original_branch,
-        )
+        """Keep sandbox branch for manual review, restoring the original branch.
+
+        The branch is preserved (not deleted) so its commits remain reachable,
+        but the working tree is switched back to ``_original_branch`` — leaving
+        HEAD on the sandbox branch would cause the next run to nest a sandbox
+        on top of it instead of on the real base branch.
+        """
+        if not self._is_git_repo or not self._original_branch:
+            return GitSandboxResult(
+                success=False,
+                error='Git sandbox not properly initialized',
+            )
+        try:
+            with _sandbox_lock:
+                subprocess.run(
+                    ['git', 'checkout', self._original_branch],
+                    cwd=self._root,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                # Pop stash if we auto-stashed
+                if self._stash_id:
+                    stash_pop(self._root, self._stash_id)
+            return GitSandboxResult(
+                success=True,
+                branch_name=self._branch_name,
+                original_branch=self._original_branch,
+            )
+        except subprocess.CalledProcessError as exc:
+            return GitSandboxResult(
+                success=False,
+                error=f'Failed to restore original branch: {exc}',
+            )
 
 
 class GitTransactionSink:
