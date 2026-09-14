@@ -836,9 +836,24 @@ def apply_config_defaults(args: argparse.Namespace) -> None:  # noqa: C901
             if v is not None and k != 'root'
         }
     else:
-        data = json.loads(config_path.read_text(encoding='utf-8'))
+        try:
+            data = json.loads(config_path.read_text(encoding='utf-8'))
+        except json.JSONDecodeError as exc:
+            import sys
+
+            print(
+                f'Warning: {config_path} is not valid JSON ({exc}); using defaults.',
+                file=sys.stderr,
+            )
+            apply_workspace_defaults_to_namespace(args, root=root)
+            return
     if not isinstance(data, dict):
-        raise SystemExit('--config must contain a JSON object')
+        print(
+            f'Warning: {config_path} must contain a JSON object; using defaults.',
+            file=sys.stderr,
+        )
+        apply_workspace_defaults_to_namespace(args, root=root)
+        return
     profile = getattr(args, 'profile', None)
     if profile:
         profiles = data.get('profiles')
