@@ -23,7 +23,9 @@ def cloud_list_command(args: Namespace) -> int:
 
     manager = CloudTaskManager(store=CloudTaskStore(args.root, readonly=True))
     tasks = manager.list_tasks(status=args.status, limit=args.limit)
-    if args.json:
+    if args.json or not tasks:
+        # Always emit a JSON array when empty so the command isn't silent —
+        # matches goal list / background list which print [].
         print(json.dumps([t.to_dict() for t in tasks]))
     else:
         for t in tasks:
