@@ -462,12 +462,15 @@ class GitBranchSandbox:
         return self.rollback()
 
     def keep(self) -> GitSandboxResult:
-        """Keep sandbox branch for manual review, restoring the original branch.
+        """Keep sandbox branch for review; restore original branch, apply changes.
 
-        The branch is preserved (not deleted) so its commits remain reachable,
-        but the working tree is switched back to ``_original_branch`` — leaving
-        HEAD on the sandbox branch would cause the next run to nest a sandbox
-        on top of it instead of on the real base branch.
+        The sandbox branch is preserved (not deleted) so its commits remain
+        reachable, but the working tree is switched back to ``_original_branch``
+        and the sandbox's changes are applied there as uncommitted edits. This
+        leaves HEAD on the original branch (so the next run does not nest a
+        sandbox on top of this one) while keeping the agent's work visible for
+        review/undo — matching the merge/discard paths that all restore the
+        original branch.
         """
         if not self._is_git_repo or not self._original_branch:
             return GitSandboxResult(
@@ -476,6 +479,7 @@ class GitBranchSandbox:
             )
         try:
             with _sandbox_lock:
+                # Switch back to the original branch first.
                 subprocess.run(
                     ['git', 'checkout', self._original_branch],
                     cwd=self._root,
@@ -483,6 +487,25 @@ class GitBranchSandbox:
                     text=True,
                     check=True,
                 )
+
+                # Apply the sandbox branch's changes to the working tree without
+                # committing: squash-merge stages them, reset unstages so they
+                # surface as ordinary uncommitted edits.
+                subprocess.run(
+                    ['git', 'merge', '--squash', self._branch_name],
+                    cwd=self._root,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                subprocess.run(
+                    ['git', 'reset'],
+                    cwd=self._root,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+
                 # Pop stash if we auto-stashed
                 if self._stash_id:
                     stash_pop(self._root, self._stash_id)
