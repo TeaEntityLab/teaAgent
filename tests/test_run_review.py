@@ -103,3 +103,37 @@ def test_empty_run_reports_zero_coverage():
     assert report['tool_calls'] == 0
     assert report['metrics']['coverage'] == 0.0
     assert report['findings'] == []
+
+
+def test_blocked_at_approval_gate_call_is_counted():
+    # A destructive call paused at the approval gate emits
+    # tool_call_pending_approval but never reaches tool_call_started.
+    # It must still be counted and classified, not invisible.
+    events = [
+        _ev(
+            'tool_call_pending_approval',
+            call_id='c1',
+            tool_name='workspace_write_file',
+            annotations={'destructive': True},
+            arguments={'path': 'x.txt'},
+        ),
+    ]
+    report = review_run(events, run_id='r1')
+    assert report['tool_calls'] == 1
+    assert report['annotated_calls'] == 1
+    classes = [f['class'] for f in report['findings']]
+    assert 'capability_use' in classes
+
+
+def test_pending_and_started_same_call_not_double_counted():
+    events = [
+        _started('c1', 'workspace_write_file', annotations={'destructive': True}),
+        _ev(
+            'tool_call_pending_approval',
+            call_id='c1',
+            tool_name='workspace_write_file',
+            annotations={'destructive': True},
+        ),
+    ]
+    report = review_run(events, run_id='r1')
+    assert report['tool_calls'] == 1

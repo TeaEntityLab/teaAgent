@@ -101,6 +101,24 @@ def review_run(events: list[dict[str, Any]], *, run_id: str) -> dict[str, Any]:
     pending: set[str] = set()
     failure_count: dict[str, int] = {}
     calls: list[dict[str, Any]] = []
+    seen_call_ids: set[str] = set()
+
+    def _add_call(payload: dict[str, Any]) -> None:
+        cid = payload.get('call_id')
+        if isinstance(cid, str) and cid in seen_call_ids:
+            return
+        if isinstance(cid, str):
+            seen_call_ids.add(cid)
+        annotations = payload.get('annotations')
+        arguments = payload.get('arguments')
+        calls.append(
+            {
+                'call_id': cid,
+                'tool_name': payload.get('tool_name'),
+                'annotations': annotations if isinstance(annotations, dict) else {},
+                'arguments': arguments if isinstance(arguments, dict) else {},
+            }
+        )
 
     for event in events:
         etype = event.get('event_type')
@@ -109,20 +127,13 @@ def review_run(events: list[dict[str, Any]], *, run_id: str) -> dict[str, Any]:
         tool_name = payload.get('tool_name')
 
         if etype == 'tool_call_started':
-            annotations = payload.get('annotations')
-            arguments = payload.get('arguments')
-            calls.append(
-                {
-                    'call_id': call_id,
-                    'tool_name': tool_name,
-                    'annotations': annotations if isinstance(annotations, dict) else {},
-                    'arguments': arguments if isinstance(arguments, dict) else {},
-                }
-            )
-        elif etype == 'tool_call_approved' and isinstance(call_id, str):
-            approved.add(call_id)
+            _add_call(payload)
         elif etype == 'tool_call_pending_approval' and isinstance(call_id, str):
             pending.add(call_id)
+            # A call blocked at the approval gate never reaches
+            # tool_call_started; count it here so blocked capability
+            # requests are classified instead of invisible.
+            _add_call(payload)
         elif etype in ('tool_call_denied', 'tool_call_blocked') and isinstance(
             call_id, str
         ):
