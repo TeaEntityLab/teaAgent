@@ -475,9 +475,14 @@ def build_control_cockpit(
         cockpit.memory = {
             'total_entries': len(entries),
             'last_entry_summary': entries[0].content[:80] if entries else '',
+            'quarantine_count': _count_quarantine_lines(root_path),
         }
     except Exception:
-        cockpit.memory = {'total_entries': 0, 'last_entry_summary': ''}
+        cockpit.memory = {
+            'total_entries': 0,
+            'last_entry_summary': '',
+            'quarantine_count': _count_quarantine_lines(root_path),
+        }
 
     # ── review ──
     try:
@@ -512,7 +517,22 @@ def build_control_cockpit(
         }
 
     # ── approval ──
-    pending = _count_quarantine_lines(root_path)
+    # pending_count must reflect the real approval queue (per-run pending
+    # approvals), not the memory-quarantine file — that count is surfaced under
+    # memory.quarantine_count above.
+    try:
+        from teaagent.integration.approval_parity import (
+            build_pending_approvals_snapshot,
+        )
+        from teaagent.run_store import RunStore
+
+        _store = RunStore(root_path, readonly=True)
+        pending = int(
+            build_pending_approvals_snapshot(_store, limit=100).get('queue_depth', 0)
+        )
+    except Exception:
+        logger.exception('pending-approval count failed')
+        pending = 0
     cockpit.approval = {
         'pending_count': pending,
         'blocked_count': 0,
