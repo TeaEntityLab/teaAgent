@@ -10,6 +10,10 @@ import hashlib
 import sys
 from pathlib import Path
 
+# Ensure sibling scripts (e.g. docs_tier) are importable when this module is
+# loaded outside a `python3 scripts/...` invocation (e.g. pytest).
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 from docs_tier import (
     WORKING_CURRENT_TRUTH_DOCS,
     is_archive_tier,
