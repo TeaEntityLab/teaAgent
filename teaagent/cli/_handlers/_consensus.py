@@ -30,7 +30,11 @@ from teaagent.consensus.types import (
 
 def consensus_peers_list_command(args: argparse.Namespace) -> int:
     """List all registered peers."""
-    storage_path = Path(args.storage) if args.storage else None
+    storage_path = (
+        Path(args.storage)
+        if args.storage
+        else Path(getattr(args, 'root', '.')) / '.teaagent' / 'peers.json'
+    )
     registry = PeerRegistry(storage_path=storage_path)
 
     peers = registry.list_all()
@@ -55,7 +59,11 @@ def consensus_peers_list_command(args: argparse.Namespace) -> int:
 
 def consensus_peers_add_command(args: argparse.Namespace) -> int:
     """Add a new peer."""
-    storage_path = Path(args.storage) if args.storage else None
+    storage_path = (
+        Path(args.storage)
+        if args.storage
+        else Path(getattr(args, 'root', '.')) / '.teaagent' / 'peers.json'
+    )
     registry = PeerRegistry(storage_path=storage_path)
 
     # Read SSH public key from file if provided
@@ -63,6 +71,10 @@ def consensus_peers_add_command(args: argparse.Namespace) -> int:
         ssh_key = Path(args.ssh_key_file).read_text(encoding='utf-8').strip()
     else:
         ssh_key = args.ssh_key
+
+    if not ssh_key:
+        print('Error: --ssh-key or --ssh-key-file is required.')
+        return 1
 
     peer = PeerIdentity(
         name=args.name,
@@ -82,7 +94,11 @@ def consensus_peers_add_command(args: argparse.Namespace) -> int:
 
 def consensus_peers_remove_command(args: argparse.Namespace) -> int:
     """Remove a peer."""
-    storage_path = Path(args.storage) if args.storage else None
+    storage_path = (
+        Path(args.storage)
+        if args.storage
+        else Path(getattr(args, 'root', '.')) / '.teaagent' / 'peers.json'
+    )
     registry = PeerRegistry(storage_path=storage_path)
 
     peer = registry.unregister(args.name)
@@ -97,7 +113,11 @@ def consensus_peers_remove_command(args: argparse.Namespace) -> int:
 
 def consensus_peers_activate_command(args: argparse.Namespace) -> int:
     """Activate a peer."""
-    storage_path = Path(args.storage) if args.storage else None
+    storage_path = (
+        Path(args.storage)
+        if args.storage
+        else Path(getattr(args, 'root', '.')) / '.teaagent' / 'peers.json'
+    )
     registry = PeerRegistry(storage_path=storage_path)
 
     if registry.activate(args.name):
@@ -110,7 +130,11 @@ def consensus_peers_activate_command(args: argparse.Namespace) -> int:
 
 def consensus_peers_deactivate_command(args: argparse.Namespace) -> int:
     """Deactivate a peer."""
-    storage_path = Path(args.storage) if args.storage else None
+    storage_path = (
+        Path(args.storage)
+        if args.storage
+        else Path(getattr(args, 'root', '.')) / '.teaagent' / 'peers.json'
+    )
     registry = PeerRegistry(storage_path=storage_path)
 
     if registry.deactivate(args.name):
