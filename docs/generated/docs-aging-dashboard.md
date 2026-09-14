@@ -33,7 +33,7 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 
 | Document | Status | Last reviewed | File mtime | Notes |
 | --- | --- | --- | --- | --- |
-| `README.md` | stale_by_mtime | 2026-08-26 | 2026-09-12 | Missing owner banner; File modified after last reviewed date |
+| `README.md` | stale_by_mtime | 2026-08-26 | 2026-09-14 | Missing owner banner; File modified after last reviewed date |
 
 ### security
 
