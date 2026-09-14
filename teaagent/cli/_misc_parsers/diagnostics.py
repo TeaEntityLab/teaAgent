@@ -361,6 +361,18 @@ def _audit(
         )
         verify_cmd.add_argument('--root', default='.', help='Workspace root.')
         verify_cmd.add_argument(
+            'run_id',
+            nargs='?',
+            default=None,
+            help='Verify a specific run log (.teaagent/runs/<run_id>.jsonl). '
+            'If omitted, verifies the workspace log .teaagent/audit.jsonl.',
+        )
+        verify_cmd.add_argument(
+            '--path',
+            default=None,
+            help='Explicit path to an audit JSONL file to verify.',
+        )
+        verify_cmd.add_argument(
             '--signature',
             default=None,
             help='Path to SSH/GPG key for signing attestation (e.g., ~/.ssh/id_ed25519).',

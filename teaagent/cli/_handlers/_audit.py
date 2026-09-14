@@ -114,20 +114,46 @@ def audit_serve_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _resolve_audit_verify_path(args: argparse.Namespace) -> Path:
+    """Resolve which audit log to verify.
+
+    Precedence: explicit ``--path`` > ``run_id`` (per-run store log) > the
+    workspace-global ``.teaagent/audit.jsonl``. Runs persist to
+    ``.teaagent/runs/<run_id>.jsonl``; the global file is only present when a
+    workspace-level logger is configured, so a bare ``audit verify`` on a
+    run-only workspace must not silently target a nonexistent global log.
+    """
+    explicit = getattr(args, 'path', None)
+    if explicit:
+        return Path(explicit)
+    run_id = getattr(args, 'run_id', None)
+    if run_id:
+        return Path(args.root) / '.teaagent' / 'runs' / f'{run_id}.jsonl'
+    return Path(args.root) / '.teaagent' / 'audit.jsonl'
+
+
 def audit_verify_command(args: argparse.Namespace) -> int:  # noqa: C901
     """Verify cryptographic audit chain integrity and optionally sign attestation."""
-    audit_log_path = Path(args.root) / '.teaagent' / 'audit.jsonl'
+    audit_log_path = _resolve_audit_verify_path(args)
     ci_mode = bool(getattr(args, 'ci', False))
 
     if not audit_log_path.exists():
-        payload = {
-            'status': 'error',
-            'message': f'Audit log not found at {audit_log_path}',
-        }
-        if ci_mode:
-            print_json(payload)
-        else:
-            print_json(payload)
+        message = f'Audit log not found at {audit_log_path}'
+        # When the workspace-global log is absent but per-run logs exist, point
+        # the operator at the run_id form instead of a dead end.
+        runs_dir = Path(args.root) / '.teaagent' / 'runs'
+        if (
+            not getattr(args, 'run_id', None)
+            and not getattr(args, 'path', None)
+            and runs_dir.is_dir()
+            and any(runs_dir.glob('*.jsonl'))
+        ):
+            message += (
+                '; per-run logs exist under .teaagent/runs/ — '
+                'use `teaagent audit verify <run_id>` or `--path <file>`'
+            )
+        payload = {'status': 'error', 'message': message}
+        print_json(payload)
         return 1
 
     if not ci_mode:
