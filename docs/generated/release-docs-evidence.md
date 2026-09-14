@@ -1,7 +1,7 @@
 # Release Documentation Evidence Bundle (Generated)
 
-**Generated:** 2026-09-14T04:58:51+00:00
-**Git commit:** `a52b2105355b3cdc57f170acfcb4172345a41f65` on `main`
+**Generated:** 2026-09-14T05:14:54+00:00
+**Git commit:** `5f3f615a8ffad808a589f3f3347c28db078c650b` on `teaagent-sandbox-bd0b3918f0754a27a1a175841aa44638`
 **Working tree dirty:** no
 
 Regenerate: `python3 scripts/build_release_docs_evidence_bundle.py`
