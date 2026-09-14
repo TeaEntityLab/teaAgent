@@ -251,23 +251,8 @@ def _execute_agent_task(  # noqa: C901
     store = factory.create_run_store()
     audit = factory.create_audit_logger(store)
 
-    if routing is not None:
-        _policy_source = _derive_policy_source(routing.reason)
-        _fallback_used = routing.model is None
-        audit.record(
-            'model_route',
-            run_id='pending',
-            requested_provider=args.provider,
-            requested_model=args.model or '',
-            resolved_provider=routing.provider,
-            resolved_model=routing.model or '',
-            role=routing.category,
-            routing_reason=routing.reason,
-            policy_source=_policy_source,
-            estimated_cost_cents=0.0,
-            actual_cost_cents=0.0,
-            fallback_used=_fallback_used,
-        )
+    # model_route is recorded after pending_run_id is generated (line ~333)
+    # so the audit event carries the real run_id, not a 'pending' placeholder.
 
     from teaagent.scratchpad import Scratchpad
 
@@ -331,6 +316,24 @@ def _execute_agent_task(  # noqa: C901
 
     # Pre-generate run_id so sandbox branch name matches the final run record.
     pending_run_id = uuid4().hex
+
+    if routing is not None:
+        _policy_source = _derive_policy_source(routing.reason)
+        _fallback_used = routing.model is None
+        audit.record(
+            'model_route',
+            run_id=pending_run_id,
+            requested_provider=args.provider,
+            requested_model=args.model or '',
+            resolved_provider=routing.provider,
+            resolved_model=routing.model or '',
+            role=routing.category,
+            routing_reason=routing.reason,
+            policy_source=_policy_source,
+            estimated_cost_cents=0.0,
+            actual_cost_cents=0.0,
+            fallback_used=_fallback_used,
+        )
 
     git_sandbox = factory.create_git_sandbox(run_id=pending_run_id)
     git_sandbox_available = git_sandbox.is_available()

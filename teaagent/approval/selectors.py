@@ -144,7 +144,11 @@ def collect_pending_approval_views(
     views: list[PendingApprovalView] = []
     selector = 1
     for summary in store.list_runs(limit=limit):
-        pending = _pending_detail_from_events(store, summary.run_id)
+        try:
+            pending = _pending_detail_from_events(store, summary.run_id)
+        except FileNotFoundError:
+            # Stale index entry — run file deleted or never written.
+            continue
         if not pending:
             continue
         arguments = pending.get('arguments')
