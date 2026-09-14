@@ -144,6 +144,7 @@ def test_resolve_git_sandbox_headless_keeps_without_prompt(monkeypatch) -> None:
     sandbox._branch_name = 'teaagent-sandbox-run1'
     sandbox._stash_id = None
     sandbox._run_id = 'run1'
+    sandbox.keep.return_value = MagicMock(success=True, error=None)
 
     monkeypatch.setattr(
         'teaagent.cli._handlers._agent.sandbox_resolution.sys.stdin',
@@ -167,7 +168,10 @@ def test_resolve_git_sandbox_headless_keeps_without_prompt(monkeypatch) -> None:
     run_spy.assert_not_called()
     sandbox.merge.assert_not_called()
     sandbox.discard.assert_not_called()
-    sandbox.keep.assert_not_called()
+    # Headless keep must actually invoke keep() so the working tree is restored
+    # to the original branch — recording 'keep' without calling it stranded HEAD
+    # on the sandbox branch and nested the next run.
+    sandbox.keep.assert_called_once()
     audit.record.assert_called_once()
     assert audit.record.call_args[1]['resolution'] == 'keep'
     assert audit.record.call_args[1]['success'] is True
