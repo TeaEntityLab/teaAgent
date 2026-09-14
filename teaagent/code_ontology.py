@@ -70,9 +70,45 @@ class CodeOntologyGraph:
     def build(self, extensions: Optional[list[str]] = None) -> None:
         """Build code ontology from source files."""
         self.builder.build_from_directory(extensions)
+        self._resolve_call_targets()
 
         if self.graph_store:
             self._sync_to_graph_store()
+
+    def _resolve_call_targets(self) -> None:
+        """Rewrite wildcard CALLS targets to real function node IDs.
+
+        visit_Call emits ``function:*:name:*`` placeholders. Resolve them to
+        the actual ``function:path:name:line`` node IDs by name lookup.
+        Ambiguous names (same name in multiple files) resolve to the first
+        match — a known limitation of name-only resolution.
+        """
+        # Build name → node_id index for Function/Method nodes.
+        name_to_id: dict[str, str] = {}
+        for node in self.builder.get_nodes():
+            if node.node_type in ('Function', 'Method'):
+                name_to_id.setdefault(node.name, node.node_id)
+
+        resolved: list[CodeEdge] = []
+        for edge in self.builder.get_edges():
+            if edge.edge_type == 'CALLS' and ':*:' in edge.target:
+                # Extract the function name from function:*:name:*
+                parts = edge.target.split(':')
+                if len(parts) >= 3:
+                    name = parts[2]
+                    real_id = name_to_id.get(name)
+                    if real_id:
+                        resolved.append(
+                            CodeEdge(
+                                source=edge.source,
+                                target=real_id,
+                                edge_type=edge.edge_type,
+                                metadata=edge.metadata,
+                            )
+                        )
+                        continue
+            resolved.append(edge)
+        self.builder.edges = resolved
 
     def _sync_to_graph_store(self) -> None:
         """Sync nodes and edges to GraphQLite graph store."""
@@ -98,7 +134,6 @@ class CodeOntologyGraph:
                     nodes.append(
                         (endpoint, {'name': stub_name, 'external': True}, 'External')
                     )
-                    known_ids.add(endpoint)
         # Bulk insert: one transaction instead of per-node/edge SQLite writes.
         # Falls back to per-item upsert if the store doesn't support bulk.
         if hasattr(graph, 'insert_graph_bulk'):
@@ -149,8 +184,15 @@ class CodeOntologyGraph:
         results = self.graph_store.query(cypher, params=params)
         # OPTIONAL MATCH produces a row of nulls when the entity exists but
         # has no edges in that direction — drop them so callers see [] not
-        # [{name: null, ...}].
-        return [r for r in results if r.get('name') is not None]
+        # [{name: null, ...}]. Check all key variants: 'name' (both),
+        # 'caller.name' (upstream), 'callee.name' (downstream).
+        return [
+            r
+            for r in results
+            if r.get('name') is not None
+            or r.get('caller.name') is not None
+            or r.get('callee.name') is not None
+        ]
 
     def query_inheritance_chain(self, class_name: str) -> list[dict[str, Any]]:
         """Query inheritance hierarchy for a class.
