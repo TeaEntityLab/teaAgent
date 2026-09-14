@@ -38,10 +38,24 @@ def check_audit_completeness(events: list[dict[str, Any]]) -> AuditCompletenessR
         return AuditCompletenessReport(ok=False, issues=['audit log is empty'])
 
     event_types = [e.get('event_type') for e in events]
-    if event_types[0] != 'run_started':
-        issues.append('first event must be run_started')
-    if event_types[-1] not in {'run_completed', 'run_failed', 'run_paused'}:
-        issues.append('final event must be run_completed, run_failed, or run_paused')
+    # Lifecycle ordering, not absolute position: real runs legitimately emit
+    # non-lifecycle events (git_sandbox_started, skill_load) before run_started
+    # and trailing events (memory_write_quarantined) after the terminal event.
+    terminal_types = {'run_completed', 'run_failed', 'run_paused'}
+    if 'run_started' not in event_types:
+        issues.append('missing run_started event')
+    else:
+        started_idx = event_types.index('run_started')
+        terminal_idx = max(
+            (i for i, t in enumerate(event_types) if t in terminal_types),
+            default=None,
+        )
+        if terminal_idx is None:
+            issues.append(
+                'missing terminal event (run_completed, run_failed, or run_paused)'
+            )
+        elif terminal_idx < started_idx:
+            issues.append('terminal event precedes run_started')
 
     run_ids = {e.get('run_id') for e in events}
     if len(run_ids) != 1 or None in run_ids:

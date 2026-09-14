@@ -57,11 +57,14 @@ class FakeLLMAdapter:
             self._call_count += 1
             return response
 
-        # Default response if no scripted response available
+        # Default response if no scripted response available. Emit a valid
+        # `final` decision JSON so `teaagent run fake` completes end-to-end
+        # offline (dogfooding / smoke path); scripted responses still take
+        # precedence when queued via add_response().
         return LLMResponse(
             provider=self.provider,
             model=self.model,
-            content='Fake response',
+            content='{"type":"final","content":"Fake response"}',
             input_tokens=0,
             output_tokens=0,
         )

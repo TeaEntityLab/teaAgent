@@ -107,6 +107,21 @@ def test_audit_completeness_detects_missing_terminal_event(tmp_path) -> None:
     assert any('terminal lifecycle' in issue for issue in report.issues)
 
 
+def test_audit_completeness_ignores_non_lifecycle_edge_events(tmp_path) -> None:
+    """Leading git_sandbox_started/skill_load and trailing memory_write_quarantined
+    must not fail completeness — only run_started→terminal ordering matters."""
+    log_path = tmp_path / 'run.jsonl'
+    audit = AuditLogger(path=log_path)
+    audit.record('git_sandbox_started', 'run-1', success=True)
+    audit.record('skill_load', 'run-1', loaded=[])
+    audit.record('run_started', 'run-1', task='t')
+    audit.record('run_completed', 'run-1', answer='done')
+    audit.record('memory_write_quarantined', 'run-1')
+    events = [json.loads(line) for line in log_path.read_text().splitlines() if line]
+    report = check_audit_completeness(events)
+    assert report.ok, report.issues
+
+
 def test_run_trace_and_export(tmp_path) -> None:
     log_path = tmp_path / 'run.jsonl'
     audit = AuditLogger(path=log_path)

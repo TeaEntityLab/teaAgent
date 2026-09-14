@@ -250,3 +250,46 @@ class TestCostTracker:
             report = tracker.report_all()
             assert report['total']['runs'] == 0
             assert report['total']['cost_cents'] == 0.0
+
+    def test_pending_and_index_files_excluded(self) -> None:
+        """Unfinalized pending-* temp logs and the index must not pollute the report."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            runs_dir = root / '.teaagent' / 'runs'
+            _write_run(
+                runs_dir / 'run-001.jsonl',
+                [
+                    {
+                        'event_id': 'ev1',
+                        'event_type': 'run_started',
+                        'run_id': 'run-001',
+                        'created_at': '2026-06-01T10:00:00+00:00',
+                        'payload': {'task': 't'},
+                    },
+                    {
+                        'event_id': 'ev2',
+                        'event_type': 'run_completed',
+                        'run_id': 'run-001',
+                        'created_at': '2026-06-01T10:05:00+00:00',
+                        'payload': {'cost_cents': 10.0},
+                    },
+                ],
+            )
+            # Unfinalized temp log + the index — neither is a real run.
+            _write_run(
+                runs_dir / 'pending-abc123.jsonl',
+                [
+                    {
+                        'event_id': 'ev9',
+                        'event_type': 'run_started',
+                        'run_id': 'pending-abc123',
+                        'created_at': '2026-06-01T10:00:00+00:00',
+                        'payload': {'task': 'partial'},
+                    }
+                ],
+            )
+            _write_run(runs_dir / 'runs-index.jsonl', [{'run_id': 'run-001'}])
+
+            report = CostTracker(root=tmp).report_all()
+            assert report['total']['runs'] == 1
+            assert report['total']['run_ids'] == ['run-001']

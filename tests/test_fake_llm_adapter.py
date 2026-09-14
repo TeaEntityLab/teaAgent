@@ -26,12 +26,16 @@ def test_fake_adapter_returns_scripted_responses() -> None:
 
 
 def test_fake_adapter_returns_default_when_no_scripted_responses() -> None:
-    """Test that FakeLLMAdapter returns a default response when no scripted responses are available."""
+    """Default response is a valid `final` decision JSON so `run fake` completes offline."""
     adapter = FakeLLMAdapter()
     request = LLMRequest(messages=[LLMMessage(role='user', content='test')])
 
     response = adapter.complete(request)
-    assert response.content == 'Fake response'
+    from teaagent.prompt import FinalAnswer, parse_model_decision
+
+    decision = parse_model_decision(response.content)
+    assert isinstance(decision, FinalAnswer)
+    assert decision.content == 'Fake response'
 
 
 def test_fake_adapter_reset_reuses_responses() -> None:

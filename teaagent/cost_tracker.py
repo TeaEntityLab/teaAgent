@@ -32,6 +32,12 @@ class CostTracker:
             return []
         runs: list[dict[str, Any]] = []
         for jsonl_path in sorted(self._runs_dir.glob('*.jsonl')):
+            # Skip the index and unfinalized pending-* temp logs; they are not
+            # real runs (matches RunStore.list_runs exclusion).
+            if jsonl_path.name == 'runs-index.jsonl' or jsonl_path.name.startswith(
+                'pending-'
+            ):
+                continue
             run_data = self._parse_single_run(jsonl_path)
             if run_data is not None:
                 runs.append(run_data)
