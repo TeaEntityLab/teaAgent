@@ -680,6 +680,7 @@ def _create_runner_and_engine(
         budget=runner_budget,
         approval_policy=approval_policy,
         approval_handler=config.approval_handler,
+        workspace_root=config.root,
         budget_prompt_handler=config.budget_prompt_handler,
         compactor=ContextCompactor(memory_keys=('task_spec', 'memories')),
         checkpoint_store=config.checkpoint_store,

@@ -1,0 +1,48 @@
+{
+  "candidate_count": 1,
+  "candidates": [
+    {
+      "action": "launch_subagent",
+      "assignee": "b15ffcfb361d4f438b04abb7041d6a67",
+      "event_id": "68631e0d76a046a1ba7c06541d5398f8",
+      "mode": "shadow",
+      "owner_note": "",
+      "owner_verdict": null,
+      "reason": "Permission denied: no role with permission start_workflow",
+      "run_id": "b15ffcfb361d4f438b04abb7041d6a67",
+      "surface": "subagent_launch",
+      "target": "generic",
+      "ts": "2026-09-14T21:03:08.140229+00:00"
+    }
+  ],
+  "coverage": [
+    {
+      "denials": 0,
+      "empty_weeks": [],
+      "observed_events": 1,
+      "surface": "approval",
+      "weeks": {
+        "2026-W38": 1
+      }
+    },
+    {
+      "denials": 1,
+      "empty_weeks": [],
+      "observed_events": 1,
+      "surface": "subagent_launch",
+      "weeks": {
+        "2026-W38": 1
+      }
+    }
+  ],
+  "event_type": "h4_governance_shadow",
+  "note": "Candidate evidence only. owner_verdict/owner_note are owner-only; agents must not classify false positives (ADR-0031 exit criterion 1).",
+  "observed_events": 2,
+  "reachable_runs": 9,
+  "since": "2026-08-13",
+  "skipped_malformed": 0,
+  "synthetic_excluded": 0,
+  "total_events": 7341,
+  "until": "2026-09-14",
+  "verdict": "needs_review"
+}
