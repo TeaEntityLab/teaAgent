@@ -118,7 +118,7 @@ def _sandbox_check(
     check_parser = subparsers.add_parser('check', help='Check sandbox capabilities')
 
     check_subs = check_parser.add_subparsers(
-        dest='check_command', help='Check commands'
+        dest='check_command', required=True, help='Check commands'
     )
 
     # Check WASM availability
@@ -165,7 +165,7 @@ def _sandbox(
     sandbox_parser = subparsers.add_parser('sandbox', help='Sandbox management')
 
     sandbox_subs = sandbox_parser.add_subparsers(
-        dest='sandbox_command', help='Sandbox commands'
+        dest='sandbox_command', required=True, help='Sandbox commands'
     )
 
     _sandbox_route(sandbox_subs, route_handler)

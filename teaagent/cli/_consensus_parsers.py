@@ -18,7 +18,7 @@ def _consensus_peers(
     peers_parser = subparsers.add_parser('peers', help='Manage consensus peers')
 
     peers_subs = peers_parser.add_subparsers(
-        dest='peers_command', help='Peer management commands'
+        dest='peers_command', required=True, help='Peer management commands'
     )
 
     # List peers
@@ -63,7 +63,7 @@ def _consensus_config(
     )
 
     config_subs = config_parser.add_subparsers(
-        dest='config_command', help='Config management commands'
+        dest='config_command', required=True, help='Config management commands'
     )
 
     # Set config
@@ -135,6 +135,7 @@ def _consensus(
 
     consensus_subs = consensus_parser.add_subparsers(
         dest='consensus_command',
+        required=True,
         help='Consensus commands',
     )
 
