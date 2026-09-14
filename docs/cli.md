@@ -107,6 +107,7 @@ teaagent approval revoke <grant_id> --root .
 teaagent guidance
 teaagent agent run gpt "read @README.md" --dry-run
 teaagent agent daily gpt --write-journal
+teaagent journal list
 teaagent watch --interval 30
 ```
 
@@ -738,8 +739,8 @@ resume <run_id>
 |------|---------|
 | Summarize repo | `teaagent agent daily gpt "summarize repo" --context-profile lean` then read-only `agent run` |
 | Review diff | `teaagent agent daily gpt "review diff" --context-profile balanced` |
-| Fix failing test | `teaagent agent preflight gpt "fix test_foo"` → `agent run ... --permission-mode workspace-write` |
 | Write docs | `teaagent agent run gpt "update USAGE daily section" --permission-mode workspace-write` |
+| List daily journals | `teaagent journal list` |
 | Inspect architecture | `teaagent agent daily gpt "auth flow" --context-profile deep` |
 | Resume previous run | `teaagent agent status <run_id>` → `teaagent agent resume gpt <run_id>` |
 | Safe cleanup | read-only `agent run` first; use `prompt` only if destructive deletes are required |
