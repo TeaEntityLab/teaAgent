@@ -825,7 +825,7 @@ def apply_config_defaults(args: argparse.Namespace) -> None:  # noqa: C901
     )
 
     root = getattr(args, 'root', '.')
-    config_path = resolve_config_path(getattr(args, 'config', None))
+    config_path = resolve_config_path(getattr(args, 'config', None), root=root)
     if config_path is None:
         apply_workspace_defaults_to_namespace(args, root=root)
         return
@@ -888,11 +888,11 @@ def _finalize_permission_mode(args: argparse.Namespace) -> None:
         args.permission_mode = DEFAULT_KEYS['permission_mode']
 
 
-def resolve_config_path(explicit: Optional[str]) -> Optional[Path]:
+def resolve_config_path(explicit: Optional[str], *, root: str = '.') -> Optional[Path]:
     if explicit:
         return Path(explicit)
-    json_candidate = Path('.teaagent') / 'config.json'
+    json_candidate = Path(root) / '.teaagent' / 'config.json'
     if json_candidate.is_file():
         return json_candidate
-    toml_candidate = Path('.teaagent') / 'config.toml'
+    toml_candidate = Path(root) / '.teaagent' / 'config.toml'
     return toml_candidate if toml_candidate.is_file() else None

@@ -85,17 +85,18 @@ Legend: ✅ Done (committed) · 🟡 In progress · ⬜ Not started · 🔵 Alre
 | U-P2-5 | UX | Minor: duplicate `undo` help line, `--chat-mode` docstring, `['*']` "Explicit current directory" comment. | `teaagent/tui/rendering.py:50,81`; `_chat.py:3,15`; `core.py:1329` | Cleaned up. | ✅ | Duplicate undo help fixed (guarded by `tests/tui/test_tui_command_truth.py`); `--chat-mode` docstrings corrected in `_chat.py` (it delegates to `run_tui`, no such flag); the misleading `['*']` "Explicit current directory" comments corrected to accurate wildcard wording in `core.py` / `agent_helpers.py` / `_agent/approval.py`. NOTE: `'*'` is an fnmatch wildcard matching ALL paths (the grant is limited by session+tool scope, not the path pattern) — the question of whether path-narrowed scoping is intended is flagged for separate review. |
 | U-P2-6 | UX | Add `journal list` subcommand to list daily journal files under `.teaagent/daily/`. | `teaagent/cli/_ergonomics_parsers.py`; `teaagent/cli/_handlers/_ergonomics/recipes.py`; `teaagent/cli/__init__.py` | `teaagent journal list` emits JSON journal entries (name/path/size/mtime); `teaagent journal <provider>` still writes today's journal; ergonomics tests pass. | ✅ | Implemented 2026-09-14 under owner-override dogfood direction; `journal list` dispatches through `daily_journal_command` when `provider == 'list'` to avoid argparse subparser/positional conflict. |
 | U-P2-7 | UX | Harden `session list` and run-store index against stale `run_id: "pending"` entries. | `teaagent/run_store.py`; `teaagent/cli/_handlers/_ergonomics/session.py` | `teaagent session list` no longer crashes when the index contains a placeholder `run_id`; `summarize` falls back to filename-derived run_id; index rebuild fixes stale entries. | ✅ | Found during 2026-09-14 dogfooding; `RunStore.summarize` uses `path.stem` when the first audit event still carries `run_id: "pending"`; `session_list_command` skips missing runs and recovers from stale index. |
+| U-P2-8 | UX | Resolve CLI config resolution to honor `--root` instead of CWD. | `teaagent/cli/__init__.py` | Commands using `--root <other-workspace>` load config from the target workspace, not the directory where `teaagent` is invoked. | ✅ | Found during 2026-09-14 dogfooding; `resolve_config_path` now takes the command's `root` and searches `<root>/.teaagent/config.{json,toml}`; `tests/acceptance/test_daily_cli.py` passes with temp roots. |
 
 ## Statistics
 
 | Priority | Count | Distribution by Dimension |
 | --- | --- | --- |
 | P0 | 9 | Security 3, Architecture 2, UX 2, Governance 2 |
-| P2 | 35 | Security 11, Governance 10, Architecture 7, UX 7 |
-| **Total** | **62** | |
+| P2 | 36 | Security 11, Governance 10, Architecture 7, UX 8 |
+| **Total** | **63** | |
 
 ### Status Summary
-| ✅ Done (verified) | 60 | S-P0-1, S-P0-2, S-P0-3, A-P0-1, A-P0-2, U-P0-1, U-P0-2, G-P0-1, G-P0-2; S-P1-1, S-P1-2, S-P1-3, S-P1-4, G-P1-1, G-P1-2, G-P1-3, A-P1-1, A-P1-2, A-P1-3, A-P1-4, A-P1-5, U-P1-1, U-P1-2, U-P1-3, U-P1-4, U-P1-5, U-P1-6; S-P2-1, S-P2-4, S-P2-5, S-P2-6, S-P2-7, S-P2-8, S-P2-9, S-P2-10, S-P2-11, G-P2-1, G-P2-2, G-P2-3, G-P2-5, G-P2-6, G-P2-7, G-P2-8, G-P2-9, G-P2-10, G-P2-11, G-P2-12, G-P2-13, A-P2-1, A-P2-2, A-P2-3, A-P2-5, A-P2-6, A-P2-7, U-P2-1, U-P2-2, U-P2-3, U-P2-4, U-P2-5, U-P2-6, U-P2-7 |
+| ✅ Done (verified) | 61 | S-P0-1, S-P0-2, S-P0-3, A-P0-1, A-P0-2, U-P0-1, U-P0-2, G-P0-1, G-P0-2; S-P1-1, S-P1-2, S-P1-3, S-P1-4, G-P1-1, G-P1-2, G-P1-3, A-P1-1, A-P1-2, A-P1-3, A-P1-4, A-P1-5, U-P1-1, U-P1-2, U-P1-3, U-P1-4, U-P1-5, U-P1-6; S-P2-1, S-P2-4, S-P2-5, S-P2-6, S-P2-7, S-P2-8, S-P2-9, S-P2-10, S-P2-11, G-P2-1, G-P2-2, G-P2-3, G-P2-5, G-P2-6, G-P2-7, G-P2-8, G-P2-9, G-P2-10, G-P2-11, G-P2-12, G-P2-13, A-P2-1, A-P2-2, A-P2-3, A-P2-5, A-P2-6, A-P2-7, U-P2-1, U-P2-2, U-P2-3, U-P2-4, U-P2-5, U-P2-6, U-P2-7, U-P2-8 |
 | 🟡 In progress | 0 | — |
 | ⬜ Not started | 0 | — |
 | 🔵 Already existed | 4 | S-P2-2, S-P2-3, G-P2-4, A-P2-4 |
