@@ -78,20 +78,36 @@ class CodeOntologyGraph:
         """Sync nodes and edges to GraphQLite graph store."""
         if self.graph_store is None:
             return
-        for node in self.builder.get_nodes():
-            self.graph_store.graph.upsert_node(
-                node.node_id,
-                node.to_dict(),
-                label=node.node_type,
-            )
-
-        for edge in self.builder.get_edges():
-            self.graph_store.graph.upsert_edge(
-                edge.source,
-                edge.target,
-                edge.to_dict(),
-                rel_type=edge.edge_type,
-            )
+        graph = self.graph_store.graph
+        nodes = [
+            (node.node_id, node.to_dict(), node.node_type)
+            for node in self.builder.get_nodes()
+        ]
+        edges = [
+            (edge.source, edge.target, edge.to_dict(), edge.edge_type)
+            for edge in self.builder.get_edges()
+        ]
+        # Bulk insert requires both endpoints to exist. Create stub nodes
+        # for edge targets that reference external modules (e.g. stdlib
+        # imports like `os`, `sys`) not parsed as source files.
+        known_ids = {n[0] for n in nodes}
+        for source, target, _props, _rel in edges:
+            for endpoint in (source, target):
+                if endpoint not in known_ids:
+                    stub_name = endpoint.split(':')[-1] or endpoint
+                    nodes.append(
+                        (endpoint, {'name': stub_name, 'external': True}, 'External')
+                    )
+                    known_ids.add(endpoint)
+        # Bulk insert: one transaction instead of per-node/edge SQLite writes.
+        # Falls back to per-item upsert if the store doesn't support bulk.
+        if hasattr(graph, 'insert_graph_bulk'):
+            graph.insert_graph_bulk(nodes, edges)
+        else:
+            for node_id, props, label in nodes:
+                graph.upsert_node(node_id, props, label=label)
+            for source, target, props, rel_type in edges:
+                graph.upsert_edge(source, target, props, rel_type=rel_type)
 
     def query_dependencies(
         self, entity_name: str, direction: str = 'both'
