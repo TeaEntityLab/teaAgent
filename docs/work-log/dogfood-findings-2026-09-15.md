@@ -44,6 +44,7 @@
 | G14 | ANP dead surface — `agent run` ANP path is a stub. |
 | G15 | **No CLI reject/cancel for a queued pending approval** (refined). `tool_call_denied` IS emitted (`teaagent/runner/_approval_manager.py:134`) when `approval_handler` returns `False` (interactive decline), and `pending_approval_for_run` clears on it — the deny lifecycle is fully built. Missing is only a **CLI command** to deny a *queued/headless* pending approval: `approval` exposes `approve` but no `deny`/`reject` for an already-paused run. A small, well-scoped `feat:` — `approval deny <call_id>` recording `tool_call_denied`. |
 | G16 | **Pending-approval durability asymmetry — no expiry on main path.** The subagent approval queue auto-times-out (`pending_request_timeout_seconds: 3600`), but the main `tool_call_pending_approval`/`run_paused` path has no expiry — `pending_approval_for_run` clears only on approve/deny/complete/fail, so a paused run that never resumes stays pending forever. With G15 (no reject), a declined-but-unactionable approval lingers indefinitely. |
+| G17 | **TUI cockpit tabs unreachable — dead code.** `CockpitScreenRenderer`/`CockpitDataManager`/`CockpitTab` (WORKFLOWS/APPROVALS/COSTS/MEMORY/BACKGROUND) are defined and re-exported from `teaagent.tui` but nothing instantiates them — no command/keybinding/render path reaches the tabbed screens. `core.py` refreshes `build_control_cockpit` data but never renders the tabbed UI. The spec's §3.1 "TUI tabs" half of cockpit acceptance can't be exercised. |
 
 ## Denial candidate (owner adjudication)
 
