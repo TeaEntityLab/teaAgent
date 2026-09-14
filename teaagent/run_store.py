@@ -411,6 +411,12 @@ class RunStore(AbstractStore[list[dict[str, Any]]]):
             self._corrupt_count += 1
             return None
         run_id = events[0].get('run_id')
+        if run_id == 'pending':
+            # Pending loggers may write 'run_id': 'pending' before the real run_id
+            # is assigned; the file is later renamed to the real run_id by
+            # logger_for_result.  Prefer the filename in that case so the index
+            # remains resolvable.
+            run_id = path.stem
         if not isinstance(run_id, str) or not run_id:
             return None
         task = ''

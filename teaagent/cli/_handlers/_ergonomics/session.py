@@ -115,10 +115,20 @@ def session_list_command(args: argparse.Namespace) -> int:
     store = AgentExecutionFactory(args.root).create_run_store(readonly=True)
     rows = []
     for summary in store.list_runs(limit=args.limit):
-        row = summary.to_dict()
-        row['heartbeat'] = store.heartbeat_for_run(summary.run_id)
-        row['pending_approval'] = store.pending_approval_for_run(summary.run_id)
-        rows.append(row)
+        # Some older indexed runs carry the placeholder run_id 'pending' even
+        # though the file was renamed to the real run_id.  Recover from the
+        # filename, and skip any run that no longer exists on disk.
+        run_id = summary.run_id
+        if run_id == 'pending' and not summary.path.stem.startswith('pending-'):
+            run_id = summary.path.stem
+        try:
+            row = summary.to_dict()
+            row['run_id'] = run_id
+            row['heartbeat'] = store.heartbeat_for_run(run_id)
+            row['pending_approval'] = store.pending_approval_for_run(run_id)
+            rows.append(row)
+        except FileNotFoundError:
+            pass
     from teaagent.scratchpad import Scratchpad
 
     scratchpad = Scratchpad(Path(args.root))
