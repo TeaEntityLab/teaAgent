@@ -499,7 +499,9 @@ def _watch(subparsers: argparse._SubParsersAction, handler: Callable) -> None:
 
 def _journal(subparsers: argparse._SubParsersAction, handlers: dict) -> None:
     p = subparsers.add_parser(
-        'journal', help='Write today daily markdown journal under .teaagent/daily/.'
+        'journal',
+        help='Write today daily markdown journal under .teaagent/daily/; `journal list` lists files.',
+        description='Write today daily markdown journal under .teaagent/daily/. Use `journal list` to list existing journal files.',
     )
     p.add_argument('--root', default='.')
     p.add_argument('provider', nargs='?', default=None, metavar='provider')
