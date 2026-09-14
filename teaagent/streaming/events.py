@@ -95,7 +95,7 @@ def audit_event_to_stream_event(event: AuditEvent) -> Optional[StreamEvent]:
             },
         )
     if event.event_type == 'run_completed':
-        return StreamEvent('run_completed', {'run_id': payload.get('run_id')})
+        return StreamEvent('run_completed', {'run_id': event.run_id})
     if event.event_type == 'approval_required':
         return StreamEvent('approval_required', dict(payload))
     return None
