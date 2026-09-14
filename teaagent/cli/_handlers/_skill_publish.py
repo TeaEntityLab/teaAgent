@@ -15,7 +15,7 @@ from teaagent.tsb_format import (
 )
 
 
-def skill_publish_command(args: argparse.Namespace) -> int:
+def skill_publish_tsb_command(args: argparse.Namespace) -> int:
     """Publish a skill with cryptographic attestation.
 
     Args:

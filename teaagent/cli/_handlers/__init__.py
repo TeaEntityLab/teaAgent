@@ -147,6 +147,7 @@ from ._goal import goal_list_command, goal_status_command
 from ._marketplace import (
     skill_install_marketplace_command,
     skill_marketplace_list_command,
+    skill_publish_command,
     skill_search_command,
 )
 from ._mcp import mcp_serve_command
@@ -244,7 +245,7 @@ from ._skill import (
     skill_health_command,
 )
 from ._skill_publish import (
-    skill_publish_command,
+    skill_publish_tsb_command,
     skill_verify_tsb_command,
 )
 from ._surfaces import surfaces_explain_command
@@ -353,7 +354,7 @@ __all__ = [
     'health_command',
     'metrics_command',
     'credentials_rotate_command',
-    'skill_publish_command',
+    'skill_publish_tsb_command',
     'skill_verify_tsb_command',
     'chat_command',
     'clarify_command',

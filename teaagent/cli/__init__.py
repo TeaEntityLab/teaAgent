@@ -219,6 +219,7 @@ from teaagent.cli._handlers import (  # noqa: E402
     skill_install_marketplace_command,
     skill_marketplace_list_command,
     skill_publish_command,
+    skill_publish_tsb_command,
     skill_search_command,
     skill_verify_tsb_command,
     start_tui,
@@ -523,7 +524,7 @@ def build_parser() -> argparse.ArgumentParser:
             'search': skill_search_command,
             'marketplace-list': skill_marketplace_list_command,
             'install-from-marketplace': skill_install_marketplace_command,
-            'publish_tsb': skill_publish_command,
+            'publish_tsb': skill_publish_tsb_command,
             'verify_tsb': skill_verify_tsb_command,
         },
     )
