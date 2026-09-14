@@ -523,6 +523,7 @@ class RunStore(AbstractStore[list[dict[str, Any]]]):
             pending_approval=pending_approval,
             token_pressure=token_pressure,
             origin=run_origin,
+            warnings=warnings,
         )
 
     def health_report(self) -> dict[str, Any]:
