@@ -472,8 +472,9 @@ def _execute_agent_task(  # noqa: C901
             adapter = args._adapter_factory(
                 args.provider,
                 model=selected_model,
-                transport=TracingHTTPTransport(adapter.transport, tracer),
             )
+            if hasattr(adapter, 'transport'):
+                adapter.transport = TracingHTTPTransport(adapter.transport, tracer)
         except Exception as exc:
             print(f'Telemetry setup failed: {exc}', file=sys.stderr)
 
