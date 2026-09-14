@@ -36,6 +36,7 @@ This document maps threats to mitigations and verification. It complements [tool
 | Workflow self-healing infinite recursion | High | `_execute_step` accepts `current_attempt` parameter preserved across recursive re-execution; abort guard checks attempts against max before proceeding | `tests/test_phase5_workflow_engine.py` | Previously `self_healing_attempts` reset to 0 on new `StepExecution` — now passed through recursion chain |
 | Workflow strict validation rollback never executed | High | `execute_workflow` integrates `UndoJournal` + `AuditLogger`; checks `result.requires_rollback` and calls `journal.restore()` on strict validation failure | `tests/test_remediation_p1_p2.py` (`WorkflowRollbackTests`), `tests/test_phase5_workflow_engine.py` | Previously `requires_rollback` flag set but never consumed — now triggers full workspace undo |
 | NFS / multi-writer JSONL corruption | High | Single-writer per workspace; `fcntl` + `atomic_write_text` on supported local FS; SQLite for Context Bus / OAuth | ADR 0008, `teaagent selftest` | Do not share `.teaagent/runs/*.jsonl` across concurrent hosts on NFS without DB migration |
+| Agent misalignment / overeager action (insider-threat class) | High | Harness-as-boundary controls in this table — plan gate, `ApprovalPolicy`, `RunBudget`, hash-chained audit | Post-hoc audit review (`teaagent runs export`); no live trajectory monitor | Agent itself is the actor within granted permissions; most real incidents are misinterpretation/overeagerness, not adversarial intent — see Insider-Threat section |
 
 ## Trust Boundaries
 
@@ -44,6 +45,35 @@ Trusted:   TeaAgent harness (Runner, Policy, Audit, built-in workspace tools)
 Reviewed:  Project plugins, MCP servers, skills (manifest + human enable)
 Untrusted: Model output, external MCP payloads, arbitrary plugin handlers
 ```
+
+## Insider-Threat / Agent-Misalignment Class
+
+The table above frames threats as *external* attack vectors (injection,
+traversal, tampering, supply-chain). The 2026-09-13 vendor-direction survey
+(`.teaagent/reviews/vendor-directions-2026-09-13/survey-record.md`,
+gitignored) surfaced a distinct class that framing misses: **the agent itself
+as an insider threat**. DeepMind's AI Control roadmap treats a capable agent
+operating *within* its granted permissions as the actor to contain — a MITRE
+ATT&CK-derived taxonomy with trusted-AI supervisors monitoring reasoning,
+actions, and plans.
+
+Two properties separate this class from the external-attacker rows:
+
+- **The actor is authorized.** The agent holds real tool permissions; harm
+  comes from *misuse of granted capability*, not from breaching a boundary.
+  Containment is therefore about scoping and observing legitimate power, not
+  keeping an intruder out.
+- **Most incidents are not adversarial.** DeepMind's analysis of ~1M
+  coding-agent trajectories found the majority of flagged events were
+  *misinterpretation or overeagerness*, not hostile intent — so the control
+  target is the agent's own judgment, not an attacker's.
+
+Current posture: the harness-as-boundary controls in the table (plan gate,
+`ApprovalPolicy`, `RunBudget`, hash-chained audit) already bound what an
+insider-agent *can* do, and the audit trail supports **post-hoc** review
+(`teaagent runs export`). The open gap is **live supervision** — a trusted
+reviewer pass over the in-flight trajectory with coverage/recall/
+time-to-response metrics — tracked as **VND-001** (Proposed, owner-gated).
 
 ## Operator Checklist (High-Risk Repos)
 
