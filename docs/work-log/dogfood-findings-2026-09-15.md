@@ -42,12 +42,14 @@
 | G12 | `--approve-call-id` deprecated and ignored but still accepted — a stale flag silently does nothing. |
 | G13 | `doctor all` `ok:False` counts unconfigured optional providers as failure — an operator can't tell "no providers configured" from "something broken". (Docs frame it as a readiness gate — may be intended.) |
 | G14 | ANP dead surface — `agent run` ANP path is a stub. |
+| G15 | **No reject/cancel path for pending approvals.** `approval` offers only `approve` (executes the call); `runs`/`agent` expose no `reject`/`cancel`/`abort`. An operator who wants to *decline* a pending destructive call has no surface — approve it or leave it pending forever. The deny/reject half of the approval decision is missing. |
 
 ## Denial candidate (owner adjudication)
 
 | # | Candidate |
 |---|---|
 | D1 | 1 `subagent_launch` denial in the H4 shadow receipts — needs owner verdict (false-positive classification is owner-only per ADR-0031 exit criterion 1). |
+
 
 ## H4 evidence produced (B2 complete)
 
