@@ -67,6 +67,8 @@ class TeaAgentTUI:
         model: Optional[str] = None,
         root: str | Path = '.',
         _root_explicit: bool = False,
+        _provider_explicit: bool = False,
+        _model_explicit: bool = False,
         allow_destructive: bool = False,
         permission_mode: PermissionMode = PermissionMode.PROMPT,
         input_fn: Optional[InputFn] = None,
@@ -89,6 +91,8 @@ class TeaAgentTUI:
         self.route_model_enabled = False
         self.root = Path(root).resolve()
         self._root_explicit = _root_explicit
+        self._provider_explicit = _provider_explicit
+        self._model_explicit = _model_explicit
         self.allow_destructive = allow_destructive
         self.permission_mode = permission_mode
         self.progress = True
@@ -1434,8 +1438,10 @@ class TeaAgentTUI:
             return
         if not isinstance(data, dict):
             return
-        self.provider = data.get('provider', self.provider)
-        self.model = data.get('model', self.model)
+        if not self._provider_explicit:
+            self.provider = data.get('provider', self.provider)
+        if not self._model_explicit:
+            self.model = data.get('model', self.model)
         if not self._root_explicit:
             # Only restore root from state when no explicit --root was provided
             # AND the state has a root value (TASK-DD2-002)
@@ -1491,7 +1497,7 @@ class TeaAgentTUI:
 
         defaults = load_workspace_defaults(self.root)
         provider = defaults.get('provider')
-        if isinstance(provider, str) and provider:
+        if not self._provider_explicit and isinstance(provider, str) and provider:
             self.provider = provider
         if self.provider is None:
             self.provider = 'gpt'

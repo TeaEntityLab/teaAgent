@@ -135,6 +135,8 @@ def run_tui(
         model=model,
         root=root,
         _root_explicit=_root_explicit,
+        _provider_explicit=provider is not None,
+        _model_explicit=model is not None,
         allow_destructive=allow_destructive,
         permission_mode=permission_mode,
         input_fn=input_fn,
