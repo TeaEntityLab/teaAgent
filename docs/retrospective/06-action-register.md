@@ -83,6 +83,7 @@ Legend: ✅ Done (committed) · 🟡 In progress · ⬜ Not started · 🔵 Alre
 | U-P2-3 | UX | Fix undo-scope divergence and update the known-issues document. | `teaagent/tui/core.py:1063-1079` | Undo scope consistent; known-issues updated. | ✅ | TUI undo is journal-only with no global checkpoint fallback; `tests/tui/test_tui_undo_scope.py`; current operator docs updated |
 | U-P2-4 | UX | Improve `--task` ergonomics with an alias or CLI hint; prominently document the provider/task order flip. | `teaagent/cli/_agent_parsers.py:63-95` | Alias or hint added; documented prominently. | ✅ | Invalid `--task` usage emits the positional-task hint and `docs/USAGE.md` documents provider/task order; `tests/test_cli_run_error_formatting.py` |
 | U-P2-5 | UX | Minor: duplicate `undo` help line, `--chat-mode` docstring, `['*']` "Explicit current directory" comment. | `teaagent/tui/rendering.py:50,81`; `_chat.py:3,15`; `core.py:1329` | Cleaned up. | ✅ | Duplicate undo help fixed (guarded by `tests/tui/test_tui_command_truth.py`); `--chat-mode` docstrings corrected in `_chat.py` (it delegates to `run_tui`, no such flag); the misleading `['*']` "Explicit current directory" comments corrected to accurate wildcard wording in `core.py` / `agent_helpers.py` / `_agent/approval.py`. NOTE: `'*'` is an fnmatch wildcard matching ALL paths (the grant is limited by session+tool scope, not the path pattern) — the question of whether path-narrowed scoping is intended is flagged for separate review. |
+| U-P2-6 | UX | Add `journal list` subcommand to list daily journal files under `.teaagent/daily/`. | `teaagent/cli/_ergonomics_parsers.py`; `teaagent/cli/_handlers/_ergonomics/recipes.py`; `teaagent/cli/__init__.py` | `teaagent journal list` emits JSON journal entries (name/path/size/mtime); `teaagent journal <provider>` still writes today's journal; ergonomics tests pass. | ✅ | Implemented 2026-09-14 under owner-override dogfood direction; `journal list` dispatches through `daily_journal_command` when `provider == 'list'` to avoid argparse subparser/positional conflict. |
 
 ## Statistics
 
@@ -90,12 +91,12 @@ Legend: ✅ Done (committed) · 🟡 In progress · ⬜ Not started · 🔵 Alre
 | --- | --- | --- |
 | P0 | 9 | Security 3, Architecture 2, UX 2, Governance 2 |
 | P1 | 18 | Security 4, Governance 3, Architecture 5, UX 6 (including cross-dimensional items) |
-| P2 | 33 | Security 11, Governance 10, Architecture 7, UX 5 |
-| **Total** | **60** | |
+| P2 | 34 | Security 11, Governance 10, Architecture 7, UX 6 |
+| **Total** | **61** | |
 
 ### Status Summary
 
-| ✅ Done (verified) | 58 | S-P0-1, S-P0-2, S-P0-3, A-P0-1, A-P0-2, U-P0-1, U-P0-2, G-P0-1, G-P0-2; S-P1-1, S-P1-2, S-P1-3, S-P1-4, G-P1-1, G-P1-2, G-P1-3, A-P1-1, A-P1-2, A-P1-3, A-P1-4, A-P1-5, U-P1-1, U-P1-2, U-P1-3, U-P1-4, U-P1-5, U-P1-6; S-P2-1, S-P2-4, S-P2-5, S-P2-6, S-P2-7, S-P2-8, S-P2-9, S-P2-10, S-P2-11, G-P2-1, G-P2-2, G-P2-3, G-P2-5, G-P2-6, G-P2-7, G-P2-8, G-P2-9, G-P2-10, G-P2-11, G-P2-12, G-P2-13, A-P2-1, A-P2-2, A-P2-3, A-P2-5, A-P2-6, A-P2-7, U-P2-1, U-P2-2, U-P2-3, U-P2-4, U-P2-5 |
+| ✅ Done (verified) | 59 | S-P0-1, S-P0-2, S-P0-3, A-P0-1, A-P0-2, U-P0-1, U-P0-2, G-P0-1, G-P0-2; S-P1-1, S-P1-2, S-P1-3, S-P1-4, G-P1-1, G-P1-2, G-P1-3, A-P1-1, A-P1-2, A-P1-3, A-P1-4, A-P1-5, U-P1-1, U-P1-2, U-P1-3, U-P1-4, U-P1-5, U-P1-6; S-P2-1, S-P2-4, S-P2-5, S-P2-6, S-P2-7, S-P2-8, S-P2-9, S-P2-10, S-P2-11, G-P2-1, G-P2-2, G-P2-3, G-P2-5, G-P2-6, G-P2-7, G-P2-8, G-P2-9, G-P2-10, G-P2-11, G-P2-12, G-P2-13, A-P2-1, A-P2-2, A-P2-3, A-P2-5, A-P2-6, A-P2-7, U-P2-1, U-P2-2, U-P2-3, U-P2-4, U-P2-5, U-P2-6 |
 | 🟡 In progress | 0 | — |
 | ⬜ Not started | 0 | — |
 | 🔵 Already existed | 4 | S-P2-2, S-P2-3, G-P2-4, A-P2-4 |

@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import subprocess
 import time
+from pathlib import Path
 
 from teaagent.approval import parse_permission_mode
 from teaagent.cli._handlers._misc import print_json
@@ -129,6 +130,8 @@ def watch_command(args: argparse.Namespace) -> int:
 
 
 def daily_journal_command(args: argparse.Namespace) -> int:
+    if args.provider == 'list':
+        return journal_list_command(args)
     defaults = load_workspace_defaults(args.root)
     provider = args.provider or defaults.get('provider')
     if not provider:
@@ -144,4 +147,24 @@ def daily_journal_command(args: argparse.Namespace) -> int:
     )
     path = write_daily_journal(brief, root=args.root)
     print_json({'ok': True, 'path': str(path)})
+    return 0
+
+
+def journal_list_command(args: argparse.Namespace) -> int:
+    """List daily journal files under .teaagent/daily/."""
+    daily_dir = Path(args.root) / '.teaagent' / 'daily'
+    if not daily_dir.exists():
+        print_json({'journals': []})
+        return 0
+    entries: list[dict[str, object]] = [
+        {
+            'name': f.name,
+            'path': str(f),
+            'size': f.stat().st_size,
+            'mtime': f.stat().st_mtime,
+        }
+        for f in daily_dir.glob('*.md')
+    ]
+    entries.sort(key=lambda j: j['mtime'], reverse=True)  # type: ignore[arg-type,return-value]
+    print_json({'journals': entries})
     return 0

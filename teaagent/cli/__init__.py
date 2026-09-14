@@ -153,6 +153,7 @@ from teaagent.cli._handlers import (  # noqa: E402
     health_command,
     init_command,
     interactive_review_command,
+    journal_list_command,
     mcp_serve_command,
     mcp_trust_allow_command,
     mcp_trust_audit_command,
@@ -701,6 +702,7 @@ def build_parser() -> argparse.ArgumentParser:
             'ci_review': ci_review_command,
             'watch': watch_command,
             'daily_journal': daily_journal_command,
+            'journal_list': journal_list_command,
         },
     )
     register_model(

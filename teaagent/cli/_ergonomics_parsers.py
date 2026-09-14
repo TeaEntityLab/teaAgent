@@ -30,7 +30,7 @@ def register(
     _permission(subparsers, handlers['permission_explain'])
     _ci(subparsers, handlers['ci_review'])
     _watch(subparsers, handlers['watch'])
-    _journal(subparsers, handlers['daily_journal'])
+    _journal(subparsers, handlers)
 
 
 def _yesterday(subparsers: argparse._SubParsersAction, handler: Callable) -> None:
@@ -497,7 +497,7 @@ def _watch(subparsers: argparse._SubParsersAction, handler: Callable) -> None:
     p.set_defaults(func=handler, command='watch')
 
 
-def _journal(subparsers: argparse._SubParsersAction, handler: Callable) -> None:
+def _journal(subparsers: argparse._SubParsersAction, handlers: dict) -> None:
     p = subparsers.add_parser(
         'journal', help='Write today daily markdown journal under .teaagent/daily/.'
     )
@@ -515,7 +515,7 @@ def _journal(subparsers: argparse._SubParsersAction, handler: Callable) -> None:
         choices=['lean', 'balanced', 'deep'],
         default='balanced',
     )
-    p.set_defaults(func=handler, command='journal')
+    p.set_defaults(func=handlers['daily_journal'], command='journal')
 
 
 def _permission(
