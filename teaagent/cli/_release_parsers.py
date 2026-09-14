@@ -28,8 +28,11 @@ def _evidence(
     )
     p.add_argument(
         '--profile',
+        dest='release_profile',
         choices=('release', 'full', 'counts-only'),
         default='release',
+        help='Evidence-collection profile (distinct from the global --profile '
+        'config selector).',
     )
     p.add_argument(
         '--root',

@@ -11,7 +11,7 @@ from teaagent.release_evidence import (
 
 def release_evidence_command(args: argparse.Namespace) -> int:
     bundle = build_release_evidence_bundle(
-        profile=getattr(args, 'profile', 'release'),
+        profile=getattr(args, 'release_profile', 'release'),
         root=getattr(args, 'root', None),
     )
     write_release_evidence_bundle(bundle, args.output)
