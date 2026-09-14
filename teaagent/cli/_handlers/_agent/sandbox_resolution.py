@@ -241,13 +241,17 @@ def resolve_git_sandbox_after_run(
     if not interactive:
         # Headless runs should not emit prompts or extra stdout that would
         # corrupt the JSON completion payload. Keep the sandbox branch for
-        # review and record the resolution without user interaction.
+        # review — but actually invoke keep() so the working tree is restored
+        # to the original branch (recording 'keep' without calling it left
+        # HEAD stranded on the sandbox branch, nesting the next run).
+        keep_result = sandbox.keep()
         record_git_sandbox_resolved(
             audit,
             run_id,
             sandbox,
             resolution='keep',
-            success=True,
+            success=keep_result.success,
+            error=keep_result.error,
         )
         return
 

@@ -1,7 +1,7 @@
-# Risk Report — `GitBranchSandbox.keep()` restores original branch
+# Risk Report — sandbox `keep()` + headless resolution restore original branch
 
-**Date:** 2026-09-14 · **Scope:** `teaagent/sandbox/_git_branch.py` `keep()` only
-**High-risk path touched:** `teaagent/sandbox/_git_branch.py` (sandbox lifecycle)
+**Date:** 2026-09-14 · **Scope:** `teaagent/sandbox/_git_branch.py` `keep()` + `teaagent/cli/_handlers/_agent/sandbox_resolution.py` headless path
+**High-risk paths touched:** `teaagent/sandbox/_git_branch.py`, `teaagent/cli/_handlers/_agent/sandbox_resolution.py` (sandbox lifecycle)
 
 ## What changes
 
@@ -15,6 +15,12 @@ teaagent-sandbox-bd0b…`).
 `keep()` now `git checkout`s back to `_original_branch` before popping the
 stash, matching `merge()`/`rollback()`/`discard()`, while still preserving the
 sandbox branch (not deleted) for review.
+
+The headless path in `resolve_git_sandbox_after_run` compounded this: it
+recorded `resolution='keep'` in the audit trail but never invoked
+`sandbox.keep()`, so the branch was never restored even after `keep()` was
+fixed. It now calls `sandbox.keep()` and records the real result (success +
+error), so the audit event reflects what actually happened.
 
 ## Risk assessment
 
