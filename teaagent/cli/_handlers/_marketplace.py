@@ -30,7 +30,8 @@ def skill_search_command(args: Namespace) -> int:
 
     registry = MarketplaceRegistry(args.root, readonly=True)
     results = registry.search(args.query, tag=args.tag, limit=args.limit)
-    if args.json:
+    if args.json or not results:
+        # Emit a JSON array when empty so the command isn't silent.
         print(json.dumps([e.to_dict() for e in results]))
     else:
         for e in results:
@@ -43,7 +44,9 @@ def skill_marketplace_list_command(args: Namespace) -> int:
 
     registry = MarketplaceRegistry(args.root, readonly=True)
     entries = registry.list(limit=args.limit)
-    if args.json:
+    if args.json or not entries:
+        # Emit a JSON array when empty so the command isn't silent — matches
+        # goal list / background list / cloud list which print [].
         print(json.dumps([e.to_dict() for e in entries]))
     else:
         for e in entries:
