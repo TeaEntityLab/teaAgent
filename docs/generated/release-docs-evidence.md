@@ -1,7 +1,7 @@
 # Release Documentation Evidence Bundle (Generated)
 
-**Generated:** 2026-09-14T22:40:42+00:00
-**Git commit:** `dfe2f4cd440104aedcfcbc9273544ed2f476a684` on `main`
+**Generated:** 2026-09-14T22:41:56+00:00
+**Git commit:** `2d3a868350f130d698458eb389d42f056439f932` on `main`
 **Working tree dirty:** yes
 
 Regenerate: `python3 scripts/build_release_docs_evidence_bundle.py`
