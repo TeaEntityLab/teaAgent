@@ -1,11 +1,11 @@
 {
   "ok": true,
-  "created_at": "2026-09-14T00:05:46+00:00",
+  "created_at": "2026-09-14T04:33:00+00:00",
   "repo_root": "/Users/teee/dev/teaagent",
   "git": {
     "branch": "main",
-    "commit": "314fa2d7a14085994e2a45e899404ec0c77230ca",
-    "dirty": false
+    "commit": "a7534ad04a41ffb77bd686f639affa6f721c2a62",
+    "dirty": true
   },
   "commands": [
     {
@@ -60,9 +60,9 @@
       {
         "id": "H4",
         "name": "Durable owner/agent operations",
-        "status": "On Hold — shadow wiring exists; ADR-0031 evidence packet prepared 2026-08-27, refreshed 2026-08-31 and re-verified 2026-09-12 over the closed decision window 2026-08-13→2026-09-11 (`prepare_h4_evidence.py --since 2026-08-13 --until 2026-09-11`: 0 observed / 0 reachable runs, verdict `unexercised`; `promotion_ready=false` is a hardcoded literal, not a metric); H4 demo `scripts/exercise_h4_shadow_demo.py` exercisable (2 synthetic candidates, must not launder into C1) and guarded (`tests/test_h4_shadow_demo.py`); 2026-09-12 expiry-day state: no dogfood session booked, zero new runs and zero new friction entries since review, so promotion is unreachable — the decision due today is the owner's: extend only with a dated dogfood session booked, else revert (default)",
+        "status": "On Hold — shadow wiring exists; ADR-0031 evidence packet prepared 2026-08-27, refreshed 2026-08-31 and re-verified 2026-09-12 over the closed decision window 2026-08-13→2026-09-11 (`prepare_h4_evidence.py --since 2026-08-13 --until 2026-09-11`: 0 observed / 0 reachable runs, verdict `unexercised`; `promotion_ready=false` is a hardcoded literal, not a metric); H4 demo `scripts/exercise_h4_shadow_demo.py` exercisable (2 synthetic candidates, must not launder into C1) and guarded (`tests/test_h4_shadow_demo.py`); 2026-09-12 expiry-day state: no dogfood session booked, zero new runs and zero new friction entries since review, so promotion is unreachable — owner decided 2026-09-14: extend with a booked co-maintainer dogfood session (new window close set on booking)",
         "confidence": "Low",
-        "next_gate": "Owner decision on ADR-0031 today 2026-09-12 (extend-with-booked-session or revert); EFX live-proof closure remains pending owner authorization"
+        "next_gate": "Owner to book the co-maintainer dogfood session (sets the new ADR-0031 window close); EFX live-proof closure remains pending owner authorization"
       },
       {
         "id": "H6",
