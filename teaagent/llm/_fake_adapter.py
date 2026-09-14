@@ -25,7 +25,7 @@ class FakeLLMAdapter:
     ) -> None:
         self.provider = provider
         self.model = model
-        self._responses = responses or []
+        self._responses = responses or self._load_script_from_env()
         self._call_count = 0
 
         # Add a fake config for compatibility with code that expects it
@@ -49,6 +49,47 @@ class FakeLLMAdapter:
                 return self.base_url
 
         self.config = FakeProviderConfig(provider, model)
+
+    @staticmethod
+    def _load_script_from_env() -> list[LLMResponse]:
+        """Load scripted responses from ``TEAAGENT_FAKE_SCRIPT`` JSON file.
+
+        Each entry is ``{"type": "final"|"tool", ...}`` matching the wire
+        decision format. Enables offline dogfooding of tool-call, undo, and
+        approval flows without a real provider.
+        """
+        import json
+        import os
+
+        path = os.environ.get('TEAAGENT_FAKE_SCRIPT')
+        if not path:
+            return []
+        try:
+            with open(path) as f:
+                data = json.loads(f.read())
+        except (OSError, json.JSONDecodeError):
+            return []
+        if not isinstance(data, list):
+            return []
+        responses: list[LLMResponse] = []
+        for entry in data:
+            if not isinstance(entry, dict):
+                continue
+            if entry.get('type') == 'tool':
+                responses.append(
+                    create_fake_tool_call_response(
+                        tool_name=str(entry.get('tool_name', '')),
+                        tool_input=entry.get('arguments', {}),
+                        call_id=str(entry.get('call_id', 'fake-call-id')),
+                    )
+                )
+            else:
+                content = str(entry.get('content', 'Fake response'))
+                # Wrap plain text in the decision JSON the runner expects.
+                if not content.startswith('{'):
+                    content = json.dumps({'type': 'final', 'content': content})
+                responses.append(create_fake_text_response(content=content))
+        return responses
 
     def complete(self, request: LLMRequest) -> LLMResponse:
         """Return the next scripted response, or a default response if none available."""

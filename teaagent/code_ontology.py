@@ -130,7 +130,11 @@ class CodeOntologyGraph:
                 COALESCE(caller.file_path, callee.file_path) as file_path
             """
 
-        return self.graph_store.query(cypher, params=params)
+        results = self.graph_store.query(cypher, params=params)
+        # OPTIONAL MATCH produces a row of nulls when the entity exists but
+        # has no edges in that direction — drop them so callers see [] not
+        # [{name: null, ...}].
+        return [r for r in results if r.get('name') is not None]
 
     def query_inheritance_chain(self, class_name: str) -> list[dict[str, Any]]:
         """Query inheritance hierarchy for a class.
@@ -195,8 +199,37 @@ class CodeOntologyBuilder:
         if extensions is None:
             extensions = ['.py']
 
+        # Skip dependency caches, virtualenvs, and vendored trees — they
+        # produce thousands of noise nodes and drown out the project source.
+        _EXCLUDE_DIRS = {
+            '.git',
+            '.hg',
+            '.svn',
+            '.tox',
+            '.venv',
+            'venv',
+            'env',
+            'node_modules',
+            '__pycache__',
+            '.mypy_cache',
+            '.pytest_cache',
+            '.ruff_cache',
+            '.uv-cache',
+            '.teaagent',
+            'dist',
+            'build',
+            '.eggs',
+            '*.egg-info',
+        }
+
         for ext in extensions:
             for file_path in self.root.rglob(f'*{ext}'):
+                # Skip files inside excluded directories.
+                if any(
+                    part in _EXCLUDE_DIRS or part.endswith('.egg-info')
+                    for part in file_path.relative_to(self.root).parts
+                ):
+                    continue
                 self._parse_file(file_path)
 
     def _parse_file(self, file_path: Path) -> None:
