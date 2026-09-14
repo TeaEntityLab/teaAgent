@@ -576,23 +576,22 @@ def test_clear_config_cache():
     assert len(config_loader._CONFIG_CACHE) == 0
 
 
-def test_config_resolver_with_relative_path():
+def test_config_resolver_with_relative_path(tmp_path) -> None:
     """Test that ConfigResolver handles relative paths."""
-    rc = ConfigResolver(workspace_root='.')
+    (tmp_path / '.teaagent').mkdir()
+    rc = ConfigResolver(workspace_root=str(tmp_path))
     result = rc.resolve()
-    # Should handle relative path
+    # Should handle relative path and fall back to defaults when no config exists
     assert isinstance(result, ResolvedConfig)
     assert result.get('permission_mode') == 'prompt'
 
 
-def test_config_resolver_with_absolute_path():
+def test_config_resolver_with_absolute_path(tmp_path) -> None:
     """Test that ConfigResolver handles absolute paths."""
-    import os
-
-    abs_path = os.path.abspath('.')
-    rc = ConfigResolver(workspace_root=abs_path)
+    (tmp_path / '.teaagent').mkdir()
+    rc = ConfigResolver(workspace_root=str(tmp_path.resolve()))
     result = rc.resolve()
-    # Should handle absolute path
+    # Should handle absolute path and fall back to defaults when no config exists
     assert isinstance(result, ResolvedConfig)
     assert result.get('permission_mode') == 'prompt'
 
