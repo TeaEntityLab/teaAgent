@@ -248,6 +248,20 @@ def agent_runs_export(args: argparse.Namespace) -> int:
     return 0
 
 
+def agent_runs_review(args: argparse.Namespace) -> int:
+    from teaagent.run_review import review_run
+    from teaagent.run_trace import dumps_export
+
+    store = AgentExecutionFactory(args.root).create_run_store(readonly=True)
+    try:
+        events = store.show_run(args.run_id)
+    except FileNotFoundError as exc:
+        print_json({'status': 'error', 'message': str(exc)})
+        return 1
+    print(dumps_export(review_run(events, run_id=args.run_id)))
+    return 0
+
+
 def agent_runs_replay(args: argparse.Namespace) -> int:
     from teaagent.run_trace import dumps_export, replay_dry_run
 

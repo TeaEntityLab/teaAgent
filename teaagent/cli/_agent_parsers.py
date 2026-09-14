@@ -1167,6 +1167,12 @@ def _runs(
     )
     replay_p.add_argument('run_id')
     replay_p.set_defaults(func=handlers['replay'])
+    review_p = run_subs.add_parser(
+        'review',
+        help='Post-run insider-threat review: classify tool calls, report coverage.',
+    )
+    review_p.add_argument('run_id')
+    review_p.set_defaults(func=handlers['review'])
 
     commit_p = run_subs.add_parser(
         'commit', help='Commit changes from a run with metadata.'

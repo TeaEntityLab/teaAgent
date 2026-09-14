@@ -77,6 +77,7 @@ from .runs import (
     agent_runs_export,
     agent_runs_list,
     agent_runs_replay,
+    agent_runs_review,
     agent_runs_trace,
     agent_status_command,
 )
@@ -152,6 +153,7 @@ __all__ = [
     'agent_runs_export',
     'agent_runs_list',
     'agent_runs_replay',
+    'agent_runs_review',
     'agent_runs_trace',
     'agent_status_command',
     # subagent_review.py
