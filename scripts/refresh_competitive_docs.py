@@ -8,17 +8,23 @@ import sys
 import tempfile
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
+from types import ModuleType
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
-def _load_module(script_name: str):
+def _load_module(script_name: str) -> ModuleType:
     path = _REPO_ROOT / 'scripts' / script_name
     spec = spec_from_file_location(script_name.replace('.py', ''), path)
     if spec is None or spec.loader is None:
         raise RuntimeError(f'Unable to load {path}')
     module = module_from_spec(spec)
     sys.modules[spec.name] = module
+    # Ensure sibling scripts (e.g. docs_tier) are importable when this module is
+    # loaded outside a `python3 scripts/...` invocation (e.g. pytest).
+    scripts_dir = str(path.parent)
+    if scripts_dir not in sys.path:
+        sys.path.insert(0, scripts_dir)
     spec.loader.exec_module(module)
     return module
 
