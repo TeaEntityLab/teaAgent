@@ -36,7 +36,11 @@ def find_pending_approval_for_call_id(
 ) -> tuple[str, dict[str, Any]] | None:
     """Return ``(run_id, pending_payload)`` when *call_id* is queued."""
     for summary in store.list_runs(limit=limit):
-        pending = store.pending_approval_for_run(summary.run_id)
+        try:
+            pending = store.pending_approval_for_run(summary.run_id)
+        except FileNotFoundError:
+            # Stale index entry — run file deleted or never written.
+            continue
         if pending and pending.get('call_id') == call_id:
             return summary.run_id, pending
     return None

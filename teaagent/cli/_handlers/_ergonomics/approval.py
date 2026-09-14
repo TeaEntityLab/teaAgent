@@ -453,6 +453,17 @@ def approval_approve_command(args: argparse.Namespace) -> int:  # noqa: C901
             )
             defaults = load_workspace_defaults(args.root)
             if not ns.provider:
+                # Prefer the original run's provider over config — the
+                # suspended run was started with a specific provider and
+                # resuming with a different one is almost always wrong.
+                try:
+                    for event in store.show_run(target_run_id):
+                        if event.get('event_type') == 'run_started':
+                            ns.provider = event.get('payload', {}).get('provider')
+                            break
+                except FileNotFoundError:
+                    pass
+            if not ns.provider:
                 ns.provider = defaults.get('provider')
             if not ns.provider:
                 print_json(
