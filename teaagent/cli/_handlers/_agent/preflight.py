@@ -86,6 +86,14 @@ def agent_undo_command(args: argparse.Namespace) -> int:  # noqa: C901
 
     preview = getattr(args, 'preview', False)
 
+    # Fail fast when the named run doesn't exist — otherwise the git-sandbox
+    # preview path returns 0 for any run_id in a git repo.
+    try:
+        store.show_run(run_id)
+    except FileNotFoundError:
+        print_json({'status': 'error', 'message': f"run '{run_id}' not found"})
+        return 1
+
     # Try git sandbox rollback first
     git_sandbox = factory.create_git_sandbox(run_id=run_id)
     if git_sandbox.is_available():

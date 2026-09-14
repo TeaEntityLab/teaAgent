@@ -120,9 +120,16 @@ def _models_for_provider(provider: str, config_default: str) -> list[str]:
     return sorted(name for name in names if name)
 
 
-def build_capability_table() -> list[dict[str, Any]]:
+def build_capability_table(provider: str | None = None) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
-    for name, config in sorted(PROVIDER_CONFIGS.items()):
+    items = (
+        [(provider, PROVIDER_CONFIGS.get(provider))]
+        if provider
+        else sorted(PROVIDER_CONFIGS.items())
+    )
+    for name, config in items:
+        if config is None:
+            continue
         caps = dict(_PROVIDER_CAPABILITIES.get(name, {}))
         rows.append(
             {

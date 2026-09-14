@@ -86,6 +86,7 @@ def register(
     )
     capabilities.add_argument(
         '--provider',
+        dest='capability_provider',
         choices=available_providers(),
         default=None,
         help='Filter to one provider.',

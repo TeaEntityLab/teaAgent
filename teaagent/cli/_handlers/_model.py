@@ -68,13 +68,16 @@ def model_capabilities(args: argparse.Namespace) -> int:
         build_model_capability_table,
     )
 
+    # capability_provider is the --provider *filter* (distinct dest so the
+    # config-default provider is not mistaken for an explicit filter).
+    provider = getattr(args, 'capability_provider', None)
     if getattr(args, 'per_model', False) or getattr(args, 'model', None):
         print_json(
             build_model_capability_table(
-                provider=getattr(args, 'provider', None),
+                provider=provider,
                 model=getattr(args, 'model', None),
             )
         )
         return 0
-    print_json(build_capability_table())
+    print_json(build_capability_table(provider=provider))
     return 0
