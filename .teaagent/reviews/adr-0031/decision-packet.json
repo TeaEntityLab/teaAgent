@@ -38,11 +38,11 @@
   "event_type": "h4_governance_shadow",
   "note": "Candidate evidence only. owner_verdict/owner_note are owner-only; agents must not classify false positives (ADR-0031 exit criterion 1).",
   "observed_events": 5,
-  "reachable_runs": 12,
+  "reachable_runs": 13,
   "since": "2026-08-13",
   "skipped_malformed": 0,
   "synthetic_excluded": 0,
-  "total_events": 7371,
+  "total_events": 7383,
   "until": "2026-09-15",
   "verdict": "needs_review"
 }
