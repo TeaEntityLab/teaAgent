@@ -241,13 +241,19 @@ def workspace_openapi_command(args: argparse.Namespace) -> int:
 
 
 def completion_command(args: argparse.Namespace) -> int:
+
+    from teaagent.cli import build_parser
     from teaagent.llm import available_providers
 
-    top = (
-        'agent approval audit background ci clarify completion configure daily doctor guidance '
-        'graphqlite init journal mcp memory model recall recipes session status tui '
-        'ultrawork watch workspace yesterday run ask resume'
-    )
+    parser = build_parser()
+    top_commands: list[str] = []
+    if parser._subparsers:
+        for action in parser._subparsers._actions:
+            choices = getattr(action, 'choices', None)
+            if isinstance(choices, dict) and all(isinstance(k, str) for k in choices):
+                top_commands = sorted(choices)
+                break
+    top = ' '.join(top_commands)
     providers = ' '.join(available_providers())
     if args.shell == 'bash':
         print(f'complete -W "{top}" teaagent')
