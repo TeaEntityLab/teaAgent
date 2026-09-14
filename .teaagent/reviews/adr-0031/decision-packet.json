@@ -19,10 +19,10 @@
     {
       "denials": 0,
       "empty_weeks": [],
-      "observed_events": 1,
+      "observed_events": 4,
       "surface": "approval",
       "weeks": {
-        "2026-W38": 1
+        "2026-W38": 4
       }
     },
     {
@@ -37,12 +37,12 @@
   ],
   "event_type": "h4_governance_shadow",
   "note": "Candidate evidence only. owner_verdict/owner_note are owner-only; agents must not classify false positives (ADR-0031 exit criterion 1).",
-  "observed_events": 2,
-  "reachable_runs": 9,
+  "observed_events": 5,
+  "reachable_runs": 12,
   "since": "2026-08-13",
   "skipped_malformed": 0,
   "synthetic_excluded": 0,
-  "total_events": 7341,
-  "until": "2026-09-14",
+  "total_events": 7371,
+  "until": "2026-09-15",
   "verdict": "needs_review"
 }
