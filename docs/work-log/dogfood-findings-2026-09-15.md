@@ -128,7 +128,7 @@ implementation below; each lands under the provenance tag proposed above.
 | D1 | **Deferred** — needs more evidence before classifying. |
 | ADR-0031 | **Extend, conditioned on G1–G5** — new close date; promotion only after the safety-critical fixes land and are re-dogfooded. |
 
-## Re-dogfood of G1–G5 fixes (2026-09-15, post-`1611e71b`)
+## Re-dogfood of selected G1/G6/G22 fixes (ADR-0031 G1–G5 condition, 2026-09-15, post-`1611e71b`)
 
 - **G1 live**: with the strict preset applied, `approval check workspace_write_file --path /tmp/x.txt` returns `decision: deny` in both default and `--permission-mode allow`. Deny grants now block, not warn. (Probe grants revoked afterward.)
 - **G6 live**: `approval preset strict` now applies 2 deny grants with `path_globs: ["*"]` (`grants_skipped: []`) — was a no-op.
