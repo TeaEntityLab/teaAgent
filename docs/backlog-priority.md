@@ -71,7 +71,7 @@ was met on 2026-06-22; completing that intake does not authorize new work.
 | TASK-006 RunEvent taxonomy + M0 | `harness-migration` | **Done** — ADR-0032 run-event taxonomy; `teaagent/runner/_events.py` spine + audit dual-write (M0–M7 in work-log) |
 | TASK-001 constitution repositioning | `owner-override` | **Done (Human Review 2026-07-22)** — owner ratified harness-first positioning; no README/product-contract changes required |
 | TASK-002 docs tiering | `harness-migration` | **Done** — tier column in `docs/generated/docs-inventory.md` + aging dashboard; `check-docs-inventory` pre-commit regen |
-| TASK-003 test typing pass | `harness-migration` | **Done** — all 586 test files typed (contract/behavior/adversarial/lifecycle) per `scripts/audit_test_quality.py` |
+| TASK-003 test typing pass | `harness-migration` | **Done** — all 606 test files typed (contract/behavior/adversarial/lifecycle) per `scripts/audit_test_quality.py` |
 | TASK-004 flagship tests off deprecated approval | `governance-gap` | **Done (2026-07-01)** — G-P2-2 removed call-id preapproval; flagship uses `--approve-scoped`; see `work-log/task-004-blocked-2026-06-13.md` resolution |
 | TASK-007 friction log bootstrap | `friction-driven` | **Met (2026-06-22)** — 5/5 owner evidence entries (F2/F3/F6/F7/F8); DR-001 7b satisfied |
 | Phase 4–6 Beta (consensus, sandbox, control plane) | `owner-override` | Shipped; **freeze** new platform surface per T3/T4 |
