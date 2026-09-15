@@ -1,17 +1,17 @@
 {
-  "ok": true,
-  "created_at": "2026-09-15T16:17:02+00:00",
+  "ok": false,
+  "created_at": "2026-09-15T16:35:15+00:00",
   "repo_root": "/Users/teee/dev/teaagent",
   "git": {
     "branch": "main",
-    "commit": "5a47d4aa70daa05200dfd1c0d3004b3a9b308df9",
-    "dirty": false
+    "commit": "4589d55d597dd43541116add7240797563cb217a",
+    "dirty": true
   },
   "commands": [
     {
       "cmd": "/opt/homebrew/opt/python@3.14/bin/python3.14 scripts/validate_docs_consistency.py",
-      "exit_code": 0,
-      "stdout": "Risk register evidence coverage: 29/29 rows verified (100%)\nTicket index evidence coverage: 21/21 rows verified (100%)\nDocs consistency check passed.\n",
+      "exit_code": 1,
+      "stdout": "Risk register evidence coverage: 29/29 rows verified (100%)\nTicket index evidence coverage: 21/21 rows verified (100%)\nERROR: docs/generated/docs-inventory.md is out of date; run: python3 scripts/generate_docs_inventory.py\n",
       "stderr": ""
     },
     {
@@ -23,12 +23,11 @@
   ],
   "docs_freshness": {
     "scanned": 17,
-    "needs_attention": 5,
+    "needs_attention": 4,
     "by_owner": {
       "project": 1,
       "docs": 1,
       "verification": 1,
-      "roadmap": 1,
       "governance": 1
     },
     "stale_threshold_days": 90
