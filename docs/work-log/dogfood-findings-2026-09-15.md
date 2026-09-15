@@ -68,3 +68,36 @@
 - ADR-0031 sign-off (criterion 4) — the packet is ready.
 - The owner-driven TUI dogfood session (`m4-dogfood-2026-09-15.md`) — the one surface agents can't drive.
 - Adjudication of G1–G22 + D1 — each is a `feat:`/design change or a verdict, not a dogfooding step.
+
+## Owner adjudication triage (agent-proposed, 2026-09-15)
+
+Proposed DR-006 provenance per gap so adjudication is a sign-off, not an
+analysis session. These are proposals — the owner assigns the gate.
+`friction-driven` is not proposed anywhere: no friction-log entries exist to
+cite. Nothing here is scheduled by this table.
+
+| # | Proposed provenance | Owner decision needed | Suggested disposition |
+|---|---|---|---|
+| G1 | `governance-gap` | Should a matched deny grant block in every mode? | Fix `check_preset` to distinguish `deny` from no-preset; P0 |
+| G2 | `governance-gap` | Should `undo` refuse when HEAD is not on the sandbox branch? | Guard `rollback()` on a current-branch check; P0 |
+| G3 | `governance-gap` | Should headless runs always restore the original branch? | Restore-on-complete in `keep()`/run `finally`; P0 |
+| G4 | `governance-gap` | What is the §3.3 orphan-marker contract? | Emit `orphaned` when pid dies without a clean exit record |
+| G5 | `governance-gap` | Should all pending-approval surfaces share one unbounded query? | Single source: drop `limit=20` or paginate |
+| G6 | `governance-gap` | Should `preset strict` apply scoped denies, or be removed? | Give preset deny entries scope, or drop the preset |
+| G7 | `governance-gap` | What is the intended default RBAC role set? | Ship a default role or document empty-store semantics |
+| G8 | `governance-gap` | Should `assignee` resolve to `operator_id`? | Design decision, then wire the allow path |
+| G9 | `governance-gap` | Should the shadow observe all modes, not just prompt? | Design decision; affects H4 evidence validity |
+| G10 | `governance-gap` | — | `attach --resume` inherits the run's recorded provider; small fix |
+| G11 | `governance-gap` | Should an undecryptable trust policy fail closed? | Error on decrypt failure instead of reading as empty |
+| G12 | `governance-gap` | — | Remove or hard-error on `--approve-call-id` |
+| G13 | `governance-gap` | Is `ok:False`-on-unconfigured intended? | Split `configured` vs `unconfigured` in `doctor all` output |
+| G14 | `legacy-competitive` | Wire the ANP path or quarantine/delete it? | ADR-0043-style disposition |
+| G15 | `governance-gap` | — | Add `approval deny <call_id>` for paused runs (deny mechanism already exists) |
+| G16 | `governance-gap` | Should paused runs expire? | Add expiry or document the no-expiry intent |
+| G17 | `owner-override` | Wire the TUI cockpit tabs or delete them? | Decision gates G19/G20 |
+| G18 | `governance-gap` | — | Include `teaagent/tui/` in vulture + wire the gate into pre-commit |
+| G19 | `governance-gap` | (moot if G17 deletes) | Point APPROVALS tab at `tool_call_pending_approval` |
+| G20 | `governance-gap` | (moot if G17 deletes) | Point WORKFLOWS/COSTS tabs at real workflow data or relabel |
+| G21 | `governance-gap` | Which approval source is canonical? | Single source of truth for pending approvals |
+| G22 | `governance-gap` | — | Order audit promotion after sandbox resolution; promote the suspend logger |
+| D1 | owner verdict | True or false positive? | ADR-0031 criterion-1 input |
