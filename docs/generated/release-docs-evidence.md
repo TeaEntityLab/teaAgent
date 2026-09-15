@@ -1,8 +1,8 @@
 # Release Documentation Evidence Bundle (Generated)
 
-**Generated:** 2026-09-15T07:59:27+00:00
-**Git commit:** `da5d681841968c1f7785f3d86dcd3ec778455a81` on `main`
-**Working tree dirty:** no
+**Generated:** 2026-09-15T08:03:22+00:00
+**Git commit:** `e857f333dec500771bf8e474dd4a70f4b32e8c64` on `main`
+**Working tree dirty:** yes
 
 Regenerate: `python3 scripts/build_release_docs_evidence_bundle.py`
 
@@ -14,8 +14,8 @@ Regenerate: `python3 scripts/build_release_docs_evidence_bundle.py`
 
 ## Last Gate Run
 
-- Overall gate status: **pass**
-- `/opt/homebrew/opt/python@3.14/bin/python3.14 scripts/validate_docs_consistency.py` — **pass** (exit 0)
+- Overall gate status: **fail**
+- `/opt/homebrew/opt/python@3.14/bin/python3.14 scripts/validate_docs_consistency.py` — **fail** (exit 1)
 - `/opt/homebrew/opt/python@3.14/bin/python3.14 scripts/report_docs_aging.py --check` — **pass** (exit 0)
 
 ## Documentation Freshness
@@ -37,7 +37,7 @@ Regenerate: `python3 scripts/build_release_docs_evidence_bundle.py`
 - `H0` Claim and risk hygiene: **Complete** (confidence High, next gate H1)
 - `H1` Daily operator loop: **Complete** (confidence High, next gate H2)
 - `H2` Multi-surface continuity: **On Hold — M2 foundation complete** (confidence Medium, next gate Owner-validated continuity need)
-- `H4` Durable owner/agent operations: **On Hold — shadow wiring exists; ADR-0031 evidence packet prepared 2026-08-27, refreshed 2026-08-31 and re-verified 2026-09-12 over the closed decision window 2026-08-13→2026-09-11 (`prepare_h4_evidence.py --since 2026-08-13 --until 2026-09-11`: 0 observed / 0 reachable runs, verdict `unexercised`; `promotion_ready=false` is a hardcoded literal, not a metric); H4 demo `scripts/exercise_h4_shadow_demo.py` exercisable (2 synthetic candidates, must not launder into C1) and guarded (`tests/test_h4_shadow_demo.py`); 2026-09-12 expiry-day state: no dogfood session booked, zero new runs and zero new friction entries since review, so promotion is unreachable — owner decided 2026-09-14: extend with a booked co-maintainer dogfood session (new window close set on booking)** (confidence Low, next gate Dogfood session booked 2026-09-15 (background+cockpit, docs/work-log/m4-dogfood-2026-09-15.md) — new ADR-0031 window close 2026-09-15; EFX live-proof closure remains pending owner authorization)
+- `H4` Durable owner/agent operations: **On Hold — shadow wiring exists; ADR-0031 evidence packet prepared 2026-08-27, refreshed 2026-08-31 and re-verified 2026-09-12 over the closed decision window 2026-08-13→2026-09-11 (0 observed / 0 reachable, verdict `unexercised`); extended window 2026-08-13→2026-09-15 after the booked 2026-09-15 M4 dogfood: 9 observed (8 approval + 1 subagent_launch denial candidate) across 21 reachable runs, verdict `needs_review`, packet 4/5 prepared (criterion 4 human sign-off `human_required`); `promotion_ready=false` is a hardcoded literal, not a metric; H4 demo `scripts/exercise_h4_shadow_demo.py` exercisable (2 synthetic candidates, must not launder into C1) and guarded (`tests/test_h4_shadow_demo.py`); 2026-09-12 expiry-day state: no dogfood session booked, zero new runs and zero new friction entries since review, so promotion is unreachable — owner decided 2026-09-14: extend with a booked co-maintainer dogfood session (new window close set on booking)** (confidence Low, next gate Dogfood session booked 2026-09-15 (background+cockpit, docs/work-log/m4-dogfood-2026-09-15.md) — new ADR-0031 window close 2026-09-15; EFX live-proof closure remains pending owner authorization)
 - `H6` Owner packaging and local distribution: **On Hold — local proof exists; daily CLI unwired** (confidence Low, next gate Owner update friction + trust-boundary proof)
 - `M0` (1-2 weeks): **High** (next gate All 3 checks pass: `validate_docs_consistency.py`, `refresh_competitive_docs.py --check`, `teaagent tool lint --root .`)
 - `M1` (2-6 weeks): **High** (next gate CLI/TUI cockpit parity acceptance, run evidence summary acceptance, guided recovery acceptance)
