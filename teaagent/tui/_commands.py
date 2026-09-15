@@ -61,15 +61,12 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
         action = action[1:]
     args = parts[1:]
 
-    # Dispatch to command handler. Guarded so no single command can kill the
-    # REPL loop (cf. `show last` FileNotFoundError, 2026-09-15 dogfood).
+    # Dispatch to command handler. handle_command() in core.py is the REPL
+    # survival guard — individual handlers only catch their own expected
+    # errors (e.g. _cmd_show below) for precise messages.
     handler = _COMMAND_DISPATCH.get(action)
     if handler:
-        try:
-            return handler(tui, args)
-        except Exception as exc:
-            tui.output_fn(f'error: {action} failed — {exc}')
-            return True
+        return handler(tui, args)
 
     # Handle chat mode fallback: unknown command → prompt before forwarding as task
     if tui.chat:
@@ -434,8 +431,8 @@ def _cmd_show(tui: 'TeaAgentTUI', args: list[str]) -> bool:
         return True
     try:
         tui._print_json(RunStore(tui.root).show_run(args[0]))
-    except (FileNotFoundError, OSError, ValueError) as exc:
-        tui.output_fn(f"error: run '{args[0]}' not found — {exc}")
+    except (FileNotFoundError, OSError) as exc:
+        tui.output_fn(f'error: {exc}')
     return True
 
 

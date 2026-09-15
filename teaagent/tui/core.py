@@ -658,10 +658,21 @@ class TeaAgentTUI:
         self.route_model_enabled = value
 
     def handle_command(self, raw_command: str) -> bool:
+        """Dispatch one command; no command may kill the REPL loop.
+
+        Single chokepoint covering both the command handler and the
+        post-command cockpit refresh — either raising is caught, logged,
+        printed, and the REPL stays at prompt.
+        """
         from teaagent.tui._commands import _handle_tui_command
 
-        result = _handle_tui_command(self, raw_command)
-        self._refresh_control_cockpit()
+        try:
+            result = _handle_tui_command(self, raw_command)
+            self._refresh_control_cockpit()
+        except Exception as exc:
+            logger.exception('TUI command failed')
+            self.output_fn(f'error: command failed — {exc}')
+            return True
         return result
 
     def _handle_memory(self, args: list[str]) -> None:
