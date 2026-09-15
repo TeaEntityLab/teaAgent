@@ -139,3 +139,36 @@ def test_tui_approve_resume_grants_scoped_approval_like_cli() -> None:
         assert len(scoped) == 1
         assert scoped[0].call_id == 'call-123'
         assert scoped[0].tool_name == 'workspace_write_file'
+
+
+def test_cli_and_tui_pending_queue_match_beyond_default_window() -> None:
+    """G5+G21 follow-up: CLI and TUI agree when pending runs exceed 20.
+
+    Regression for the TUI `approvals pending` stale `limit=20` (fixed in
+    `18d1feaa`): the shared contract is unbounded, so with 25 pending runs
+    both surfaces must report the full queue, not the first window.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        for i in range(25):
+            _seed_pending_run(tmp, run_id=f'parity-many-{i:02d}')
+
+        cli_out = io.StringIO()
+        with redirect_stdout(cli_out):
+            code = main(['approval', 'pending', '--root', tmp])
+        assert code == 0
+        cli_payload = json.loads(cli_out.getvalue())
+
+        tui_out: list[str] = []
+        tui = TeaAgentTUI(
+            root=tmp,
+            input_fn=lambda _prompt: 'exit',
+            output_fn=tui_out.append,
+        )
+        assert tui.handle_command('approvals pending')
+        tui_payload = json.loads(tui_out[-1])
+
+        assert cli_payload['queue_depth'] == 25
+        assert tui_payload['queue_depth'] == 25
+        assert {item['run_id'] for item in tui_payload['pending']} == {
+            item['run_id'] for item in cli_payload['pending']
+        }
