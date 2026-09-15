@@ -1,7 +1,7 @@
 # TeaAgent Documentation Index
-# 2026-08-27
+# 2026-09-15
 
-> **Last reviewed:** 2026-08-27 (current roadmap execution plan indexed; ADR-0029 active queue reconciled; parallel-lens review adopted)
+> **Last reviewed:** 2026-09-15 (09-09 Socratic review row verified; curated evidence list unchanged)
 > **Review trigger:** New front-door docs, supersession links, roadmap evidence, or validation command changes.
 > **Owner:** docs
 

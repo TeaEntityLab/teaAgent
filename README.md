@@ -1,6 +1,6 @@
 # TeaAgent
 
-> **Last reviewed:** 2026-08-26 (permission-mode bullets cover external-effect tools; EFX-002)
+> **Last reviewed:** 2026-09-15 (09-12 JIT/multi-agent quarantine framing verified per ADR-0043; no new feature claims)
 > **Review trigger:** README feature claims, golden path, or provider count changes.
 > **Direction record:** [Harness-First Direction](docs/strategy/harness-first-direction-2026-06-13.md) (owner-operator harness-first current direction)
 

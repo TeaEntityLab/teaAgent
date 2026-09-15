@@ -1,6 +1,6 @@
 # TeaAgent Maturity Matrix
 
-> **Last reviewed:** 2026-08-27
+> **Last reviewed:** 2026-09-15 (labels unchanged; acceptance posture 131 files / 670 tests matches guard)
 > **Review trigger:** Subsystem maturity labels change.
 
 Last updated: 2026-05-31 (TUI evolution Phase A-C + doc review)

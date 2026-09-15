@@ -7,7 +7,7 @@
 > **Does not own:** Full-suite CI results (see dated evidence) or roadmap priorities.
 >
 > **Review trigger:** Acceptance test inventory or count changes.
-> **Last reviewed:** 2026-08-26
+> **Last reviewed:** 2026-09-15 (guard target 670 matches pytest collection)
 
 ## Suite Tiers (WDG-002)
 
