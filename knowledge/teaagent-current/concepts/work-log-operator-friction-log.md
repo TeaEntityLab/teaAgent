@@ -6,7 +6,7 @@ resource: "urn:teaagent:doc:docs/work-log/operator-friction-log.md"
 tags: ["teaagent", "friction", "intake", "evidence"]
 teaagent:
   source_path: "docs/work-log/operator-friction-log.md"
-  source_sha256: "27857f17e1998ebbb1c83e4919869f4f549e253f625e4c014244bfe28701d54e"
+  source_sha256: "d6a159d92aaf4893c89bddd584010e4e72589c4b02332a62063a766232c3c6d3"
   docs_tier: "working"
   authority: "canonical"
   lifecycle: "current"

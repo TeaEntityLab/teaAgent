@@ -1,7 +1,10 @@
 """Acceptance: EFX-001/002/003 local durable-effect guards.
 
 Providerless. These tests exercise the governed runner, approval, and
-annotation seams. They do not call live GitHub, browser, or paid providers.
+annotation seams. They do not call live GitHub, browser, or paid providers:
+network-touching seams are patched (github `_gh_api` below) or never reached
+(pending-approval halts before dispatch), so they are safe to run in CI
+without credentials. Live-provider proof remains a separate owner-gated step.
 """
 
 from __future__ import annotations

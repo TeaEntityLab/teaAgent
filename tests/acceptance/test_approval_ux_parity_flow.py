@@ -6,6 +6,7 @@ import io
 import json
 import tempfile
 from contextlib import redirect_stdout
+from pathlib import Path
 from unittest.mock import patch
 
 from teaagent.cli import main
@@ -172,3 +173,61 @@ def test_cli_and_tui_pending_queue_match_beyond_default_window() -> None:
         assert {item['run_id'] for item in tui_payload['pending']} == {
             item['run_id'] for item in cli_payload['pending']
         }
+
+
+def test_cli_reject_denies_pending_and_clears_queue() -> None:
+    """G15 follow-up: `approval reject` records tool_call_denied and clears the queue.
+
+    Regression: `approval reject` (landed `1611e71b`) had no acceptance test —
+    only the approve path was pinned. Rejects the pending call by call_id with
+    the resume step mocked out, then asserts the `tool_call_denied` receipt
+    exists and the pending queue is empty. Fails pre-fix (no `reject`
+    subcommand → exit code 2).
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        _seed_pending_run(tmp)
+        (Path(tmp) / '.teaagent' / 'config.toml').parent.mkdir(
+            parents=True, exist_ok=True
+        )
+        (Path(tmp) / '.teaagent' / 'config.toml').write_text(
+            'provider = "gpt"\n', encoding='utf-8'
+        )
+
+        cli_out = io.StringIO()
+        with (
+            redirect_stdout(cli_out),
+            patch(
+                'teaagent.cli._handlers._agent.agent_resume_command',
+                return_value=0,
+            ) as resume,
+        ):
+            code = main(['approval', 'reject', 'call-123', '--root', tmp])
+        assert code == 0
+        resume.assert_called_once()
+        store = RunStore(tmp)
+        denied = [
+            e
+            for e in store.show_run('approval-parity')
+            if e.get('event_type') == 'tool_call_denied'
+        ]
+        assert len(denied) == 1
+        payload = denied[0].get('payload') or {}
+        assert payload.get('call_id') == 'call-123'
+        assert payload.get('tool_name') == 'workspace_write_file'
+        assert payload.get('reason_code') == 'operator_denied'
+        assert payload.get('authority_type') == 'cli_reject'
+        assert payload.get('denied_by') == 'operator'
+        assert store.pending_approval_for_run('approval-parity') is None
+
+
+def test_cli_reject_unknown_call_id_errors_cleanly() -> None:
+    """G15 follow-up: `approval reject` on a non-queued call_id exits 1."""
+    with tempfile.TemporaryDirectory() as tmp:
+        _seed_pending_run(tmp)
+
+        cli_out = io.StringIO()
+        with redirect_stdout(cli_out):
+            code = main(['approval', 'reject', 'no-such-call', '--root', tmp])
+        assert code == 1
+        cli_payload = json.loads(cli_out.getvalue())
+        assert cli_payload['status'] == 'error'

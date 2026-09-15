@@ -1,6 +1,6 @@
 # TeaAgent Maturity Matrix
 
-> **Last reviewed:** 2026-09-15 (labels unchanged; acceptance posture 131 files / 671 tests matches guard)
+> **Last reviewed:** 2026-09-16 (labels unchanged; acceptance posture 131 files / 673 tests matches guard)
 > **Review trigger:** Subsystem maturity labels change.
 
 Last updated: 2026-05-31 (TUI evolution Phase A-C + doc review)
@@ -80,7 +80,7 @@ Scale reference (internal engineering, not market validation):
 ## Honest External Posture
 
 - Public repo activity ≠ production validation.
-- **Internal acceptance coverage is strong** (131 test files across `tests/acceptance/`, 671 collected tests; counts pinned by `tests/test_docs_consistency.py`).
+- **Internal acceptance coverage is strong** (131 test files across `tests/acceptance/`, 673 collected tests; counts pinned by `tests/test_docs_consistency.py`).
 - External adoption signals (stars, forks, production references) remain early — do not infer enterprise readiness from architecture alone.
 
 ## Related Docs

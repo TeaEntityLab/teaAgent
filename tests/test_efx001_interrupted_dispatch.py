@@ -1,5 +1,11 @@
 # test-type: lifecycle
-"""EFX-001: unmatched mutating dispatch is UNKNOWN and not blindly retried."""
+"""EFX-001: unmatched mutating dispatch is UNKNOWN and not blindly retried.
+
+Providerless. The mutating tool writes a local tmp marker file and the crash
+path uses `os._exit` in a spawned child; no GitHub/browser/paid-provider
+seam is touched, so this test is safe to run in CI without credentials.
+Live-provider proof remains a separate owner-gated step.
+"""
 
 from __future__ import annotations
 

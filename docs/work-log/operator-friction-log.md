@@ -196,7 +196,7 @@ fields only when the entry is promoted to work.
 - **Source:** [hypothesis: UX survey 2026-06-06 + retrospective 04-ux-usability, 2026-06-22]
 - **One-line capture:** Blocked runs may require `approvals pending` → extract `call_id` → `approve` instead of inline "approve this edit."
 - **Status:** open
-- **Closure evidence:** `teaagent approval pending --human` prints a numbered list and `teaagent approval approve --selector N` approves by number — no call_id hunting needed (`teaagent/approval_selectors.py`, `tests/test_approval_selectors.py`; verified `approval approve --help` marks `call_id` positional as legacy, "Prefer --selector N"). Awaiting owner validation to close.
+- **Closure evidence:** `teaagent approval pending --human` prints a numbered list and `teaagent approval approve --selector N` approves by number — no call_id hunting needed (`teaagent/approval/selectors.py`, importable as `teaagent.approval_selectors` via `_compat_modules.py`; `tests/test_approval_selectors.py`; verified `approval approve --help` marks `call_id` positional as legacy, "Prefer --selector N"). Awaiting owner validation to close.
 - **Promoted to:** n/a
 
 
@@ -214,7 +214,7 @@ fields only when the entry is promoted to work.
 - **Source:** [hypothesis: owner capture batch (F5), 2026-06-22]
 - **One-line capture:** `agent run <run_id>` or `--background <run_id>` may be confused with task text; owner did not confirm in the capture batch (F5 not confirmed).
 - **Status:** open
-- **Closure evidence:** Guard verified live 2026-09-14 — `teaagent run <existing-run-id>` exits with `Error [RUN_ID]` and the corrective hint (`agent resume`/`interactive-review`); `tests/test_resume_lifecycle.py::test_background_rejects_existing_run_id_in_task_position` and `test_background_rejects_existing_run_id_in_provider_position` pin the guard. Awaiting owner validation to close.
+- **Closure evidence:** Guard verified live 2026-09-14 — `teaagent run <existing-run-id>` exits with `Error [RUN_ID]` and the corrective hint (`agent resume`/`interactive-review`); pinned by `tests/test_resume_lifecycle.py::test_background_rejects_existing_run_id_in_task_position` (:148) and `..._in_provider_position` (:174). Awaiting owner validation to close.
 - **Promoted to:** n/a
 
 
@@ -243,7 +243,7 @@ fields only when the entry is promoted to work.
 - **Source:** [hypothesis: harness-first direction §5.2 / V8 lesson, 2026-06-22]
 - **One-line capture:** Effective permission mode may be unclear without `teaagent doctor config` provenance view.
 - **Status:** open
-- **Closure evidence:** `teaagent doctor config` verified live 2026-09-14 — prints every key with its source (`default` / `config:config.json` / env), e.g. `permission_mode` shows `config:config.json`; `tests/test_workspace_defaults_toml.py::test_resolve_config_provenance_layers` pins the provenance resolution. Awaiting owner validation to close.
+- **Closure evidence:** `teaagent doctor config` verified live 2026-09-14 — prints every key with its source (`default` / `config:config.json` / env), e.g. `permission_mode` shows `config:config.json`; pinned by `tests/test_workspace_defaults_toml.py::test_doctor_config_command_reports_sources` (:379) and `::test_doctor_config_redacts_webhook_url` (:334), which call the `doctor_config` CLI handler directly; underlying resolution pinned by `::test_resolve_config_provenance_layers` (:246). Awaiting owner validation to close.
 - **Promoted to:** n/a
 
 ### 2026-06-22 - Epistemology gap (friction log vs competitor backlog)

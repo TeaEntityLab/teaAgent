@@ -7,7 +7,7 @@
 > **Does not own:** Full-suite CI results (see dated evidence) or roadmap priorities.
 >
 > **Review trigger:** Acceptance test inventory or count changes.
-> **Last reviewed:** 2026-09-15 (guard target 671 matches pytest collection)
+> **Last reviewed:** 2026-09-16 (guard target 673 matches pytest collection)
 
 ## Suite Tiers (WDG-002)
 
@@ -42,7 +42,7 @@ acceptance flow writes the user TUI state file. In sandboxed environments, run
 them with permission to bind localhost ports and write the TeaAgent state
 directory.
 
-**Current acceptance test count: `671 passed`** (pytest-collected guard target)
+**Current acceptance test count: `673 passed`** (pytest-collected guard target)
 
 Keep historical acceptance-count snapshots in dated analysis or roadmap docs.
 This file only owns the live guard target.
@@ -101,7 +101,8 @@ Product claim-to-test traceability: [`docs/architecture/claim-to-test-traceabili
 | `test_hook_lifecycle_flow.py` | Hook lifecycle acceptance (elevated from integration) | PreToolUse veto via HookError, PostToolUse result chaining, multi-hook ordering, permission_check_hook deny/allow/patterns, registry enabled flag, all 8 Claude Code hook events |
 | `test_issue_to_plan_acceptance_flow.py` | Issue-to-plan intake | Issue text parsing, ambiguity detection, plan artifact generation, safe command suggestion, acceptance checklist generation |
 | `test_plan_review_revision_flow.py` | Plan review and revision | Plan storage with versioning, plan diff generation, run-to-plan binding, hash verification to prevent execution of modified plans |
-| `test_run_evidence_summary_flow.py` | Run evidence summary | Evidence bundle includes changed files, commands, tests, approvals, denied actions, costs, known failures, and rollback path for successful, failed, cancelled, and pending-approval runs with sensitive value redaction |
+| `test_approval_ux_parity_flow.py` | CLI/TUI pending-approval parity (SURF-009) | Shared queue contract across CLI/TUI: schema, payload, selector approve, approve+resume scoped grant, N>20 window parity; `approval reject` records `tool_call_denied` + clears the queue, unknown call_id errors cleanly |
+| `test_agent_attach_resume_parity_flow.py` | Attach/resume delegation parity | CLI attach payload matches programmatic snapshot; `attach --resume` delegates to `agent_resume_command` with the run's provider |
 | `test_surface_launch_recipes_flow.py` | Multi-surface launch recipes | USAGE surface table covers CLI/TUI/VS Code/MCP/ACP/A2A/ANP/managed runtime; documented local smoke commands run without network |
 | `test_subagent_lineage_flow.py` | Subagent lineage and isolation | Child runs record parent lineage metadata; batch returns ordered lineage; default isolation is worktree on git repos (requires explicit shared) |
 | `test_subagent_parallel_worktree_merge_flow.py` | Parallel subagent worktree merge | Two worktree-isolated children expose lineage for parent review before merge |
