@@ -37,7 +37,7 @@ This directory contains all Architecture Decision Records (ADRs) for the TeaAgen
 | [0028](0028-tournament-swarm-architecture.md) | Tournament and Swarm Execution | Accepted | - | - |
 | [0029](0029-consensus-validation-deferred.md) | Consensus Validation Deferred Behind Approval Queue | Closed — Option D executed | 2026-06-10 | 2026-07-22 |
 | [0030](0030-root-module-freeze.md) | Root Module Freeze and Canonical Package Homes | Accepted | 2026-06-10 | - |
-| [0031](0031-shadow-mode-exit-criteria.md) | Shadow Mode Exit Criteria | Proposed | 2026-06-12 | 2026-09-12 (expiry review) |
+| [0031](0031-shadow-mode-exit-criteria.md) | Shadow Mode Exit Criteria | Proposed | 2026-06-12 | 2026-09-29 (expiry review; extended 2026-09-15 conditioned on G1–G5) |
 | [0032](0032-run-event-taxonomy.md) | Run Event Taxonomy and Event Spine | Accepted and Implemented | 2026-06-13 | 2026-06-17 |
 | [0040](0040-second-framework-invariants.md) | Reconcile the Second Execution Framework with the Primary Runner | Accepted | 2026-06-20 | - |
 | [0041](0041-execution-surface-unification-and-harness-thinning.md) | Execution Surface Unification and Harness Thinning | Accepted | 2026-06-30 | 2026-06-30 |

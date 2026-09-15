@@ -4,7 +4,7 @@
 
 Proposed — 2026-06-12
 
-**Expiry review:** 2026-09-12 (re-score whether policy/RBAC shadow mode should promote to enforce)
+**Expiry review:** 2026-09-29 (re-score whether policy/RBAC shadow mode should promote to enforce; extended 2026-09-15 by owner decision conditioned on G1–G5 landing and re-dogfood — see `docs/work-log/dogfood-findings-2026-09-15.md` §"Owner decisions" and `docs/reviews/dogfood-g1-g22-2026-09-15-risk.md`)
 
 ## Context
 
@@ -45,7 +45,7 @@ Policy/RBAC may be promoted from shadow to enforce mode only when **all** of the
 
 ### Expiry
 
-Shadow status for policy/RBAC enforcement **expires on 2026-09-12**. On expiry:
+Shadow status for policy/RBAC enforcement **expires on 2026-09-29** (extended 2026-09-15 by owner decision conditioned on G1–G5 landing and re-dogfood). On expiry:
 
 - If exit criteria are met: Promote to enforce mode via this ADR acceptance
 - If exit criteria are not met: Either (a) extend shadow status with new ADR citing blocking evidence, or (b) revert shadow wiring and document gaps
