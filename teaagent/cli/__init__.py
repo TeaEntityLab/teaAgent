@@ -828,6 +828,8 @@ def apply_config_defaults(args: argparse.Namespace) -> None:  # noqa: C901
     )
 
     root = getattr(args, 'root', '.')
+    if root is _UNSET:
+        root = '.'
     config_path = resolve_config_path(getattr(args, 'config', None), root=root)
     if config_path is None:
         apply_workspace_defaults_to_namespace(args, root=root)
