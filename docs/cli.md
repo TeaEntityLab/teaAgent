@@ -1,6 +1,6 @@
 # TeaAgent CLI
 
-**Last reviewed:** 2026-08-26 (complete top-level command-group roster added; drift-guarded)
+**Last reviewed:** 2026-09-15 (approval pending/reject/TTL/deny-blocking deltas; no flag/subcommand changes)
 
 > **Review trigger:** CLI flags, subcommands, or handler behavior changes.
 
@@ -858,9 +858,10 @@ teaagent approval explain workspace_write_file --arg path=src/foo.py --root .
 
 Output includes a human-readable `summary` field explaining the decision and `reason` fields in `evaluated_grants` showing why each grant matched or failed (e.g., `path_glob_mismatch`, `permission_mode_mismatch`, `expired`).
 
-#### Approval pending and approve workflow
+#### Approval pending, approve, and reject workflow
 
-Manage runs stuck on pending approval:
+Manage runs stuck on pending approval (all pending surfaces read the full
+audit log — no recent-run window since the G5/G21 unification fix):
 
 ```bash
 # List all runs with pending approvals
@@ -871,7 +872,16 @@ teaagent approval approve <call_id> --root .
 
 # Approve and immediately resume the run
 teaagent approval approve <call_id> --root . --resume
+
+# Reject a queued call and resume the run without executing it
+teaagent approval reject <call_id> --root .
 ```
+
+`approval reject` records `tool_call_denied` (clears the pending entry); the
+denied call is not re-executed on resume. `approval deny <tool>` is
+grant-only for future calls (requires `--path-glob`/`--command-prefix`
+scope) and cannot reject an already-queued call. Paused approvals auto-deny
+after `TEAAGENT_PENDING_APPROVAL_TTL_SECONDS` (default 24h).
 
 #### Approval presets for common patterns
 
@@ -887,6 +897,12 @@ teaagent approval preset ci-safe --root .
 # strict: deny all destructive tools, require explicit approval
 teaagent approval preset strict --root .
 ```
+
+Matched deny grants hard-block in every mode (`POLICY_DENIED`) since the G1
+fix — previously advisory-only. `preset strict` applies wildcard deny grants
+(`path_globs: ["*"]`), so "deny all destructive tools" actually applies (was
+a no-op before the G6 fix). `approval check` evaluates deny grants in allow
+mode too.
 
 #### Approval doctor for policy health
 

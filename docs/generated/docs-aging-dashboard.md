@@ -4,18 +4,12 @@
 
 **Stale threshold:** 90 days since `Last reviewed`
 **Current-truth docs scanned:** 17
-**Needs attention (working tier only):** 6
+**Needs attention (working tier only):** 5
 **Archive-tier docs (exempt from staleness):** 0
 
 Regenerate: `python3 scripts/report_docs_aging.py`
 
 ## Stale Or Incomplete By Owner Surface
-
-### cli
-
-| Document | Status | Last reviewed | File mtime | Notes |
-| --- | --- | --- | --- | --- |
-| `docs/cli.md` | stale_by_mtime | 2026-08-26 | 2026-09-14 | Missing owner banner; File modified after last reviewed date |
 
 ### docs
 
