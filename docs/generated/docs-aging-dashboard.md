@@ -4,7 +4,7 @@
 
 **Stale threshold:** 90 days since `Last reviewed`
 **Current-truth docs scanned:** 17
-**Needs attention (working tier only):** 8
+**Needs attention (working tier only):** 7
 **Archive-tier docs (exempt from staleness):** 0
 
 Regenerate: `python3 scripts/report_docs_aging.py`
@@ -47,12 +47,6 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 | --- | --- | --- | --- | --- |
 | `docs/permission-and-approval-playbook.md` | stale_by_age | 2026-06-06 | 2026-06-06 | Missing owner banner; Last reviewed older than 90 days |
 
-### strategy
-
-| Document | Status | Last reviewed | File mtime | Notes |
-| --- | --- | --- | --- | --- |
-| `docs/backlog-priority.md` | stale_by_mtime | 2026-09-13 | 2026-09-15 | Missing owner banner; File modified after last reviewed date |
-
 ### verification
 
 | Document | Status | Last reviewed | File mtime | Notes |
@@ -83,7 +77,7 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 
 ## Corpus Cost (G5 Signal)
 
-**Total docs:** 651 (baseline 582 at diagnosis, delta +69)
+**Total docs:** 652 (baseline 582 at diagnosis, delta +70)
 **Live corpus (non-archive):** 377
 **Working-tier docs unreferenced by INDEX.md:** 328
 

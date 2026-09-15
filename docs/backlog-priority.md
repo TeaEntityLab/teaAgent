@@ -1,6 +1,6 @@
 # Backlog Priority
 
-> **Last reviewed:** 2026-09-13
+> **Last reviewed:** 2026-09-15
 > **Review trigger:** Backlog priorities or shipped/beta status claims change.
 > **Scheduling gate (2026-08-26):** DR-006 remains authoritative. EFX-001–003
 > are in-progress P0 `governance-gap` remediations on existing seams; no
@@ -17,8 +17,7 @@
 > measured 8 post-DR-006 `feat` commits touching `teaagent/`, 1 citing a gate
 > (`87d1c61` governance-gap); retrospective only since the gate landed
 > 2026-09-09, and backlog-row coverage was not re-audited in this pass.
-> Falsifier window closes 2026-09-22. ADR-0031 expiry arrives today with no
-> dogfood booked (see roadmap-status H4 row); that decision is the owner's.
+> Falsifier is a standing tripwire (DR-006 Falsifiers, no close date). ADR-0031 extended to 2026-09-29 with booked 2026-09-15 dogfood; B1 + D1 pending.
 > **Review 2026-09-13:** agentflow v8.2.0 survey delta added AGF-001..004;
 > AGF-001 (cross-host skill conflict audit) and AGF-002 (guard incident
 > citations) are **Done** under owner "implement governance gaps" direction;
@@ -67,8 +66,8 @@ was met on 2026-06-22; completing that intake does not authorize new work.
 | --- | --- | --- |
 | CP-4 OpenCode Gap Watch | `legacy-competitive` | Monitoring only; escalation → feature sprint **blocked** without friction evidence |
 | CP-6 Community Presence | `legacy-competitive` | **Hold** — external acquisition non-goal |
-| M4 cloud/background/control-plane cockpit | `legacy-competitive` | **Hold except DR-006 carve-out** — background lifecycle + operator cockpit eligible under owner-override co-maintainer dogfood; cloud/SaaS/multi-tenant GTM held (T4). Owner 2026-07-22: carve-out remains held with no scheduled dogfood |
-| RBAC enforce flip (ADR 0031, packet evaluated 2026-09-15) | `governance-gap` | **Hold** — 4/5 criteria prepared, promotion not ready; owner must promote, extend with new ADR citing blocking evidence, or revert per ADR-0031; no premature enforce flip |
+| M4 cloud/background/control-plane cockpit | `legacy-competitive` | **Hold except DR-006 carve-out** — background lifecycle + operator cockpit eligible under owner-override co-maintainer dogfood; cloud/SaaS/multi-tenant GTM held (T4). 2026-09-15 co-maintainer dogfood session completed (B2 evidence, B1 still pending) |
+| RBAC enforce flip (ADR 0031, packet evaluated 2026-09-15) | `governance-gap` | **Hold** — 4/5 criteria prepared, promotion not ready; owner extended to 2026-09-29 conditioned on G1–G5 landing and re-dogfood; promotion_ready=false; no premature enforce flip |
 | TASK-006 RunEvent taxonomy + M0 | `harness-migration` | **Done** — ADR-0032 run-event taxonomy; `teaagent/runner/_events.py` spine + audit dual-write (M0–M7 in work-log) |
 | TASK-001 constitution repositioning | `owner-override` | **Done (Human Review 2026-07-22)** — owner ratified harness-first positioning; no README/product-contract changes required |
 | TASK-002 docs tiering | `harness-migration` | **Done** — tier column in `docs/generated/docs-inventory.md` + aging dashboard; `check-docs-inventory` pre-commit regen |

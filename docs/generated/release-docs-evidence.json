@@ -1,17 +1,17 @@
 {
-  "ok": true,
-  "created_at": "2026-09-15T08:04:27+00:00",
+  "ok": false,
+  "created_at": "2026-09-15T08:07:52+00:00",
   "repo_root": "/Users/teee/dev/teaagent",
   "git": {
     "branch": "main",
-    "commit": "01ffe71e45f291a5061a9e9027eb446d389e5059",
-    "dirty": false
+    "commit": "5830e8141cbd26931abaadad026c4b01dd9caf78",
+    "dirty": true
   },
   "commands": [
     {
       "cmd": "/opt/homebrew/opt/python@3.14/bin/python3.14 scripts/validate_docs_consistency.py",
-      "exit_code": 0,
-      "stdout": "Risk register evidence coverage: 29/29 rows verified (100%)\nTicket index evidence coverage: 21/21 rows verified (100%)\nDocs consistency check passed.\n",
+      "exit_code": 1,
+      "stdout": "Risk register evidence coverage: 29/29 rows verified (100%)\nTicket index evidence coverage: 21/21 rows verified (100%)\nERROR: docs/generated/docs-inventory.md is out of date; run: python3 scripts/generate_docs_inventory.py\n",
       "stderr": ""
     },
     {
@@ -23,14 +23,13 @@
   ],
   "docs_freshness": {
     "scanned": 17,
-    "needs_attention": 8,
+    "needs_attention": 7,
     "by_owner": {
       "project": 1,
       "docs": 1,
       "cli": 1,
       "verification": 1,
       "roadmap": 1,
-      "strategy": 1,
       "governance": 1,
       "security": 1
     },
@@ -62,7 +61,7 @@
       {
         "id": "H4",
         "name": "Durable owner/agent operations",
-        "status": "On Hold — shadow wiring exists; ADR-0031 evidence packet prepared 2026-08-27, refreshed 2026-08-31 and re-verified 2026-09-12 over the closed decision window 2026-08-13→2026-09-11 (0 observed / 0 reachable, verdict `unexercised`); extended window 2026-08-13→2026-09-15 after the booked 2026-09-15 M4 dogfood: 9 observed (8 approval + 1 subagent_launch denial candidate) across 21 reachable runs, verdict `needs_review`, packet 4/5 prepared (criterion 4 human sign-off `human_required`); `promotion_ready=false` is a hardcoded literal, not a metric; H4 demo `scripts/exercise_h4_shadow_demo.py` exercisable (2 synthetic candidates, must not launder into C1) and guarded (`tests/test_h4_shadow_demo.py`); 2026-09-12 expiry-day state: no dogfood session booked, zero new runs and zero new friction entries since review, so promotion is unreachable — owner decided 2026-09-14: extend with a booked co-maintainer dogfood session (new window close set on booking)",
+        "status": "On Hold — shadow wiring exists; ADR-0031 evidence packet prepared 2026-08-27, refreshed 2026-08-31 and re-verified 2026-09-12 over the closed decision window 2026-08-13→2026-09-11 (0 observed / 0 reachable, verdict `unexercised`); extended window 2026-08-13→2026-09-15 after the booked 2026-09-15 M4 dogfood: 8 in-log approval receipts + 1 orphan-sourced D1 subagent_launch denial candidate across 21 reachable runs, verdict `needs_review`, packet 4/5 prepared (criterion 4 human sign-off `human_required`); `promotion_ready=false` is a hardcoded literal, not a metric; H4 demo `scripts/exercise_h4_shadow_demo.py` exercisable (2 synthetic candidates, must not launder into C1) and guarded (`tests/test_h4_shadow_demo.py`); 2026-09-12 expiry-day state: no dogfood session booked, zero new runs and zero new friction entries since review, so promotion is unreachable — owner decided 2026-09-14: extend with a booked co-maintainer dogfood session (new window close set on booking)",
         "confidence": "Low",
         "next_gate": "Dogfood session booked 2026-09-15 (background+cockpit, docs/work-log/m4-dogfood-2026-09-15.md) — new ADR-0031 window close 2026-09-15; EFX live-proof closure remains pending owner authorization"
       },
