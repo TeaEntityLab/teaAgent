@@ -1,3 +1,4 @@
+# test-type: behavior
 """Acceptance tests for the post-run insider-threat trajectory reviewer (VND-001)."""
 
 from __future__ import annotations
