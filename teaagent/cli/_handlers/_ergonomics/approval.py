@@ -18,6 +18,7 @@ from teaagent.ergonomics.workspace_defaults import load_workspace_defaults
 from teaagent.integration.approval_parity import (
     build_approval_granted_payload,
     build_pending_approvals_snapshot,
+    find_pending_approval_for_call_id,
     grant_pending_approval,
 )
 from teaagent.types import PermissionMode
@@ -329,8 +330,8 @@ def approval_grant_command(args: argparse.Namespace) -> int:
 
 def approval_deny_command(args: argparse.Namespace) -> int:
     def _deny() -> int:
-        store = ApprovalPresetStore(args.root)
-        grant = store.deny(
+        preset = ApprovalPresetStore(args.root)
+        grant = preset.deny(
             args.tool_name,
             path_globs=args.path_glob or None,
             command_prefixes=args.command_prefix or None,
@@ -339,6 +340,90 @@ def approval_deny_command(args: argparse.Namespace) -> int:
         return 0
 
     return _wrap_approval_store_errors(_deny)
+
+
+def approval_reject_command(args: argparse.Namespace) -> int:
+    def _reject() -> int:
+        store = AgentExecutionFactory(args.root).create_run_store()
+        found = find_pending_approval_for_call_id(store, args.call_id)
+        if not found:
+            print_json(
+                {
+                    'status': 'error',
+                    'message': f"call_id '{args.call_id}' not found in pending approvals",
+                }
+            )
+            return 1
+        run_id, pending = found
+        audit = store.audit_logger(run_id)
+        audit.record(
+            'tool_call_denied',
+            run_id,
+            call_id=pending['call_id'],
+            tool_name=pending.get('tool_name', 'unknown'),
+            reason_code='operator_denied',
+            authority_type='cli_reject',
+            denied_by='operator',
+        )
+
+        from teaagent.cli._handlers._agent import agent_resume_command
+
+        original_permission_mode = 'prompt'
+        try:
+            for event in store.show_run(run_id):
+                if event.get('event_type') != 'run_started':
+                    continue
+                payload = event.get('payload') or {}
+                mode = payload.get('permission_mode')
+                if isinstance(mode, str) and mode:
+                    original_permission_mode = mode
+                break
+        except FileNotFoundError:
+            original_permission_mode = 'prompt'
+
+        ns = argparse.Namespace(
+            run_id=run_id,
+            root=args.root,
+            provider=None,
+            model=None,
+            fresh_restart=False,
+            approve_call_id=[],
+            clarify=False,
+            route_model=False,
+            max_iterations=10,
+            max_tool_calls=10,
+            allow_destructive=False,
+            hitl_approval=False,
+            permission_mode=original_permission_mode,
+            subagent=False,
+            max_subagent_depth=1,
+            heartbeat=0.0,
+            code_analysis=False,
+            telemetry_otlp_endpoint=None,
+            telemetry_service_name='teaagent',
+            telemetry_console=False,
+            checkpoint_store=None,
+            auto_compact=None,
+            _adapter_factory=getattr(args, '_adapter_factory', None),
+        )
+
+        defaults = load_workspace_defaults(args.root)
+        if not ns.provider:
+            try:
+                for event in store.show_run(run_id):
+                    if event.get('event_type') == 'run_started':
+                        ns.provider = event.get('payload', {}).get('provider')
+                        break
+            except FileNotFoundError:
+                pass
+        if not ns.provider:
+            ns.provider = defaults.get('provider')
+        if not ns.provider:
+            print_json({'status': 'error', 'message': 'provider required for resume'})
+            return 1
+        return agent_resume_command(ns)
+
+    return _wrap_approval_store_errors(_reject)
 
 
 def approval_audit_command(args: argparse.Namespace) -> int:
@@ -375,7 +460,7 @@ def approval_approve_command(args: argparse.Namespace) -> int:  # noqa: C901
         store = AgentExecutionFactory(args.root).create_run_store()
         call_id = args.call_id
         if getattr(args, 'selector', None) is not None:
-            views = collect_pending_approval_views(store, limit=100)
+            views = collect_pending_approval_views(store)
             selected = resolve_selector(views, args.selector)
             if selected is None:
                 print_json(
@@ -396,7 +481,7 @@ def approval_approve_command(args: argparse.Namespace) -> int:  # noqa: C901
             )
             return 1
 
-        grant = grant_pending_approval(args.root, call_id, limit=100)
+        grant = grant_pending_approval(args.root, call_id)
         if grant is None:
             print_json(
                 {
@@ -492,7 +577,7 @@ def approval_approve_command(args: argparse.Namespace) -> int:  # noqa: C901
 def approval_next_command(args: argparse.Namespace) -> int:
     def _next() -> int:
         store = AgentExecutionFactory(args.root).create_run_store(readonly=True)
-        views = collect_pending_approval_views(store, limit=20)
+        views = collect_pending_approval_views(store)
 
         if not views:
             if wants_human_cli(args):

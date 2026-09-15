@@ -671,6 +671,11 @@ def _attach(subs: argparse._SubParsersAction, handler: Callable) -> None:
         help='Resume a paused run after snapshot (auto-approve pending destructive call).',
     )
     p.add_argument(
+        '--provider',
+        default=argparse.SUPPRESS,
+        help='Override provider for --resume; otherwise inherit from the run record.',
+    )
+    p.add_argument(
         '--notify',
         action='store_true',
         help='Emit a desktop notification with the current run status.',

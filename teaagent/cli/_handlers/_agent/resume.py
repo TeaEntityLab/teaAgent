@@ -110,11 +110,12 @@ def suspend_to_background(
     except Exception as exc:
         output(f'[TeaAgent] Warning: Could not check workspace status: {exc}')
 
-    # Emit audit event for suspension
+    # Emit audit event for suspension into the run's real audit file so it is not
+    # orphaned in a pending-* temp. The run_id is already generated at this point.
     factory = AgentExecutionFactory(root)
     try:
         store = factory.create_run_store()
-        audit = store.audit_logger()
+        audit = store.audit_logger(run_id=run_id)
         audit.record(
             event_type='session_suspended',
             run_id=run_id,

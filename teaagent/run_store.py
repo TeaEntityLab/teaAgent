@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 from uuid import uuid4
@@ -44,6 +45,18 @@ class RunSummary:
             'token_pressure': self.token_pressure,
             'origin': self.origin,
         }
+
+
+def _parse_event_timestamp(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace('Z', '+00:00'))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed
 
 
 class RunStore(AbstractStore[list[dict[str, Any]]]):
@@ -212,7 +225,8 @@ class RunStore(AbstractStore[list[dict[str, Any]]]):
         )
         return audit.disk_error is None
 
-    def list_runs(self, *, limit: int = 20) -> list[RunSummary]:
+    def list_runs(self, *, limit: int | None = 20) -> list[RunSummary]:
+        """List run summaries, newest first. ``limit=None`` returns all."""
         if not self.store_dir.exists():
             return []
         # Try to use the index first for O(1) lookup
@@ -220,9 +234,9 @@ class RunStore(AbstractStore[list[dict[str, Any]]]):
             summaries = self._read_index()
             # Sort by updated_at descending
             summaries.sort(key=lambda s: s.updated_at, reverse=True)
-            return summaries[:limit]
+            return summaries if limit is None else summaries[:limit]
         # Fallback to the old method if index doesn't exist
-        return [
+        summaries = [
             summary
             for path in sorted(
                 self.store_dir.glob('*.jsonl'),
@@ -232,7 +246,8 @@ class RunStore(AbstractStore[list[dict[str, Any]]]):
             if path.name != 'runs-index.jsonl'
             and not path.name.startswith('pending-')
             and (summary := self.summarize(path)) is not None
-        ][:limit]
+        ]
+        return summaries if limit is None else summaries[:limit]
 
     def show_run(self, run_id: str) -> list[dict[str, Any]]:
         path = self.run_path(run_id)
@@ -339,17 +354,12 @@ class RunStore(AbstractStore[list[dict[str, Any]]]):
     def pending_approval_for_run(self, run_id: str) -> Optional[dict[str, Any]]:
         pending: Optional[dict[str, Any]] = None
         for event in self.show_run(run_id):
-            # Validate event is a dictionary
             if not isinstance(event, dict):
                 continue
-
             event_type = event.get('event_type')
             payload = event.get('payload')
-
-            # Validate payload is a dictionary, default to empty dict
             if not isinstance(payload, dict):
                 payload = {}
-
             if event_type == 'tool_call_pending_approval':
                 call_id = payload.get('call_id')
                 tool_name = payload.get('tool_name')
@@ -363,6 +373,7 @@ class RunStore(AbstractStore[list[dict[str, Any]]]):
                         'argument_digest_version': payload.get(
                             'argument_digest_version'
                         ),
+                        'created_at': event.get('created_at') or event.get('timestamp'),
                     }
             elif event_type in {
                 'tool_call_approved',
@@ -370,14 +381,30 @@ class RunStore(AbstractStore[list[dict[str, Any]]]):
                 'run_completed',
                 'run_failed',
             }:
-                if pending and isinstance(pending, dict):
-                    pending_call_id = pending.get('call_id')
-                    payload_call_id = payload.get('call_id')
-                    if (
-                        pending_call_id is not None
-                        and pending_call_id == payload_call_id
-                    ):
-                        pending = None
+                if pending and pending.get('call_id') == payload.get('call_id'):
+                    pending = None
+        if pending is None:
+            return None
+        created_at = pending.get('created_at')
+        if isinstance(created_at, str) and created_at:
+            parsed = _parse_event_timestamp(created_at)
+            if parsed is not None:
+                age = (datetime.now(timezone.utc) - parsed).total_seconds()
+                from teaagent.ergonomics._approval_grants import (
+                    get_pending_approval_ttl_seconds,
+                )
+
+                if age > get_pending_approval_ttl_seconds():
+                    if not self.readonly:
+                        audit = self.audit_logger(run_id)
+                        audit.record(
+                            'tool_call_denied',
+                            run_id,
+                            call_id=pending['call_id'],
+                            tool_name=pending['tool_name'],
+                            reason_code='expired',
+                        )
+                    return None
         return pending
 
     def heartbeat_for_run(self, run_id: str) -> dict[str, Any]:

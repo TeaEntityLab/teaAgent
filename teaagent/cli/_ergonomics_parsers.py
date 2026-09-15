@@ -262,7 +262,8 @@ def _approval(
     )
     grant.set_defaults(func=handlers['approval_grant'], command='approval')
     deny = subs.add_parser(
-        'deny', help='Deny a tool globally (use grant --scope deny for scoped deny).'
+        'deny',
+        help='Deny a tool globally (no effect on queued calls).',
     )
     deny.add_argument('tool_name')
     deny.add_argument('--root', default='.')
@@ -279,6 +280,13 @@ def _approval(
         help='Deny only when the shell command starts with this prefix (repeatable).',
     )
     deny.set_defaults(func=handlers['approval_deny'], command='approval')
+    reject = subs.add_parser(
+        'reject',
+        help='Reject a queued pending call by call_id and resume the run.',
+    )
+    reject.add_argument('call_id')
+    reject.add_argument('--root', default='.')
+    reject.set_defaults(func=handlers['approval_reject'], command='approval')
     audit = subs.add_parser('audit')
     audit.add_argument('--root', default='.')
     audit.add_argument('--limit', type=int, default=20)
@@ -292,7 +300,7 @@ def _approval(
         'pending', help='List runs with pending approval requests.'
     )
     pending.add_argument('--root', default='.')
-    pending.add_argument('--limit', type=int, default=20)
+    pending.add_argument('--limit', type=int, default=None)
     pending.add_argument(
         '--human',
         action='store_true',

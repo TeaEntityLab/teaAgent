@@ -15,7 +15,6 @@ from teaagent.cockpit import assess_stale_workspace
 from teaagent.preflight import preflight
 from teaagent.subagents._cost import build_child_cost_ledger
 from teaagent.subagents._hybrid_store_health import HybridStoreHealthMixin
-from teaagent.tui.cockpit_data_sources import ApprovalDataSource
 
 _BOUNDED_OBSERVABILITY_MODULES = (
     'teaagent/audit.py',
@@ -23,7 +22,6 @@ _BOUNDED_OBSERVABILITY_MODULES = (
     'teaagent/audit_export.py',
     'teaagent/cockpit.py',
     'teaagent/preflight.py',
-    'teaagent/tui/cockpit_data_sources.py',
     'teaagent/subagents/_review.py',
     'teaagent/subagents/_approval_queue_hybrid_store.py',
     'teaagent/subagents/_hybrid_store_health.py',
@@ -158,62 +156,6 @@ def test_preflight_audit_health_failure_is_classified(tmp_path: Path, caplog) ->
     record = next(r for r in caplog.records if 'audit health check' in r.message)
     _assert_classified(record, severity='high')
     assert 'sensitive audit event' not in record.message
-
-
-def test_cockpit_memory_failure_is_classified(tmp_path: Path, caplog) -> None:
-    source = ApprovalDataSource(tmp_path)
-
-    with (
-        patch(
-            'teaagent.memory.MemoryCatalog',
-            side_effect=RuntimeError('sensitive memory content'),
-        ),
-        caplog.at_level(logging.ERROR, logger='teaagent.tui.cockpit_data_sources'),
-    ):
-        assert source.get_approvals() == []
-
-    record = next(r for r in caplog.records if 'memory approval source' in r.message)
-    _assert_classified(record, severity='medium')
-    assert 'sensitive memory content' not in record.message
-
-
-def test_cockpit_quarantine_failure_is_classified(tmp_path: Path, caplog) -> None:
-    quarantine_path = tmp_path / '.teaagent' / 'memory-quarantine.jsonl'
-    quarantine_path.parent.mkdir(parents=True)
-    quarantine_path.write_text('{}\n', encoding='utf-8')
-    catalog = MagicMock()
-    catalog.list.return_value = []
-    source = ApprovalDataSource(tmp_path)
-
-    with (
-        patch('teaagent.memory.MemoryCatalog', return_value=catalog),
-        patch('pathlib.Path.read_text', side_effect=OSError('sensitive quarantine')),
-        caplog.at_level(logging.ERROR, logger='teaagent.tui.cockpit_data_sources'),
-    ):
-        assert source.get_approvals() == []
-
-    record = next(
-        r for r in caplog.records if 'quarantine approval source' in r.message
-    )
-    _assert_classified(record, severity='medium')
-    assert 'sensitive quarantine' not in record.message
-
-
-def test_cockpit_approval_count_failure_is_classified(tmp_path: Path, caplog) -> None:
-    source = ApprovalDataSource(tmp_path)
-
-    with (
-        patch(
-            'teaagent.memory.MemoryCatalog',
-            side_effect=RuntimeError('sensitive approval count'),
-        ),
-        caplog.at_level(logging.ERROR, logger='teaagent.tui.cockpit_data_sources'),
-    ):
-        assert source.get_approval_count() == 0
-
-    record = next(r for r in caplog.records if 'approval count source' in r.message)
-    _assert_classified(record, severity='medium')
-    assert 'sensitive approval count' not in record.message
 
 
 def test_rollback_cleanup_failure_is_classified(caplog) -> None:

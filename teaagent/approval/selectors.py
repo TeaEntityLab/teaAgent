@@ -6,7 +6,7 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from teaagent.ergonomics._approval_grants import APPROVAL_TTL_HOURS
+from teaagent.ergonomics._approval_grants import get_pending_approval_ttl_seconds
 from teaagent.run_store import RunStore
 
 
@@ -94,8 +94,16 @@ def _pending_expires_at(created_at: str) -> str:
     created = _parse_event_timestamp(created_at)
     if created is None:
         return 'open-ended'
-    expires = created + timedelta(hours=APPROVAL_TTL_HOURS)
+    expires = created + timedelta(seconds=get_pending_approval_ttl_seconds())
     return expires.replace(microsecond=0).isoformat()
+
+
+def _is_pending_expired(created_at: str) -> bool:
+    created = _parse_event_timestamp(created_at)
+    if created is None:
+        return False
+    age = (datetime.now(timezone.utc) - created).total_seconds()
+    return age > get_pending_approval_ttl_seconds()
 
 
 def _pending_detail_from_events(
@@ -139,7 +147,7 @@ def _pending_detail_from_events(
 def collect_pending_approval_views(
     store: RunStore,
     *,
-    limit: int = 20,
+    limit: int | None = None,
 ) -> list[PendingApprovalView]:
     views: list[PendingApprovalView] = []
     selector = 1
@@ -149,7 +157,7 @@ def collect_pending_approval_views(
         except FileNotFoundError:
             # Stale index entry — run file deleted or never written.
             continue
-        if not pending:
+        if not pending or _is_pending_expired(pending.get('created_at', '')):
             continue
         arguments = pending.get('arguments')
         if not isinstance(arguments, dict):

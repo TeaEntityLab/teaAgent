@@ -41,6 +41,7 @@
 > | `teaagent/domain/workflow_engine.py` | **No production caller**; execution simulated | Strongest deletion candidate (importer sweep done 2026-09-13: zero production callers) |
 > | `teaagent/consensus/` + `cli/_handlers/_consensus.py` | No (`teaagent consensus`; off by default) | Delete per ADR-0029 precedent unless ratified |
 > | `teaagent/jit_approval_server.py` | No (`teaagent control-plane serve`) | M4 carve-out only if dogfood scheduled; else delete |
+> | `teaagent/anp_adapter.py` (ANP bidirectional federation adapter) | No — no production caller; symbols exported from `teaagent/__init__.py` and tests only | Promote under `owner-override` if ANP federation is wanted, else delete |
 
 Prioritized by impact order: security and production risk → core platform capabilities → developer experience and ecosystem.
 

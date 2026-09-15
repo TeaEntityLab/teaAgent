@@ -49,6 +49,12 @@ class Permission(str, Enum):
     REJECT = 'reject'
 
 
+DEFAULT_OPERATOR_ROLE_ID = 'default-operator-role'
+DEFAULT_OPERATOR_ASSIGNMENT_ID = 'default-operator-assignment'
+DEFAULT_OPERATOR_ASSIGNEE = 'default-operator'
+DEFAULT_OPERATOR_PERMISSIONS = {Permission.START_WORKFLOW}
+
+
 @dataclass
 class Role:
     """A role with associated permissions."""
@@ -388,6 +394,33 @@ class RBACSystem:
         self.role_store = RoleStore(self.root, tenant_id=tenant_id)
         self.policy_store = PolicyStore(self.root, tenant_id=tenant_id)
         self.policy_engine = PolicyEngine(self.policy_store)
+
+    def ensure_default_operator_role(self) -> None:
+        """Seed the default operator role and assignment if absent.
+
+        A fresh workspace starts with a minimal operator role that can launch
+        subagent workflows, assigned to the configured default operator identity.
+        """
+        role = self.role_store.load_role(DEFAULT_OPERATOR_ROLE_ID)
+        if role is None:
+            role = Role(
+                role_id=DEFAULT_OPERATOR_ROLE_ID,
+                name='operator',
+                description='Default operator with permission to start subagent workflows.',
+                permissions=DEFAULT_OPERATOR_PERMISSIONS,
+            )
+            self.role_store.save_role(role)
+            self._create_role_policy(role)
+
+        assignment = self.role_store.load_assignment(DEFAULT_OPERATOR_ASSIGNMENT_ID)
+        if assignment is None:
+            assignment = RoleAssignment(
+                assignment_id=DEFAULT_OPERATOR_ASSIGNMENT_ID,
+                role_id=DEFAULT_OPERATOR_ROLE_ID,
+                assignee=DEFAULT_OPERATOR_ASSIGNEE,
+                tenant_id=self.tenant_id,
+            )
+            self.role_store.save_assignment(assignment)
 
     def create_role(
         self,

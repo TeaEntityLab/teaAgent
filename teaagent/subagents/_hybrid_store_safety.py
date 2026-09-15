@@ -315,13 +315,11 @@ class HybridStoreSafetyMixin(HybridStoreBase):
     def _update_analytics(
         self,
         request: SubagentApprovalRequest,
-        old_status: Optional[ApprovalRequestStatus] = None,
     ) -> None:
         """Update request analytics.
 
         Args:
             request: The request to track
-            old_status: Previous status for state transitions
         """
         if not self.config.enable_analytics:
             return

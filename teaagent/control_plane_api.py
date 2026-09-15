@@ -54,6 +54,7 @@ class ControlPlaneServer:
         state: ControlPlaneState | None = None,
         tenant_registry: ControlPlaneRegistry | None = None,
         jit_server: JITApprovalServer | None = None,
+        workspace_root: str | Path | None = None,
         dashboard_dir: Path | None = None,
         sse_interval_seconds: float = 1.0,
         max_sse_events: int | None = None,
@@ -70,6 +71,7 @@ class ControlPlaneServer:
         if state is not None:
             self.registry.seed(self.registry.default_tenant, state)
         self.jit_server = jit_server
+        self.workspace_root = Path(workspace_root).resolve() if workspace_root else None
         self.dashboard_dir = (dashboard_dir or DASHBOARD_DIR).resolve()
         self.sse_interval_seconds = sse_interval_seconds
         self.max_sse_events = max_sse_events
@@ -140,6 +142,27 @@ class ControlPlaneServer:
         return f'http://{self.host}:{self.port}'
 
     def _pending_approvals(self) -> list[dict[str, Any]]:
+        if self.workspace_root is not None:
+            try:
+                from teaagent.integration.approval_parity import (
+                    build_pending_approvals_snapshot,
+                )
+                from teaagent.run_store import RunStore
+
+                store = RunStore(self.workspace_root, readonly=True)
+                snap = build_pending_approvals_snapshot(store)
+                return [
+                    {
+                        'request_id': item['call_id'],
+                        'agent_name': item.get('task') or item.get('run_id', 'unknown'),
+                        'tool_name': item['tool_name'],
+                        'reason': item.get('reason', 'approval required'),
+                        'status': 'pending',
+                    }
+                    for item in snap.get('pending', [])
+                ]
+            except Exception:
+                logger.exception('pending approvals snapshot failed')
         if self.jit_server is None:
             return []
         return [

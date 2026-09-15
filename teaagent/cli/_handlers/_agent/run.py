@@ -563,63 +563,69 @@ def _execute_agent_task(  # noqa: C901
         run_id=pending_run_id,
         adapter_factory=args._adapter_factory,
     )
-    result = run_chat_agent(
-        config,
-        task,
-        adapter=adapter,
-        audit=audit,
-        task_spec=task_spec,
-        initial_observations=initial_observations,
-        initial_context_extra=merged_context_extra or None,
-        run_id=pending_run_id,
-    )
-    store.logger_for_result(result, audit)
-    if undo_journal.has_entries:
-        undo_journal.save_to(store.undo_path(result.run_id))
-
-    if 'scratchpad' in dir():
-        _sp_state['written'] = True
-        error_msg = result.error_message or ''
-        if result.status == 'completed':
-            final_answer = (
-                result.final_answer.content
-                if result.final_answer
-                else 'Task completed.'
-            )
-            scratchpad.write(
-                goal=task,
-                progress=f'Completed: {final_answer[:500]}',
-                open_questions=[],
-                next_step='',
-                session_id=result.run_id,
-            )
-        else:
-            scratchpad.write(
-                goal=task,
-                progress=f'Ended ({result.status})'
-                + (f': {error_msg[:200]}' if error_msg else ''),
-                open_questions=[],
-                next_step='Review errors and retry.',
-                session_id=result.run_id,
-            )
-
-    validation_profile = _resolve_validation_profile(args)
-    if validation_profile and result.status == 'completed':
-        validation_exit = _run_post_validation(
-            args, result=result, store=store, profile=validation_profile
-        )
-        if validation_exit != 0:
-            return validation_exit
-
-    if git_sandbox_available:
-        resolve_git_sandbox_after_run(
+    result: Any = None
+    try:
+        result = run_chat_agent(
+            config,
+            task,
+            adapter=adapter,
             audit=audit,
-            run_id=result.run_id,
-            sandbox=git_sandbox,
-            args=args,
-            result=result,
-            show_interactive_diff=show_interactive_diff,
+            task_spec=task_spec,
+            initial_observations=initial_observations,
+            initial_context_extra=merged_context_extra or None,
+            run_id=pending_run_id,
         )
+        if undo_journal.has_entries:
+            undo_journal.save_to(store.undo_path(result.run_id))
+
+        if 'scratchpad' in dir():
+            _sp_state['written'] = True
+            error_msg = result.error_message or ''
+            if result.status == 'completed':
+                final_answer = (
+                    result.final_answer.content
+                    if result.final_answer
+                    else 'Task completed.'
+                )
+                scratchpad.write(
+                    goal=task,
+                    progress=f'Completed: {final_answer[:500]}',
+                    open_questions=[],
+                    next_step='',
+                    session_id=result.run_id,
+                )
+            else:
+                scratchpad.write(
+                    goal=task,
+                    progress=f'Ended ({result.status})'
+                    + (f': {error_msg[:200]}' if error_msg else ''),
+                    open_questions=[],
+                    next_step='Review errors and retry.',
+                    session_id=result.run_id,
+                )
+
+        validation_profile = _resolve_validation_profile(args)
+        if validation_profile and result.status == 'completed':
+            validation_exit = _run_post_validation(
+                args, result=result, store=store, profile=validation_profile
+            )
+            if validation_exit != 0:
+                return validation_exit
+    finally:
+        # Resolve the git sandbox before promoting the audit. Sandbox resolution
+        # emits git_sandbox_resolved, which must be written to the pending temp
+        # and then landed in the real run file by logger_for_result.
+        if git_sandbox_available and result is not None:
+            resolve_git_sandbox_after_run(
+                audit=audit,
+                run_id=result.run_id,
+                sandbox=git_sandbox,
+                args=args,
+                result=result,
+                show_interactive_diff=show_interactive_diff,
+            )
+        if result is not None:
+            store.logger_for_result(result, audit)
 
     if _telemetry_sink is not None:
         from contextlib import suppress

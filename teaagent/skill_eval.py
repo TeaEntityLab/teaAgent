@@ -396,7 +396,6 @@ def run_offline_eval(
     candidate_dir: Path,
     *,
     max_skill_bytes: int = DEFAULT_MAX_SKILL_BYTES,
-    fixture_dir: Path | None = None,
 ) -> EvalReport:
     from teaagent.skill_eval_fixtures import (
         get_default_eval_cases,

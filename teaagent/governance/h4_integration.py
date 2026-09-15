@@ -158,6 +158,7 @@ def check_subagent_launch_rbac(
         'parent_run_id': parent_run_id,
     }
     rbac = RBACSystem(workspace_root)
+    rbac.ensure_default_operator_role()
     allowed, reason = rbac.check_action_permission(
         assignee,
         'start_workflow',

@@ -1,3 +1,10 @@
+"""ANP adapter for federated multi-agent task delegation.
+
+This module is quarantined as `legacy-competitive` / On Hold per
+ADR-0043 with a 2026-12-09 disposition review. No new feature work
+without a dated `owner-override`, and no present-tense capability claims.
+"""
+
 from __future__ import annotations
 
 import logging

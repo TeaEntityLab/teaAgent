@@ -198,6 +198,15 @@ def authorize_tool_call(
     call ``runner._emit_summary`` on a terminal pending-approval denial — behaviour
     identical to the prior inline ``AgentRunner._authorize_tool_call`` method.
     """
+    if tool.annotations.destructive:
+        runner.approval_manager.record_approval_shadow(
+            audit=runner.audit,
+            run_id=run_id,
+            tool_name=decision.tool_name,
+            arguments=decision.arguments or {},
+            destructive=True,
+            call_id=decision.call_id,
+        )
     if runner.file_policy is not None:
         runner.file_policy.assert_allowed(
             tool_name=decision.tool_name,

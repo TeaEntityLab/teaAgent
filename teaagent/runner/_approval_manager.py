@@ -33,6 +33,33 @@ class RunnerApprovalCoordinator:
         self.approval_handler = approval_handler
         self.jit_state = jit_state or JITApprovalState()
         self.workspace_root = workspace_root
+        self._h4_recorded_call_ids: set[str] = set()
+
+    def record_approval_shadow(
+        self,
+        *,
+        audit: AuditLogger,
+        run_id: str,
+        tool_name: str,
+        arguments: dict[str, Any],
+        destructive: bool,
+        call_id: str,
+    ) -> None:
+        """Record h4_governance_shadow once per call_id."""
+        if call_id in self._h4_recorded_call_ids:
+            return
+        self._h4_recorded_call_ids.add(call_id)
+        from teaagent.governance.h4_integration import evaluate_approval_policy_shadow
+
+        evaluate_approval_policy_shadow(
+            workspace_root=self.workspace_root,
+            audit=audit,
+            run_id=run_id,
+            tool_name=tool_name,
+            arguments=arguments,
+            destructive=destructive,
+            call_id=call_id,
+        )
 
     def can_request_approval(self, destructive: bool) -> bool:
         """Check if approval can be requested for a tool call."""
@@ -80,10 +107,7 @@ class RunnerApprovalCoordinator:
 
         Returns True if approved, False if denied.
         """
-        from teaagent.governance.h4_integration import evaluate_approval_policy_shadow
-
-        evaluate_approval_policy_shadow(
-            workspace_root=self.workspace_root,
+        self.record_approval_shadow(
             audit=audit,
             run_id=run_id,
             tool_name=approval_request.tool_name,

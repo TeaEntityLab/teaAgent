@@ -527,9 +527,7 @@ def build_control_cockpit(
         from teaagent.run_store import RunStore
 
         _store = RunStore(root_path, readonly=True)
-        pending = int(
-            build_pending_approvals_snapshot(_store, limit=100).get('queue_depth', 0)
-        )
+        pending = int(build_pending_approvals_snapshot(_store).get('queue_depth', 0))
     except Exception:
         logger.exception('pending-approval count failed')
         pending = 0

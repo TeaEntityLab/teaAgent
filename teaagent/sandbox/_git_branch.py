@@ -127,6 +127,7 @@ class GitBranchSandbox:
         self._run_id = run_id
         self._branch_name = f'teaagent-sandbox-{_sanitize_run_id(run_id)}'
         self._original_branch: Optional[str] = None
+        self._original_sha: Optional[str] = None
         self._is_git_repo = is_git_repository(self._root)
         self._stash_id: Optional[str] = None
 
@@ -171,15 +172,25 @@ class GitBranchSandbox:
 
         try:
             with _sandbox_lock:
-                # Get current branch
-                result = subprocess.run(
+                # Get current branch and its SHA so we can scope preview/undo diffs
+                # to the run's writes even if the original branch moves later.
+                branch_result = subprocess.run(
                     ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
                     cwd=self._root,
                     capture_output=True,
                     text=True,
                     check=True,
                 )
-                self._original_branch = result.stdout.strip()
+                self._original_branch = branch_result.stdout.strip()
+
+                sha_result = subprocess.run(
+                    ['git', 'rev-parse', 'HEAD'],
+                    cwd=self._root,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                self._original_sha = sha_result.stdout.strip()
 
                 # Create and checkout temporary branch
                 subprocess.run(
@@ -242,7 +253,13 @@ class GitBranchSandbox:
             )
 
     def rollback(self) -> GitSandboxResult:
-        """Rollback to original branch and delete sandbox branch."""
+        """Rollback to original branch and delete sandbox branch.
+
+        Refuses to reset/clean if HEAD is no longer on the sandbox branch, which
+        can happen after a completed headless run has already restored the
+        original branch. Without this guard, `git reset --hard HEAD` on the
+        original branch would destroy uncommitted work.
+        """
         if not self._is_git_repo or not self._original_branch:
             return GitSandboxResult(
                 success=False,
@@ -251,6 +268,25 @@ class GitBranchSandbox:
 
         try:
             with _sandbox_lock:
+                # Refuse to reset the wrong branch if keep()/merge() already
+                # switched us back to the original branch.
+                current_branch = subprocess.run(
+                    ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
+                    cwd=self._root,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                ).stdout.strip()
+                if current_branch != self._branch_name:
+                    return GitSandboxResult(
+                        success=False,
+                        error=(
+                            f'HEAD is on {current_branch!r}, not the sandbox branch '
+                            f'{self._branch_name!r}. Refusing rollback to avoid '
+                            f'resetting the original branch.'
+                        ),
+                    )
+
                 # Clean sandbox branch before checkout to avoid conflicts
                 subprocess.run(
                     ['git', 'reset', '--hard', 'HEAD'],

@@ -37,6 +37,11 @@ def register(
         help='JIT approval request timeout. Default 180 (3 minutes).',
     )
     serve_cmd.add_argument(
+        '--root',
+        default='.',
+        help='Workspace root. Defaults to current directory.',
+    )
+    serve_cmd.add_argument(
         '--sse-interval-seconds',
         type=float,
         default=1.0,

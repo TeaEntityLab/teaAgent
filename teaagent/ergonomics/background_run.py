@@ -131,7 +131,7 @@ class BackgroundRunStore:
             data['run_id'] = run_id
             if previous_run_id != run_id and not self.readonly:
                 _persist_record_state(record_path, data)
-        return _enrich_liveness(self.root, data)
+        return _enrich_liveness(self.root, data, record_path=record_path)
 
     def update_run_id(self, background_id: str, run_id: str) -> None:
         if self.readonly:
@@ -161,7 +161,7 @@ class BackgroundRunStore:
                     data['run_id'] = run_id
                     if not self.readonly:
                         _persist_record_state(path, data)
-            rows.append(_enrich_liveness(self.root, data))
+            rows.append(_enrich_liveness(self.root, data, record_path=path))
         return rows
 
     def logs(self, background_id: str, *, max_bytes: int = 64_000) -> dict[str, Any]:
@@ -211,18 +211,24 @@ class BackgroundRunStore:
         return data
 
 
-def _enrich_liveness(root: Path, data: dict[str, Any]) -> dict[str, Any]:
+def _enrich_liveness(
+    root: Path,
+    data: dict[str, Any],
+    *,
+    record_path: Optional[Path] = None,
+) -> dict[str, Any]:
     run_id = data.get('run_id')
     if not isinstance(run_id, str) or not run_id:
         return data
     from teaagent.ergonomics.run_liveness import liveness_snapshot
 
     snap = liveness_snapshot(root, run_id)
-    if snap is None:
-        return data
-    data['liveness_updated_at'] = snap['updated_at']
-    data['liveness_age_seconds'] = snap['age_seconds']
-    data['liveness_stale'] = snap['stale']
+    if snap is not None:
+        data['liveness_updated_at'] = snap['updated_at']
+        data['liveness_age_seconds'] = snap['age_seconds']
+        data['liveness_stale'] = snap['stale']
+    if record_path is not None and not data.get('alive'):
+        _derive_orphan_state(record_path, data)
     return data
 
 
@@ -246,6 +252,44 @@ def _process_exists(pid: int) -> bool:
         return True
     except OSError:
         return False
+
+
+_TERMINAL_RUN_EVENTS = frozenset(
+    {'run_completed', 'run_failed', 'run_paused', 'run_cancelled'}
+)
+
+
+def _has_clean_exit_record(root: Path, run_id: str, tenant_id: str) -> bool:
+    try:
+        from teaagent.run_store import RunStore
+
+        events = RunStore(root, tenant_id=tenant_id, readonly=True).show_run(run_id)
+    except (FileNotFoundError, OSError):
+        return False
+    return any(
+        isinstance(e, dict) and e.get('event_type') in _TERMINAL_RUN_EVENTS
+        for e in events
+    )
+
+
+def _derive_orphan_state(record_path: Path, data: dict[str, Any]) -> None:
+    if data.get('stop_signal') is not None:
+        return
+    if data.get('exit_code') == 0:
+        return
+    run_id = data.get('run_id')
+    if not isinstance(run_id, str) or not run_id:
+        return
+    tenant_id = _get_tenant_id_from_path(record_path)
+    if tenant_id == 'default':
+        w_root = record_path.parent.parent.parent
+    else:
+        w_root = record_path.parent.parent.parent.parent.parent
+    if _has_clean_exit_record(w_root, run_id, tenant_id):
+        if data.get('exit_code') is None:
+            data['exit_code'] = 0
+        return
+    data['orphaned'] = True
 
 
 def _capture_failure_card(
@@ -358,13 +402,12 @@ def _refresh_process_state(
         if exit_code is not None:
             data['exit_code'] = exit_code
         elif data.get('exit_code') is None:
-            # Child was reaped by another waitpid caller (e.g. the
+            # The child was reaped by another waitpid caller (e.g. the
             # subprocess module's _cleanup, a signal handler, or a
-            # concurrent test).  We can no longer read the exit code,
-            # so default to 0 (fast exits with errors rarely get reaped
-            # early, and None would break downstream consumers).
-            data['exit_code'] = 0
-        if data['exit_code'] != 0 and data.get('run_id'):
+            # concurrent test), so the real exit code is lost. Leave it
+            # unset; the orphan marker will surface the uncertainty.
+            data['exit_code'] = None
+        if data.get('exit_code') and data.get('run_id'):
             tenant_id = _get_tenant_id_from_path(record_path)
             if tenant_id == 'default':
                 w_root = record_path.parent.parent.parent

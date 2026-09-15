@@ -129,6 +129,7 @@ dev = [
     "google-adk>=2.0.0",
     "google-cloud-aiplatform>=1.158.0",
     "bandit>=1.7",
+    "vulture>=2.11",
 ]
 
 [project.scripts]

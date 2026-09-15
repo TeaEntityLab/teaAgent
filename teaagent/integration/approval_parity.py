@@ -18,7 +18,7 @@ APPROVAL_QUEUE_SCHEMA_VERSION = '1'
 def build_pending_approvals_snapshot(
     store: RunStore,
     *,
-    limit: int = 20,
+    limit: int | None = None,
 ) -> dict[str, Any]:
     """Build the shared pending-approval queue payload for CLI, TUI, and IDE."""
     views = collect_pending_approval_views(store, limit=limit)
@@ -32,7 +32,7 @@ def find_pending_approval_for_call_id(
     store: RunStore,
     call_id: str,
     *,
-    limit: int = 100,
+    limit: int | None = None,
 ) -> tuple[str, dict[str, Any]] | None:
     """Return ``(run_id, pending_payload)`` when *call_id* is queued."""
     for summary in store.list_runs(limit=limit):
@@ -50,7 +50,7 @@ def grant_pending_approval(
     root: str | Path,
     call_id: str,
     *,
-    limit: int = 100,
+    limit: int | None = None,
 ) -> dict[str, Any] | None:
     """Persist scoped approval for a pending call. Returns grant metadata or None."""
     approval_store = ApprovalPresetStore(root)
@@ -86,4 +86,35 @@ def build_approval_granted_payload(grant: dict[str, Any]) -> dict[str, Any]:
         'call_id': grant['call_id'],
         'run_id': grant['run_id'],
         'note': 'Use --resume to continue the run',
+    }
+
+
+def deny_pending_approval(
+    root: str | Path,
+    call_id: str,
+    *,
+    limit: int | None = None,
+    reason_code: str = 'operator_denied',
+) -> dict[str, Any] | None:
+    """Record tool_call_denied for a queued pending call. Returns metadata or None."""
+    store = RunStore(root)
+    found = find_pending_approval_for_call_id(store, call_id, limit=limit)
+    if not found:
+        return None
+    run_id, pending = found
+    audit = store.audit_logger(run_id)
+    audit.record(
+        'tool_call_denied',
+        run_id,
+        call_id=call_id,
+        tool_name=pending.get('tool_name', 'unknown'),
+        reason_code=reason_code,
+        authority_type='cli_deny',
+        denied_by='operator',
+    )
+    return {
+        'status': 'denied',
+        'run_id': run_id,
+        'call_id': call_id,
+        'tool_name': pending.get('tool_name', 'unknown'),
     }

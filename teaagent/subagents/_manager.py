@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from teaagent.approval.manager import PermissionMode
+from teaagent.governance.rbac import DEFAULT_OPERATOR_ASSIGNEE
 from teaagent.llm import LLMAdapter
 from teaagent.run_store import RunStore
 from teaagent.subagent_run_context import (
@@ -271,9 +272,7 @@ class SubagentManager:
         child_depth = depth + 1
         assignee = str(
             getattr(self._parent_config, 'operator_id', None)
-            or getattr(self._parent_config, 'agent_id', None)
-            or parent_run_id
-            or 'default-operator'
+            or DEFAULT_OPERATOR_ASSIGNEE
         )
         from teaagent.governance.h4_integration import check_subagent_launch_rbac
         from teaagent.run_store import RunStore

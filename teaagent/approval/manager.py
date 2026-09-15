@@ -745,14 +745,18 @@ class ApprovalStoreManager:
         tool_name: str,
         permission_mode: str,
         arguments: dict[str, Any] | None = None,
-    ) -> bool:
+    ) -> str:
         if not self.approval_store:
-            return False
-        return self.approval_store.is_allowed(
+            return 'prompt'
+        result = self.approval_store.check(
             tool_name,
             permission_mode=permission_mode,
             arguments=arguments,
         )
+        decision = result.get('decision', 'prompt')
+        if decision in ('allow', 'deny'):
+            return decision
+        return 'prompt'
 
     def check_scoped(
         self,
@@ -937,9 +941,9 @@ class ApprovalManager:
             # the dev opt-in is active.
             self._assert_skill_path_not_protected(tool_name, call_id, arguments)
 
-        if decision.approved:
-            return
-        if decision.reason_code != 'jit_required':
+        # Permission-mode denials (read-only, workspace-write, unacknowledged
+        # full-access) are final; prompt mode continues to the grant/approval chain.
+        if not decision.approved and decision.reason_code != 'jit_required':
             # Map the backend reason code to a DenialReasonCode.
             dc = decision.reason_code
             if dc == DenialReasonCode.READ_ONLY_MODE.value:
@@ -975,11 +979,28 @@ class ApprovalManager:
         if self.jit_state.consume_once(call_id, payload_digest):
             return
 
-        if self._store_manager.check_preset(
+        preset_decision = self._store_manager.check_preset(
             tool_name=tool_name,
             permission_mode=self.permission_mode.value,
             arguments=arguments,
+        )
+        if preset_decision == 'deny':
+            raise ToolPermissionError(
+                f"Tool call '{call_id}' for '{tool_name}' is denied by an approval preset.",
+                reason_code=DenialReasonCode.POLICY_DENIED,
+            )
+        if (
+            preset_decision == 'allow'
+            and self.approval_store
+            and self.approval_store.is_allowed(
+                tool_name,
+                permission_mode=self.permission_mode.value,
+                arguments=arguments,
+            )
         ):
+            return
+
+        if decision.approved:
             return
 
         if arguments is not None and self._store_manager.check_scoped(

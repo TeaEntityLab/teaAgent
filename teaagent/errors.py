@@ -24,6 +24,7 @@ class DenialReasonCode(str, Enum):
     FULL_ACCESS_NOT_ACKNOWLEDGED = 'full_access_not_acknowledged'
     SKILL_WRITE_BLOCKED = 'skill_write_blocked'
     SYMLINK_BLOCKED = 'symlink_blocked'
+    POLICY_DENIED = 'policy_denied'
 
 
 class ErrorCategory(str, Enum):

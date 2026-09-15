@@ -3,6 +3,7 @@ from __future__ import annotations
 import fnmatch
 import hashlib
 import json
+import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -14,6 +15,20 @@ ApprovalDecision = Literal['allow', 'deny', 'prompt']
 
 SESSION_TTL_HOURS = 8.0
 APPROVAL_TTL_HOURS = 24.0  # Scoped approvals expire after 24 hours by default
+PENDING_APPROVAL_TTL_SECONDS = int(APPROVAL_TTL_HOURS * 3600)
+
+
+def get_pending_approval_ttl_seconds() -> int:
+    """Configurable pending-approval expiry; may be overridden via environment."""
+    raw = os.environ.get('TEAAGENT_PENDING_APPROVAL_TTL_SECONDS', '')
+    try:
+        override = int(raw)
+    except ValueError:
+        return PENDING_APPROVAL_TTL_SECONDS
+    if override <= 0:
+        return PENDING_APPROVAL_TTL_SECONDS
+    return override
+
 
 POLICY_ORDER = [
     'Matching deny grants block the tool call',
@@ -232,7 +247,7 @@ def _path_matches(
                 break
 
     if path_value is None:
-        return False
+        return any(pattern == '*' for pattern in path_globs)
 
     for pattern in path_globs:
         normalized_pattern = pattern.replace('\\', '/')
@@ -283,6 +298,8 @@ def _compute_expires_at(
 
 __all__ = [
     'APPROVAL_TTL_HOURS',
+    'PENDING_APPROVAL_TTL_SECONDS',
+    'get_pending_approval_ttl_seconds',
     'POLICY_ORDER',
     'SESSION_TTL_HOURS',
     'ApprovalDecision',

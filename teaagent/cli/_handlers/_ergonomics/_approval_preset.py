@@ -68,10 +68,12 @@ def approval_preset_command(args: argparse.Namespace) -> int:
                     {
                         'tool_name': 'workspace_write_file',
                         'scope': 'deny',
+                        'path_globs': ['*'],
                     },
                     {
                         'tool_name': 'workspace_run_shell_mutate',
                         'scope': 'deny',
+                        'path_globs': ['*'],
                     },
                 ],
             },

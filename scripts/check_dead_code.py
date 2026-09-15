@@ -16,8 +16,11 @@ def main() -> int:
         'teaagent/',
         '--min-confidence',
         '80',
-        '--exclude',
-        'teaagent/tui/',
+        # Signature-required / placeholder params vulture can't see are used:
+        # __exit__ exc_* are protocol-required; apply_binary_delta's
+        # current_binary is a required positional in a stub method.
+        '--ignore-names',
+        'exc_type,exc_val,exc_tb,current_binary',
     ]
     return subprocess.call(cmd)
 

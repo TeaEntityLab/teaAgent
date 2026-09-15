@@ -30,7 +30,15 @@ def agent_attach_command(args: argparse.Namespace) -> int:  # noqa: C901
         from teaagent.ergonomics.workspace_defaults import load_workspace_defaults
 
         defaults = load_workspace_defaults(args.root)
-        provider = defaults.get('provider')
+        provider = getattr(args, 'provider', None)
+        if not provider:
+            for event in store.show_run(args.run_id):
+                if event.get('event_type') == 'run_started':
+                    provider = event.get('payload', {}).get('provider')
+                    if provider:
+                        break
+        if not provider:
+            provider = defaults.get('provider')
         if not provider:
             print_json({'status': 'error', 'message': 'provider required for --resume'})
             return 1

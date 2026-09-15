@@ -107,3 +107,9 @@ repos:
         entry: python3 scripts/check_high_risk_paths.py
         language: system
         pass_filenames: false
+      - id: check-dead-code
+        name: check-dead-code
+        # DR-006 G18: dead-code gate covers teaagent/tui/ via vulture.
+        entry: env UV_CACHE_DIR=.uv-cache uv run python3 scripts/check_dead_code.py
+        language: system
+        pass_filenames: false

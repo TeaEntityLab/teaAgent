@@ -100,13 +100,14 @@ def agent_undo_command(args: argparse.Namespace) -> int:  # noqa: C901
         if preview:
             root_path = Path(args.root).resolve()
             try:
+                # Diff from the original SHA captured at sandbox start to the
+                # sandbox branch. This shows only the run's writes, not later
+                # commits that landed on the original branch after the run.
+                base = (
+                    git_sandbox._original_sha or git_sandbox._original_branch or 'HEAD'
+                )
                 diff_result = subprocess.run(
-                    [
-                        'git',
-                        'diff',
-                        git_sandbox._branch_name,
-                        git_sandbox._original_branch or 'HEAD',
-                    ],
+                    ['git', 'diff', base, git_sandbox._branch_name],
                     cwd=root_path,
                     capture_output=True,
                     text=True,

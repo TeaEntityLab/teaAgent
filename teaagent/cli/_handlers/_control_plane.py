@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from typing import Any
 
 from teaagent.approval import JITApprovalServer
 from teaagent.control_plane_api import ControlPlaneServer
@@ -28,16 +29,20 @@ def control_plane_serve_command(args: argparse.Namespace) -> int:
         relay_mode=False,
     )
     registry = ControlPlaneRegistry(default_tenant=args.default_tenant)
+    kwargs: dict[str, Any] = {
+        'host': args.host,
+        'port': args.port,
+        'tenant_registry': registry,
+        'jit_server': jit,
+        'sse_interval_seconds': args.sse_interval_seconds,
+        'max_sse_events': None,
+        'auth_policy': policy,
+    }
+    root = getattr(args, 'root', None)
+    if root:
+        kwargs['workspace_root'] = root
     try:
-        server = ControlPlaneServer(
-            host=args.host,
-            port=args.port,
-            tenant_registry=registry,
-            jit_server=jit,
-            sse_interval_seconds=args.sse_interval_seconds,
-            max_sse_events=None,
-            auth_policy=policy,
-        )
+        server = ControlPlaneServer(**kwargs)
     except ValueError as exc:
         print(f'Error: {exc}')
         return 1
