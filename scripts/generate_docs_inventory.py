@@ -46,6 +46,9 @@ _CONSTITUTION_DOCS = {
     'governance-compliance.md',
 }
 
+# Harness-first G5: constitution tier holds at most this many claim-tested docs.
+_CONSTITUTION_MAX_DOCS = 12
+
 # Date pattern and working overrides live in docs_tier.py (shared with report_docs_aging).
 _WORKING_CURRENT_TRUTH_DOCS = WORKING_CURRENT_TRUTH_DOCS
 
@@ -143,13 +146,27 @@ def check_docs_inventory(
             rel = output_path
         return [f'{rel} missing; run: python3 scripts/generate_docs_inventory.py']
     actual = output_path.read_text(encoding='utf-8')
-    if actual == expected:
-        return []
-    try:
-        rel = output_path.relative_to(_REPO_ROOT)
-    except ValueError:
-        rel = output_path
-    return [f'{rel} is out of date; run: python3 scripts/generate_docs_inventory.py']
+    errors: list[str] = []
+    if actual != expected:
+        try:
+            rel = output_path.relative_to(_REPO_ROOT)
+        except ValueError:
+            rel = output_path
+        errors.append(
+            f'{rel} is out of date; run: python3 scripts/generate_docs_inventory.py'
+        )
+    constitution_rows = [
+        line
+        for line in expected.splitlines()
+        if line.startswith('| `') and '| constitution |' in line
+    ]
+    if len(constitution_rows) > _CONSTITUTION_MAX_DOCS:
+        errors.append(
+            f'constitution tier holds {len(constitution_rows)} docs, '
+            f'exceeding the G5 cap of {_CONSTITUTION_MAX_DOCS}; '
+            'move docs out of _CONSTITUTION_DOCS or raise the cap with owner approval'
+        )
+    return errors
 
 
 def main(argv: list[str] | None = None) -> int:

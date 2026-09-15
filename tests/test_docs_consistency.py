@@ -965,3 +965,30 @@ def test_roadmap_g5_corpus_counts_match_inventory() -> None:
         assert tiers[tier] in numbers, (
             f'G5 row does not state the real {tier} tier count {tiers[tier]}: {g5_row}'
         )
+
+
+def test_constitution_tier_cap_enforced_at_twelve() -> None:
+    """G5: constitution tier holds at most 12 claim-tested docs.
+
+    Harness-first §2/G5 residual: the ≤12 cap was stated but unenforced.
+    `check_docs_inventory` now fails when the generated inventory carries
+    more than `_CONSTITUTION_MAX_DOCS` constitution rows, so a 13th
+    constitution doc cannot land silently.
+    """
+    from importlib.util import module_from_spec, spec_from_file_location
+
+    spec = spec_from_file_location(
+        'generate_docs_inventory_cap',
+        _SCRIPTS / 'generate_docs_inventory.py',
+    )
+    assert spec and spec.loader
+    module = module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    assert module._CONSTITUTION_MAX_DOCS == 12
+    live_rows = [
+        line
+        for line in module.generate_docs_inventory().splitlines()
+        if line.startswith('| `') and '| constitution |' in line
+    ]
+    assert len(live_rows) <= module._CONSTITUTION_MAX_DOCS
