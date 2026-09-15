@@ -3,7 +3,7 @@
 **Status:** Active monitoring process
 **Frequency:** Monthly
 **Owner:** TBD
-**Last reviewed:** 2026-06-01
+**Last reviewed:** 2026-09-15
 
 ## Purpose
 
@@ -72,6 +72,7 @@ When an escalation trigger is met:
 |------|-------------|----------|---------------------|--------------|
 | 2026-06-01 | Initial setup | Process established | No | Document created |
 | 2026-06-01 | Automated monitoring cycle | No new releases, no governance issues, no community governance requests | No | Monitoring cycle completed via automation script |
+| 2026-09-15 | Automated monitoring cycle | Latest release v1.18.31; 0 governance issues, 0 high-vote issues, no community governance requests | No | Monitoring cycle completed via automation script (`scripts/opencode_gap_watch.py` dry run; live GitHub API) |
 
 ## Resources
 
