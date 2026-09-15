@@ -30,13 +30,12 @@ def test_show_unknown_run_id_prints_error_and_returns_true() -> None:
     assert tui.lines == ["error: run 'no-such-run-id' not found"]
 
 
-def test_handle_command_survives_handler_raise() -> None:
+def test_handle_command_survives_handler_raise(tmp_path) -> None:
     """A raising handler must not kill the REPL — handle_command guards all."""
     from teaagent.tui.core import TeaAgentTUI
 
-    tui = TeaAgentTUI.__new__(TeaAgentTUI)
     seen: list[str] = []
-    tui.output_fn = seen.append
+    tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=seen.append, root=tmp_path)
 
     def boom(_t: object, _a: list[str]) -> bool:
         raise RuntimeError('synthetic failure')
