@@ -1,5 +1,5 @@
 # Daily-Driver Current Status
-# As of 2026-08-25
+# As of 2026-09-15
 
 > **Claim class:** Current truth for daily-driver behavior (TUI, chat, agent mode,
 > approval, cost, undo, resume).
@@ -11,7 +11,10 @@
 > `docs/analysis/`.
 >
 > **Review trigger:** TUI, chat, agent mode, approval, cost, undo, or resume behavior changes.
-> **Last reviewed:** 2026-08-26 (EFX providerless proof/live-proof gate, ambient-credential warning, and current roadmap execution sequence reviewed)
+> **Last reviewed:** 2026-09-15 (approval behavior changes: deny grants block
+> all modes, `approval reject` CLI, 24h pending-approval TTL, unbounded pending
+> surfaces — see `permission-and-approval-playbook.md`; undo refuses off-branch;
+> attach inherits the run's recorded provider)
 
 This page is the short daily-use entry point for TeaAgent's TUI, TUI chat, and
 agent mode. It is intentionally more practical than the audit corpus.
@@ -42,6 +45,15 @@ daily-driver plan is historical evidence, not an active scheduling authority.
 - `daily`/`preflight` warn when `GITHUB_TOKEN`/`GH_TOKEN` sit in the shell environment: external-effect tools stay fail-closed until approved, but remove ambient tokens unless authorizing live use (EFX-002).
 - `teaagent chat` prints successful task answers and no longer marks successful tasks as failures.
 - `teaagent chat` `/cost` and `/budget` are wired to real session cost. Budget semantics are explicit: `None` means unlimited, while `0` is a real zero cap. Cost display labels whether the value is actual, estimated, or unavailable.
+- Matched deny grants now hard-block in every mode (`approval check` reports
+  `decision: deny` with `POLICY_DENIED`; `approval preset strict` applies
+  wildcard deny grants). Pending-approval surfaces read the full audit log
+  (no `limit=20` window). Queued calls can be declined via
+  `teaagent approval reject <call_id>` (records `tool_call_denied`); paused
+  approvals auto-deny after `TEAAGENT_PENDING_APPROVAL_TTL_SECONDS` (24h).
+- `teaagent undo` refuses when HEAD is not on the sandbox branch (no more
+  `reset --hard` on `main`); `agent attach --resume` inherits the run's
+  recorded provider instead of the configured default.
 - `teaagent chat` `/undo` uses the undo journal and preserves unrelated manual edits.
 - TUI setup, preflight, runs, session listing, and approval commands provide useful operational coverage.
 - TUI `/cost` now accumulates via ChatSessionController (CG-11 fixed).
