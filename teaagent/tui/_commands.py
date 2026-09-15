@@ -61,10 +61,15 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
         action = action[1:]
     args = parts[1:]
 
-    # Dispatch to command handler
+    # Dispatch to command handler. Guarded so no single command can kill the
+    # REPL loop (cf. `show last` FileNotFoundError, 2026-09-15 dogfood).
     handler = _COMMAND_DISPATCH.get(action)
     if handler:
-        return handler(tui, args)
+        try:
+            return handler(tui, args)
+        except Exception as exc:
+            tui.output_fn(f'error: {action} failed — {exc}')
+            return True
 
     # Handle chat mode fallback: unknown command → prompt before forwarding as task
     if tui.chat:
@@ -423,14 +428,14 @@ def _cmd_runs(tui: 'TeaAgentTUI', args: list[str]) -> bool:
 
 
 def _cmd_show(tui: 'TeaAgentTUI', args: list[str]) -> bool:
-    """Handle show command."""
+    """Handle show command. Never raises — errors print and stay in the REPL."""
     if len(args) != 1:
         tui.output_fn('error: show requires a run id')
         return True
     try:
         tui._print_json(RunStore(tui.root).show_run(args[0]))
-    except FileNotFoundError:
-        tui.output_fn(f"error: run '{args[0]}' not found")
+    except (FileNotFoundError, OSError, ValueError) as exc:
+        tui.output_fn(f"error: run '{args[0]}' not found — {exc}")
     return True
 
 
