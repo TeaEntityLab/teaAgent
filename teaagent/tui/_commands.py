@@ -427,7 +427,10 @@ def _cmd_show(tui: 'TeaAgentTUI', args: list[str]) -> bool:
     if len(args) != 1:
         tui.output_fn('error: show requires a run id')
         return True
-    tui._print_json(RunStore(tui.root).show_run(args[0]))
+    try:
+        tui._print_json(RunStore(tui.root).show_run(args[0]))
+    except FileNotFoundError:
+        tui.output_fn(f"error: run '{args[0]}' not found")
     return True
 
 

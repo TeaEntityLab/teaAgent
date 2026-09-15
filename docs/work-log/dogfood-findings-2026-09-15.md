@@ -121,9 +121,17 @@ implementation below; each lands under the provenance tag proposed above.
 | G12 | **Not selected** — leave `--approve-call-id` as-is. |
 | G13 | **Not selected** — leave `doctor all` semantics as-is. |
 | G14 | **Quarantine per ADR-0043** — mark ANP stub `legacy-competitive`/On Hold. |
-| G15+G16 | **Deny CLI + expiry** — add `approval deny <call_id>` recording `tool_call_denied` for paused runs AND a paused-run expiry. |
+| G15+G16 | **Deny CLI + expiry** — as decided: `approval reject <call_id>` records `tool_call_denied` and resumes the paused run without the call; `approval deny` reverted to grant-only. Paused approvals auto-deny after `TEAAGENT_PENDING_APPROVAL_TTL_SECONDS` (default 24h). (Implemented as `reject`, not `deny <call_id>`.) |
 | G17 | **Delete the dead code** — remove `CockpitScreenRenderer`/`CockpitDataManager`/`CockpitTab`; moots G19/G20. |
 | G18 | Implement — include `teaagent/tui/` in vulture + wire the gate into pre-commit. |
 | G22 | Implement — order audit promotion after sandbox resolution; promote the suspend logger. |
 | D1 | **Deferred** — needs more evidence before classifying. |
 | ADR-0031 | **Extend, conditioned on G1–G5** — new close date; promotion only after the safety-critical fixes land and are re-dogfooded. |
+
+## Re-dogfood of G1–G5 fixes (2026-09-15, post-`1611e71b`)
+
+- **G1 live**: with the strict preset applied, `approval check workspace_write_file --path /tmp/x.txt` returns `decision: deny` in both default and `--permission-mode allow`. Deny grants now block, not warn. (Probe grants revoked afterward.)
+- **G6 live**: `approval preset strict` now applies 2 deny grants with `path_globs: ["*"]` (`grants_skipped: []`) — was a no-op.
+- **G22 live**: a `--git-sandbox-auto-stash` dogfood run (`8cbc123639cf44aea59a191adab1d25d`) lands `git_sandbox_resolved` in the real run `.jsonl` (order: started → … → completed → resolved) with HEAD restored to `main`. A dirty-worktree run without auto-stash skips the sandbox lifecycle entirely — correct, not a regression.
+- **154 `pending-*.jsonl` temps are pre-fix orphans** (newest 2026-09-14) — no new orphans from post-fix runs. Existing set is unindexed history, not new loss.
+- H4 evidence unchanged (9 observed / 21 reachable): fake-provider runs make no tool calls, so no new shadow receipts. Re-dogfood proves the G1/G6/G22 fixes, not new H4 coverage — recorded honestly for the ADR-0031 condition.
