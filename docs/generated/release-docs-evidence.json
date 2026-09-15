@@ -1,17 +1,17 @@
 {
   "ok": false,
-  "created_at": "2026-09-15T06:59:32+00:00",
+  "created_at": "2026-09-15T07:00:23+00:00",
   "repo_root": "/Users/teee/dev/teaagent",
   "git": {
     "branch": "main",
-    "commit": "cdc012e059f0f4276d8132e951ed3848c061bb01",
-    "dirty": true
+    "commit": "6eec2b7259e865e4ce2ffef44c511dae134734f8",
+    "dirty": false
   },
   "commands": [
     {
       "cmd": "/opt/homebrew/opt/python@3.14/bin/python3.14 scripts/validate_docs_consistency.py",
       "exit_code": 1,
-      "stdout": "Risk register evidence coverage: 29/29 rows verified (100%)\nTicket index evidence coverage: 21/21 rows verified (100%)\nERROR: Code reference h4_evidence.py:190 points to missing file h4_evidence.py\nERROR: docs/generated/docs-inventory.md is out of date; run: python3 scripts/generate_docs_inventory.py\n",
+      "stdout": "Risk register evidence coverage: 29/29 rows verified (100%)\nTicket index evidence coverage: 21/21 rows verified (100%)\nERROR: Code reference h4_evidence.py:190 points to missing file h4_evidence.py\n",
       "stderr": ""
     },
     {
