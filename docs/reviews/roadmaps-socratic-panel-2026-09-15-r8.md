@@ -23,12 +23,7 @@ None to canonical status. One new file (see below).
 ## Shared Findings (round 8 deltas only)
 - Post-round-7 commits are bundle-only; no runs/evidence/friction/owner
   changes.
-- Checklist flags verified against live `--help`: `build_h4_decision_packet
-  --audit-log/--since/--until/--output`, `check_h4_coverage
-  --matrix/--output`, `benchmark_h4_policy.py` (positional args, no
-  `--threshold-ms`), `verify_h4_rollback.py --output`. Coordinator
-  corrected two lens-drafted flags (`--threshold-ms` does not exist on the
-  packet builder; benchmark takes no threshold flag) before writing.
+- Checklist flags verified against live `--help` and source reads: `build_h4_decision_packet --audit-log/--since/--until/--threshold-ms/--output`, `check_h4_coverage --matrix/--output`, `benchmark_h4_policy.py --threshold-ms`, `verify_h4_rollback.py --output`. (Erratum 2026-09-15 per round-9 panel: an earlier version of this paragraph falsely claimed two flags were "coordinator-corrected" away; both scripts do accept `--threshold-ms` — see `scripts/build_h4_decision_packet.py:34`, `scripts/benchmark_h4_policy.py:33`.)
 
 ## Disagreements / Residual Risks
 - None new. Round 1 Devil's C4 + Strategic C3/R2-5 deferrals stand.

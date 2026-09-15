@@ -20,9 +20,9 @@
   `prepare_h4_evidence.py --since <start> --until 2026-09-29` was run; all
   `h4_governance_shadow` denial candidates have owner verdicts (true/false
   positive). D1 verdict recorded.
-- [ ] 3. Criterion 2 — coverage: `check_h4_coverage.py` reports `gaps: []`
+- [ ] 3. Criterion 2 — coverage: `check_h4_coverage.py --matrix <matrix> --output <report.json>` reports `gaps: []`
   for enabled policies and roles.
-- [ ] 4. Criterion 3 — performance: `benchmark_h4_policy.py` reports median
+- [ ] 4. Criterion 3 — performance: `benchmark_h4_policy.py --threshold-ms 50.0` reports median
   < 50 ms.
 - [ ] 5. Criterion 4 — human sign-off: owner signed the ADR-0031 decision
   log (promote/extend/revert) and the D1 classification.
@@ -45,8 +45,10 @@ After the owner checks all boxes, run:
 
 ```bash
 python3 scripts/build_h4_decision_packet.py \
+  --audit-log "$AUDIT_LOG" \
   --since <start> \
   --until 2026-09-29 \
+  --threshold-ms 50.0 \
   --output .teaagent/reviews/adr-0031/decision-packet-2026-09-29.json
 python3 scripts/validate_docs_consistency.py
 ./scripts/verify_docs.sh

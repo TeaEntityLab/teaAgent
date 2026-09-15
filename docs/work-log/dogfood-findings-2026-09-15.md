@@ -111,20 +111,20 @@ implementation below; each lands under the provenance tag proposed above.
 |---|---|
 | G1 | **Block in all modes** — a matched deny grant hard-blocks in prompt/allow/workspace-write/read-only. |
 | G2+G3 | **Fix both** — `rollback()` refuses when HEAD isn't on the sandbox branch; runs restore the original branch on completion. |
-| G4 | **Implement orphaned marker** — emit `orphaned` when a tracked pid dies without a clean exit record. |
+| G4 | **Fixed in `1611e71b` — orphaned marker** — emit `orphaned` when a tracked pid dies without a clean exit record. |
 | G5+G21 | **Unify on audit events, unbounded** — all pending-approval surfaces read `tool_call_pending_approval` from the audit log with no limit; control-plane JIT reads the same store. |
 | G6 | **Fix strict preset** — preset deny entries get wildcard scope so "deny all destructive tools" applies. |
 | G7+G8 | **Default role + operator_id assignee** — ship a default operator role with `start_workflow`; resolve `assignee` to `operator_id`. |
 | G9 | **Observe all modes** — `evaluate_approval_policy_shadow` runs on every destructive call regardless of mode. |
-| G10 | Implement — `attach --resume` inherits the run's recorded provider. |
+| G10 | Fixed in `1611e71b` — `attach --resume` inherits the run's recorded provider. |
 | G11 | **Not selected** — leave trust-key silent-discard as-is. |
 | G12 | **Not selected** — leave `--approve-call-id` as-is. |
 | G13 | **Not selected** — leave `doctor all` semantics as-is. |
 | G14 | **Quarantine per ADR-0043** — mark ANP stub `legacy-competitive`/On Hold. |
 | G15+G16 | **Deny CLI + expiry** — as decided: `approval reject <call_id>` records `tool_call_denied` and resumes the paused run without the call; `approval deny` reverted to grant-only. Paused approvals auto-deny after `TEAAGENT_PENDING_APPROVAL_TTL_SECONDS` (default 24h). (Implemented as `reject`, not `deny <call_id>`.) |
 | G17 | **Delete the dead code** — remove `CockpitScreenRenderer`/`CockpitDataManager`/`CockpitTab`; moots G19/G20. |
-| G18 | Implement — include `teaagent/tui/` in vulture + wire the gate into pre-commit. |
-| G22 | Implement — order audit promotion after sandbox resolution; promote the suspend logger. |
+| G18 | Fixed in `1611e71b` — include `teaagent/tui/` in vulture + wire the gate into pre-commit. |
+| G22 | Fixed in `1611e71b` — order audit promotion after sandbox resolution; promote the suspend logger. |
 | D1 | **Deferred** — needs more evidence before classifying. |
 | ADR-0031 | **Extend, conditioned on G1–G5** — new close date; promotion only after the safety-critical fixes land and are re-dogfooded. |
 
