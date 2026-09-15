@@ -17,7 +17,7 @@
 > measured 8 post-DR-006 `feat` commits touching `teaagent/`, 1 citing a gate
 > (`87d1c61` governance-gap); retrospective only since the gate landed
 > 2026-09-09, and backlog-row coverage was not re-audited in this pass.
-> Falsifier is a standing tripwire (DR-006 Falsifiers, no close date). ADR-0031 extended to 2026-09-29 with booked 2026-09-15 dogfood; B1 + D1 pending.
+> Falsifier is a standing tripwire (DR-006 Falsifiers, no close date). ADR-0031 extended to 2026-09-29 with booked 2026-09-15 dogfood (ADR-0031 review due 2026-09-12 superseded by the extension); B1 + D1 pending.
 > **Review 2026-09-13:** agentflow v8.2.0 survey delta added AGF-001..004;
 > AGF-001 (cross-host skill conflict audit) and AGF-002 (guard incident
 > citations) are **Done** under owner "implement governance gaps" direction;
