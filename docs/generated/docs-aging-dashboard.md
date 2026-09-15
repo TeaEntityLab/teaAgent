@@ -51,7 +51,7 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 
 | Document | Status | Last reviewed | File mtime | Notes |
 | --- | --- | --- | --- | --- |
-| `docs/backlog-priority.md` | stale_by_mtime | 2026-09-13 | 2026-09-14 | Missing owner banner; File modified after last reviewed date |
+| `docs/backlog-priority.md` | stale_by_mtime | 2026-09-13 | 2026-09-15 | Missing owner banner; File modified after last reviewed date |
 
 ### verification
 
@@ -83,7 +83,7 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 
 ## Corpus Cost (G5 Signal)
 
-**Total docs:** 647 (baseline 582 at diagnosis, delta +65)
+**Total docs:** 648 (baseline 582 at diagnosis, delta +66)
 **Live corpus (non-archive):** 377
 **Working-tier docs unreferenced by INDEX.md:** 328
 
