@@ -1,8 +1,14 @@
 # Permission And Approval Playbook
-# As of 2026-06-02
+# As of 2026-09-15
 
-> **Last reviewed:** 2026-06-06
+> **Last reviewed:** 2026-09-15
 > **Review trigger:** Approval, permission, or MCP trust behavior changes.
+> **Changes since 2026-06-06 review:** matched deny grants now hard-block in
+> every mode (`1611e71b` G1 fix — previously advisory-only); `approval preset
+> strict` applies wildcard-scoped denies (G6 fix); new `approval reject
+> <call_id>` denies a queued pending call and resumes the run without it
+> (G15); paused approvals auto-deny after `TEAAGENT_PENDING_APPROVAL_TTL_SECONDS`
+> (default 24h, G16); `approval check` evaluates deny grants in allow mode too.
 
 This playbook is for users operating TeaAgent in repositories where tool authority
 matters.
@@ -46,9 +52,20 @@ Risky path scopes:
 
 Useful TUI/CLI concepts:
 
-- `approvals pending` to inspect blocked calls.
-- `approvals check <id>` to inspect one approval when supported.
-- `approve <id>` only after matching the call to the task.
+- `approval pending` to inspect blocked calls (reads the full audit log — no
+  `limit=20` window since the G5/G21 unification fix).
+- `approval approve <call_id> [--resume]` to approve one queued call
+  (`--selector N` from `approval pending --human` also works).
+- `approval reject <call_id>` to deny a queued call and resume the run
+  without executing it (records `tool_call_denied`; `approval deny` is
+  grant-only and does not touch queued calls).
+- `approval check <tool>` to test whether current presets would allow, prompt,
+  or deny a call — a matched deny grant now hard-blocks (`POLICY_DENIED`) in
+  prompt, allow, workspace-write, and read-only modes.
+- `approval preset strict` applies wildcard deny grants (`path_globs: ["*"]`)
+  so "deny all destructive tools" actually applies (was a no-op before G6).
+- Paused approvals expire: a run paused longer than
+  `TEAAGENT_PENDING_APPROVAL_TTL_SECONDS` (default 24h) is auto-denied.
 - `unapprove` or `revoke` when authority is no longer needed.
 
 ## Revoking approvals
@@ -104,11 +121,25 @@ Revoke when:
 - **Cockpit**: `teaagent daily` shows active approval scope: `workspace-write (scoped: src/**)`
 
 ### Scenario 6: Single tool call approval
-- **Task**: Approve one specific tool call without granting session-wide access
-- **Command**: `teaagent approve --call-id call_abc123`
-- **Scope**: That exact tool call with its arguments; no other calls are approved
-- **Why safe**: One-time approval with exact argument matching prevents scope creep
-- **Audit**: Each approval is recorded in the run evidence bundle with `scope_path` and `authority_type`
+- **Task**: Approve one specific queued tool call without granting session-wide access
+- **Command**: `teaagent approval approve <call_id> [--resume]`
+- **Scope**: That exact queued call; no other calls are approved
+- **Why safe**: One-time approval of the exact call prevents scope creep
+- **Audit**: Each approval is recorded in the run evidence bundle with `scope_path` and `authority_type` (`cli_approval`/`operator` for CLI approvals)
+- **Note**: `--approve-call-id` on `agent run` is deprecated and ignored; the
+  removed per-call preapproval path must not be confused with approving an
+  already-queued call. There is no `teaagent approve` top-level command — the
+  surface is `teaagent approval approve`.
+
+### Scenario 7: Rejecting a queued destructive call
+- **Task**: Decline a pending destructive call without executing it
+- **Command**: `teaagent approval reject <call_id>`
+- **Scope**: That exact queued call; the run resumes without it
+- **Why safe**: Records `tool_call_denied` (clears the pending entry); the
+  denied call is not re-executed on resume
+- **Audit**: Denial is recorded with the call id; `approval deny <tool>` is
+  grant-only (registers a deny grant for future calls, requires
+  `--path-glob`/`--command-prefix` scope) and cannot reject an already-queued call.
 
 ## Security review checklist (P2-A-004)
 
