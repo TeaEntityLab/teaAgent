@@ -1,10 +1,10 @@
 {
   "ok": true,
-  "created_at": "2026-09-15T22:08:52+00:00",
+  "created_at": "2026-09-15T22:27:12+00:00",
   "repo_root": "/Users/teee/dev/teaagent",
   "git": {
     "branch": "main",
-    "commit": "7e47aa7722f293ed920d3df6a0308d3ca42c49ea",
+    "commit": "10483c86495bf5b2c0043216ad5820bd1c0445b9",
     "dirty": false
   },
   "commands": [
@@ -53,7 +53,7 @@
       {
         "id": "H4",
         "name": "Durable owner/agent operations",
-        "status": "On Hold — shadow wiring exists; ADR-0031 evidence packet prepared 2026-08-27, refreshed 2026-08-31 and re-verified 2026-09-12 over the closed decision window 2026-08-13→2026-09-11 (0 observed / 0 reachable, verdict `unexercised`); extended window 2026-08-13→2026-09-15 after the booked 2026-09-15 M4 dogfood: 8 in-log approval receipts + 1 orphan-sourced D1 subagent_launch denial candidate across 21 reachable runs, verdict `needs_review`, packet 4/5 prepared (criterion 4 human sign-off `human_required`); `promotion_ready=false` is a hardcoded literal, not a metric; H4 demo `scripts/exercise_h4_shadow_demo.py` exercisable (2 synthetic candidates, must not launder into C1) and guarded (`tests/test_h4_shadow_demo.py`); 2026-09-12 expiry-day state: no dogfood session booked, zero new runs and zero new friction entries since review, so promotion is unreachable — owner decided 2026-09-14: extend with a booked co-maintainer dogfood session (new window close set on booking)",
+        "status": "On Hold — shadow wiring exists; ADR-0031 evidence packet prepared 2026-08-27, refreshed 2026-08-31 and re-verified 2026-09-12 over the closed decision window 2026-08-13→2026-09-11 (0 observed / 0 reachable, verdict `unexercised`); extended window 2026-08-13→2026-09-15 after the booked 2026-09-15 M4 dogfood: 8 in-log approval receipts + 1 orphan-sourced D1 subagent_launch denial candidate across 22 reachable runs (21 at dogfood close + 1 hook-fixture run; no new organic receipts), verdict `needs_review`, packet 4/5 prepared (criterion 4 human sign-off `human_required`); `promotion_ready=false` is a hardcoded literal, not a metric; H4 demo `scripts/exercise_h4_shadow_demo.py` exercisable (2 synthetic candidates, must not launder into C1) and guarded (`tests/test_h4_shadow_demo.py`); 2026-09-12 expiry-day state: no dogfood session booked, zero new runs and zero new friction entries since review, so promotion is unreachable — owner decided 2026-09-14: extend with a booked co-maintainer dogfood session (new window close set on booking)",
         "confidence": "Low",
         "next_gate": "Dogfood session booked 2026-09-15 (background+cockpit, docs/work-log/m4-dogfood-2026-09-15.md) — new ADR-0031 window close 2026-09-15 (decision deadline 2026-09-29 per risk report — G1–G5 condition); EFX live-proof closure remains pending owner authorization"
       },
