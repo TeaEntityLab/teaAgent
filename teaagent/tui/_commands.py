@@ -405,7 +405,7 @@ def _cmd_approvals(tui: 'TeaAgentTUI', args: list[str]) -> bool:
         )
 
         run_store = RunStore(tui.root)
-        tui._print_json(build_pending_approvals_snapshot(run_store, limit=20))
+        tui._print_json(build_pending_approvals_snapshot(run_store))
         return True
     tui.output_fn(f"error: unknown approvals subcommand '{sub}'")
     return True
