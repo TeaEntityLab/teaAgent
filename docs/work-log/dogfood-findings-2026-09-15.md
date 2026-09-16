@@ -83,7 +83,7 @@
 
 - ADR-0031 sign-off (criterion 4) — the packet is prepared, not passed: 4/5 `prepared` means agent preparation, and criterion 1 still needs the owner D1 verdict plus a real production window.
 - The owner-driven TUI dogfood session (`m4-dogfood-2026-09-15.md`) — the one surface agents can't drive.
-- Adjudication of G23–G38 + D1 — each is a `feat:`/design change or a verdict, not a dogfooding step. (G1–G22 were adjudicated in "Owner decisions (2026-09-15)" below; the agent-proposed triage for G23–G38 is the last section of this file.)
+- ~~Adjudication of G23–G38~~ — **done**: owner adjudicated "Yes for all" on 2026-09-16 and every prescribed fix has landed (see "Landed behavior" table). G1–G22 adjudicated 2026-09-15 and implemented (G11/G12/G13 owner-declined; G34 held for ADR-0043 review). **D1 stays deferred** — owner verdict only.
 
 ## Owner adjudication triage (agent-proposed, 2026-09-15)
 
