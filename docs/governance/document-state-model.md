@@ -1,6 +1,8 @@
 # Document State Model
 # 2026-06-02
 
+> **Last reviewed:** 2026-09-16 (evidence-verdict states added)
+
 This file defines the shared status vocabulary for findings, risks, issues,
 tickets, roadmap items, and historical review documents.
 
@@ -82,6 +84,25 @@ Every roadmap item should include:
 - Next gate.
 - Exit evidence.
 - Linked risks and tickets.
+
+## Evidence-verdict states
+
+Governance evidence packets (H4 shadow receipts, dogfood adjudication,
+release-evidence bundles) use a second vocabulary for *verdicts*, distinct from
+the work-item states above. Use these verbatim; do not invent synonyms.
+
+| Verdict | Meaning |
+|---------|---------|
+| `unexercised` | The evidence surface was never reached; zero qualifying events. |
+| `needs_review` | Evidence exists and meets the packet's numeric bar, but the verdict is owner-only — an agent must not self-promote it. |
+| `prepared` | A packet criterion's evidence is assembled and reproducible. |
+| `human_required` | The criterion cannot be satisfied by an agent (sign-off, credentials, live proof). |
+| `promotion_ready` | Boolean gate on the whole packet; stays `false` until every `human_required` criterion is adjudicated. |
+
+These are *evidence* states, not scheduling states. A `needs_review` verdict
+maps to the work-item state `Proposed` (awaiting owner adjudication), never to
+`Fixed`.
+
 
 ## Source-of-truth rule
 
