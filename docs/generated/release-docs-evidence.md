@@ -1,8 +1,8 @@
 # Release Documentation Evidence Bundle (Generated)
 
-**Generated:** 2026-09-15T23:39:50+00:00
-**Git commit:** `d448db19024f75e68208245fbc35641fd3c0adee` on `main`
-**Working tree dirty:** no
+**Generated:** 2026-09-16T06:34:06+00:00
+**Git commit:** `bbe6cded6ec640c5827c79a58670ed5c54ef2d34` on `main`
+**Working tree dirty:** yes
 
 Regenerate: `python3 scripts/build_release_docs_evidence_bundle.py`
 
@@ -14,15 +14,16 @@ Regenerate: `python3 scripts/build_release_docs_evidence_bundle.py`
 
 ## Last Gate Run
 
-- Overall gate status: **pass**
-- `/opt/homebrew/opt/python@3.14/bin/python3.14 scripts/validate_docs_consistency.py` — **pass** (exit 0)
+- Overall gate status: **fail**
+- `/opt/homebrew/opt/python@3.14/bin/python3.14 scripts/validate_docs_consistency.py` — **fail** (exit 1)
 - `/opt/homebrew/opt/python@3.14/bin/python3.14 scripts/report_docs_aging.py --check` — **pass** (exit 0)
 
 ## Documentation Freshness
 
 - Current-truth docs scanned: **17**
-- Needs attention: **0** (>90 days)
-- All scanned current-truth docs are fresh.
+- Needs attention: **1** (>90 days)
+- Stale by owner surface:
+  - `roadmap`: 1
 
 ## Roadmap Excerpt
 

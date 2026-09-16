@@ -50,6 +50,9 @@
 | G20 | **TUI WORKFLOWS tab conflation — runs labeled active workflows.** "Active Workflows (20 total)" lists `run_id`s with `status='completed'` (from `RunStore.list_runs`) — shows runs (not workflows) and completed (not active). Same mislabeling pattern as G19: the TUI cockpit tabs systematically label contents that don't match. |
 | G21 | **Approval queue has no single source of truth — three divergent sources.** `control-plane serve` `/api/jit/diff` `pending` comes from `jit_server.get_pending_requests()` (in-memory JIT server), a *third* approval source distinct from the `tool_call_pending_approval` audit events. Three surfaces, three sources: cockpit `queue_depth` (audit, limit=20), `approval pending`/`next` (audit, limit=20), control-plane JIT (in-memory) — none agreeing; the JIT surface can't see the 3 audit-pending approvals at all. |
 | G22 | **Audit-integrity gap — `git_sandbox_resolved` + `session_suspended` events orphaned to stale `pending-*.jsonl` temp files, lost from real run logs.** `run.py:576` `store.logger_for_result(result, audit)` promotes `pending-<uuid>.jsonl` → `<run_id>.jsonl` and unlinks the temp, but `run.py:615` `resolve_git_sandbox_after_run` then writes `git_sandbox_resolved` to the same `audit` (path still the deleted temp) → recreates `pending-<uuid>.jsonl` with only the resolved event, never promoted. `resume.py:117` `store.audit_logger()` (run_id=None) writes `session_suspended` to a pending temp that is never promoted. Measured: 115 `git_sandbox_resolved` + 30 `session_suspended` events orphaned (absent from the real run `.jsonl`); 9 crash-orphan runs whose only audit trail is an unindexed pending temp. The sandbox-resolution and suspension lifecycle events are silently dropped from the audit trail. |
+| G23 | **`init --provider fake` prompts for `FAKE_API_KEY` and crashes on non-TTY stdin.** `_misc.py:316-319` calls `getpass.getpass(f'Enter {env_var}…')` unconditionally whenever `--api-key` is omitted — even for `fake`, whose `PROVIDER_CONFIGS['fake'].api_key_env` is `'FAKE_API_KEY'` but which needs no key. On `</dev/null`/piped stdin `getpass` raises EOFError → generic `Unexpected error: ` (empty message) + rc=1, leaving an empty `.teaagent/`. First-run UX dead-ends on the one provider meant for headless smoke. |
+| G24 | **`init`/`setup` never surface the workspace-write plan gate.** `init --permission-mode workspace-write` writes a config whose first `agent run` then fails `Error [PLAN_GATE]` (rc=2) — `_require_plan_gate` auto-enables `require_plan` for `workspace-write` (`_agent/config.py:159-161`), but `init`'s `next_steps` and `setup`'s output never mention `plan`/`--from-plan`/`--skip-plan-check`. A fresh operator following the printed next-steps hits an unexplained hard gate. |
+| G25 | **`release evidence` (default `release`/`full` profiles) runs `pre-commit run -a` + full acceptance tier with no progress output and 900s timeouts** (`release_evidence.py:651-667`). On this tree it exceeds 60–90s silently; `--profile counts-only` returns in ~6s. A read-only-looking command that actually runs the whole gate suite, with no indication it's doing so. |
 
 ## Denial candidate (owner adjudication)
 
@@ -67,7 +70,7 @@
 
 - ADR-0031 sign-off (criterion 4) — the packet is ready.
 - The owner-driven TUI dogfood session (`m4-dogfood-2026-09-15.md`) — the one surface agents can't drive.
-- Adjudication of G1–G22 + D1 — each is a `feat:`/design change or a verdict, not a dogfooding step.
+- Adjudication of G1–G25 + D1 — each is a `feat:`/design change or a verdict, not a dogfooding step.
 
 ## Owner adjudication triage (agent-proposed, 2026-09-15)
 
