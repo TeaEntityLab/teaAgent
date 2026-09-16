@@ -61,6 +61,7 @@
 | G31 | **`--background` drops the plan flags, so a workspace-write background run always dies on PLAN_GATE.** `build_agent_run_command` (`ergonomics/background_run.py:463-536`) rebuilds the worker argv but never forwards `--skip-plan-check`, `--from-plan`, or `--require-plan`. The foreground run accepts `--skip-plan-check`, but the detached worker re-runs without it and exits `Error [PLAN_GATE]` — `background list` then shows `alive:false` with no run produced. `--background` is unusable in `workspace-write` mode. |
 | G32 | **`memory failures auto-invalidate` crashes on `str / str`.** `MemoryAutoInvalidationConfig.from_workspace_config` (`failure_card.py:249`) does `root / '.teaagent'` on the raw `args.root` string — unlike `FailureCardStorage.__init__` which wraps `Path(root)`. Any `memory failures auto-invalidate` invocation raises `TypeError: unsupported operand type(s) for /: 'str' and 'str'` → generic `Unexpected error` rc=1. |
 | G33 | **`skill candidate install` raises uncaught on a missing candidate.** `skill candidate install nonexistent` → `Unexpected error: skill candidate 'nonexistent' not found` rc=1, while sibling subcommands (`show`/`eval`/`review`) return a clean `{"status":"error","message":"...not found"}`. Inconsistent error contract on the same not-found path. |
+| G34 | **`consensus` is non-functional end-to-end: peers write to disk but the engine reads in-memory.** `consensus peers add/activate` persist to `root/.teaagent/peers.json` (`_consensus.py:36,65`), but `consensus status`/`request`/`vote`/`wait`/`cancel`/`history` all build the engine via `_consensus_engine_from_args` (`_consensus.py:297-304`) which constructs `PeerRegistry(storage_path=None)` → in-memory, always empty. After `peers add` + `activate`, `consensus status` still reports `Active peers: 0` and `consensus request` fails `No active peers available`. The whole consensus flow can never see a registered peer. |
 
 ## Denial candidate (owner adjudication)
 
@@ -78,7 +79,7 @@
 
 - ADR-0031 sign-off (criterion 4) — the packet is ready.
 - The owner-driven TUI dogfood session (`m4-dogfood-2026-09-15.md`) — the one surface agents can't drive.
-- Adjudication of G1–G33 + D1 — each is a `feat:`/design change or a verdict, not a dogfooding step.
+- Adjudication of G1–G34 + D1 — each is a `feat:`/design change or a verdict, not a dogfooding step.
 
 ## Owner adjudication triage (agent-proposed, 2026-09-15)
 
