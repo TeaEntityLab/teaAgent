@@ -273,4 +273,4 @@ guarded explicit-`--config` read that warns and falls back to defaults
 (`37a2db10`) feeds `'x'*1000` through the store probes and the
 `agent show`/`resume`/`undo`/`replay steps` surfaces — exit 1, "not found",
 no "Unexpected error". Gate `governance-gap` (same classified-error rule as
-the G38 twin). Full suite 6751 passed / 0 failed.
+the G38 twin). Full suite 6752 passed / 0 failed.
