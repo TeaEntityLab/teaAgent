@@ -224,11 +224,22 @@ finding has a `# test-type: behavior` regression that failed pre-change):
 
 Residuals recorded, not fixed: `ultrawork start` (deprecated) hand-rolls an
 `agent run` argv without plan flags; `doctor model/project` wizards still call
-bare `input()` and would EOF on non-TTY stdin; `mcp trust revoke` decrypting an
-existing policy without the key still hits the generic handler; legacy unimported
+bare `input()` and would EOF on non-TTY stdin; legacy unimported
 `cli/_handlers/agent_automation.py` keeps the pre-fix G36/G37 code paths;
 `automation promote/status` remain id-only; `setup` has no `--no-gitignore`
 flag (applies by default, append-only); a NUL byte in `--api-key` still crashes
 at `os.environ` assignment after config is written (pre-existing).
 H4 evidence is unchanged by this batch (fake-provider probes make no
 governed tool calls). `promotion_ready` stays `false`.
+
+Follow-up hardening (same day, reviewer advisories): `mcp trust revoke` now
+carries the same missing-key guard as allow/deny (the G27 twin, fixed rather
+than listed); `handle_mcp_request` contains any unexpected exception in one
+request as JSON-RPC `-32603` and keeps serving (stdio and HTTP), on top of the
+precise `-32602` for unknown tools; the `init`/`setup` gitignore step reports
+`error: <reason>` instead of raising when `.gitignore` cannot be read or
+written, and EOF at its `[Y/n]` prompt counts as `skipped` — init still
+completes with config written. Live re-check: `init`/`setup` with and without
+`--provider`, on a git repo and a plain directory, all headless — classified
+error and no files left when the provider is missing; `gitignore: added` /
+`not-a-git-repo` otherwise; no `Unexpected error` on any path.

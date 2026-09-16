@@ -517,34 +517,42 @@ def _ensure_teaagent_gitignored(
 ) -> str:
     """Add ``.teaagent/`` to the workspace ``.gitignore`` inside a git repo.
 
-    Returns one of ``'added'``, ``'present'``, ``'skipped'``, or
-    ``'not-a-git-repo'``. Never rewrites existing lines and never runs git.
+    Returns one of ``'added'``, ``'present'``, ``'skipped'``,
+    ``'not-a-git-repo'``, or ``'error: <reason>'`` when the file cannot be read
+    or written. Never rewrites existing lines and never runs git.
     """
     if not (root / '.git').exists():
         return 'not-a-git-repo'
     if no_gitignore:
         return 'skipped'
     gitignore_path = root / '.gitignore'
-    existing = (
-        gitignore_path.read_text(encoding='utf-8') if gitignore_path.is_file() else ''
-    )
+    try:
+        existing = (
+            gitignore_path.read_text(encoding='utf-8')
+            if gitignore_path.exists()
+            else ''
+        )
+    except OSError as exc:
+        return f'error: {exc}'
     covered = {'.teaagent', '.teaagent/', '/.teaagent', '/.teaagent/'}
     if any(line.strip() in covered for line in existing.splitlines()):
         return 'present'
     if interactive:
-        answer = (
-            input(
+        try:
+            answer = input(
                 'Add .teaagent/ to .gitignore so the git sandbox stays available? [Y/n]: '
             )
-            .strip()
-            .lower()
-        )
-        if answer in ('n', 'no'):
+        except EOFError:
+            return 'skipped'
+        if answer.strip().lower() in ('n', 'no'):
             return 'skipped'
     addition = '\n# TeaAgent runtime state (keeps the git sandbox clean)\n.teaagent/\n'
     if not existing:
         addition = addition.lstrip('\n')
-    gitignore_path.write_text(existing + addition, encoding='utf-8')
+    try:
+        gitignore_path.write_text(existing + addition, encoding='utf-8')
+    except OSError as exc:
+        return f'error: {exc}'
     return 'added'
 
 

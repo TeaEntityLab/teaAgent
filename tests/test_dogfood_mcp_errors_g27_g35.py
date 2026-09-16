@@ -17,7 +17,10 @@ import argparse
 import io
 import json
 
-from teaagent.cli._handlers._mcp_trust import mcp_trust_allow_command
+from teaagent.cli._handlers._mcp_trust import (
+    mcp_trust_allow_command,
+    mcp_trust_revoke_command,
+)
 from teaagent.mcp_server import serve_mcp_stdio
 from teaagent.workspace_tools import build_workspace_tool_registry
 
@@ -75,6 +78,55 @@ def test_trust_allow_missing_key_returns_classified_error(
     args = argparse.Namespace(root=str(tmp_path), server='demo', tools=['t'])
 
     rc = mcp_trust_allow_command(args)
+
+    assert rc == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload['ok'] is False
+    assert 'TEAAGENT_MCP_TRUST_KEY' in payload['error']
+
+
+def test_stdio_session_survives_internal_error(tmp_path, monkeypatch) -> None:
+    """An unexpected exception in one request -> -32603; the next call succeeds."""
+    (tmp_path / 'hello.txt').write_text('hi', encoding='utf-8')
+    registry = build_workspace_tool_registry(str(tmp_path))
+    real_execute = registry.execute
+    calls = {'n': 0}
+
+    def flaky_execute(name, arguments):
+        calls['n'] += 1
+        if calls['n'] == 1:
+            raise RuntimeError('hook exploded')
+        return real_execute(name, arguments)
+
+    monkeypatch.setattr(registry, 'execute', flaky_execute)
+    call = {
+        'jsonrpc': '2.0',
+        'method': 'tools/call',
+        'params': {'name': 'workspace_read_file', 'arguments': {'path': 'hello.txt'}},
+    }
+    frames = [dict(call, id=1), dict(call, id=2)]
+    reader = io.StringIO('\n'.join(json.dumps(frame) for frame in frames) + '\n')
+    writer = io.StringIO()
+
+    rc = serve_mcp_stdio(registry, stdin=reader, stdout=writer)
+
+    assert rc == 0
+    first, second = (
+        json.loads(line) for line in writer.getvalue().splitlines() if line
+    )
+    assert first['error']['code'] == -32603
+    assert 'hook exploded' in first['error']['message']
+    assert second['result']['isError'] is False
+
+
+def test_trust_revoke_missing_key_returns_classified_error(
+    tmp_path, capsys, monkeypatch
+) -> None:
+    """G27 twin: revoke without the key is classified like allow/deny."""
+    monkeypatch.delenv('TEAAGENT_MCP_TRUST_KEY', raising=False)
+    args = argparse.Namespace(root=str(tmp_path), server='demo')
+
+    rc = mcp_trust_revoke_command(args)
 
     assert rc == 1
     payload = json.loads(capsys.readouterr().out)

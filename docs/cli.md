@@ -295,7 +295,7 @@ teaagent init --root . --provider gpt --no-gitignore   # opt out of the .gitigno
 
 - Non-interactive stdin (piped/headless): `init` and `setup` without `--provider` fail fast with `{"ok": false, "message": "provider is required in non-interactive mode; pass --provider <name> (choices: ...) or run in a terminal"}` and exit 1 before writing any file. They never silently select a credentialed provider.
 - Providers that need no key (`fake`) are never prompted for one. For a key-requiring provider on non-TTY stdin, `init` proceeds without storing a key and reports `api_key_note` naming the env var to set.
-- In a git repo, `init` (and `setup`, when it writes config) adds `.teaagent/` to `.gitignore` so the auto-enabled git sandbox stays usable; the result is reported as `gitignore: added|present|skipped|not-a-git-repo`. Existing lines are never rewritten and no git command runs; `--no-gitignore` opts out.
+- In a git repo, `init` (and `setup`, when it writes config) adds `.teaagent/` to `.gitignore` so the auto-enabled git sandbox stays usable; the result is reported as `gitignore: added|present|skipped|not-a-git-repo` (or `error: <reason>` when the file cannot be read or written — init still completes). Existing lines are never rewritten and no git command runs; `--no-gitignore` opts out.
 - For `--permission-mode workspace-write`, `next_steps` include the plan-gate path (`teaagent agent plan ...` then `teaagent agent run ... --from-plan .teaagent/plans/<plan-file>.md`); `--skip-plan-check` is not recommended.
 
 ## Model Adapters
@@ -628,7 +628,7 @@ Streamable HTTP details:
 - `--auth-token TOKEN` requires `Authorization: Bearer TOKEN` on every request.
 - `--allowed-origin URL` may be repeated to whitelist browser Origin headers. Default: allow all.
 
-Supported methods: `initialize`, `tools/list`, `tools/call`. Each tool is exposed with its `inputSchema` and read-only / destructive / idempotent annotations. Tool *execution* errors are returned as `result.isError = true` rather than JSON-RPC errors so the client can recover; a `tools/call` for an unregistered tool is a JSON-RPC `-32602` (Invalid params) error frame (`tool 'X' is not registered`) and the server keeps serving.
+Supported methods: `initialize`, `tools/list`, `tools/call`. Each tool is exposed with its `inputSchema` and read-only / destructive / idempotent annotations. Tool *execution* errors are returned as `result.isError = true` rather than JSON-RPC errors so the client can recover; a `tools/call` for an unregistered tool is a JSON-RPC `-32602` (Invalid params) error frame (`tool 'X' is not registered`), and any other unexpected failure inside one request is returned as `-32603` (Internal error) and logged — the server keeps serving in both cases (stdio and HTTP).
 
 ## Subagent Delegation
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import sys
 from dataclasses import dataclass
@@ -14,6 +15,7 @@ from teaagent.tools import ToolRegistry
 
 PROTOCOL_VERSION = '2024-11-05'
 SERVER_INFO = {'name': 'teaagent', 'version': '0.1.0'}
+logger = logging.getLogger(__name__)
 REGISTRY_PATH = Path.home() / '.teaagent' / 'workspace_registry.json'
 
 
@@ -138,6 +140,19 @@ def handle_mcp_request(
     if request_id is None:
         return None
 
+    try:
+        return _dispatch(registry, request_id, method, params)
+    except Exception as exc:
+        # Protocol boundary: one failing request must not end the session
+        # (stdio or HTTP). The failure is preserved in the error frame and the
+        # server log; JSON-RPC -32603 is the internal-error code.
+        logger.exception('mcp request %r failed', method)
+        return _error(request_id, -32603, f'internal error handling {method!r}: {exc}')
+
+
+def _dispatch(
+    registry: ToolRegistry, request_id: Any, method: Any, params: dict[str, Any]
+) -> dict[str, Any]:
     if method == 'initialize':
         return _ok(
             request_id,

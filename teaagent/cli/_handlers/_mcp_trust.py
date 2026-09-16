@@ -139,6 +139,8 @@ def mcp_trust_deny_command(args: argparse.Namespace) -> int:
 
 def mcp_trust_revoke_command(args: argparse.Namespace) -> int:
     """Revoke trust for an MCP server (removes it from the trust policy)."""
+    if not _require_trust_key():
+        return 1
     policy = load_mcp_trust_policy(args.root)
     server = args.server
     if server not in policy.servers:

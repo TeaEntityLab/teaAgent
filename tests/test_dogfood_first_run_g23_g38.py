@@ -147,6 +147,35 @@ def test_init_outside_git_repo_leaves_gitignore_alone(tmp_path: Path) -> None:
     assert not any(step.startswith('git add') for step in payload['next_steps'])
 
 
+def test_init_reports_gitignore_failure_without_crashing(tmp_path: Path) -> None:
+    """G29 hardening: an unwritable .gitignore is reported, not an uncaught crash.
+
+    The gitignore step runs after config is written, so a raised OSError there
+    would reintroduce the generic ``Unexpected error`` dead end on first run.
+    """
+    (tmp_path / '.git').mkdir()
+    (tmp_path / '.gitignore').mkdir()  # reading it raises IsADirectoryError
+    exit_code, payload = _run_init(
+        ['init', '--root', str(tmp_path), '--provider', 'fake'], tty=False
+    )
+    assert exit_code == 0
+    assert payload['ok'] is True
+    assert payload['gitignore'].startswith('error:')
+    assert (tmp_path / '.teaagent' / 'config.json').exists()
+
+
+def test_init_gitignore_prompt_eof_is_skipped(tmp_path: Path) -> None:
+    """G29 hardening: EOF at the interactive [Y/n] prompt skips, never crashes."""
+    (tmp_path / '.git').mkdir()
+    with patch('teaagent.cli._handlers._misc.input', side_effect=EOFError):
+        exit_code, payload = _run_init(
+            ['init', '--root', str(tmp_path), '--provider', 'fake'], tty=True
+        )
+    assert exit_code == 0
+    assert payload['gitignore'] == 'skipped'
+    assert not (tmp_path / '.gitignore').exists()
+
+
 def test_setup_without_provider_on_non_tty_is_classified_error(tmp_path: Path) -> None:
     """G38: non-interactive setup without --provider errors cleanly, never EOFError."""
     output = io.StringIO()
