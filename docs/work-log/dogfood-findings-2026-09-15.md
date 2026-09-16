@@ -64,6 +64,8 @@
 | G34 | **`consensus` is non-functional end-to-end: peers write to disk but the engine reads in-memory.** `consensus peers add/activate` persist to `root/.teaagent/peers.json` (`_consensus.py:36,65`), but `consensus status`/`request`/`vote`/`wait`/`cancel`/`history` all build the engine via `_consensus_engine_from_args` (`_consensus.py:297-304`) which constructs `PeerRegistry(storage_path=None)` → in-memory, always empty. After `peers add` + `activate`, `consensus status` still reports `Active peers: 0` and `consensus request` fails `No active peers available`. The whole consensus flow can never see a registered peer. |
 | G35 | **`mcp serve` dies on an unknown `tools/call` instead of returning a JSON-RPC error.** Calling `tools/call` with an unregistered tool name raises `Unexpected error: "tool 'X' is not registered"` and kills the server — no JSON-RPC error frame is emitted, the connection just drops. A valid `tools/call` (`workspace_read_file`) works. The server should return a JSON-RPC `-32601`/`-32602` error and stay alive. |
 | G36 | **`agent automation add` crashes on an unsupported schedule string.** A cron-style schedule (`*/5 * * * *`) raises `Unexpected error: unsupported schedule; use 'every 30m', 'every 2h', or 'daily HH:MM'` rc=1 — a user-input validation error surfaced as an uncaught crash instead of a clean `{"status":"error"}` like sibling subcommands. |
+| G37 | **`agent automation` lookup is by `automation_id` only — the `name` is stored but never usable.** `automation add myauto` succeeds and `list` shows `name: "myauto"`, but `run`/`pause`/`resume`/`delete`/`show` all report `automation 'myauto' not found`. Only the hex `automation_id` (`68b44cd4…`) works. The name is a write-only field — the CLI's own UX implies name-based lookup but never implements it. |
+| G38 | **`init`/`setup` crash on EOF when stdin is not a TTY.** Both prompt `Select provider … [gpt]:` via `input()`; with no TTY (piped/headless) `input()` raises `EOFError` → `Unexpected error: EOF when reading a line` rc=1. They should detect non-interactive stdin and either use the default or print a clean "requires a TTY" error. |
 
 ## Denial candidate (owner adjudication)
 
@@ -81,7 +83,7 @@
 
 - ADR-0031 sign-off (criterion 4) — the packet is ready.
 - The owner-driven TUI dogfood session (`m4-dogfood-2026-09-15.md`) — the one surface agents can't drive.
-- Adjudication of G1–G36 + D1 — each is a `feat:`/design change or a verdict, not a dogfooding step.
+- Adjudication of G1–G38 + D1 — each is a `feat:`/design change or a verdict, not a dogfooding step.
 
 ## Owner adjudication triage (agent-proposed, 2026-09-15)
 
