@@ -56,6 +56,8 @@
 | G26 | **Scratchpad object injected into run-list arrays.** `runs list`, `session list`, and `agent status` append `{'scratchpad_last_goal': ...}` as an extra element inside the run array (`_agent/runs.py:224`, `_ergonomics/session.py:138`, `agent_status.py:31`). Consumers iterating the array get a non-run entry with no `run_id`/`status` — a schema-breaking output bug. |
 | G27 | **`mcp trust allow`/`deny` crash on missing `TEAAGENT_MCP_TRUST_KEY`.** With the env var unset, both raise through the generic `Unexpected error:` handler (empty message, rc=1) instead of a clean classified error. Distinct from G11 (which is the *wrong*-key silent-discard); this is the *missing*-key path. |
 | G28 | **`audit verify` with no args fails on a nonexistent default.** Bare `teaagent audit verify` targets `.teaagent/audit.jsonl` which doesn't exist (per-run logs live under `.teaagent/runs/`), so it errors and only then tells you to pass `<run_id>` or `--path`. The default should either verify all run logs or require the arg up front. |
+| G29 | **`init`/`setup` never gitignore `.teaagent/`, so the auto-enabled git sandbox fails on the first run in a git repo.** `init` writes `.teaagent/config.json`+`config.toml` but no `.gitignore` entry; nothing in `teaagent/` writes one (workspace tools only *read* it). On a fresh git workspace the first `agent run` prints `Git sandbox initialization failed: Worktree is dirty` because `.teaagent/` runtime files are untracked — the safe-sandbox feature silently disables itself exactly when a new user needs it. |
+| G30 | **The `fake` provider fails its own connectivity check, so `agent preflight`/`plan`/`daily` return `ready:False`/rc=2 offline.** `check_provider_connectivity` (`preflight.py:93-100`) treats `fake` as remote and does a real `socket.getaddrinfo('fake.example.com')`, which fails offline; `is_local_provider` (`_config.py:126-136`) only matches `localhost`/`127.0.0.1` base_urls. The provider built for offline dogfooding/smoke can't pass its own readiness gate. |
 
 ## Denial candidate (owner adjudication)
 
@@ -73,7 +75,7 @@
 
 - ADR-0031 sign-off (criterion 4) — the packet is ready.
 - The owner-driven TUI dogfood session (`m4-dogfood-2026-09-15.md`) — the one surface agents can't drive.
-- Adjudication of G1–G28 + D1 — each is a `feat:`/design change or a verdict, not a dogfooding step.
+- Adjudication of G1–G30 + D1 — each is a `feat:`/design change or a verdict, not a dogfooding step.
 
 ## Owner adjudication triage (agent-proposed, 2026-09-15)
 
