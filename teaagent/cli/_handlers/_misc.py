@@ -491,6 +491,9 @@ def configure_command(args: argparse.Namespace) -> int:
         if not key:
             print(f'  Skipped {provider} (empty input)')
             continue
+        if '\x00' in key:
+            print(f'  Skipped {provider} (key contains an embedded NUL byte)')
+            continue
         os.environ[env_var] = key
         configured_count += 1
 

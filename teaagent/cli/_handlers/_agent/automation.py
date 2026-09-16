@@ -242,10 +242,16 @@ def automation_status_command(args: argparse.Namespace) -> int:
 
     payload = build_automation_status(args.root)
     if getattr(args, 'automation_id', None):
+        store = AutomationStore(args.root, readonly=True)
+        try:
+            automation_id = _resolve_automation_selector(store, args.automation_id)
+        except _AmbiguousAutomationName as exc:
+            print_json({'status': 'error', 'message': str(exc)})
+            return 1
         matches = [
             row
             for row in payload['automations']
-            if row['automation_id'] == args.automation_id
+            if row['automation_id'] == automation_id
         ]
         if not matches:
             print_json(
@@ -460,11 +466,12 @@ def automation_list_command(args: argparse.Namespace) -> int:
 def automation_promote_command(args: argparse.Namespace) -> int:
     store = AutomationStore(args.root)
     try:
+        automation_id = _resolve_automation_selector(store, args.automation_id)
         spec = store.promote_quarantined(
-            args.automation_id,
+            automation_id,
             attested=bool(getattr(args, 'i_attest_untrusted_write', False)),
         )
-    except (FileNotFoundError, ValueError) as exc:
+    except (FileNotFoundError, ValueError, _AmbiguousAutomationName) as exc:
         print_json({'status': 'error', 'message': str(exc)})
         return 1
     print_json({'status': 'promoted', 'automation': spec.to_dict()})
