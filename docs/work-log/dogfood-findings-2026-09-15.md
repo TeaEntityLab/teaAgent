@@ -257,3 +257,20 @@ replaced with the EOF catch — same lesson as the TUI setup fix below.)
 Regression `tests/test_dogfood_doctor_wizard_tty_g38_twin.py` (5 wizards + the
 decorator). Gate `governance-gap` (AGENTS.md: tool/CLI errors must be
 actionable and classified).
+
+Twin sweep, 2026-09-17 (path-probe crash class): Python 3.12's
+`Path.is_file()`/`exists()` re-raise `OSError` for `ENAMETOOLONG`/`EACCES`
+(only the `ENOENT` family is swallowed), so user-derived paths — an over-long
+`run_id`, an explicit `--config`, `suspension-<run_id>.json`, the default
+audit log, `--ssh-key-file` — reached the generic `Unexpected error` handler
+instead of a classified not-found. Fixes: `RunStore.run_exists`/`undo_exists`
+safe probes with every `run_id`/`undo_path` call site routed through them
+(`10b99b62`, `2d9a8224`); `_is_accessible_file` for config resolution plus a
+guarded explicit-`--config` read that warns and falls back to defaults
+(`6f35272b`, `7e7e489e`); suspension/audit-log probes guarded (`7e7e489e`);
+`--ssh-key-file` classified (`d91c2530`). Regression
+`tests/test_run_store.py::test_pathological_run_id_is_graceful_not_a_crash`
+(`37a2db10`) feeds `'x'*1000` through the store probes and the
+`agent show`/`resume`/`undo`/`replay steps` surfaces — exit 1, "not found",
+no "Unexpected error". Gate `governance-gap` (same classified-error rule as
+the G38 twin). Full suite 6751 passed / 0 failed.
