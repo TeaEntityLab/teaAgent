@@ -68,7 +68,11 @@ def consensus_peers_add_command(args: argparse.Namespace) -> int:
 
     # Read SSH public key from file if provided
     if args.ssh_key_file:
-        ssh_key = Path(args.ssh_key_file).read_text(encoding='utf-8').strip()
+        try:
+            ssh_key = Path(args.ssh_key_file).read_text(encoding='utf-8').strip()
+        except OSError as exc:
+            print(f'Error: cannot read --ssh-key-file {args.ssh_key_file}: {exc}')
+            return 1
     else:
         ssh_key = args.ssh_key
 
