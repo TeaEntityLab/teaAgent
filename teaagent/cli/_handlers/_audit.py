@@ -142,7 +142,11 @@ def audit_verify_command(args: argparse.Namespace) -> int:  # noqa: C901
     # legacy single-log layout. Per-run layouts keep logs under `.teaagent/runs/`,
     # so refuse up front with a classified error instead of chasing a nonexistent
     # default log and only hinting after a failed verification attempt.
-    if not explicit_target and not audit_log_path.exists():
+    try:
+        default_log_exists = audit_log_path.exists()
+    except OSError:
+        default_log_exists = False
+    if not explicit_target and not default_log_exists:
         print_json(
             {
                 'status': 'error',

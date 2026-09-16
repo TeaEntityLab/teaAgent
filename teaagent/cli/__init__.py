@@ -843,6 +843,15 @@ def apply_config_defaults(args: argparse.Namespace) -> None:  # noqa: C901
     else:
         try:
             data = json.loads(config_path.read_text(encoding='utf-8'))
+        except OSError as exc:
+            import sys
+
+            print(
+                f'Warning: cannot read {config_path} ({exc}); using defaults.',
+                file=sys.stderr,
+            )
+            apply_workspace_defaults_to_namespace(args, root=root)
+            return
         except json.JSONDecodeError as exc:
             import sys
 

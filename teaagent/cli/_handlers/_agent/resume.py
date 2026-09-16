@@ -207,7 +207,11 @@ def _load_suspension_data(root_path: Path, run_id: str) -> dict[str, Any] | None
     tea_dir = root_path / '.teaagent'
     suspension_file = tea_dir / f'suspension-{run_id}.json'
 
-    if not suspension_file.exists():
+    try:
+        suspension_found = suspension_file.exists()
+    except OSError:
+        suspension_found = False
+    if not suspension_found:
         print(f'[TeaAgent] Error: No suspension data found for run_id {run_id}')
         print(f'[TeaAgent] Expected file: {suspension_file}')
         return None

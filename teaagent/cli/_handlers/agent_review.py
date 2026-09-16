@@ -26,7 +26,11 @@ def interactive_review_mode(root: str, run_id: str) -> int:  # noqa: C901
     tea_dir = root_path / '.teaagent'
     suspension_file = tea_dir / f'suspension-{run_id}.json'
 
-    if not suspension_file.exists():
+    try:
+        suspension_found = suspension_file.exists()
+    except OSError:
+        suspension_found = False
+    if not suspension_found:
         print(f'[TeaAgent] Error: Suspension file not found for run {run_id}')
         return 1
 
