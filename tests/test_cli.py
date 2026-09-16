@@ -663,11 +663,13 @@ def test_cli_with_special_characters_in_api_key() -> None:
                     'sk-test\n\t\r\0',
                 ]
             )
-            # The embedded NUL in the key aborts init: main() catches the
-            # 'embedded null byte' error and returns exit 1 with no success JSON.
+            # The embedded NUL in the key aborts init with a classified error
+            # (same contract as `unknown provider`), not a silent crash.
             assert isinstance(exit_code, int)
             assert exit_code == 1
-            assert output.getvalue().strip() == ''
+            payload = json.loads(output.getvalue())
+            assert payload['ok'] is False
+            assert 'NUL' in payload['message']
 
 
 def test_cli_with_very_long_agent_name() -> None:

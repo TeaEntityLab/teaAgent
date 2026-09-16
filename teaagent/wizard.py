@@ -172,6 +172,8 @@ def resolve_api_key(
 ) -> tuple[str, str]:
     env_name = provider_env_var(provider)
     if api_key:
+        if '\x00' in api_key:
+            raise ValueError('API key contains an embedded NUL byte')
         if env_name:
             os.environ[env_name] = api_key
         return api_key, 'flag'
@@ -380,6 +382,9 @@ def run_first_session_setup(
         )
     except (EOFError, OSError):
         api_key, token_source = '', 'missing'
+    except ValueError as exc:
+        api_key, token_source = '', 'missing'
+        warnings.append(str(exc))
     env_var = provider_env_var(provider)
     if not api_key and not interactive and PROVIDER_CONFIGS[provider].requires_api_key:
         warnings.append(

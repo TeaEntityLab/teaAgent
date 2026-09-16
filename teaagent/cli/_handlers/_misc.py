@@ -343,6 +343,9 @@ def init_command(args: argparse.Namespace) -> int:
                 f'no API key provided; set {env_var} in the environment '
                 'before running the agent'
             )
+    if api_key and '\x00' in api_key:
+        print_json({'ok': False, 'message': 'API key contains an embedded NUL byte'})
+        return 1
 
     tea_dir = root / '.teaagent'
     tea_dir.mkdir(parents=True, exist_ok=True)
