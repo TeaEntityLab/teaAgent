@@ -2,10 +2,12 @@
 
 > **Claim class:** Bounded execution plan for trigger-only work, not a scheduling authority.
 > **Authority:** `roadmap-status.md`, `backlog-priority.md`, `current-roadmap-execution-plan-2026-08-26.md` §6.3, `DR-006`, `harness-first-direction`, advisor `2026-08-31` hypothesis.
-> **Status:** Draft, awaiting 2026-09-12 gate. No code without dated dogfood schedule.
-> **Last updated:** 2026-09-01 (parallel to Horizon A; runs only if dogfood scheduled, else Horizon C prune).
+> **Status:** Entry gate met 2026-09-14 (dated owner-override note `docs/work-log/m4-dogfood-2026-09-15.md`; M4 background-lifecycle + cockpit carve-out only). B1 owner testimony pending (agent PTY evidence only: 0 tool calls, 0 shadow receipts); B2 collected 2026-09-15 (8 in-log approval receipts + 1 orphan-sourced D1 candidate, verdict `needs_review`); B3 exercised headless per `docs/work-log/dogfood-findings-2026-09-15.md`, per-spec verdict pending B1. No code beyond the carve-out.
+> **Last updated:** 2026-09-16 (status reconciled; task bodies unchanged).
 
 This horizon is the *only* DR-006 lane that can generate organic evidence for everything downstream (H4 C1 shadow events, new friction entries, BG-001/cockpit). It is the fuel for Horizons A and C. If no dogfood is scheduled by 09-12, this horizon is intentionally empty and Horizon C's prune default applies.
+
+Update 2026-09-16: the session was booked and ran 2026-09-15 with agent-driven evidence only; Horizon C's fork still waits on B1 owner testimony.
 
 ## 1. Entry gate
 

@@ -1,6 +1,6 @@
 # Backlog Priority
 
-> **Last reviewed:** 2026-09-15
+> **Last reviewed:** 2026-09-16 (dogfood G23–G38 triage row added as Proposed; no priority or shipped/beta change)
 > **Review trigger:** Backlog priorities or shipped/beta status claims change.
 > **Scheduling gate (2026-08-26):** DR-006 remains authoritative. EFX-001–003
 > are in-progress P0 `governance-gap` remediations on existing seams; no
@@ -68,6 +68,7 @@ was met on 2026-06-22; completing that intake does not authorize new work.
 | CP-6 Community Presence | `legacy-competitive` | **Hold** — external acquisition non-goal |
 | M4 cloud/background/control-plane cockpit | `legacy-competitive` | **Hold except DR-006 carve-out** — background lifecycle + operator cockpit eligible under owner-override co-maintainer dogfood; cloud/SaaS/multi-tenant GTM held (T4). 2026-09-15 co-maintainer dogfood session completed (B2 evidence, B1 still pending) |
 | RBAC enforce flip (ADR 0031, packet evaluated 2026-09-15) | `governance-gap` | **Hold** — 4/5 criteria prepared, promotion not ready; owner extended to 2026-09-29 conditioned on G1–G5 landing and re-dogfood; promotion_ready=false; no premature enforce flip |
+| Dogfood findings G23–G38 (2026-09-15 sweep; triage in `work-log/dogfood-findings-2026-09-15.md`, reasoning in `reviews/roadmap-rethink-2026-09-16.md` §5) | proposed per item: 9 `governance-gap`, 6 `owner-override`, 1 `legacy-competitive` (G34) | **Proposed — not scheduled**; owner adjudication batch pending; nothing lands without its cited gate |
 | TASK-006 RunEvent taxonomy + M0 | `harness-migration` | **Done** — ADR-0032 run-event taxonomy; `teaagent/runner/_events.py` spine + audit dual-write (M0–M7 in work-log) |
 | TASK-001 constitution repositioning | `owner-override` | **Done (Human Review 2026-07-22)** — owner ratified harness-first positioning; no README/product-contract changes required |
 | TASK-002 docs tiering | `harness-migration` | **Done** — tier column in `docs/generated/docs-inventory.md` + aging dashboard; `check-docs-inventory` pre-commit regen |

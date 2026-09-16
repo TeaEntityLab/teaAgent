@@ -4,18 +4,12 @@
 
 **Stale threshold:** 90 days since `Last reviewed`
 **Current-truth docs scanned:** 17
-**Needs attention (working tier only):** 1
+**Needs attention (working tier only):** 0
 **Archive-tier docs (exempt from staleness):** 0
 
 Regenerate: `python3 scripts/report_docs_aging.py`
 
-## Stale Or Incomplete By Owner Surface
-
-### roadmap
-
-| Document | Status | Last reviewed | File mtime | Notes |
-| --- | --- | --- | --- | --- |
-| `docs/roadmap-status.md` | stale_by_mtime | 2026-09-15 | 2026-09-16 | Missing review trigger banner; File modified after last reviewed date |
+All scanned current-truth working-tier docs are fresh.
 
 ## Review Triggers (Current-Truth Docs)
 
@@ -41,7 +35,7 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 
 ## Corpus Cost (G5 Signal)
 
-**Total docs:** 663 (baseline 582 at diagnosis, delta +81)
+**Total docs:** 664 (baseline 582 at diagnosis, delta +82)
 **Live corpus (non-archive):** 377
 **Working-tier docs unreferenced by INDEX.md:** 328
 

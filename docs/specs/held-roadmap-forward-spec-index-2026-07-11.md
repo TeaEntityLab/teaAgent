@@ -25,8 +25,9 @@
 > owner-ratified promise, ADR-0031 reaches expiry, or harness-first direction
 > changes.
 >
-> **Last reviewed:** 2026-08-26 (ADR-0029 Option D execution reconciled;
-> EFX-FUTURE and ADR-0031 gates reviewed).
+> **Last reviewed:** 2026-09-16 (ADR-0031 reached its 2026-09-12 expiry and was
+> extended to 2026-09-29 by owner decision; §4 row and §8 queue updated; no
+> companion spec changed status).
 
 ## 1. Why this packet exists
 
@@ -76,7 +77,7 @@ If a historical plan schedules work DR-006 holds, DR-006 wins.
 | --- | --- | --- | --- | --- |
 | H2 multi-surface continuity | M2 foundation complete | IDE/dashboard/cloud parity is external/future | harness-first descope | No implementation spec added; existing parity docs/tests remain sufficient. |
 | H3 ecosystem trust | M3 + three-concept onboarding complete | Further simplification needs real daily-use signal | `friction-driven` | No speculative UX work; cockpit spec preserves current operator answers. |
-| H4 policy/RBAC | RBAC enforce path exists; shipped default shadow; policy "enforce" label is advisory-only | Owner-demand hold + ADR-0031 evidence window | `governance-gap`, expiry 2026-09-12 (decision packet review) | Promotion spec + 7 adversarial checks. |
+| H4 policy/RBAC | RBAC enforce path exists; shipped default shadow; policy "enforce" label is advisory-only | Owner-demand hold + ADR-0031 evidence window | `governance-gap`, expiry 2026-09-29 (decision packet review; extended 2026-09-15 from 2026-09-12 by owner decision conditioned on G1–G5 + re-dogfood) | Promotion spec + 7 adversarial checks. |
 | H4 consensus validation | Deleted/quarantined 2026-07-22; ADR-0029 Option D executed and recovery record retained | Resolved early; no remaining implementation or expiry decision | New owner/governance decision required for any revival | Keep disposition/recovery spec; no 2026-12-10 decision remains. |
 | H4 effect correctness boundary | EFX-001–003 local dispatch/approval gaps are reproduced and promoted on current-truth surfaces; ADR-0042 still bounds external reversal | Local fixes do not establish exactly-once, provider settlement, business acceptance, reconciliation, or distributed safety | `owner-override` plus provider-specific evidence | Keep EFX-FUTURE held; reuse existing governed seams; create no generic effect subsystem or companion-spec stack. |
 | M4 background lifecycle | Detached process store, attach, liveness, cockpit rows exist | Orphan semantics and background transition events are not pinned as acceptance | DR-006 carve-out (`owner-override`) | BG-001 acceptance spec + 3 checks + activation skip. |
@@ -208,7 +209,7 @@ not create authority.
 
 | Date / trigger | Decision | Required packet |
 | --- | --- | --- |
-| 2026-09-12 | ADR-0031: promote, extend, or revert H4 shadow wiring | 30-day receipt analysis, policy/RBAC coverage, benchmark, rollback proof, owner sign-off |
+| 2026-09-29 (extended 2026-09-15 from 2026-09-12) | ADR-0031: promote, extend, or revert H4 shadow wiring | 30-day receipt analysis, policy/RBAC coverage, benchmark, rollback proof, owner D1 verdict, owner sign-off |
 | First dated owner decision to widen ADR-0042 or first provider-specific settlement need | Decide whether EFX-FUTURE enters the product promise | EFX-001–003 closure, provider idempotency/status/reconciliation contract, effect-specific crash evidence, non-goals, and owner rationale |
 | First qualifying participant | Start WDH-002 real session | Consent/privacy pre-flight; protocol §5 |
 | First owner update friction | Consider `teaagent update` | Signed update trust boundary + dormant blocker fixes |

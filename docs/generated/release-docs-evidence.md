@@ -1,8 +1,8 @@
 # Release Documentation Evidence Bundle (Generated)
 
-**Generated:** 2026-09-16T09:09:30+00:00
-**Git commit:** `24a08e752f3072c7b70f2bf1bf8fd83b4ea36584` on `main`
-**Working tree dirty:** no
+**Generated:** 2026-09-16T13:54:40+00:00
+**Git commit:** `c4a2566d2604ddee11e14a38b8bdbfbd10b0564f` on `main`
+**Working tree dirty:** yes
 
 Regenerate: `python3 scripts/build_release_docs_evidence_bundle.py`
 
@@ -21,9 +21,8 @@ Regenerate: `python3 scripts/build_release_docs_evidence_bundle.py`
 ## Documentation Freshness
 
 - Current-truth docs scanned: **17**
-- Needs attention: **1** (>90 days)
-- Stale by owner surface:
-  - `roadmap`: 1
+- Needs attention: **0** (>90 days)
+- All scanned current-truth docs are fresh.
 
 ## Roadmap Excerpt
 

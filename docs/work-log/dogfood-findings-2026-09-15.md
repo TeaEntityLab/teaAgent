@@ -81,9 +81,9 @@
 
 ## What remains owner-only
 
-- ADR-0031 sign-off (criterion 4) — the packet is ready.
+- ADR-0031 sign-off (criterion 4) — the packet is prepared, not passed: 4/5 `prepared` means agent preparation, and criterion 1 still needs the owner D1 verdict plus a real production window.
 - The owner-driven TUI dogfood session (`m4-dogfood-2026-09-15.md`) — the one surface agents can't drive.
-- Adjudication of G1–G38 + D1 — each is a `feat:`/design change or a verdict, not a dogfooding step.
+- Adjudication of G23–G38 + D1 — each is a `feat:`/design change or a verdict, not a dogfooding step. (G1–G22 were adjudicated in "Owner decisions (2026-09-15)" below; the agent-proposed triage for G23–G38 is the last section of this file.)
 
 ## Owner adjudication triage (agent-proposed, 2026-09-15)
 
@@ -160,3 +160,35 @@ All probes ran in throwaway scratch workspaces (`/tmp`, deleted after) — zero 
 - **G3 live**: headless `agent run fake ... --git-sandbox` on a clean scratch repo (`.gitignore` covers `.teaagent/`, mirroring real repos) → branch created, run completes, HEAD restored to `main`, `git_sandbox_resolved` lands in the **real** run `.jsonl` (order: started → … → completed → resolved). Kept branch retained for review. (A dirty tree without auto-stash correctly skips the lifecycle — pre-existing, not a regression.)
 - **G4 live**: `BackgroundRunStore.start([sleep 30])` + `update_run_id` → SIGKILL → `alive=False`, `exit_code=-9`, `orphaned=True` on both `get()` and `list()`. Clean-exit (`exit 0`) stays unmarked. Caveat: the marker derives on `get()`/`list()` reads via `_enrich_liveness` — a SIGKILLed `agent run --background` whose pid dies before backfilling `run_id` shows `orphaned` unset until a `run_id` exists (observed `run_id: null`, no marker); the unit path with `run_id` set marks correctly.
 - **G5 live**: 25 pending runs in scratch → CLI `approval pending` `queue_depth: 25`, TUI `approvals pending` `queue_depth: 25`, shared snapshot `25`, cockpit `pending_count: 25`, `approval next` serves the newest. Post-`18d1feaa` all surfaces agree; the N>20 divergence is closed and pinned by `test_cli_and_tui_pending_queue_match_beyond_default_window` (`025c353e`).
+
+## Owner adjudication triage for G23–G38 (agent-proposed, 2026-09-16)
+
+Same contract as the G1–G22 triage above: proposals only, the owner assigns
+the gate, nothing here is scheduled. `friction-driven` is not proposed — no
+owner friction-log entry cites these. Reasoning, acceptance criteria, and
+counterarguments: `docs/reviews/roadmap-rethink-2026-09-16.md` §3.5 and §5.
+Uncaught-crash rows cite the operating rule that tool/CLI errors must be
+actionable and classified (AGENTS.md, Tool Governance).
+
+| # | Proposed provenance | Owner decision needed | Suggested disposition |
+|---|---|---|---|
+| G23 | `owner-override` (first-run ergonomics; `friction-driven` if the owner logs it) | Should `init --provider fake` skip the API-key prompt, and should non-TTY stdin fail before any config is written? | Skip the key prompt for providers that need none; fail fast with a classified error when stdin is non-interactive and a required value is missing; never silently select a credentialed provider |
+| G24 | `owner-override` (ergonomics) | Should `init`/`setup` next-steps explain the workspace-write plan gate? | Print the `plan` → `--from-plan` path in next-steps; do not recommend `--skip-plan-check` as the default |
+| G25 | `owner-override` (ergonomics; low) | Should the default `release evidence` profile announce/progress its expensive gates? | Progress output for the pre-commit + acceptance tiers; no gate weakened or skipped |
+| G26 | `governance-gap` (run-list/receipt output contract) | Is the scratchpad entry part of the run-array schema? | Move `scratchpad_last_goal` out of the run array in `runs list`, `session list`, `agent status`; pin with an output-contract test |
+| G27 | `governance-gap` (classified-error rule; distinct from owner-rejected G11 wrong-key semantics) | Should a missing `TEAAGENT_MCP_TRUST_KEY` be a classified CLI error? | Classified error naming the env var; G11 silent-discard semantics untouched |
+| G28 | `governance-gap` (audit surface contract) | Should bare `audit verify` require `<run_id>`/`--path`, or verify every run log under `.teaagent/runs/`? | Decide the contract first; either require the argument up front or add a bounded all-runs mode; never report success over a nonexistent default |
+| G29 | `governance-gap` (git sandbox is the undo/rollback safety boundary and silently self-disables) | Should `init`/`setup` add `.teaagent/` to `.gitignore` in git repos, or should untracked runtime files stop counting as a dirty worktree? | Explicit, non-destructive `.gitignore` offer during init (never auto-stash or discard), or sandbox-neutral treatment of `.teaagent/`; risk review before code |
+| G30 | `owner-override` (offline smoke-provider correctness) | Should `fake` be classified no-network for connectivity checks? | Mark `fake` as needing no network so `preflight`/`plan`/`daily` pass offline; no DNS lookup for it |
+| G31 | `governance-gap` (plan gate is an approval-class gate the background worker must honor) | Should the worker inherit the foreground plan flags verbatim? | Forward `--from-plan`/`--require-plan`/`--skip-plan-check` in `build_agent_run_command`; pin with a workspace-write background run that produces a run; no blanket bypass |
+| G32 | `governance-gap` (classified-error rule; uncaught `TypeError`) | — | Wrap the root in `Path()` inside `from_workspace_config` (matching `FailureCardStorage`); regression test with a string root |
+| G33 | `governance-gap` (classified-error rule; inconsistent not-found contract) | — | Return the sibling `{"status":"error","message":...}` shape from `skill candidate install` |
+| G34 | `legacy-competitive` (ADR-0043 quarantine; disposition evidence only) | Does this defect change the 2026-12-09 delete-vs-promote disposition? | No repair in a routine batch; carry as evidence into the ADR-0043 expiry review |
+| G35 | `governance-gap` (classified-error rule; server availability under invalid input) | Should an unknown-tool `tools/call` return the implemented MCP error frame and keep serving? | Catch the unregistered-tool error in `_call_tool`, return the contract-appropriate JSON-RPC error, stay alive; test an invalid call followed by a valid call on one connection |
+| G36 | `governance-gap` (classified-error rule; user input) | — | Validate the schedule in `automation add`, return `{"status":"error"}`, persist nothing; no cron support implied |
+| G37 | `owner-override` (ergonomics proposal — `automation run --help` requires `automation_id`, so not a demonstrated contract defect) | Is name lookup wanted, and what happens on duplicate names? | If wanted: resolve unique names to IDs, error on ambiguity, keep ID behavior unchanged |
+| G38 | `owner-override` (first-run ergonomics; overlaps G23) | On non-TTY stdin, should `init`/`setup` use documented defaults or fail with "requires a TTY"? | Detect non-interactive stdin and fail fast with a classified error unless every required value comes from flags; document the flag path |
+
+D1 stays deferred (owner verdict). Its receipt is orphan-sourced
+(`pending-1061f13779524cb9b8763a9a2d130e7d.jsonl`, parent run `b15ffcfb…`);
+see the 2026-09-15 erratum in `roadmap-status.md` before classifying.

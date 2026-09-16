@@ -12,7 +12,7 @@
 > **Status:** Active for already-authorized verification and dated decision
 > preparation. Held rows remain held.
 >
-> **Last reviewed:** 2026-09-12 (re-affirmed: queue still empty pending owner decisions — ADR-0031 undecided, EFX live-proof unauthorized, no dogfood booked; roadmap-status and backlog-priority touched same day for expiry-day evidence only, no sequencing change)
+> **Last reviewed:** 2026-09-16 (reconciled with later owner records: the 2026-09-12 ADR-0031 review was extended to 2026-09-29 by owner decision conditioned on G1–G5 fixes + re-dogfood; the M4 co-maintainer dogfood session was booked and ran 2026-09-15 (B2 evidence collected, B1 owner testimony still pending); dogfood findings G1–G22 were owner-adjudicated with fixes in `1611e71b`; EFX live proof remains unauthorized. Sequencing unchanged — see [reviews/roadmap-rethink-2026-09-16.md](../reviews/roadmap-rethink-2026-09-16.md) for the proposed, unscheduled repair order)
 
 > **Review trigger:** EFX live-proof evidence lands; ADR-0031 is decided; a
 > qualifying DR-006 signal is recorded; or an authority document changes.
@@ -29,7 +29,8 @@ Current execution order:
 
 1. close the live-evidence gap for EFX-001 through EFX-003, but only after the
    owner explicitly authorizes the target, credential, effect, and call budget;
-2. prepare the agent-completable ADR-0031 evidence before 2026-09-12, then let
+2. prepare the agent-completable ADR-0031 evidence before the owner review
+   (2026-09-29; the 2026-09-12 review was extended on 2026-09-15), then let
    the owner choose promote, extend, or revert;
 3. keep every other horizon and milestone trigger-only until its documented
    admission gate is met.

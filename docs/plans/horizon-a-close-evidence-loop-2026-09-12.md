@@ -2,10 +2,10 @@
 
 > **Claim class:** Bounded execution plan for trigger-only work, not a scheduling authority.
 > **Authority:** `roadmap-status.md`, `backlog-priority.md`, `current-roadmap-execution-plan-2026-08-26.md` §6.3, `DR-006`, `harness-first-direction`.
-> **Status:** Draft, awaiting 2026-09-12 gate. No live call without owner Definition of Ready.
-> **Last updated:** 2026-09-01 (re-affirmed: queue empty, 6681 green, no new friction, no dogfood scheduled).
+> **Status:** Partially triggered. A2 decided 2026-09-15: extend ADR-0031 to 2026-09-29, conditioned on G1–G5 fixes landing and re-dogfood (`docs/work-log/dogfood-findings-2026-09-15.md` §"Owner decisions"). A1 still awaits the owner Definition of Ready; A3 is a ~2026-09-22 calendar review, not an authority expiry. No live call without owner Definition of Ready.
+> **Last updated:** 2026-09-16 (status reconciled; task bodies unchanged).
 
-Execution of this horizon requires the 2026-09-12 owner decision. Until then it is a plan only.
+The 2026-09-12 owner decision landed as an extension (recorded 2026-09-14/15). A2's next decision point is 2026-09-29; A1 remains blocked on owner authorization; A3 remains a calendar reminder (DR-006 falsifiers are standing tripwires — see the 2026-09-15 correction in `roadmap-status.md`).
 
 ## 1. Entry gate
 
