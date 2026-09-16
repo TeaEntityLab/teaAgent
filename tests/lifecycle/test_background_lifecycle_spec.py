@@ -103,10 +103,12 @@ def test_lifecycle_roundtrip_exit_then_safe_stop(tmp_path: Path) -> None:
     assert observed['alive'] is False
     assert observed['run_id'] == 'run-dead-spec'
     assert observed['stopped_at']
-    # Cross-process reconciliation may default an unknowable code to zero;
-    # the child audit says "failed", so the spec forbids treating this field
-    # as authoritative on its own.
-    assert observed['exit_code'] == 0
+    # G4 orphan-marker (owner-adjudicated, 1611e71b): a lost/unknowable exit
+    # code is no longer defaulted to 0. The child audit says "failed", so the
+    # record marks the process orphaned and leaves exit_code unknown rather than
+    # fabricating success.
+    assert observed['exit_code'] is None
+    assert observed['orphaned'] is True
 
     stopped = store.stop('dead-spec', timeout_seconds=0)
     assert stopped['alive'] is False

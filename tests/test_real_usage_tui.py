@@ -1279,10 +1279,11 @@ class TuiBackgroundHandoffScenarios(unittest.TestCase):
             tui.handle_command('show')
             joined = '\n'.join(output)
             self.assertIn('error', joined.lower())
-            # show with bogus ID raises FileNotFoundError
+            # show with a bogus ID is handled gracefully (no crash), matching the
+            # owner-adjudicated `show` fix (see tests/tui/test_tui_show_unknown_run.py).
             output.clear()
-            with self.assertRaises(FileNotFoundError):
-                tui.handle_command('show NONEXISTENT_12345')
+            self.assertTrue(tui.handle_command('show NONEXISTENT_12345'))
+            self.assertIn('not found', '\n'.join(output).lower())
 
 
 # ============================================================================

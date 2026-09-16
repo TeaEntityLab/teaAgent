@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 
 from teaagent.run_store import RunStore
@@ -56,7 +57,7 @@ def test_approve_selector_selects_pending_approval() -> None:
                 {
                     'event_type': 'tool_call_pending_approval',
                     'run_id': 'run-1',
-                    'created_at': '2026-06-07T00:01:00Z',
+                    'created_at': datetime.now(timezone.utc).isoformat(),
                     'payload': {
                         'call_id': 'call-abc123',
                         'tool_name': 'workspace_write_file',
@@ -96,7 +97,7 @@ def test_approve_selector_out_of_range() -> None:
                 {
                     'event_type': 'tool_call_pending_approval',
                     'run_id': 'run-1',
-                    'created_at': '2026-06-07T00:01:00Z',
+                    'created_at': datetime.now(timezone.utc).isoformat(),
                     'payload': {
                         'call_id': 'call-abc123',
                         'tool_name': 'workspace_write_file',
