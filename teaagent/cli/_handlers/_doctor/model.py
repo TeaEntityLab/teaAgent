@@ -11,6 +11,7 @@ from teaagent.llm import available_providers
 from teaagent.llm._config import PROVIDER_CONFIGS
 from teaagent.wizard import merge_env_exports, read_keychain_secret
 
+from ._wizard_io import require_wizard_tty
 from .sanitize import print_json
 
 
@@ -195,6 +196,8 @@ def doctor_providers(args: argparse.Namespace) -> int:
 
 
 def _doctor_aigateway_wizard(args: argparse.Namespace) -> int:  # noqa: C901
+    if not require_wizard_tty('teaagent doctor aigateway --wizard'):
+        return 1
     requested_mode = getattr(args, 'mode', 'workers-ai')
     account_id = input('Cloudflare account id: ').strip()
     gateway_id = input('AI Gateway id: ').strip()
@@ -284,6 +287,8 @@ def _doctor_aigateway_wizard(args: argparse.Namespace) -> int:  # noqa: C901
 
 
 def _doctor_model_wizard(args: argparse.Namespace) -> int:
+    if not require_wizard_tty('teaagent doctor model --wizard'):
+        return 1
     provider = args.provider
     config = PROVIDER_CONFIGS[provider]
     env_name = config.api_key_env
@@ -342,6 +347,8 @@ def _doctor_model_wizard(args: argparse.Namespace) -> int:
 
 
 def _doctor_providers_wizard(args: argparse.Namespace) -> int:
+    if not require_wizard_tty('teaagent doctor providers --wizard'):
+        return 1
     selected = args.provider or available_providers()
 
     configured = []

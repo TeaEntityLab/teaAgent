@@ -223,8 +223,7 @@ finding has a `# test-type: behavior` regression that failed pre-change):
 | G34 | held — no change | ADR-0043 expiry review 2026-12-09 carries this defect as disposition evidence |
 
 Residuals recorded, not fixed: `ultrawork start` (deprecated) hand-rolls an
-`agent run` argv without plan flags; `doctor model/project` wizards still call
-bare `input()` and would EOF on non-TTY stdin; legacy unimported
+`agent run` argv without plan flags; legacy unimported
 `cli/_handlers/agent_automation.py` keeps the pre-fix G36/G37 code paths;
 `automation promote/status` remain id-only; `setup` has no `--no-gitignore`
 flag (applies by default, append-only); a NUL byte in `--api-key` still crashes
@@ -243,3 +242,15 @@ completes with config written. Live re-check: `init`/`setup` with and without
 `--provider`, on a git repo and a plain directory, all headless — classified
 error and no files left when the provider is missing; `gitignore: added` /
 `not-a-git-repo` otherwise; no `Unexpected error` on any path.
+
+Twin sweep, 2026-09-16 (G38 crash class): the five `doctor … --wizard` flows
+(`mcp`/`project`/`providers`/`aigateway`/`model`, the last reachable straight
+from `init`'s `next_steps`) called bare `input()`/`getpass` and hit the same
+`EOFError → "Unexpected error"` dead end on non-interactive stdin. A shared
+`require_wizard_tty` guard (`teaagent/cli/_handlers/_doctor/_wizard_io.py`) now
+fails each one fast with a classified `{"ok": false, "error": "… needs an
+interactive terminal …"}` (rc 1). Regression
+`tests/test_dogfood_doctor_wizard_tty_g38_twin.py` (5 wizards + the guard);
+live re-check: all five return the classified error headless, no `Unexpected
+error`. Gate `governance-gap` (AGENTS.md: tool/CLI errors must be actionable
+and classified).
