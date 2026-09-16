@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import functools
 import signal
 import time
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 from teaagent.automations import (
     AutomationSpec,
@@ -463,17 +464,30 @@ def automation_list_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _classified_errors(
+    func: Callable[[argparse.Namespace], int],
+) -> Callable[[argparse.Namespace], int]:
+    """Turn not-found/ambiguous/invalid-spec errors into a classified payload."""
+
+    @functools.wraps(func)
+    def wrapper(args: argparse.Namespace) -> int:
+        try:
+            return func(args)
+        except (FileNotFoundError, ValueError) as exc:
+            print_json({'status': 'error', 'message': str(exc)})
+            return 1
+
+    return wrapper
+
+
+@_classified_errors
 def automation_promote_command(args: argparse.Namespace) -> int:
     store = AutomationStore(args.root)
-    try:
-        automation_id = _resolve_automation_selector(store, args.automation_id)
-        spec = store.promote_quarantined(
-            automation_id,
-            attested=bool(getattr(args, 'i_attest_untrusted_write', False)),
-        )
-    except (FileNotFoundError, ValueError, _AmbiguousAutomationName) as exc:
-        print_json({'status': 'error', 'message': str(exc)})
-        return 1
+    automation_id = _resolve_quarantined_selector(store, args.automation_id)
+    spec = store.promote_quarantined(
+        automation_id,
+        attested=bool(getattr(args, 'i_attest_untrusted_write', False)),
+    )
     print_json({'status': 'promoted', 'automation': spec.to_dict()})
     return 0
 
@@ -489,18 +503,15 @@ class _AmbiguousAutomationName(ValueError):
         )
 
 
-def _resolve_automation_selector(store: AutomationStore, selector: str) -> str:
-    """Resolve an automation id or unique name to its stored automation id.
+def _resolve_selector(selector: str, entries: list[tuple[str, str]]) -> str:
+    """Resolve an id or unique name to its id from ``(id, name)`` entries.
 
-    An exact id match wins; otherwise a unique exact name match is used. A name
-    matching more than one automation raises ``_AmbiguousAutomationName``. When
-    nothing matches, the selector is returned unchanged so the caller surfaces
-    its existing not-found error.
+    Exact id wins; unique name match used; >1 raises ``_AmbiguousAutomationName``;
+    no match returns the selector unchanged for the caller's not-found error.
     """
-    specs = store.list()
-    if any(spec.automation_id == selector for spec in specs):
+    if any(automation_id == selector for automation_id, _ in entries):
         return selector
-    matches = [spec.automation_id for spec in specs if spec.name == selector]
+    matches = [automation_id for automation_id, name in entries if name == selector]
     if len(matches) == 1:
         return matches[0]
     if len(matches) > 1:
@@ -508,62 +519,65 @@ def _resolve_automation_selector(store: AutomationStore, selector: str) -> str:
     return selector
 
 
+def _resolve_automation_selector(store: AutomationStore, selector: str) -> str:
+    """Resolve an active automation id or unique name to its stored id."""
+    return _resolve_selector(
+        selector, [(s.automation_id, s.name) for s in store.list()]
+    )
+
+
+def _resolve_quarantined_selector(store: AutomationStore, selector: str) -> str:
+    """Resolve a quarantined automation id or unique name to its id."""
+    return _resolve_selector(
+        selector,
+        [
+            (row['automation_id'], row.get('name', ''))
+            for row in store.list_quarantined()
+        ],
+    )
+
+
+@_classified_errors
 def automation_show_command(args: argparse.Namespace) -> int:
     store = AutomationStore(args.root, readonly=True)
-    try:
-        automation_id = _resolve_automation_selector(store, args.automation_id)
-        spec = store.show(automation_id)
-    except (FileNotFoundError, _AmbiguousAutomationName) as exc:
-        print_json({'status': 'error', 'message': str(exc)})
-        return 1
+    automation_id = _resolve_automation_selector(store, args.automation_id)
+    spec = store.show(automation_id)
     print_json(spec.to_dict())
     return 0
 
 
+@_classified_errors
 def automation_pause_command(args: argparse.Namespace) -> int:
     store = AutomationStore(args.root)
-    try:
-        automation_id = _resolve_automation_selector(store, args.automation_id)
-        spec = store.set_enabled(automation_id, False)
-    except (FileNotFoundError, _AmbiguousAutomationName) as exc:
-        print_json({'status': 'error', 'message': str(exc)})
-        return 1
+    automation_id = _resolve_automation_selector(store, args.automation_id)
+    spec = store.set_enabled(automation_id, False)
     print_json({'status': 'paused', 'automation': spec.to_dict()})
     return 0
 
 
+@_classified_errors
 def automation_resume_command(args: argparse.Namespace) -> int:
     store = AutomationStore(args.root)
-    try:
-        automation_id = _resolve_automation_selector(store, args.automation_id)
-        spec = store.set_enabled(automation_id, True)
-    except (FileNotFoundError, _AmbiguousAutomationName) as exc:
-        print_json({'status': 'error', 'message': str(exc)})
-        return 1
+    automation_id = _resolve_automation_selector(store, args.automation_id)
+    spec = store.set_enabled(automation_id, True)
     print_json({'status': 'resumed', 'automation': spec.to_dict()})
     return 0
 
 
+@_classified_errors
 def automation_delete_command(args: argparse.Namespace) -> int:
     store = AutomationStore(args.root)
-    try:
-        automation_id = _resolve_automation_selector(store, args.automation_id)
-        store.delete(automation_id)
-    except (FileNotFoundError, _AmbiguousAutomationName) as exc:
-        print_json({'status': 'error', 'message': str(exc)})
-        return 1
+    automation_id = _resolve_automation_selector(store, args.automation_id)
+    store.delete(automation_id)
     print_json({'status': 'deleted', 'automation_id': automation_id})
     return 0
 
 
+@_classified_errors
 def automation_run_command(args: argparse.Namespace) -> int:
     store = AutomationStore(args.root)
-    try:
-        automation_id = _resolve_automation_selector(store, args.automation_id)
-        spec = store.show(automation_id)
-    except (FileNotFoundError, _AmbiguousAutomationName) as exc:
-        print_json({'status': 'error', 'message': str(exc)})
-        return 1
+    automation_id = _resolve_automation_selector(store, args.automation_id)
+    spec = store.show(automation_id)
     payload = _run_automation_once(args.root, spec)
     print_json(payload)
     return 0

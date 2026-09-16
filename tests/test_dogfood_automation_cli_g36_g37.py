@@ -132,3 +132,75 @@ def test_unknown_name_uses_existing_not_found_shape(tmp_path: Path) -> None:
         'status': 'error',
         'message': "automation 'ghost' not found",
     }
+
+
+def test_status_resolves_unique_name_and_prints_ok(tmp_path: Path) -> None:
+    add_code, add_out = _add(tmp_path, 'statused', 'summarize repo')
+    assert add_code == 0
+    automation_id = json.loads(add_out)['automation']['automation_id']
+
+    name_code, name_out = _run(
+        ['agent', 'automation', 'status', 'statused', '--root', str(tmp_path)]
+    )
+    assert name_code == 0
+    payload = json.loads(name_out)
+    assert payload['status'] == 'ok'
+    assert payload['automation']['automation_id'] == automation_id
+
+
+def test_status_ambiguous_name_is_classified_error(tmp_path: Path) -> None:
+    assert _add(tmp_path, 'dup', 'task one')[0] == 0
+    assert _add(tmp_path, 'dup', 'task two')[0] == 0
+    code, stdout = _run(
+        ['agent', 'automation', 'status', 'dup', '--root', str(tmp_path)]
+    )
+    assert code == 1
+    payload = json.loads(stdout)
+    assert payload['status'] == 'error'
+    assert payload['message'].startswith("ambiguous automation name 'dup': ids ")
+
+
+def test_promote_resolves_unique_name(tmp_path: Path) -> None:
+    from teaagent.automations import AutomationSpec, AutomationStore
+
+    store = AutomationStore(tmp_path)
+    spec = AutomationSpec(
+        automation_id='q1',
+        name='quar',
+        task='summarize repo',
+        schedule='every 30m',
+        provider='fake',
+    )
+    store.create_quarantined(spec, provenance={})
+
+    code, stdout = _run(
+        ['agent', 'automation', 'promote', 'quar', '--root', str(tmp_path)]
+    )
+    assert code == 0
+    payload = json.loads(stdout)
+    assert payload['status'] == 'promoted'
+    assert payload['automation']['automation_id'] == 'q1'
+
+
+def test_promote_ambiguous_name_is_classified_error(tmp_path: Path) -> None:
+    from teaagent.automations import AutomationSpec, AutomationStore
+
+    store = AutomationStore(tmp_path)
+    for aid in ('q1', 'q2'):
+        store.create_quarantined(
+            AutomationSpec(
+                automation_id=aid,
+                name='dup',
+                task='summarize repo',
+                schedule='every 30m',
+                provider='fake',
+            ),
+            provenance={},
+        )
+    code, stdout = _run(
+        ['agent', 'automation', 'promote', 'dup', '--root', str(tmp_path)]
+    )
+    assert code == 1
+    payload = json.loads(stdout)
+    assert payload['status'] == 'error'
+    assert payload['message'].startswith("ambiguous automation name 'dup': ids ")
