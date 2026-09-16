@@ -149,7 +149,7 @@ def agent_undo_command(args: argparse.Namespace) -> int:  # noqa: C901
 
     # Fallback to UndoJournal
     undo_path = store.undo_path(run_id)
-    if not undo_path.is_file():
+    if not store.undo_exists(run_id):
         print_json(
             {
                 'status': 'error',

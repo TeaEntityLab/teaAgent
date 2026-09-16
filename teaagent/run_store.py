@@ -174,6 +174,26 @@ class RunStore(AbstractStore[list[dict[str, Any]]]):
     def run_path(self, run_id: str) -> Path:
         return self.store_dir / f'{safe_run_id(run_id)}.jsonl'
 
+    def run_exists(self, run_id: str) -> bool:
+        """True when a run file exists, treating stat errors as absent.
+
+        ``run_id`` may be user-supplied; an over-long (ENAMETOOLONG) or
+        inaccessible (EACCES) path re-raises ``OSError`` from ``is_file`` on
+        Python 3.12. Such an id can't name an existing run — report absent
+        rather than crash.
+        """
+        try:
+            return self.run_path(run_id).is_file()
+        except OSError:
+            return False
+
+    def undo_exists(self, run_id: str) -> bool:
+        """True when an undo journal exists, treating stat errors as absent."""
+        try:
+            return self.undo_path(run_id).is_file()
+        except OSError:
+            return False
+
     def undo_dir(self) -> Path:
         if self.readonly:
             raise RuntimeError('Cannot access undo directory in readonly mode')
@@ -190,7 +210,7 @@ class RunStore(AbstractStore[list[dict[str, Any]]]):
 
     def latest_run_with_undo(self, *, limit: int = 50) -> Optional[str]:
         for summary in self.list_runs(limit=limit):
-            if self.undo_path(summary.run_id).is_file():
+            if self.undo_exists(summary.run_id):
                 return summary.run_id
         return None
 
@@ -208,7 +228,7 @@ class RunStore(AbstractStore[list[dict[str, Any]]]):
         if self.readonly:
             raise RuntimeError('Cannot record undo applied in readonly mode')
         path = self.run_path(run_id)
-        if not path.is_file():
+        if not self.run_exists(run_id):
             return False
         from teaagent.audit_chain import last_chain_hash
 
@@ -251,7 +271,7 @@ class RunStore(AbstractStore[list[dict[str, Any]]]):
 
     def show_run(self, run_id: str) -> list[dict[str, Any]]:
         path = self.run_path(run_id)
-        if not path.exists():
+        if not self.run_exists(run_id):
             raise FileNotFoundError(f"run '{run_id}' not found")
         events = []
         for line in path.read_text(encoding='utf-8').splitlines():

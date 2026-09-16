@@ -46,7 +46,7 @@ def _display_recovery_guidance(
     # Load undo journal if available
     undo_journal = None
     undo_path = store.undo_path(result.run_id)
-    if undo_path.is_file():
+    if store.undo_exists(result.run_id):
         factory = AgentExecutionFactory(args.root)
         undo_journal = factory.create_undo_journal(path=undo_path)
 

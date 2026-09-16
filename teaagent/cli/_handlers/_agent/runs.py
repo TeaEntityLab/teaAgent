@@ -305,7 +305,11 @@ def _show_run_diff(args: argparse.Namespace) -> int:  # noqa: C901
     root = Path(args.root).resolve()
     undo_path = root / '.teaagent' / 'undo' / f'{args.run_id}.jsonl'
 
-    if not undo_path.exists():
+    try:
+        undo_found = undo_path.exists()
+    except OSError:
+        undo_found = False
+    if not undo_found:
         print_json(
             {
                 'status': 'error',
@@ -378,7 +382,11 @@ def agent_runs_commit_command(args: argparse.Namespace) -> int:  # noqa: C901
         run_id = runs[0].run_id
 
     undo_path = root / '.teaagent' / 'undo' / f'{run_id}.jsonl'
-    if not undo_path.exists():
+    try:
+        undo_found = undo_path.exists()
+    except OSError:
+        undo_found = False
+    if not undo_found:
         print_json(
             {'status': 'error', 'message': f'No undo journal found for run {run_id}'}
         )

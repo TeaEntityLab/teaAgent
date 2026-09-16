@@ -65,7 +65,7 @@ def replay_steps(args: argparse.Namespace) -> int:
     run_store = AgentExecutionFactory(root).create_run_store(readonly=True)
     run_path = run_store.run_path(run_id)
 
-    if not run_path.exists():
+    if not run_store.run_exists(run_id):
         print_json(
             {
                 'ok': False,
@@ -125,7 +125,7 @@ def replay_fork(args: argparse.Namespace) -> int:
     run_store = AgentExecutionFactory(root).create_run_store(readonly=True)
     run_path = run_store.run_path(run_id)
 
-    if not run_path.exists():
+    if not run_store.run_exists(run_id):
         print_json(
             {
                 'ok': False,
