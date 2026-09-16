@@ -53,6 +53,9 @@
 | G23 | **`init --provider fake` prompts for `FAKE_API_KEY` and crashes on non-TTY stdin.** `_misc.py:316-319` calls `getpass.getpass(f'Enter {env_var}…')` unconditionally whenever `--api-key` is omitted — even for `fake`, whose `PROVIDER_CONFIGS['fake'].api_key_env` is `'FAKE_API_KEY'` but which needs no key. On `</dev/null`/piped stdin `getpass` raises EOFError → generic `Unexpected error: ` (empty message) + rc=1, leaving an empty `.teaagent/`. First-run UX dead-ends on the one provider meant for headless smoke. |
 | G24 | **`init`/`setup` never surface the workspace-write plan gate.** `init --permission-mode workspace-write` writes a config whose first `agent run` then fails `Error [PLAN_GATE]` (rc=2) — `_require_plan_gate` auto-enables `require_plan` for `workspace-write` (`_agent/config.py:159-161`), but `init`'s `next_steps` and `setup`'s output never mention `plan`/`--from-plan`/`--skip-plan-check`. A fresh operator following the printed next-steps hits an unexplained hard gate. |
 | G25 | **`release evidence` (default `release`/`full` profiles) runs `pre-commit run -a` + full acceptance tier with no progress output and 900s timeouts** (`release_evidence.py:651-667`). On this tree it exceeds 60–90s silently; `--profile counts-only` returns in ~6s. A read-only-looking command that actually runs the whole gate suite, with no indication it's doing so. |
+| G26 | **Scratchpad object injected into run-list arrays.** `runs list`, `session list`, and `agent status` append `{'scratchpad_last_goal': ...}` as an extra element inside the run array (`_agent/runs.py:224`, `_ergonomics/session.py:138`, `agent_status.py:31`). Consumers iterating the array get a non-run entry with no `run_id`/`status` — a schema-breaking output bug. |
+| G27 | **`mcp trust allow`/`deny` crash on missing `TEAAGENT_MCP_TRUST_KEY`.** With the env var unset, both raise through the generic `Unexpected error:` handler (empty message, rc=1) instead of a clean classified error. Distinct from G11 (which is the *wrong*-key silent-discard); this is the *missing*-key path. |
+| G28 | **`audit verify` with no args fails on a nonexistent default.** Bare `teaagent audit verify` targets `.teaagent/audit.jsonl` which doesn't exist (per-run logs live under `.teaagent/runs/`), so it errors and only then tells you to pass `<run_id>` or `--path`. The default should either verify all run logs or require the arg up front. |
 
 ## Denial candidate (owner adjudication)
 
@@ -70,7 +73,7 @@
 
 - ADR-0031 sign-off (criterion 4) — the packet is ready.
 - The owner-driven TUI dogfood session (`m4-dogfood-2026-09-15.md`) — the one surface agents can't drive.
-- Adjudication of G1–G25 + D1 — each is a `feat:`/design change or a verdict, not a dogfooding step.
+- Adjudication of G1–G28 + D1 — each is a `feat:`/design change or a verdict, not a dogfooding step.
 
 ## Owner adjudication triage (agent-proposed, 2026-09-15)
 
