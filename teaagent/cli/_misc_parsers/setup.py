@@ -114,6 +114,14 @@ def _setup(
         action='store_true',
         help='Verify existing setup without making changes.',
     )
+    p.add_argument(
+        '--no-gitignore',
+        action='store_true',
+        help=(
+            'Do not add .teaagent/ to .gitignore (in a git repo it is added by '
+            'default to keep the git sandbox usable).'
+        ),
+    )
     p.set_defaults(func=handler)
 
 

@@ -224,13 +224,14 @@ finding has a `# test-type: behavior` regression that failed pre-change):
 
 Residuals recorded, not fixed: `ultrawork start` (deprecated) hand-rolls an
 `agent run` argv without plan flags; legacy unimported
-`cli/_handlers/agent_automation.py` keeps the pre-fix G36/G37 code paths;
-`automation promote/status` remain id-only; `setup` has no `--no-gitignore`
-flag (applies by default, append-only). The NUL-byte `--api-key` crash is
-fixed in `fd5be772` (2026-09-17): the key is validated before any config
-write, so `init` returns a classified `{"ok": false}` with no partial
-`.teaagent/`; the wizard's `resolve_api_key` raises a `ValueError` its
-caller converts to a warning.
+`cli/_handlers/agent_automation.py` keeps the pre-fix G36/G37 code paths.
+The remaining residuals are now closed (2026-09-17): `automation
+promote`/`status` route through `_resolve_automation_selector` like their
+G37 siblings; `setup` has the `--no-gitignore` opt-out `init` already had;
+and the NUL-byte `--api-key` crash is fixed in `fd5be772` — the key is
+validated before any config write, so `init` returns a classified
+`{"ok": false}` with no partial `.teaagent/`; the wizard's
+`resolve_api_key` raises a `ValueError` its caller converts to a warning.
 H4 evidence is unchanged by this batch (fake-provider probes make no
 governed tool calls). `promotion_ready` stays `false`.
 
