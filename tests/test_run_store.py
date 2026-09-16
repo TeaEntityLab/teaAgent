@@ -8,6 +8,8 @@ import tempfile
 from contextlib import redirect_stdout
 from pathlib import Path
 
+import pytest
+
 from teaagent import FinalAnswer, RunStore
 from teaagent.audit import AUDIT_REDACTED
 from teaagent.cli import main
@@ -409,3 +411,32 @@ def test_run_origin_round_trips_through_index() -> None:
         assert summaries['run-plain'].origin == 'unknown'
         # to_dict carries it
         assert summaries['run-owner'].to_dict()['origin'] == 'owner'
+
+
+def test_pathological_run_id_is_graceful_not_a_crash(capsys) -> None:
+    """An over-long/inaccessible run_id must report "not found", not crash.
+
+    Python 3.12's ``Path.is_file``/``exists`` re-raise ``OSError`` for
+    ENAMETOOLONG/EACCES (only ENOENT-family is swallowed). A run_id longer than
+    the filename limit used to reach the generic "Unexpected error" handler;
+    the safe probes must instead surface a clean not-found.
+    """
+    run_id = 'x' * 1000
+    with tempfile.TemporaryDirectory() as tmp:
+        store = RunStore(tmp)
+        assert store.run_exists(run_id) is False
+        assert store.undo_exists(run_id) is False
+        with pytest.raises(FileNotFoundError):
+            store.show_run(run_id)
+
+        for argv in (
+            ['agent', 'show', run_id, '--root', tmp],
+            ['agent', 'resume', 'fake', run_id, '--root', tmp],
+            ['agent', 'undo', run_id, '--root', tmp],
+            ['replay', 'steps', '--run-id', run_id, '--root', tmp],
+        ):
+            code = main(argv)
+            captured = capsys.readouterr()
+            assert code == 1, f'{argv[:2]} returned {code}'
+            assert 'Unexpected error' not in captured.err, argv[:2]
+            assert 'not found' in (captured.out + captured.err).lower(), argv[:2]
