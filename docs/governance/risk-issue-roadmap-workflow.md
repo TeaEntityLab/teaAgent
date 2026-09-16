@@ -1,6 +1,8 @@
 # Risk Issue Roadmap Workflow
 # 2026-06-02
 
+> **Last reviewed:** 2026-09-16 (Step 4b owner-adjudication gate added)
+
 This workflow turns scattered review findings into durable work without losing
 history or inventing a new tracking style for each audit pass.
 
@@ -96,6 +98,22 @@ Use this mapping:
 
 The roadmap row should not repeat the whole ticket. It should link to the ticket
 and name the exit evidence.
+
+## Step 4b: Adjudicate before scheduling
+
+Findings that change a safety control, a documented guarantee, or a
+`feat:`-class behavior are not self-scheduling. Before a ticket or roadmap row
+is created, the finding needs an **owner adjudication**: a verdict that names
+the DR-006 provenance gate (`friction-driven`, `governance-gap`, or
+`owner-override`) and the intended state transition.
+
+Agents may prepare the adjudication packet (evidence, proposed gate, candidate
+fix shape) but must not assign the verdict, mark a gap `Fixed`, or set
+`promotion_ready`. The 2026-09-15 dogfooding consolidation
+(`docs/work-log/dogfood-findings-2026-09-15.md`) is the working example: each
+gap carries a proposed gate and a question for the owner, and stays
+`needs_review` until adjudicated.
+
 
 ## Step 5: Verify
 

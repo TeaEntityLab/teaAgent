@@ -1,6 +1,6 @@
 # Governance Index
 
-> **Last reviewed:** 2026-08-26 (high-risk path review entry point added)
+> **Last reviewed:** 2026-09-16 (10 missing docs added to index: snippet registry, coverage-omit ledger, daily-driver gates/checklist, do-not-claim, audit cadence, guarded-claims, prompt-injection, release-channel SOT, scope taxonomy)
 > **Review trigger:** Governance index or process entry points change.
 > **Owner:** docs / governance
 
@@ -29,6 +29,16 @@ This directory contains the authoritative standards and process documentation fo
 | [integration-contracts.md](integration-contracts.md) | WS5 run/event/approval/storage/plugin boundaries |
 | [trust-and-audit-whitepaper.md](trust-and-audit-whitepaper.md) | Guarantees, non-goals, failure behavior, verification commands |
 | [cost-state-taxonomy.md](cost-state-taxonomy.md) | Run receipt and budget display labels |
+| [command-snippet-registry.md](command-snippet-registry.md) | Which high-value guide command prefixes are smoke-tested vs manual-only |
+| [coverage-omit-ledger.md](coverage-omit-ledger.md) | Governance ledger for files/dirs omitted from coverage reporting |
+| [daily-driver-release-gates-2026-06-02.md](daily-driver-release-gates-2026-06-02.md) | Release gates for changes affecting TUI, chat, or agent mode |
+| [daily-driver-review-checklist-2026-06-02.md](daily-driver-review-checklist-2026-06-02.md) | Reviewer checklist for daily-driver PRs (TUI/chat/agent/approval/cost/undo/resume/memory) |
+| [do-not-claim.md](do-not-claim.md) | Current truth for what TeaAgent explicitly does not provide |
+| [documentation-audit-cadence-2026-06-06.md](documentation-audit-cadence-2026-06-06.md) | When documentation governance checks must run and what evidence to keep |
+| [guarded-claims-registry.md](guarded-claims-registry.md) | Volatile prose facts guarded by `validate_docs_consistency.py` so stale claims fail CI |
+| [prompt-injection-trust-boundaries.md](prompt-injection-trust-boundaries.md) | Current truth for untrusted-content handling and injection trust boundaries |
+| [release-channel-sot.md](release-channel-sot.md) | Governance rule for the release-channel source of truth |
+| [scope-taxonomy.md](scope-taxonomy.md) | Canonical reference for scope vocabulary |
 
 For the threat model and permission mode table, see [SECURITY.md](../../SECURITY.md).
 For architecture decisions, see [docs/adr/](../adr/).
