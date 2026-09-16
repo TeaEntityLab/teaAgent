@@ -68,11 +68,10 @@ def _start_background_run(args: argparse.Namespace) -> int:
                 candidates.append(stripped)
 
     for candidate in candidates:
-        run_path = run_store.run_path(candidate)
         suspension_path = (
             root_path / '.teaagent' / f'suspension-{safe_run_id(candidate)}.json'
         )
-        if run_path.is_file():
+        if run_store.run_exists(candidate):
             print(
                 format_error_block(
                     'Error',
@@ -85,7 +84,11 @@ def _start_background_run(args: argparse.Namespace) -> int:
                 file=sys.stderr,
             )
             return 2
-        if suspension_path.is_file():
+        try:
+            is_suspension = suspension_path.is_file()
+        except OSError:
+            is_suspension = False
+        if is_suspension:
             print(
                 format_error_block(
                     'Error',
@@ -138,13 +141,9 @@ def agent_run_task(args: argparse.Namespace) -> int:
         from teaagent.run_store import RunStore
 
         store = RunStore(Path(args.root))
-        try:
-            candidate_is_run = store.run_path(run_id_candidate).is_file()
-        except OSError:
-            # A candidate that can't be statted (e.g. longer than the filename
-            # limit) can't be an existing run id — treat it as a task.
-            candidate_is_run = False
-        if candidate_is_run:
+        # A candidate that can't be statted (e.g. longer than the filename
+        # limit) can't be an existing run id — run_exists reports it absent.
+        if store.run_exists(run_id_candidate):
             print(
                 format_error_block(
                     'Error',
