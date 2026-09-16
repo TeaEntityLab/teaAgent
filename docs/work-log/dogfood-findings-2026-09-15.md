@@ -59,6 +59,8 @@
 | G29 | **`init`/`setup` never gitignore `.teaagent/`, so the auto-enabled git sandbox fails on the first run in a git repo.** `init` writes `.teaagent/config.json`+`config.toml` but no `.gitignore` entry; nothing in `teaagent/` writes one (workspace tools only *read* it). On a fresh git workspace the first `agent run` prints `Git sandbox initialization failed: Worktree is dirty` because `.teaagent/` runtime files are untracked — the safe-sandbox feature silently disables itself exactly when a new user needs it. |
 | G30 | **The `fake` provider fails its own connectivity check, so `agent preflight`/`plan`/`daily` return `ready:False`/rc=2 offline.** `check_provider_connectivity` (`preflight.py:93-100`) treats `fake` as remote and does a real `socket.getaddrinfo('fake.example.com')`, which fails offline; `is_local_provider` (`_config.py:126-136`) only matches `localhost`/`127.0.0.1` base_urls. The provider built for offline dogfooding/smoke can't pass its own readiness gate. |
 | G31 | **`--background` drops the plan flags, so a workspace-write background run always dies on PLAN_GATE.** `build_agent_run_command` (`ergonomics/background_run.py:463-536`) rebuilds the worker argv but never forwards `--skip-plan-check`, `--from-plan`, or `--require-plan`. The foreground run accepts `--skip-plan-check`, but the detached worker re-runs without it and exits `Error [PLAN_GATE]` — `background list` then shows `alive:false` with no run produced. `--background` is unusable in `workspace-write` mode. |
+| G32 | **`memory failures auto-invalidate` crashes on `str / str`.** `MemoryAutoInvalidationConfig.from_workspace_config` (`failure_card.py:249`) does `root / '.teaagent'` on the raw `args.root` string — unlike `FailureCardStorage.__init__` which wraps `Path(root)`. Any `memory failures auto-invalidate` invocation raises `TypeError: unsupported operand type(s) for /: 'str' and 'str'` → generic `Unexpected error` rc=1. |
+| G33 | **`skill candidate install` raises uncaught on a missing candidate.** `skill candidate install nonexistent` → `Unexpected error: skill candidate 'nonexistent' not found` rc=1, while sibling subcommands (`show`/`eval`/`review`) return a clean `{"status":"error","message":"...not found"}`. Inconsistent error contract on the same not-found path. |
 
 ## Denial candidate (owner adjudication)
 
@@ -76,7 +78,7 @@
 
 - ADR-0031 sign-off (criterion 4) — the packet is ready.
 - The owner-driven TUI dogfood session (`m4-dogfood-2026-09-15.md`) — the one surface agents can't drive.
-- Adjudication of G1–G31 + D1 — each is a `feat:`/design change or a verdict, not a dogfooding step.
+- Adjudication of G1–G33 + D1 — each is a `feat:`/design change or a verdict, not a dogfooding step.
 
 ## Owner adjudication triage (agent-proposed, 2026-09-15)
 
