@@ -223,8 +223,10 @@ finding has a `# test-type: behavior` regression that failed pre-change):
 | G34 | held — no change | ADR-0043 expiry review 2026-12-09 carries this defect as disposition evidence |
 
 Residuals recorded, not fixed: `ultrawork start` (deprecated) hand-rolls an
-`agent run` argv without plan flags; legacy unimported
-`cli/_handlers/agent_automation.py` keeps the pre-fix G36/G37 code paths.
+`agent run` argv without plan flags — left deferred; the command is deprecated
+and points users at `agent run`, so forwarding plan flags there is scope creep.
+The legacy unimported `cli/_handlers/agent_automation.py` was deleted in
+`4f69f71f` (it carried the pre-fix G36/G37 code paths as a grep-trap).
 The remaining residuals are now closed (2026-09-17): `automation
 promote`/`status` route through `_resolve_automation_selector` like their
 G37 siblings; `setup` has the `--no-gitignore` opt-out `init` already had;
