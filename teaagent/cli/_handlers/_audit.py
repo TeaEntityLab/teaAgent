@@ -136,24 +136,29 @@ def audit_verify_command(args: argparse.Namespace) -> int:  # noqa: C901
     """Verify cryptographic audit chain integrity and optionally sign attestation."""
     audit_log_path = _resolve_audit_verify_path(args)
     ci_mode = bool(getattr(args, 'ci', False))
+    explicit_target = bool(getattr(args, 'path', None) or getattr(args, 'run_id', None))
+
+    # G28: a bare `audit verify` (no run_id / --path) only makes sense in the
+    # legacy single-log layout. Per-run layouts keep logs under `.teaagent/runs/`,
+    # so refuse up front with a classified error instead of chasing a nonexistent
+    # default log and only hinting after a failed verification attempt.
+    if not explicit_target and not audit_log_path.exists():
+        print_json(
+            {
+                'status': 'error',
+                'message': (
+                    f'Default audit log does not exist at {audit_log_path}; '
+                    'per-run logs live under .teaagent/runs/ — run '
+                    '`teaagent audit verify <run_id> | --path <file>`'
+                ),
+            }
+        )
+        return 1
 
     if not audit_log_path.exists():
-        message = f'Audit log not found at {audit_log_path}'
-        # When the workspace-global log is absent but per-run logs exist, point
-        # the operator at the run_id form instead of a dead end.
-        runs_dir = Path(args.root) / '.teaagent' / 'runs'
-        if (
-            not getattr(args, 'run_id', None)
-            and not getattr(args, 'path', None)
-            and runs_dir.is_dir()
-            and any(runs_dir.glob('*.jsonl'))
-        ):
-            message += (
-                '; per-run logs exist under .teaagent/runs/ — '
-                'use `teaagent audit verify <run_id>` or `--path <file>`'
-            )
-        payload = {'status': 'error', 'message': message}
-        print_json(payload)
+        print_json(
+            {'status': 'error', 'message': f'Audit log not found at {audit_log_path}'}
+        )
         return 1
 
     if not ci_mode:

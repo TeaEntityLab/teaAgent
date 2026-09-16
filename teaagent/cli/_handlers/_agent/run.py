@@ -99,7 +99,13 @@ def _start_background_run(args: argparse.Namespace) -> int:
             )
             return 2
 
-    task = _prepare_task(args, args.task)
+    if getattr(args, 'from_plan', None) and getattr(args, 'task', None) is None:
+        # --from-plan supplies the task; the worker resolves it from the plan
+        # artifact. Skip local expansion so we do not pass None into the task
+        # pipeline or append a literal task to the worker argv.
+        task = None
+    else:
+        task = _prepare_task(args, args.task)
     command = build_agent_run_command(args, task)
     record = factory.create_background_run_store().start(command)
     payload = record.to_dict()

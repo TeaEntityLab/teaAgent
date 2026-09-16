@@ -1,5 +1,5 @@
 # Run Evidence And Audit Guide
-# As of 2026-06-02
+# As of 2026-09-16
 
 This guide helps a user answer: "What did the agent actually do?"
 
@@ -42,6 +42,12 @@ An audit event should answer:
 
 If a final answer claims success but no audit/result/verification event supports it,
 treat the claim as unverified.
+
+Per-run audit logs live under `.teaagent/runs/<run_id>.jsonl`. `teaagent audit
+verify` with no argument only verifies the legacy workspace log
+`.teaagent/audit.jsonl`; when that file is absent the command exits non-zero
+with a classified error pointing you at `teaagent audit verify <run_id>` or
+`teaagent audit verify --path <file>`.
 
 ## Changed files
 

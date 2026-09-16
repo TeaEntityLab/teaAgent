@@ -4,12 +4,24 @@
 
 **Stale threshold:** 90 days since `Last reviewed`
 **Current-truth docs scanned:** 17
-**Needs attention (working tier only):** 0
+**Needs attention (working tier only):** 2
 **Archive-tier docs (exempt from staleness):** 0
 
 Regenerate: `python3 scripts/report_docs_aging.py`
 
-All scanned current-truth working-tier docs are fresh.
+## Stale Or Incomplete By Owner Surface
+
+### cli
+
+| Document | Status | Last reviewed | File mtime | Notes |
+| --- | --- | --- | --- | --- |
+| `docs/cli.md` | stale_by_mtime | 2026-09-15 | 2026-09-16 | Missing owner banner; File modified after last reviewed date |
+
+### daily-driver
+
+| Document | Status | Last reviewed | File mtime | Notes |
+| --- | --- | --- | --- | --- |
+| `docs/USAGE.md` | stale_by_mtime | 2026-08-26 | 2026-09-16 | Missing owner banner; File modified after last reviewed date |
 
 ## Review Triggers (Current-Truth Docs)
 
@@ -35,7 +47,7 @@ All scanned current-truth working-tier docs are fresh.
 
 ## Corpus Cost (G5 Signal)
 
-**Total docs:** 664 (baseline 582 at diagnosis, delta +82)
+**Total docs:** 665 (baseline 582 at diagnosis, delta +83)
 **Live corpus (non-archive):** 377
 **Working-tier docs unreferenced by INDEX.md:** 328
 

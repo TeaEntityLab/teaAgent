@@ -192,3 +192,43 @@ actionable and classified (AGENTS.md, Tool Governance).
 D1 stays deferred (owner verdict). Its receipt is orphan-sourced
 (`pending-1061f13779524cb9b8763a9a2d130e7d.jsonl`, parent run `b15ffcfb…`);
 see the 2026-09-15 erratum in `roadmap-status.md` before classifying.
+
+## Owner decisions (2026-09-16) — G23–G38
+
+Owner adjudicated the G23–G38 triage in one batch: **"Yes for all"** — every
+proposed provenance and suggested disposition above is adopted as written
+(9 `governance-gap`, 6 `owner-override`, G34 `legacy-competitive` held). D1
+stays deferred. Risk record: `docs/reviews/dogfood-g23-g38-2026-09-16-risk.md`.
+
+Implemented 2026-09-16 (seven parallel slices, integrator-reviewed; each
+finding has a `# test-type: behavior` regression that failed pre-change):
+
+| # | Landed behavior | Proof |
+|---|---|---|
+| G23 | `init --provider fake` never prompts for a key (`ProviderConfig.requires_api_key=False`); non-TTY key-requiring providers proceed with `api_key_note` instead of crashing | `tests/test_dogfood_first_run_g23_g38.py`; scratch `init --provider fake </dev/null` → `ok: true`, no prompt |
+| G24 | `workspace-write` `next_steps` add `agent plan …` → `agent run … --from-plan …`; never `--skip-plan-check` | same file |
+| G29 | `init`/`setup` append `.teaagent/` to `.gitignore` in git repos (`--no-gitignore` opt-out; `gitignore: added\|present\|skipped\|not-a-git-repo`); first next step tells the user to commit the scaffold because the sandbox refuses an untracked-file worktree | scratch: `gitignore: added`; after committing the scaffold, `agent run fake` prints `Safe git sandbox auto-enabled`, completes, `git status --porcelain` empty |
+| G30 | `fake` is `requires_network=False`: connectivity + loopback-bind checks skipped, no DNS | `check_provider_connectivity('fake')` with sockets patched to raise → ready; scratch preflight `ready: true` |
+| G38 | non-TTY `init`/`setup` without `--provider` → `{"ok": false, "message": "provider is required in non-interactive mode; pass --provider <name> …"}` rc=1 before any write | scratch: rc=1, directory contains only `.git` |
+| G31 | worker argv forwards `--from-plan`/`--require-plan`/`--skip-plan-check` (and `--allow-external-plan`); `--from-plan` without a positional task no longer crashes the parent | `tests/test_dogfood_background_plan_g31.py`; scratch workspace-write background run produced a `run_id`, log has no `PLAN_GATE` |
+| G26 | scratchpad pseudo-entry removed from `runs list` / `session list` / legacy `agent_status.py` arrays; hint printed only in human/TTY output | `tests/test_dogfood_run_list_schema_g26.py`; scratch `runs list` → every element has `run_id` |
+| G35 | unknown `tools/call` → JSON-RPC `-32602` (`tool 'X' is not registered`), session keeps serving; catch narrowed to the registry lookup | `tests/test_dogfood_mcp_errors_g27_g35.py`; scratch: 3 frames, second `error.code -32602`, third `isError false` |
+| G27 | `mcp trust allow/deny` without `TEAAGENT_MCP_TRUST_KEY` → `{"ok": false, "error": "TEAAGENT_MCP_TRUST_KEY is not set; …"}` rc=1; wrong-key (G11) semantics untouched | same file |
+| G32 | `MemoryAutoInvalidationConfig.from_workspace_config` wraps `Path(root)` | `tests/test_dogfood_memory_skill_errors_g32_g33.py`; scratch `memory failures auto-invalidate` → `status: ok` |
+| G33 | `skill candidate install <missing>` → `{"status": "error", "message": "… not found"}` rc=1 | same file |
+| G36 | `automation add` validates the schedule before persisting → classified error, nothing written | `tests/test_dogfood_automation_cli_g36_g37.py` |
+| G37 | `show/pause/resume/delete/run` accept an id or a unique name; ambiguous → `ambiguous automation name 'x': ids …` | same file; `--help` says `Automation id or unique name` |
+| G28 | bare `audit verify` without a legacy `.teaagent/audit.jsonl` → classified error naming `.teaagent/runs/` and the `<run_id> \| --path` usage, before any verification | `tests/test_dogfood_audit_release_g25_g28.py`; scratch rc=1 |
+| G25 | `release evidence` (release/full) prints `[release evidence] running: … / done in …` on stderr around the two 900 s gates; stdout unchanged; counts-only silent | same file (subprocess stubbed; live run deliberately not exercised) |
+| G34 | held — no change | ADR-0043 expiry review 2026-12-09 carries this defect as disposition evidence |
+
+Residuals recorded, not fixed: `ultrawork start` (deprecated) hand-rolls an
+`agent run` argv without plan flags; `doctor model/project` wizards still call
+bare `input()` and would EOF on non-TTY stdin; `mcp trust revoke` decrypting an
+existing policy without the key still hits the generic handler; legacy unimported
+`cli/_handlers/agent_automation.py` keeps the pre-fix G36/G37 code paths;
+`automation promote/status` remain id-only; `setup` has no `--no-gitignore`
+flag (applies by default, append-only); a NUL byte in `--api-key` still crashes
+at `os.environ` assignment after config is written (pre-existing).
+H4 evidence is unchanged by this batch (fake-provider probes make no
+governed tool calls). `promotion_ready` stays `false`.

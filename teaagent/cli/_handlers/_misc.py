@@ -14,6 +14,7 @@ from teaagent.graphqlite_store import GraphQLiteConfig, GraphQLiteGraphStore
 from teaagent.intent import clarify_task
 from teaagent.llm import available_providers, check_llm_configuration
 from teaagent.tui import run_tui
+from teaagent.types import PermissionMode
 from teaagent.ultrawork import UltraworkStore
 from teaagent.wizard import run_first_session_setup
 from teaagent.workspace_tools import build_workspace_tool_registry
@@ -289,6 +290,12 @@ def setup_command(args: argparse.Namespace) -> int:
         check_llm=check_llm_configuration,
     )
     payload = result.to_dict()
+    if result.files_written:
+        payload['gitignore'] = _ensure_teaagent_gitignored(
+            Path(args.root).resolve(),
+            no_gitignore=getattr(args, 'no_gitignore', False),
+            interactive=sys.stdin.isatty(),
+        )
     if getattr(args, 'human', False):
         from teaagent.ergonomics.human_output import format_setup_summary
 
@@ -301,22 +308,44 @@ def setup_command(args: argparse.Namespace) -> int:
 def init_command(args: argparse.Namespace) -> int:
     if getattr(args, 'wizard', False):
         return setup_command(args)
+    from teaagent.llm._config import PROVIDER_CONFIGS
+
     root = Path(args.root).resolve()
-    tea_dir = root / '.teaagent'
-    tea_dir.mkdir(parents=True, exist_ok=True)
+    interactive = sys.stdin.isatty()
 
     provider = args.provider
     if not provider:
         choices = ', '.join(available_providers())
+        if not interactive:
+            print_json(
+                {
+                    'ok': False,
+                    'message': (
+                        'provider is required in non-interactive mode; pass '
+                        f'--provider <name> (choices: {choices}) or run in a terminal'
+                    ),
+                }
+            )
+            return 1
         provider = input(f'Select provider ({choices}) [gpt]: ').strip() or 'gpt'
         if provider not in available_providers():
             print_json({'ok': False, 'message': f'unknown provider: {provider}'})
             return 1
 
+    env_var = _provider_env_var(provider)
     api_key = args.api_key
-    if not api_key:
-        env_var = _provider_env_var(provider)
-        api_key = getpass.getpass(f'Enter {env_var} (input hidden): ').strip()
+    api_key_note = None
+    if not api_key and PROVIDER_CONFIGS[provider].requires_api_key:
+        if interactive:
+            api_key = getpass.getpass(f'Enter {env_var} (input hidden): ').strip()
+        else:
+            api_key_note = (
+                f'no API key provided; set {env_var} in the environment '
+                'before running the agent'
+            )
+
+    tea_dir = root / '.teaagent'
+    tea_dir.mkdir(parents=True, exist_ok=True)
 
     config = {
         'provider': provider,
@@ -362,9 +391,41 @@ def init_command(args: argparse.Namespace) -> int:
         )
         agents_md_status = 'created'
 
-    env_var = _provider_env_var(provider)
     if api_key and env_var:
         os.environ[env_var] = api_key
+
+    gitignore_status = _ensure_teaagent_gitignored(
+        root,
+        no_gitignore=getattr(args, 'no_gitignore', False),
+        interactive=interactive,
+    )
+
+    plan_gated = (
+        parse_permission_mode(args.permission_mode) == PermissionMode.WORKSPACE_WRITE
+    )
+    next_steps = []
+    if gitignore_status in ('added', 'present'):
+        # The git sandbox refuses a dirty worktree, and the scaffold init just
+        # wrote (.gitignore, AGENTS.md) is untracked until committed.
+        next_steps.append(
+            'git add .gitignore AGENTS.md && git commit -m "Add TeaAgent workspace '
+            'scaffold"  # keeps the worktree clean so the git sandbox stays enabled'
+        )
+    next_steps.append(
+        f'teaagent setup --root {root} --provider {provider} --permission-mode read-only'
+    )
+    if plan_gated:
+        next_steps.append(f'teaagent agent plan {provider} "<task>" --root {root}')
+        next_steps.append(
+            f'teaagent agent run {provider} --from-plan '
+            f'.teaagent/plans/<plan-file>.md --root {root}'
+        )
+    next_steps.extend(
+        [
+            f'teaagent daily "summarize this repo" --dry-run --root {root}',
+            f'teaagent doctor mcp --wizard --root {root}',
+        ]
+    )
 
     payload = {
         'ok': True,
@@ -377,12 +438,11 @@ def init_command(args: argparse.Namespace) -> int:
         'permission_mode': args.permission_mode,
         'max_iterations': int(args.max_iterations),
         'max_tool_calls': int(args.max_tool_calls),
-        'next_steps': [
-            f'teaagent setup --root {root} --provider {provider} --permission-mode read-only',
-            f'teaagent daily "summarize this repo" --dry-run --root {root}',
-            f'teaagent doctor mcp --wizard --root {root}',
-        ],
+        'gitignore': gitignore_status,
+        'next_steps': next_steps,
     }
+    if api_key_note:
+        payload['api_key_note'] = api_key_note
     if args.write_env and env_var and api_key:
         from teaagent.wizard import merge_env_exports
 
@@ -450,6 +510,42 @@ def _provider_env_var(provider: str) -> str:
 
     config = PROVIDER_CONFIGS.get(provider)
     return config.api_key_env if config else ''
+
+
+def _ensure_teaagent_gitignored(
+    root: Path, *, no_gitignore: bool, interactive: bool
+) -> str:
+    """Add ``.teaagent/`` to the workspace ``.gitignore`` inside a git repo.
+
+    Returns one of ``'added'``, ``'present'``, ``'skipped'``, or
+    ``'not-a-git-repo'``. Never rewrites existing lines and never runs git.
+    """
+    if not (root / '.git').exists():
+        return 'not-a-git-repo'
+    if no_gitignore:
+        return 'skipped'
+    gitignore_path = root / '.gitignore'
+    existing = (
+        gitignore_path.read_text(encoding='utf-8') if gitignore_path.is_file() else ''
+    )
+    covered = {'.teaagent', '.teaagent/', '/.teaagent', '/.teaagent/'}
+    if any(line.strip() in covered for line in existing.splitlines()):
+        return 'present'
+    if interactive:
+        answer = (
+            input(
+                'Add .teaagent/ to .gitignore so the git sandbox stays available? [Y/n]: '
+            )
+            .strip()
+            .lower()
+        )
+        if answer in ('n', 'no'):
+            return 'skipped'
+    addition = '\n# TeaAgent runtime state (keeps the git sandbox clean)\n.teaagent/\n'
+    if not existing:
+        addition = addition.lstrip('\n')
+    gitignore_path.write_text(existing + addition, encoding='utf-8')
+    return 'added'
 
 
 def handle_first_run(root: Path, quiet: bool = False) -> bool:

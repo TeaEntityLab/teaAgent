@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 from typing import Any
 
 from teaagent.cli._output import _redact_value
@@ -64,6 +65,22 @@ def _print_json(value: Any) -> None:
     print_json(sanitized)
 
 
+def _require_trust_key() -> bool:
+    """Return True when TEAAGENT_MCP_TRUST_KEY is set, else emit classified error."""
+    if 'TEAAGENT_MCP_TRUST_KEY' in os.environ:
+        return True
+    _print_json(
+        {
+            'ok': False,
+            'error': (
+                'TEAAGENT_MCP_TRUST_KEY is not set; '
+                'export it before running mcp trust allow/deny'
+            ),
+        }
+    )
+    return False
+
+
 def mcp_trust_list_command(args: argparse.Namespace) -> int:
     policy = load_mcp_trust_policy(args.root)
     _print_json({'ok': True, 'policy': policy.to_public_dict()})
@@ -93,6 +110,8 @@ def mcp_trust_inspect_command(args: argparse.Namespace) -> int:
 
 
 def mcp_trust_allow_command(args: argparse.Namespace) -> int:
+    if not _require_trust_key():
+        return 1
     policy = load_mcp_trust_policy(args.root)
     tools = list(args.tools or [])
     if args.server:
@@ -105,6 +124,8 @@ def mcp_trust_allow_command(args: argparse.Namespace) -> int:
 
 
 def mcp_trust_deny_command(args: argparse.Namespace) -> int:
+    if not _require_trust_key():
+        return 1
     policy = load_mcp_trust_policy(args.root)
     tools = list(args.tools or [])
     if args.server:

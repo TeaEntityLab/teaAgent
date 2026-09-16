@@ -1,7 +1,7 @@
 # Roadmap Rethink — Decision Rationale and Proposed Plan (2026-09-16)
 
 > **Claim class:** Dated review and continuation record; not current truth or scheduling authority.
-> **Status:** Review recorded; implementation and priority-change proposals remain Proposed.
+> **Status:** Review recorded 2026-09-16; owner adjudicated G23–G38 "Yes for all" the same day and R2/R3/R5 landed (see §7). R4 and the independent decision gates remain open.
 > **Owner:** docs
 > **Last reviewed:** 2026-09-16
 > **Review trigger:** Owner disposition, a relevant contract/source change, new owner-use evidence, or a named decision gate.
@@ -192,10 +192,10 @@ EFX proof and H4 acceptance are separate decision lanes; one does not establish 
 | --- | --- | --- |
 | Preserve this review and link it from existing entry points | Done 2026-09-16 | Indexed in `docs/INDEX.md` and `docs/roadmap-status.md`; links, G23–G38 coverage, and docs gates verified. |
 | R1 broader status reconciliation | Applied 2026-09-16 (docs-only, under the standing keep-docs-current instruction) | Execution plan header/§1 date, Horizon A/B status banners, held-spec index H4 expiry rows, findings owner-only list, backlog Proposed row, H1 exit-evidence caveat. Not changed: H1 status/confidence columns and every gate or horizon status — owner calls. |
-| R2 first-run repair batch | Proposed, not scheduled | Select bounded changes and cite the real DR-006 gate before implementation. |
-| R3 execution/output/protocol repairs | Proposed, not scheduled | Keep slices independent; contract and regression evidence per row. |
+| R2 first-run repair batch | Implemented 2026-09-16 (owner "Yes for all"; `Gate: owner-override` for G23/G24/G30/G38, `Gate: governance-gap` for G29) | Landed with regression tests and an integrated scratch journey (headless `init` → committed scaffold → offline preflight → sandboxed `agent run`, worktree clean). Residual: `doctor model/project` wizards still EOF on non-TTY stdin (twins, out of scope). |
+| R3 execution/output/protocol repairs | Implemented 2026-09-16 (`Gate: governance-gap`) | G31 plan flags forwarded (+`--allow-external-plan`), G26 arrays contain only runs, G35 `-32602` with the session alive. Residual: deprecated `ultrawork start` hand-rolled argv still lacks plan flags. |
 | R4 owner-observed coding | Owner acceptance still pending | Owner performs/attests the real task; agents do not simulate the testimony. |
-| R5 residual repair and improvement triage | Proposed; G34 held; agent-proposed provenance per finding recorded 2026-09-16 in `docs/work-log/dogfood-findings-2026-09-15.md` (9 `governance-gap`, 6 `owner-override`, 1 `legacy-competitive`) | Work only through admitted scope; the owner assigns the gates; do not convert all findings into feature tickets. |
+| R5 residual repair and improvement triage | Implemented 2026-09-16 except G34 (held): G27/G28/G32/G33/G36 under `Gate: governance-gap`, G25/G37 under `Gate: owner-override` | Residuals: `mcp trust revoke` without the key, legacy unimported `agent_automation.py`, `automation promote/status` id-only, `release evidence` live progress not exercised (unit-proven only). |
 | H4 enforcement, D1 verdict, EFX live proof, quarantine deletion | Existing gates unchanged | Named owner authorization and evidence, not this review, determine execution. |
 
 ### Next recommended action

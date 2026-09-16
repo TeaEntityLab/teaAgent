@@ -6,7 +6,7 @@ resource: "urn:teaagent:doc:docs/daily-driver-current-status.md"
 tags: ["teaagent", "daily-driver", "current-status", "reference"]
 teaagent:
   source_path: "docs/daily-driver-current-status.md"
-  source_sha256: "5daffd323d929d14564c6d949d9b6453793e7be346771c35c3c1822a53d5ded7"
+  source_sha256: "b462a4be839337399827e8bf8675341635314e8d9e8be141319f0d17ea3404d1"
   docs_tier: "working"
   authority: "canonical"
   lifecycle: "current"

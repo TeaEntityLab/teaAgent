@@ -238,7 +238,11 @@ def skill_candidate_install_command(args: argparse.Namespace) -> int:
             )
             return 1
     else:
-        candidate = store.show(args.candidate_id)
+        try:
+            candidate = store.show(args.candidate_id)
+        except FileNotFoundError as exc:
+            _print_json({'status': 'error', 'message': str(exc)})
+            return 1
         risk_reason = (
             f'Installing skill candidate {candidate.name} '
             f'(scope={args.scope}, status={candidate.status})'

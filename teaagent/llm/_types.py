@@ -221,6 +221,8 @@ class ProviderConfig:
     api_key: Optional[str] = None
     model: Optional[str] = None
     base_url_env: Optional[str] = None
+    requires_network: bool = True
+    requires_api_key: bool = True
 
     def resolved_api_key(self) -> str:
         api_key = self.api_key or os.environ.get(self.api_key_env)

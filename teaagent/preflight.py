@@ -73,6 +73,11 @@ def check_provider_connectivity(provider: str | None) -> tuple[bool, str]:
     normalized = provider.lower()
     if normalized not in PROVIDER_CONFIGS:
         return True, f'unknown provider {provider!r} — skipping connectivity check'
+    if not PROVIDER_CONFIGS[normalized].requires_network:
+        return (
+            True,
+            f'Provider {provider!r} needs no network — skipping connectivity check',
+        )
 
     base_url = PROVIDER_CONFIGS[normalized].base_url
     parsed = urllib.parse.urlparse(base_url)
@@ -136,9 +141,21 @@ def check_env_health(
             pass
 
     # 2. Check network binding ability (important for MCP/TUI).
-    #    Local providers communicate over loopback only, so the binding
-    #    check is always expected to succeed for them.
-    if not (provider and is_local_provider(provider)):
+    #    Local providers communicate over loopback only, and no-network
+    #    providers (e.g. fake) need no sockets at all, so the binding check
+    #    is skipped for both.
+    normalized = provider.lower() if provider else None
+    skip_network = bool(
+        normalized
+        and (
+            is_local_provider(normalized)
+            or (
+                normalized in PROVIDER_CONFIGS
+                and not PROVIDER_CONFIGS[normalized].requires_network
+            )
+        )
+    )
+    if not skip_network:
         with contextlib.suppress(Exception):
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             try:

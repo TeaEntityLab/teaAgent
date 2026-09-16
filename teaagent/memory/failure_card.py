@@ -244,8 +244,9 @@ class MemoryAutoInvalidationConfig:
         )
 
     @classmethod
-    def from_workspace_config(cls, root: Path) -> 'MemoryAutoInvalidationConfig':
+    def from_workspace_config(cls, root: str | Path) -> 'MemoryAutoInvalidationConfig':
         """Load configuration from workspace .teaagent/config.json if present."""
+        root = Path(root)
         config_path = root / '.teaagent' / 'config.json'
         if not config_path.exists():
             return cls.default()

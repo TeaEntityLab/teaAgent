@@ -283,6 +283,21 @@ teaagent tui --permission-mode allow
 teaagent tui --permission-mode danger-full-access
 ```
 
+## Workspace Init
+
+`teaagent init` is the non-wizard bootstrap (the guided flow is `teaagent setup`):
+
+```bash
+teaagent init --root . --provider fake                 # offline smoke provider needs no key
+teaagent init --root . --provider gpt --api-key sk-...
+teaagent init --root . --provider gpt --no-gitignore   # opt out of the .gitignore addition
+```
+
+- Non-interactive stdin (piped/headless): `init` and `setup` without `--provider` fail fast with `{"ok": false, "message": "provider is required in non-interactive mode; pass --provider <name> (choices: ...) or run in a terminal"}` and exit 1 before writing any file. They never silently select a credentialed provider.
+- Providers that need no key (`fake`) are never prompted for one. For a key-requiring provider on non-TTY stdin, `init` proceeds without storing a key and reports `api_key_note` naming the env var to set.
+- In a git repo, `init` (and `setup`, when it writes config) adds `.teaagent/` to `.gitignore` so the auto-enabled git sandbox stays usable; the result is reported as `gitignore: added|present|skipped|not-a-git-repo`. Existing lines are never rewritten and no git command runs; `--no-gitignore` opts out.
+- For `--permission-mode workspace-write`, `next_steps` include the plan-gate path (`teaagent agent plan ...` then `teaagent agent run ... --from-plan .teaagent/plans/<plan-file>.md`); `--skip-plan-check` is not recommended.
+
 ## Model Adapters
 
 List supported providers:
@@ -613,7 +628,7 @@ Streamable HTTP details:
 - `--auth-token TOKEN` requires `Authorization: Bearer TOKEN` on every request.
 - `--allowed-origin URL` may be repeated to whitelist browser Origin headers. Default: allow all.
 
-Supported methods: `initialize`, `tools/list`, `tools/call`. Each tool is exposed with its `inputSchema` and read-only / destructive / idempotent annotations. Tool errors are returned as `result.isError = true` rather than JSON-RPC errors so the client can recover.
+Supported methods: `initialize`, `tools/list`, `tools/call`. Each tool is exposed with its `inputSchema` and read-only / destructive / idempotent annotations. Tool *execution* errors are returned as `result.isError = true` rather than JSON-RPC errors so the client can recover; a `tools/call` for an unregistered tool is a JSON-RPC `-32602` (Invalid params) error frame (`tool 'X' is not registered`) and the server keeps serving.
 
 ## Subagent Delegation
 
@@ -1015,25 +1030,34 @@ teaagent agent automation add daily-brief "Summarize open TODOs" --schedule "dai
 teaagent agent automation add lint-sweep "Check docs consistency" --schedule "every 2h" --root . --auto-propose-skill
 ```
 
-List and inspect:
+Schedules accept `every <N>m`, `every <N>h`, or `daily HH:MM`. Any other value
+(for example a cron expression like `*/5 * * * *`) is rejected before anything
+is written, returning `{"status": "error", "message": "unsupported schedule
+'...'; use 'every 30m', 'every 2h', or 'daily HH:MM'"}` with exit code 1.
+
+List and inspect. The `show`, `pause`, `resume`, `delete`, and `run` commands
+accept either the hex `automation_id` or a unique automation `name`; a name
+that matches more than one automation returns an `ambiguous automation name
+'<name>': ids ...` error (exit code 1), and an unknown value returns the
+usual `automation '<value>' not found` error.
 
 ```bash
 teaagent agent automation list --root .
-teaagent agent automation show <automation_id> --root .
+teaagent agent automation show <automation-or-name> --root .
 ```
 
 Control lifecycle:
 
 ```bash
-teaagent agent automation pause <automation_id> --root .
-teaagent agent automation resume <automation_id> --root .
-teaagent agent automation delete <automation_id> --root .
+teaagent agent automation pause <automation-or-name> --root .
+teaagent agent automation resume <automation-or-name> --root .
+teaagent agent automation delete <automation-or-name> --root .
 ```
 
 Execute runs:
 
 ```bash
-teaagent agent automation run <automation_id> --root .
+teaagent agent automation run <automation-or-name> --root .
 teaagent agent automation tick --root .
 teaagent agent automation tick --dry-run --root .
 teaagent agent automation serve --interval-seconds 30 --max-ticks 10 --root .

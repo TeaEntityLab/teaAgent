@@ -151,6 +151,7 @@ def test_init_interactive_prompts_for_api_key() -> None:
                 return_value='sk-prompt-1',
             ),
             patch('teaagent.cli._handlers._misc.input', return_value='gpt'),
+            patch('sys.stdin.isatty', return_value=True),
             redirect_stdout(output),
         ):
             exit_code = main(['init', '--root', tmp])
@@ -616,10 +617,14 @@ def test_cli_with_negative_max_tool_calls() -> None:
 
 
 def test_cli_with_empty_api_key() -> None:
-    """Test that empty API key is handled."""
+    """G23/G38: an empty key on non-interactive stdin proceeds with a note.
+
+    Previously init dead-ended on the `getpass` prompt; now it writes config and
+    tells the user which env var to set instead of crashing.
+    """
     with tempfile.TemporaryDirectory() as tmp:
         output = io.StringIO()
-        with redirect_stdout(output):
+        with patch('sys.stdin.isatty', return_value=False), redirect_stdout(output):
             exit_code = main(
                 [
                     'init',
@@ -631,10 +636,11 @@ def test_cli_with_empty_api_key() -> None:
                     '',
                 ]
             )
-            # An empty API key aborts init: exit 1, no config written.
-            assert isinstance(exit_code, int)
-            assert exit_code == 1
-            assert not (Path(tmp) / '.teaagent' / 'config.json').exists()
+        assert exit_code == 0
+        payload = json.loads(output.getvalue())
+        assert payload['ok'] is True
+        assert 'OPENAI_API_KEY' in payload['api_key_note']
+        assert (Path(tmp) / '.teaagent' / 'config.json').exists()
 
 
 def test_cli_with_special_characters_in_api_key() -> None:

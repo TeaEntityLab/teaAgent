@@ -41,6 +41,7 @@ exclude = [
 "teaagent/ergonomics/background_run.py" = ["T201"]
 "teaagent/graphqlite_store.py" = ["T201"]
 "teaagent/policy.py" = ["T201"]
+"teaagent/release_evidence.py" = ["T201"]
 "teaagent/runner/_streaming.py" = ["T201"]
 "teaagent/signature_relay.py" = ["T201"]
 "teaagent/streaming/handlers.py" = ["T201"]

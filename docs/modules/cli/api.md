@@ -73,7 +73,7 @@ run_chat_repl(args)            # non-TUI REPL loop
 # cli/_handlers/_audit.py
 audit_list_command(args)       # teaagent audit list
 audit_show_command(args)       # teaagent audit show <run_id>
-audit_verify_command(args)     # teaagent audit verify <path>
+audit_verify_command(args)     # teaagent audit verify [<run_id>] [--path <file>]  (bare form verifies the legacy .teaagent/audit.jsonl only; per-run layouts must pass <run_id> or --path)
 audit_export_command(args)     # teaagent audit export
 audit_serve_command(args)      # teaagent audit serve [--port]
 ```

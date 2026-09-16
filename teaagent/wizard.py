@@ -5,6 +5,7 @@ import logging
 import os
 import shlex
 import subprocess
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Optional
@@ -323,9 +324,26 @@ def run_first_session_setup(
     files_written: list[str] = []
     warnings: list[str] = []
 
+    interactive = sys.stdin.isatty()
     provider = getattr(args, 'provider', None)
     if not provider:
         choices = ', '.join(available_providers())
+        if not interactive:
+            message = (
+                'provider is required in non-interactive mode; pass '
+                f'--provider <name> (choices: {choices}) or run in a terminal'
+            )
+            return WizardResult(
+                ok=False,
+                mode=mode,
+                root=str(root),
+                warnings=[message],
+                next_steps=[
+                    'teaagent setup --provider gpt --permission-mode read-only'
+                ],
+                safe_command='teaagent setup --provider gpt --permission-mode read-only',
+                extra={'message': message},
+            )
         provider = input_fn(f'Select provider ({choices}) [gpt]: ').strip() or 'gpt'
     if provider not in available_providers():
         return WizardResult(
@@ -338,7 +356,7 @@ def run_first_session_setup(
         )
 
     permission_mode = getattr(args, 'permission_mode', PermissionMode.PROMPT.value)
-    non_interactive = bool(
+    non_interactive = not interactive or bool(
         getattr(args, 'provider', None) and getattr(args, 'api_key', None)
     )
     api_key, token_source = resolve_api_key(
@@ -348,6 +366,11 @@ def run_first_session_setup(
         getpass_fn=getpass_fn,
     )
     env_var = provider_env_var(provider)
+    if not api_key and not interactive and PROVIDER_CONFIGS[provider].requires_api_key:
+        warnings.append(
+            f'no API key captured for {env_var} on non-interactive stdin; '
+            f'set {env_var} in the environment before running the agent'
+        )
 
     cfg_path, toml_path = write_workspace_config(
         root,

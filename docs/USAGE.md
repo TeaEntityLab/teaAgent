@@ -85,7 +85,7 @@ teaagent memory failures prune
 - `plan` writes a reviewable artifact; `run --from-plan` binds execution to that artifact (task + content hash in the run audit log). Plans must live under `.teaagent/plans/` unless you pass `--allow-external-plan` (other paths must still be under `--root`).
 - **Plan-before-write enforcement**: `workspace-write` mode requires a plan by default. Use `--skip-plan-check` to override.
 
-**Advanced paths** (not part of the golden path): `teaagent init`, `teaagent doctor providers --wizard`, manual `providers_env.zsh`, Keychain scripts, per-provider env exports — see [Recovery recipes](#recovery-recipes) and [API Key Setup](#api-key-setup).
+**Advanced paths** (not part of the golden path): `teaagent init` (non-interactive stdin requires `--provider`; skips the API-key prompt for `fake`; adds `.teaagent/` to `.gitignore` in git repos unless `--no-gitignore`; for `workspace-write` its next-steps show the `plan` → `--from-plan` gate), `teaagent doctor providers --wizard`, manual `providers_env.zsh`, Keychain scripts, per-provider env exports — see [Recovery recipes](#recovery-recipes) and [API Key Setup](#api-key-setup).
 
 ## Setup model
 

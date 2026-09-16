@@ -11,10 +11,10 @@
 > `docs/analysis/`.
 >
 > **Review trigger:** TUI, chat, agent mode, approval, cost, undo, or resume behavior changes.
-> **Last reviewed:** 2026-09-15 (approval behavior changes: deny grants block
-> all modes, `approval reject` CLI, 24h pending-approval TTL, unbounded pending
-> surfaces — see `permission-and-approval-playbook.md`; undo refuses off-branch;
-> attach inherits the run's recorded provider)
+> **Last reviewed:** 2026-09-16 (first-run and error-contract fixes G23–G38:
+> offline-ready `fake` provider, `init`/`setup` gitignore `.teaagent/` and fail
+> fast on non-interactive stdin, `--background` honors plan flags, run-list JSON
+> arrays contain only runs, MCP unknown-tool calls no longer end the session)
 
 This page is the short daily-use entry point for TeaAgent's TUI, TUI chat, and
 agent mode. It is intentionally more practical than the audit corpus.
@@ -43,6 +43,9 @@ daily-driver plan is historical evidence, not an active scheduling authority.
 
 - Approval governance now fail-closes GitHub/browser/MCP external mutations in prompt/read-only/workspace-write, consumes one-time JIT grants, and refuses blind redispatch of unmatched non-idempotent starts. Providerless acceptance is in `tests/acceptance/test_efx_durable_effect_flow.py`. Keep live credentials off until a live-credential dry-run exists; see "Known issues."
 - `daily`/`preflight` warn when `GITHUB_TOKEN`/`GH_TOKEN` sit in the shell environment: external-effect tools stay fail-closed until approved, but remove ambient tokens unless authorizing live use (EFX-002).
+- The `fake` provider is offline-ready: `agent preflight`/`plan`/`daily` pass with no DNS or socket call because `ProviderConfig.requires_network=False` short-circuits the connectivity and loopback-bind checks (G30).
+- `init`/`setup` add `.teaagent/` to `.gitignore` in git repos (append-only; `--no-gitignore` opts out) so the auto-enabled git sandbox no longer self-disables on first run, and non-interactive `init`/`setup` fail fast with a classified error instead of crashing on stdin EOF (G23/G29/G38).
+- `agent run --background` forwards `--from-plan`/`--require-plan`/`--skip-plan-check` to the worker, so a workspace-write background run with a valid plan produces a run instead of dying on `PLAN_GATE` (G31). `runs list`/`session list` JSON arrays contain only run records; the scratchpad hint is human-output only (G26).
 - `teaagent chat` prints successful task answers and no longer marks successful tasks as failures.
 - `teaagent chat` `/cost` and `/budget` are wired to real session cost. Budget semantics are explicit: `None` means unlimited, while `0` is a real zero cap. Cost display labels whether the value is actual, estimated, or unavailable.
 - Matched deny grants now hard-block in every mode (`approval check` reports

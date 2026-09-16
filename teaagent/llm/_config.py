@@ -26,6 +26,8 @@ PROVIDER_CONFIGS = {
         default_model='fake-model',
         base_url='https://fake.example.com/v1',
         base_url_env='FAKE_BASE_URL',
+        requires_network=False,
+        requires_api_key=False,
     ),
     'claude': ProviderConfig(
         name='claude',
@@ -168,6 +170,8 @@ def create_llm_adapter(
             api_key=config.api_key,
             model=model,
             base_url_env=config.base_url_env,
+            requires_network=config.requires_network,
+            requires_api_key=config.requires_api_key,
         )
     if normalized == 'claude':
         return cast(

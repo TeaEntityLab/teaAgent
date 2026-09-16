@@ -7,6 +7,7 @@ from pathlib import Path
 from teaagent.approval import parse_permission_mode
 from teaagent.cli._handlers._misc import print_json
 from teaagent.cli.execution import AgentExecutionFactory
+from teaagent.ergonomics.cli_output import wants_human_cli
 from teaagent.ergonomics.run_history import list_recall_runs, list_yesterday_runs
 from teaagent.ergonomics.status_short import build_status_short
 from teaagent.ergonomics.workspace_defaults import load_workspace_defaults
@@ -134,8 +135,8 @@ def session_list_command(args: argparse.Namespace) -> int:
     scratchpad = Scratchpad(Path(args.root))
     if scratchpad.exists():
         content = scratchpad.read()
-        if content and content.get('last_goal'):
-            rows.append({'scratchpad_last_goal': content['last_goal']})
+        if content and content.get('last_goal') and wants_human_cli(args):
+            print(f'scratchpad last goal: {content["last_goal"]}')
     print_json(rows)
     return 0
 

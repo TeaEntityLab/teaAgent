@@ -1030,27 +1030,47 @@ def _automation(
     promote.set_defaults(func=handlers['promote'], agent_command='automation')
 
     show = commands.add_parser('show', help='Show one automation.')
-    show.add_argument('automation_id')
+    show.add_argument(
+        'automation_id',
+        metavar='automation',
+        help='Automation id or unique name.',
+    )
     show.add_argument('--root', default='.', help='Workspace root.')
     show.set_defaults(func=handlers['show'], agent_command='automation')
 
     pause = commands.add_parser('pause', help='Pause an automation.')
-    pause.add_argument('automation_id')
+    pause.add_argument(
+        'automation_id',
+        metavar='automation',
+        help='Automation id or unique name.',
+    )
     pause.add_argument('--root', default='.', help='Workspace root.')
     pause.set_defaults(func=handlers['pause'], agent_command='automation')
 
     resume = commands.add_parser('resume', help='Resume an automation.')
-    resume.add_argument('automation_id')
+    resume.add_argument(
+        'automation_id',
+        metavar='automation',
+        help='Automation id or unique name.',
+    )
     resume.add_argument('--root', default='.', help='Workspace root.')
     resume.set_defaults(func=handlers['resume'], agent_command='automation')
 
     delete = commands.add_parser('delete', help='Delete an automation.')
-    delete.add_argument('automation_id')
+    delete.add_argument(
+        'automation_id',
+        metavar='automation',
+        help='Automation id or unique name.',
+    )
     delete.add_argument('--root', default='.', help='Workspace root.')
     delete.set_defaults(func=handlers['delete'], agent_command='automation')
 
     run = commands.add_parser('run', help='Run an automation immediately.')
-    run.add_argument('automation_id')
+    run.add_argument(
+        'automation_id',
+        metavar='automation',
+        help='Automation id or unique name.',
+    )
     run.add_argument('--root', default='.', help='Workspace root.')
     run.set_defaults(func=handlers['run'], agent_command='automation')
 

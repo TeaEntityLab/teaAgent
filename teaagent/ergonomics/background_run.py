@@ -460,7 +460,7 @@ def _run_id_from_log(log_path: Path) -> Optional[str]:
     return None
 
 
-def build_agent_run_command(args: Any, task: str) -> list[str]:  # noqa: C901
+def build_agent_run_command(args: Any, task: Optional[str]) -> list[str]:  # noqa: C901
     """Reconstruct a foreground ``agent run`` argv list for a background worker."""
     cmd = [
         sys.executable,
@@ -471,7 +471,17 @@ def build_agent_run_command(args: Any, task: str) -> list[str]:  # noqa: C901
     ]
     if getattr(args, 'provider', None):
         cmd.append(args.provider)
-    cmd.append(task)
+    if task:
+        cmd.append(task)
+    from_plan = getattr(args, 'from_plan', None)
+    if from_plan:
+        cmd.extend(['--from-plan', str(from_plan)])
+    if getattr(args, 'allow_external_plan', False):
+        cmd.append('--allow-external-plan')
+    if getattr(args, 'require_plan', False):
+        cmd.append('--require-plan')
+    if getattr(args, 'skip_plan_check', False):
+        cmd.append('--skip-plan-check')
     cmd.extend(['--root', str(args.root)])
     if getattr(args, 'model', None):
         cmd.extend(['--model', args.model])

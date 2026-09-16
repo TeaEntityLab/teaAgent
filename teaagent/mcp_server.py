@@ -205,6 +205,10 @@ def _call_tool(
     if not isinstance(arguments, dict):
         return _error(request_id, -32602, "tools/call requires object 'arguments'")
     try:
+        registry.get(name)
+    except KeyError as exc:
+        return _error(request_id, -32602, str(exc.args[0]))
+    try:
         result = registry.execute(name, arguments)
     except AgentHarnessError as exc:
         return _ok(

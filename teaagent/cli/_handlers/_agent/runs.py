@@ -220,8 +220,8 @@ def agent_runs_list(args: argparse.Namespace) -> int:
     scratchpad = Scratchpad(Path(args.root))
     if scratchpad.exists():
         content = scratchpad.read()
-        if content and content.get('last_goal'):
-            payload.append({'scratchpad_last_goal': content['last_goal']})
+        if content and content.get('last_goal') and wants_human_cli(args):
+            print(f'scratchpad last goal: {content["last_goal"]}')
     print_json(payload)
     return 0
 

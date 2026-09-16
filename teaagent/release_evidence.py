@@ -98,6 +98,35 @@ def _run(argv: list[str], *, cwd: Path, timeout_seconds: int = 600) -> dict[str,
         }
 
 
+def _run_with_progress(
+    argv: list[str],
+    *,
+    cwd: Path,
+    timeout_seconds: int,
+    label: str,
+) -> dict[str, Any]:
+    """Run a gate command, emitting progress to stderr around the call.
+
+    ``build_release_evidence_bundle`` runs multi-minute gate steps
+    (``pre-commit run -a``, the acceptance tier) that were previously silent.
+    Progress lines go to stderr so stdout stays a single parseable result
+    document (the JSON/markdown bundle).
+    """
+    print(
+        f'[release evidence] running: {label} (timeout {timeout_seconds}s) ...',
+        file=sys.stderr,
+        flush=True,
+    )
+    result = _run(argv, cwd=cwd, timeout_seconds=timeout_seconds)
+    print(
+        f'[release evidence] {label}: done in '
+        f'{result["duration_seconds"]}s (exit {result["exit_code"]})',
+        file=sys.stderr,
+        flush=True,
+    )
+    return result
+
+
 def _parse_pytest_count(text: str) -> Optional[int]:
     """Parse collected test count from pytest --collect-only output."""
     for line in reversed(text.splitlines()):
@@ -651,18 +680,20 @@ def build_release_evidence_bundle(
     if profile in ('release', 'full'):
         # Pre-commit checks
         commands.append(
-            _run(
+            _run_with_progress(
                 ['pre-commit', 'run', '-a'],
                 cwd=repo_root,
                 timeout_seconds=900,
+                label='pre-commit run -a',
             )
         )
         # Acceptance tests
         commands.append(
-            _run(
+            _run_with_progress(
                 [python, 'scripts/run_acceptance_tier.py', '--tier', 'all'],
                 cwd=repo_root,
                 timeout_seconds=900,
+                label='acceptance tier pytest',
             )
         )
 

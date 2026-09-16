@@ -85,6 +85,14 @@ def _init(
         action='store_true',
         help='Run the guided first-session setup flow (same as `teaagent setup`).',
     )
+    p.add_argument(
+        '--no-gitignore',
+        action='store_true',
+        help=(
+            'Do not add .teaagent/ to .gitignore (in a git repo it is added by '
+            'default to keep the git sandbox usable).'
+        ),
+    )
     p.set_defaults(func=handler)
 
 
