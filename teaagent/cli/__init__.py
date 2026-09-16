@@ -908,11 +908,25 @@ def _finalize_permission_mode(args: argparse.Namespace) -> None:
         args.permission_mode = DEFAULT_KEYS['permission_mode']
 
 
+def _is_accessible_file(path: Path) -> bool:
+    """``Path.is_file()`` that treats stat errors as "not a usable file".
+
+    Python 3.12's ``Path.is_file`` only swallows ENOENT-family errors; a
+    permission-denied (EACCES) or over-long (ENAMETOOLONG) path re-raises
+    ``OSError``. An unreadable config candidate should fall back to defaults,
+    not crash every command before dispatch.
+    """
+    try:
+        return path.is_file()
+    except OSError:
+        return False
+
+
 def resolve_config_path(explicit: Optional[str], *, root: str = '.') -> Optional[Path]:
     if explicit:
         return Path(explicit)
     json_candidate = Path(root) / '.teaagent' / 'config.json'
-    if json_candidate.is_file():
+    if _is_accessible_file(json_candidate):
         return json_candidate
     toml_candidate = Path(root) / '.teaagent' / 'config.toml'
-    return toml_candidate if toml_candidate.is_file() else None
+    return toml_candidate if _is_accessible_file(toml_candidate) else None

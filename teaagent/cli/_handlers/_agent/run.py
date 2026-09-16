@@ -138,7 +138,13 @@ def agent_run_task(args: argparse.Namespace) -> int:
         from teaagent.run_store import RunStore
 
         store = RunStore(Path(args.root))
-        if store.run_path(run_id_candidate).is_file():
+        try:
+            candidate_is_run = store.run_path(run_id_candidate).is_file()
+        except OSError:
+            # A candidate that can't be statted (e.g. longer than the filename
+            # limit) can't be an existing run id — treat it as a task.
+            candidate_is_run = False
+        if candidate_is_run:
             print(
                 format_error_block(
                     'Error',

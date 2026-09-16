@@ -39,6 +39,20 @@ DEFAULT_KEYS = {
 }
 
 
+def _is_accessible_file(path: Path) -> bool:
+    """``Path.is_file()`` that treats stat errors as "not a usable file".
+
+    Python 3.12's ``Path.is_file`` only swallows ENOENT-family errors; a
+    permission-denied (EACCES) or over-long (ENAMETOOLONG) path re-raises
+    ``OSError``. An unreadable config/env candidate should fall back to the
+    prior precedence layer, not crash every command before dispatch.
+    """
+    try:
+        return path.is_file()
+    except OSError:
+        return False
+
+
 def _parse_flat_toml(text: str) -> dict[str, Any]:
     """Parse flat ``key = value`` TOML used by ``.teaagent/config.toml`` (py3.10 fallback)."""
     result: dict[str, Any] = {}
@@ -96,10 +110,14 @@ def _parse_env_file_exports(root: str | Path) -> dict[str, str]:
     attribute config provenance to the env file vs. the real shell environment.
     """
     env_path = Path(root).resolve() / '.teaagent' / 'env'
-    if not env_path.is_file():
+    if not _is_accessible_file(env_path):
         return {}
     exports: dict[str, str] = {}
-    for raw_line in env_path.read_text(encoding='utf-8').splitlines():
+    try:
+        env_lines = env_path.read_text(encoding='utf-8').splitlines()
+    except OSError:
+        return {}
+    for raw_line in env_lines:
         line = raw_line.strip()
         if not line.startswith('export '):
             continue
@@ -187,7 +205,7 @@ def resolve_config_provenance(root: str | Path = '.') -> dict[str, dict[str, Any
 
     for fname, reader in (('config.toml', _read_toml), ('config.json', _read_json)):
         path = tea_dir / fname
-        if path.is_file():
+        if _is_accessible_file(path):
             for key, value in reader(path).items():
                 prov[key] = {'value': value, 'source': f'config:{fname}'}
 
