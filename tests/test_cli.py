@@ -322,6 +322,7 @@ def test_doctor_model_ok_when_key_set() -> None:
 def test_doctor_model_wizard_uses_keychain_when_prompt_empty() -> None:
     output = io.StringIO()
     with (
+        patch('sys.stdin.isatty', return_value=True),
         patch('teaagent.cli._handlers._doctor.model.getpass.getpass', return_value=''),
         patch('teaagent.cli._handlers._doctor.model.input', return_value=''),
         patch('teaagent.wizard.subprocess.run') as security_run,
@@ -430,6 +431,7 @@ def test_doctor_aigateway_wizard_writes_env() -> None:
         env_path.write_text('export OPENAI_API_KEY=sk-existing\n', encoding='utf-8')
         output = io.StringIO()
         with (
+            patch('sys.stdin.isatty', return_value=True),
             patch(
                 'teaagent.cli._handlers._doctor.model.input',
                 side_effect=['acct123', 'gw123', 'y'],
@@ -465,6 +467,7 @@ def test_doctor_aigateway_wizard_writes_compat_base_url() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         output = io.StringIO()
         with (
+            patch('sys.stdin.isatty', return_value=True),
             patch(
                 'teaagent.cli._handlers._doctor.model.input',
                 side_effect=['acct123', 'gw123', 'n'],
@@ -502,6 +505,7 @@ def test_doctor_aigateway_wizard_writes_compat_base_url() -> None:
 def test_doctor_aigateway_wizard_reads_keychain_token_when_input_empty() -> None:
     output = io.StringIO()
     with (
+        patch('sys.stdin.isatty', return_value=True),
         patch(
             'teaagent.cli._handlers._doctor.model.input',
             side_effect=['acct123', 'gw123', 'n'],
