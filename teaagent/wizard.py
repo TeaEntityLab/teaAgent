@@ -325,26 +325,38 @@ def run_first_session_setup(
     warnings: list[str] = []
 
     interactive = sys.stdin.isatty()
+    # The CLI uses the builtin ``input``/``getpass`` defaults, so a non-TTY
+    # stdin cannot be prompted and must not have a prompt echoed onto the JSON
+    # stdout. The TUI injects its own callbacks, which prompt without a TTY, so
+    # only gate the default path.
+    default_stdin = input_fn is input
+    cannot_prompt = default_stdin and not interactive
     provider = getattr(args, 'provider', None)
     if not provider:
         choices = ', '.join(available_providers())
-        if not interactive:
-            message = (
+        _no_provider = WizardResult(
+            ok=False,
+            mode=mode,
+            root=str(root),
+            warnings=[
                 'provider is required in non-interactive mode; pass '
                 f'--provider <name> (choices: {choices}) or run in a terminal'
-            )
-            return WizardResult(
-                ok=False,
-                mode=mode,
-                root=str(root),
-                warnings=[message],
-                next_steps=[
-                    'teaagent setup --provider gpt --permission-mode read-only'
-                ],
-                safe_command='teaagent setup --provider gpt --permission-mode read-only',
-                extra={'message': message},
-            )
-        provider = input_fn(f'Select provider ({choices}) [gpt]: ').strip() or 'gpt'
+            ],
+            next_steps=['teaagent setup --provider gpt --permission-mode read-only'],
+            safe_command='teaagent setup --provider gpt --permission-mode read-only',
+            extra={
+                'message': (
+                    'provider is required in non-interactive mode; pass '
+                    f'--provider <name> (choices: {choices}) or run in a terminal'
+                )
+            },
+        )
+        if cannot_prompt:
+            return _no_provider
+        try:
+            provider = input_fn(f'Select provider ({choices}) [gpt]: ').strip() or 'gpt'
+        except (EOFError, OSError):
+            return _no_provider
     if provider not in available_providers():
         return WizardResult(
             ok=False,
@@ -356,15 +368,18 @@ def run_first_session_setup(
         )
 
     permission_mode = getattr(args, 'permission_mode', PermissionMode.PROMPT.value)
-    non_interactive = not interactive or bool(
+    non_interactive = cannot_prompt or bool(
         getattr(args, 'provider', None) and getattr(args, 'api_key', None)
     )
-    api_key, token_source = resolve_api_key(
-        provider,
-        api_key=getattr(args, 'api_key', None),
-        prompt=not non_interactive,
-        getpass_fn=getpass_fn,
-    )
+    try:
+        api_key, token_source = resolve_api_key(
+            provider,
+            api_key=getattr(args, 'api_key', None),
+            prompt=not non_interactive,
+            getpass_fn=getpass_fn,
+        )
+    except (EOFError, OSError):
+        api_key, token_source = '', 'missing'
     env_var = provider_env_var(provider)
     if not api_key and not interactive and PROVIDER_CONFIGS[provider].requires_api_key:
         warnings.append(

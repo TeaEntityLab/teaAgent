@@ -246,11 +246,14 @@ error and no files left when the provider is missing; `gitignore: added` /
 Twin sweep, 2026-09-16 (G38 crash class): the five `doctor … --wizard` flows
 (`mcp`/`project`/`providers`/`aigateway`/`model`, the last reachable straight
 from `init`'s `next_steps`) called bare `input()`/`getpass` and hit the same
-`EOFError → "Unexpected error"` dead end on non-interactive stdin. A shared
-`require_wizard_tty` guard (`teaagent/cli/_handlers/_doctor/_wizard_io.py`) now
-fails each one fast with a classified `{"ok": false, "error": "… needs an
-interactive terminal …"}` (rc 1). Regression
-`tests/test_dogfood_doctor_wizard_tty_g38_twin.py` (5 wizards + the guard);
-live re-check: all five return the classified error headless, no `Unexpected
-error`. Gate `governance-gap` (AGENTS.md: tool/CLI errors must be actionable
-and classified).
+`EOFError → "Unexpected error"` dead end on exhausted (`</dev/null`) stdin. A
+shared `guard_wizard_eof` decorator
+(`teaagent/cli/_handlers/_doctor/_wizard_io.py`) now catches the `EOFError` and
+returns a classified `{"ok": false, "error": "… needs interactive input …"}`
+(rc 1); provided/piped answers still work, so the existing wizard tests that
+mock `input`/`getpass` keep passing. (First cut used an `isatty` pre-guard;
+the full suite showed it wrongly blocked the mocked/piped path, so it was
+replaced with the EOF catch — same lesson as the TUI setup fix below.)
+Regression `tests/test_dogfood_doctor_wizard_tty_g38_twin.py` (5 wizards + the
+decorator). Gate `governance-gap` (AGENTS.md: tool/CLI errors must be
+actionable and classified).

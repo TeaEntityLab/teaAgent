@@ -9,7 +9,7 @@ from typing import Any
 from teaagent.ergonomics.approval_store import ApprovalPresetStore
 from teaagent.llm._config import PROVIDER_CONFIGS
 
-from ._wizard_io import require_wizard_tty
+from ._wizard_io import guard_wizard_eof
 from .sanitize import _is_sensitive_key, print_json
 
 
@@ -186,9 +186,8 @@ def doctor_config_lint_command(args: argparse.Namespace) -> int:
 # ── Wizard implementations ────────────────────────────────────────────────
 
 
+@guard_wizard_eof('teaagent doctor project --wizard')
 def _doctor_project_wizard(args: argparse.Namespace) -> int:
-    if not require_wizard_tty('teaagent doctor project --wizard'):
-        return 1
     root = str(Path(getattr(args, 'root', '.')).resolve())
     provider = input('Default provider for project (default gpt): ').strip() or 'gpt'
     if provider not in PROVIDER_CONFIGS:
@@ -225,9 +224,8 @@ def _doctor_project_wizard(args: argparse.Namespace) -> int:
     return 0
 
 
+@guard_wizard_eof('teaagent doctor mcp --wizard')
 def _doctor_mcp_wizard(args: argparse.Namespace) -> int:
-    if not require_wizard_tty('teaagent doctor mcp --wizard'):
-        return 1
     root = str(Path(getattr(args, 'root', '.')).resolve())
     host = input('MCP host (default 127.0.0.1): ').strip() or '127.0.0.1'
     port = input('MCP port (default 7330): ').strip() or '7330'
