@@ -30,7 +30,6 @@ Crucially, **every one of these modules predates the decisions that descoped the
 | `teaagent/context_bus.py` | 2026-05-28 | before both |
 | `teaagent/signature_relay.py` | 2026-05-29 | before both |
 | `teaagent/domain/workflow_engine.py` | 2026-06-20 | after harness-first, before DR-006 |
-| `teaagent/anp_adapter.py` (ADR-0007, accepted 2026-05-22) | 2026-05-18 | before both — added to this register 2026-09-15 by owner disposition G14 (`work-log/dogfood-findings-2026-09-15.md`), not by the 2026-09-09 panel |
 
 So this is **not** a governance violation — no one shipped a non-goal after it was
 declared. It is an unresolved **retention** question: the direction doc descoped the
