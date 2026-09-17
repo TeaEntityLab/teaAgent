@@ -37,16 +37,18 @@
 > `[Run status]` + `[Control Cockpit]` panels (`teaagent/tui/core.py:271-381`),
 > refreshed after every REPL command by `_refresh_control_cockpit` from the
 > **same** `build_control_cockpit` builder that fills the snapshot's `control`
-> section. Read §1's TUI bullet and its three deleted test names as history;
-> read "TUI tabs" in §3.1/§4 as "TUI status panels", with the operator questions
-> now answered as: Q1 `control.goal` + `[Run status]` recoverable lines
-> (`Suspended Session`, `Checkpoint`) + `background list`/`session list`; Q2 the
-> `Approval: N pending, N blocked, mode=…` line; Q3 the `Cost: $spent / $limit
-> (state)` line; **Q4 CLI-only** — the panel prints `Memory: N entries` without
-> `memory.quarantine_count`, so a TUI-only Q4 answer is a recorded gap for the §5
-> checklist walk-through, not fixed here (a panel line is `feat:` work under
-> DR-006). §6's first risk narrows: the `[Control Cockpit]` panel shares the
-> snapshot builder; residual drift is confined to the `[Run status]` panel's
+> section. Read §1's TUI bullet and its three deleted test names as history,
+> and the "TUI tabs" references in §3.1/§4 as superseded. **Whether the
+> surviving panels answer Q1–Q4 is the §5.1 owner walk-through's determination,
+> not asserted here.** Candidate surfaces for that walk-through, verified only
+> to exist: Q1 `control.goal` + the `[Run status]` recoverable lines
+> (`Suspended Session`, `Checkpoint`) + the `background list`/`session list`
+> commands; Q2 the `Approval: N pending, N blocked, mode=…` line; Q3 the
+> `Cost: $spent / $limit (state)` line; Q4 **has no TUI surface** — the panel
+> prints `Memory: N entries` without `memory.quarantine_count`, which exists
+> only in the CLI snapshot (adding a panel line is `feat:` work under DR-006,
+> not done here). §6's first risk narrows: the `[Control Cockpit]` panel shares
+> the snapshot builder; residual drift is confined to the `[Run status]` panel's
 > separate `CockpitState`.
 
 ## 1. Current verified state (2026-07-11, HEAD)
