@@ -78,6 +78,7 @@ ungoverned external effect — the exact failure class EFX-001..003 exists to pr
 | `teaagent/workflow_engine.py` (root compat shim) | 24 | Import shim only | `harness-migration` | Keep while ADR-0030 root-module freeze stands; delete with its target |
 | `teaagent/consensus/` + `teaagent/cli/_handlers/_consensus.py` | 475 + engine/registry/voting | No — `teaagent consensus`, `enable_consensus=False` by default | `legacy-competitive` | Delete per ADR-0029 precedent unless swarm consensus is ratified |
 | `teaagent/jit_approval_server.py` (remote SSE JIT approval) | 445 + 286 test | No — `teaagent control-plane serve` | M4 carve-out, needs `owner-override` | Covered by the M4 background-lifecycle/operator-cockpit carve-out **only if** a dogfood session is scheduled; else delete |
+| `teaagent/anp_adapter.py` (ANP bidirectional federation adapter; added 2026-09-15 per owner G14 disposition in `work-log/dogfood-findings-2026-09-15.md`) | 516 + 464 test | No — no production caller; lazily exported from `teaagent/__init__.py` (`_lazy_exports.py`) and referenced by tests only; the `agent run` ANP path is a stub | `legacy-competitive` | Promote under `owner-override` if ANP federation is wanted, else delete |
 | `teaagent/context_bus.py` (DeltaCard store) | — | No — used by `teaagent/swarm.py` | `harness-migration` | Governed by G3/ADR-0032, not by this ADR; see the accepted fourth-parallel-system risk |
 
 ## Consequences
@@ -86,9 +87,10 @@ ungoverned external effect — the exact failure class EFX-001..003 exists to pr
   recorded in one dated place with an expiry, instead of being invisible.
 - Positive: `governance-gate` continuing to run these tests is now *justified* — they
   guard quarantined-but-live code, rather than silently enforcing non-goals.
-- Negative: the harness keeps carrying roughly 2,900 LOC of quarantined surface plus
-  ~1,000 LOC of tests, and their security surface (SSRF validation, HTTP relay auth,
-  SQLite/WAL locking) stays in scope for review.
+- Negative: the harness keeps carrying roughly 3,500 LOC of quarantined surface plus
+  ~1,450 LOC of tests (2,900 + ~1,000 at declaration; ANP row added 2026-09-15), and
+  their security surface (SSRF validation, HTTP relay auth, SQLite/WAL locking) stays
+  in scope for review.
 - Negative: quarantine is weaker than deletion. If the 2026-12-09 expiry passes
   without a disposition, this ADR has failed in exactly the way ADR-0031's own
   rationale warns about ("wired quietly becomes the new implemented-but-unwired").

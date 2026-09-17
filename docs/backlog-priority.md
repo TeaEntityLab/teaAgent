@@ -1,6 +1,6 @@
 # Backlog Priority
 
-> **Last reviewed:** 2026-09-16 (dogfood G23–G38 adjudicated "Yes for all" and implemented; G34 held; no priority or shipped/beta change)
+> **Last reviewed:** 2026-09-17 (roadmaps/progress/intents review: no priority or shipped/beta change; the "Open — High (P0)/(P1)" and "Open — Daily-use ergonomics" sections are fully shipped and retained for provenance — new work still enters only through the DR-006 gate; ADR-0043 register now carries the ANP row this file already listed; ADR-0031 close 2026-09-29 and ADR-0043 disposition 2026-12-09 are the next owner dates)
 > **Review trigger:** Backlog priorities or shipped/beta status claims change.
 > **Scheduling gate (2026-08-26):** DR-006 remains authoritative. EFX-001–003
 > are in-progress P0 `governance-gap` remediations on existing seams; no
