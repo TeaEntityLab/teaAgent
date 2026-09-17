@@ -10,8 +10,13 @@
 > dogfood scheduled for organic events else revert (0 organic ≠ promotion,
 > demo synthetic ≠ C1); EFX promote only on live proof; M4 dogfood is only
 > DR-006 lane that can generate organic events/friction/BG-001;
-> H2/H5/H6/WDH-002/EFX-FUTURE remain Hold — see
-> `.omx/artifacts/claude-you-are-an-external-advisor-for-teaagent-a-harness-first-own-2026-08-31T06-14-02-585Z.md`.
+> H2/H5/H6/WDH-002/EFX-FUTURE remain Hold — verbatim record and dated
+> disposition in [External Advisor Roadmap Hypothesis — 2026-08-31](reviews/external-advisor-roadmap-hypothesis-2026-08-31.md)
+> (internalized 2026-09-17; the original `.omx/artifacts/` run artifact is
+> local-only and not in git). Disposition as of 2026-09-17: extension taken
+> bound to the booked 2026-09-15 session (9 observed / 22 reachable,
+> `needs_review`, 0 `origin: owner` runs); revert not triggered; EFX live proof
+> and the ADR-0031 sign-off (2026-09-29) still open; all named holds unchanged.
 > **Review 2026-09-12:** no priority or shipped/beta change; DR-006 falsifier 1
 > is now mechanically checkable via `scripts/check_dr006_gate_trailer.py` —
 > measured 8 post-DR-006 `feat` commits touching `teaagent/`, 1 citing a gate

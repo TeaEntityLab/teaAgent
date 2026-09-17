@@ -1,11 +1,11 @@
 {
   "ok": true,
-  "created_at": "2026-09-17T07:49:14+00:00",
+  "created_at": "2026-09-17T07:57:42+00:00",
   "repo_root": "/Users/teee/dev/teaagent",
   "git": {
     "branch": "main",
-    "commit": "fe36aec4413b23cf1fe916bcde9bab7a3b2a6340",
-    "dirty": false
+    "commit": "cb44d738cb3049603b8041ba9f6cda6bd1a9319f",
+    "dirty": true
   },
   "commands": [
     {
@@ -23,8 +23,9 @@
   ],
   "docs_freshness": {
     "scanned": 17,
-    "needs_attention": 2,
+    "needs_attention": 3,
     "by_owner": {
+      "docs": 1,
       "daily-driver": 1,
       "cli": 1
     },

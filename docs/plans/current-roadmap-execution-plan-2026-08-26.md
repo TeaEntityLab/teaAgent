@@ -362,8 +362,9 @@ share a commit with an undecided or incomplete packet.
 ### 6.3 Advisor horizons for after 2026-09-12 (hypothesis, 2026-08-31)
 
 > **Claim class:** External advisor hypothesis only. Not a scheduling
-> authority. Source:
-> `.omx/artifacts/claude-you-are-an-external-advisor-for-teaagent-a-harness-first-own-2026-08-31T06-14-02-585Z.md`.
+> authority. Source: [External Advisor Roadmap Hypothesis — 2026-08-31](../reviews/external-advisor-roadmap-hypothesis-2026-08-31.md)
+> (verbatim output + dated disposition; internalized 2026-09-17 from a
+> local-only `.omx/artifacts/` run artifact that is not in git).
 > DR-006 and `roadmap-status.md` remain authoritative; this section
 > only makes the 12-day runway’s fuel problem explicit.
 
