@@ -1202,20 +1202,26 @@ class TUITests(unittest.TestCase):
         self.assertNotIn('--detach', joined)
 
     def test_tui_ask_clarify_with_concrete_task_builds_spec(self) -> None:
-        output = []
-        adapter = FakeAdapter(['{"type":"final","content":"done"}'])
-        tui = TeaAgentTUI(
-            input_fn=lambda _prompt: 'exit',
-            output_fn=output.append,
-            adapter_factory=lambda _provider, _model: adapter,
-        )
-        self.assertTrue(
-            tui.handle_command(
-                'ask --clarify Update docs/cli.md to document clarify command'
+        # Explicit tmp root: the default root is CWD, and this test runs a real
+        # (fake-provider) task, which would append to the repo's own
+        # .teaagent/runs index — polluting the G1/H4 evidence denominators.
+        with tempfile.TemporaryDirectory() as tmp:
+            output = []
+            adapter = FakeAdapter(['{"type":"final","content":"done"}'])
+            tui = TeaAgentTUI(
+                root=tmp,
+                input_fn=lambda _prompt: 'exit',
+                output_fn=output.append,
+                adapter_factory=lambda _provider, _model: adapter,
             )
-        )
-        payload = json.loads(output[-1])
-        self.assertEqual(payload['status'], 'completed')
+            self.assertTrue(
+                tui.handle_command(
+                    'ask --clarify Update docs/cli.md to document clarify command'
+                )
+            )
+            payload = json.loads(output[-1])
+            self.assertEqual(payload['status'], 'completed')
+            self.assertTrue((Path(tmp) / '.teaagent' / 'runs').is_dir())
 
     def test_tui_progress_sink_handles_run_failed(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
