@@ -6,7 +6,7 @@ drive, and classify failures in this repo. Map files live under `verify/`:
 | Path | Role |
 |---|---|
 | `verify/features/*.md` | one file per feature area: metadata, `covers:` paths, runnable `drive:` items, outcomes, failure paths |
-| `verify/acceptance.yaml` | **locked** oracle: 6 highest-value invariants (2 `known_failing`) |
+| `verify/acceptance.yaml` | **locked** oracle: 6 highest-value invariants (all `expected_pass`; a check may be marked `known_failing` when a finding is open) |
 | `verify/checks/` | `doctor.sh`, `drive.sh`, `acceptance.sh`, `verify-map.sh`, shared `lib.sh` |
 | `verify/fixtures/` | offline fake-provider scripts |
 | `verify/sweep.sh`, `verify/refresh.sh`, `verify/run-verifier.sh` | fresh-agent sweep, map-refresh loop, agent run interface |
@@ -17,7 +17,7 @@ assignment: run Doctor, then every feature (`drive.sh all`), then
 `acceptance.sh`, and classify each failure with the table below. Ignore
 `verifier-agent.md`'s Assignment section; it applies only inside `sweep.sh`.
 
-Map verified at `a91f1dc2` on 2026-09-24 (macOS arm64, bash 3.2, Python 3.12.8).
+Map verified at `ba6009df` on 2026-09-24 (macOS arm64, bash 3.2, Python 3.12.8).
 
 ## Launch
 
@@ -62,7 +62,7 @@ Features (index and known findings: `verify/features/README.md`):
 | `governed-tool-execution` | permission modes, exact-call approval, presets, plan gate, tool contracts |
 | `run-lifecycle` | offline runs, iteration/tool-call caps, runs list/replay, undo |
 | `audit-evidence` | per-run JSONL events, redaction, hash-chain verify, denial explanations |
-| `mcp-surface` | `mcp serve` stdio/HTTP protocol, auth, sessions (known finding F-1) |
+| `mcp-surface` | `mcp serve` stdio/HTTP protocol, auth, sessions, tools/call governance + audit |
 | `operator-cli` | init/setup error contract, doctor/selftest, status/daily/preflight/cockpit |
 
 Reproduce one drive item by hand (copy its `run:` body after these two lines):
@@ -115,7 +115,7 @@ How to decide:
 - `workspace-write` runs need a plan (`Error [PLAN_GATE]`, exit 2) unless `--skip-plan-check`.
 - Piping CLI JSON into a reader that closes early → `Unexpected error: [Errno 32] Broken pipe`; write to a file first.
 - Stock macOS has no `timeout(1)`; `run-verifier.sh` applies `AGENT_TIMEOUT` only when `timeout`/`gtimeout` exists.
-- `CONTRIBUTING.md` installs `.[dev,oauth,telemetry]`; `pyproject.toml` defines no `oauth` extra. The installer warns and continues (uv: ``warning: The package `teaagent @ file://…` does not have an extra named `oauth` ``). This repo's `.venv` is uv-managed and has no `pip` module.
+- This repo's `.venv` is uv-managed and has no `pip` module; install with `uv pip install --python .venv/bin/python -e '.[dev]'` or follow `CONTRIBUTING.md` in a pip venv.
 
 ## Fresh-agent sweep and map refresh
 

@@ -1,18 +1,19 @@
 ---
 feature: mcp-surface
-source_commit: a91f1dc2
+source_commit: ba6009df
 last_verified_at: 2026-09-24
-verification_status: failed
-known_findings: [F-1]
+verification_status: passed
 covers:
   - teaagent/mcp_server.py
   - teaagent/mcp_http/
   - teaagent/mcp_trust.py
   - teaagent/cli/_handlers/_mcp.py
   - teaagent/cli/_handlers/_mcp_trust.py
+  - teaagent/cli/_mcp_parsers.py
+  - teaagent/integration/run_contract.py
 drive:
   - id: tests
-    expect: MCP server/HTTP/trust/error-contract test set passes (~89 tests, ~25s)
+    expect: MCP server/HTTP/trust/error-contract/governance test set passes (~93 tests, ~25s)
     run: |
       cd "$REPO"
       "$P" -m pytest -q tests/test_mcp_server.py tests/test_mcp_http.py \
@@ -46,6 +47,37 @@ drive:
       curl -s -D headers.txt -o /dev/null -X POST "$u" -H 'Authorization: Bearer vtok' -H "$j" -d "$init"
       grep -qi '^mcp-session-id: ' headers.txt
       [ "$(curl -s -o /dev/null -w '%{http_code}' -X POST "$u" -H 'Authorization: Bearer vtok' -H "$j" -d '{"jsonrpc":"2.0","id":2,"method":"tools/list"}')" = 400 ]
+  - id: destructive-call-governed
+    expect: "default (prompt) mode denies an unapproved write with -32001 and writes nothing; the run log .teaagent/runs/mcp-*.jsonl records tool_call_requested then tool_call_blocked, ends with run_completed, and its chain verifies"
+    run: |
+      printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"workspace_write_file","arguments":{"path":"mcp.txt","content":"y"}}}' \
+        | "$T" mcp serve --root . > frame.json 2> /dev/null
+      jget 'd["error"]["code"]' < frame.json | grep -qx -- -32001
+      [ ! -e mcp.txt ]
+      log=$(ls .teaagent/runs/mcp-*.jsonl)
+      "$P" -c 'import json,sys; print([json.loads(l)["event_type"] for l in open(sys.argv[1])])' "$log" \
+        | grep -qx "\['run_started', 'tool_call_requested', 'tool_call_blocked', 'run_completed'\]"
+      "$T" audit verify "$(basename "$log" .jsonl)" --root . --ci | jget 'd["status"]' | grep -qx valid
+  - id: preset-digest-and-mode-authorize
+    expect: "a `approval grant` preset allows writes under its glob only; an --approve-scoped digest allows its exact call; --permission-mode allow runs the write; read-only denies"
+    run: |
+      call() { printf '{"jsonrpc":"2.0","id":%s,"method":"tools/call","params":{"name":"workspace_write_file","arguments":{"path":"%s","content":"y","create_dirs":true}}}\n' "$1" "$2"; }
+      "$T" approval grant workspace_write_file --path-glob 'ok/**' --scope session --root . > /dev/null
+      { call 1 ok/a.txt; call 2 b.txt; } | "$T" mcp serve --root . > frames.jsonl 2> /dev/null
+      [ -e ok/a.txt ] && [ ! -e b.txt ]
+      digest=$("$P" -c "from teaagent.policy import compute_scoped_payload_digest as c; print(c('workspace_write_file', {'path': 'b.txt', 'content': 'y', 'create_dirs': True}))")
+      call 3 b.txt | "$T" mcp serve --root . --approve-scoped "workspace_write_file:$digest" > /dev/null 2>&1
+      [ -e b.txt ]
+      call 4 c.txt | "$T" mcp serve --root . --permission-mode read-only > frame.json 2> /dev/null
+      jget 'd["error"]["code"]' < frame.json | grep -qx -- -32001; [ ! -e c.txt ]
+      call 5 c.txt | "$T" mcp serve --root . --permission-mode allow > /dev/null 2>&1
+      [ -e c.txt ]
+  - id: workspace-write-refused
+    expect: "`mcp serve --permission-mode workspace-write` exits 2 before serving (the mode depends on a bound plan MCP cannot provide) and opens no run log"
+    run: |
+      rc=0; echo '{"jsonrpc":"2.0","id":1,"method":"initialize"}' | "$T" mcp serve --root . --permission-mode workspace-write > out.txt 2> err.txt || rc=$?
+      [ "$rc" = 2 ]; grep -q 'workspace-write' err.txt
+      ! ls .teaagent/runs/mcp-*.jsonl > /dev/null 2>&1
 ---
 
 # MCP surface
@@ -53,54 +85,45 @@ drive:
 `teaagent mcp serve` exposes the workspace tool pack
 (`build_workspace_tool_registry`) to MCP clients over stdio JSON-RPC
 (`serve_mcp_stdio`, `teaagent/mcp_server.py`) or Streamable HTTP
-(`serve_mcp_http`, `teaagent/mcp_http/__init__.py`). `teaagent mcp trust`
-manages the trust policy for *remote* MCP servers consumed by agent runs
-(`teaagent/mcp_trust.py`).
+(`serve_mcp_http`, `teaagent/mcp_http/__init__.py`). Every `tools/call` goes
+through `MCPGovernance` (workspace `ApprovalPolicy` + run log).
+`teaagent mcp trust` manages the trust policy for *remote* MCP servers
+consumed by agent runs (`teaagent/mcp_trust.py`). Contract:
+`docs/api/mcp-api.md`.
 
 ## Entry points
 
-| Surface | Command |
+| Surface | Command / symbol |
 |---|---|
 | stdio | `teaagent mcp serve --root .` (one JSON-RPC request per stdin line) |
 | HTTP | `teaagent mcp serve --http --port 7330 --auth-token TOKEN --root .` → `POST/GET/DELETE /mcp` |
+| Governance flags | `--permission-mode {read-only,prompt,allow,danger-full-access}` (default: workspace config, else prompt), `--approve-scoped TOOL:SHA256` |
+| Library | `MCPGovernance.for_workspace(root, permission_mode=…, transport=…)`; `handle_mcp_request(registry, request, governance=…)` |
 | Methods | `initialize`, `tools/list`, `tools/call` |
-| Trust | `teaagent mcp trust …` |
+| Trust (remote servers) | `teaagent mcp trust {list,inspect,allow,deny,revoke,audit}` |
 
 ## Observable outcomes (healthy product)
 
 - Protocol errors are JSON-RPC error frames (-32601 unknown method, -32602 invalid params / unregistered tool, -32603 internal); the server keeps serving.
+- A destructive `tools/call` runs only under `allow`/`danger-full-access`, a matching approval preset, or a matching `--approve-scoped` digest; otherwise `-32001`. A deny preset wins in every mode. No interactive prompt exists over MCP.
+- Each server process writes one chained run log `.teaagent/runs/mcp-<hex>.jsonl` (`origin: mcp`); arguments and results are redacted.
 - HTTP: default bind 127.0.0.1; `--auth-token` enforces `Authorization: Bearer`; every request after `initialize` must echo `Mcp-Session-Id`.
-
-## Known finding F-1 — `tools/call` is ungoverned (open, owner ruling required)
-
-Observed at `a91f1dc2`, stdio and HTTP: `tools/call` for a destructive tool
-(`workspace_write_file`) **executes immediately**. `_call_tool` calls
-`registry.execute(name, arguments)` with no `ApprovalPolicy`, no permission
-mode (`mcp serve` has no `--permission-mode` flag), and writes **no audit
-event**. This contradicts:
-
-- `AGENTS.md` Tool Governance: destructive tools must not run in
-  `read-only`/`workspace-write`/`prompt` without an approval token, and direct
-  `ToolRegistry.execute()` without policy context is unsupported.
-- `AGENTS.md` Runtime Safety: every tool call must be audited.
-- `docs/api/mcp-api.md` § Trust Model, which says the server applies approval
-  policy, returns `-32001` on denial, and accepts `--permission-mode`.
-
-`git log -S` finds no commit that ever added policy to `mcp_server.py`, so
-this is not a regression from an earlier governed state. Oracle check
-`A5-mcp-destructive-call-governed` in `verify/acceptance.yaml` is
-`known_failing` on F-1. Do **not** add a drive item that asserts the current
-ungoverned behavior; the owner decides between gating the server (product fix)
-or rewriting the documented trust model (doc fix).
 
 ## Failure paths
 
 | Symptom | Likely class |
 |---|---|
-| destructive `tools/call` executes | known finding F-1 (report as KNOWN, not new) |
-| destructive `tools/call` now denied with -32001 | F-1 fixed → acceptance reports XPASS; update this file and F-1 status (doc drift) |
+| destructive `tools/call` executes without mode/preset/digest | product regression (AGENTS.md Tool Governance; oracle A5) |
+| a `tools/call` leaves no `tool_call_*` event in the mcp run log | product regression (AGENTS.md Runtime Safety) |
 | `curl` connection refused on the HTTP item | harness: port collision or slow start; rerun |
+| `mcp serve` exits 2 in a workspace whose config default is `workspace-write` | healthy: pass `--permission-mode` explicitly |
+
+## History
+
+F-1 (2026-09-24, `a91f1dc2`): `tools/call` ran destructive tools with no
+policy and no audit. Fixed under G-P2-20; risk report
+`docs/reviews/mcp-server-governance-2026-09-24-risk.md`.
 
 ## Evidence
 
-`verify/checks/drive.sh mcp-surface`; `verify/checks/acceptance.sh` (A5 XFAIL).
+`verify/checks/drive.sh mcp-surface`; `verify/checks/acceptance.sh` (A5).

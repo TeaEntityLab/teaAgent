@@ -8,16 +8,17 @@
 intent_record:
   intent_id: teaagent-verify-map-2026-09-24
   goal: "A fresh agent can doctor, drive, and classify TeaAgent failures from VERIFY.md alone"
-  out_of_scope: ["fixing product findings F-1..F-4", "mapping features listed as Not mapped", "real LLM providers"]
-  unknowns:
-    - {item: "F-1 ruling: gate mcp serve tools/call, or rewrite docs/api/mcp-api.md trust model", owner: "repo owner"}
-    - {item: "F-2 ruling: redact nested shadow-receipt arguments", owner: "repo owner"}
+  out_of_scope: ["mapping features listed as Not mapped", "real LLM providers"]
+  unknowns: []
+  resolved:
+    - {item: "F-1: gate mcp serve tools/call (doc rewrite would violate AGENTS.md Tool Governance)", basis: "AGENTS.md", evidence: "docs/reviews/mcp-server-governance-2026-09-24-risk.md"}
+    - {item: "F-2: redact nested tool arguments in audit payloads", basis: "audit L2 redaction contract", evidence: "tests/test_audit.py"}
   irreversible_assumptions: []
   signed_by: ""
   status: unsigned
 
 oracle_manifest:
-  spec_version: "verify-map@a91f1dc2"
+  spec_version: "verify-map@ba6009df"
   oracles:
     - {name: verify/acceptance.yaml, class: authoritative, owner: "repo owner", host_seal: none, change_protocol: out_of_band}
     - {name: "verify/checks/**", class: authoritative, owner: "repo owner", host_seal: none, change_protocol: out_of_band}
@@ -26,7 +27,7 @@ oracle_manifest:
   in_run_lock: "verify/checks/verify-map.sh fails on any diff to these paths vs HEAD (detects, does not prevent)"
 
 task_packet:
-  spec_version: "verify-map@a91f1dc2"
+  spec_version: "verify-map@ba6009df"
   state_ledger_ref: "$STATE/ledger.md (refresh.sh) | $STATE/summary.md (sweep.sh)"
   oracle_manifest_ref: "verify/governance/contracts.yaml#oracle_manifest"
   files: [VERIFY.md, "verify/features/<assigned>.md", verify/governance/verifier-agent.md]
@@ -38,7 +39,7 @@ verification_plan:
     - {kind: runtime, independent: true, what: "offline fake-provider runs + MCP stdio/HTTP probes in scratch workspaces"}
     - {kind: independent_model, independent: false, what: "fresh verifier verdicts via sweep.sh (same model family as the author)"}
   high_risk_pass_requires_non_model: true
-  compatibility_bounds: {tools: "bash 3.2+, git, curl, claude CLI (sweep/refresh only)", models: "any; verdicts are advisory above the deterministic floor", repos: "teaagent @ a91f1dc2"}
+  compatibility_bounds: {tools: "bash 3.2+, git, curl, claude CLI (sweep/refresh only)", models: "any; verdicts are advisory above the deterministic floor", repos: "teaagent @ ba6009df"}
 
 evidence_ledger_format:
   entries:
@@ -54,7 +55,7 @@ envelope:
   strictness: L2
 
 acceptance_record:
-  spec_version: "verify-map@a91f1dc2"
+  spec_version: "verify-map@ba6009df"
   accepter: ""
   oracle_manifest_ref: "verify/governance/contracts.yaml#oracle_manifest"
   product_evidence_refs: ["verify/checks/drive.sh all", "verify/checks/acceptance.sh", "fresh-agent sweep verdicts (HANDOVER.md)"]

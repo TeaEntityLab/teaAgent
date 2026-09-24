@@ -1,6 +1,6 @@
 ---
 feature: governed-tool-execution
-source_commit: a91f1dc2
+source_commit: ba6009df
 last_verified_at: 2026-09-24
 verification_status: passed
 covers:
@@ -58,11 +58,12 @@ drive:
       jget 'd["audit_summary"]["status"]' < out.json | grep -qx completed
       [ "$(cat probe.txt)" = x ]
   - id: approve-and-resume
-    expect: "`approval approve c1 --resume` resumes the paused run as a new completed run that performs the write"
+    expect: "`approval approve c1 --resume` resumes the paused run as a new completed run that performs the write, without the inert --approve-call-id deprecation notice"
     run: |
       TEAAGENT_FAKE_SCRIPT="$FIX/write-probe.json" "$T" run fake "write probe" --root . --permission-mode prompt --json --no-summary > /dev/null 2>&1 || true
-      TEAAGENT_FAKE_SCRIPT="$FIX/write-probe.json" "$T" approval approve c1 --resume --root . 2> /dev/null | grep -v '^Deprecation\|^--approve-call-id' > out.json
+      TEAAGENT_FAKE_SCRIPT="$FIX/write-probe.json" "$T" approval approve c1 --resume --root . > out.json 2> err.txt
       jget 'd["audit_summary"]["status"], bool(d["resumed_from"])' < out.json | grep -qx "('completed', True)"
+      ! grep -q 'approve-call-id' out.json err.txt
       [ -e probe.txt ]
   - id: presets-deny-beats-allow
     expect: with an allow grant on src/** and a deny grant on src/secret/**, `approval check` answers allow for src/a.py and deny for src/secret/k.py
@@ -124,7 +125,6 @@ for `teaagent run` / `agent run`.
 ## Known quirks (healthy)
 
 - `approval check --permission-mode read-only` reports `allow` when a grant matches; it evaluates presets only. The real run still blocks (see `read-only-blocks-write`).
-- `approval approve … --resume` prints a `Deprecation [DEPRECATED] --approve-call-id …` notice on stderr even though the operator never passed that flag.
 
 ## Evidence
 

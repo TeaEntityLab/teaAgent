@@ -1,6 +1,6 @@
 ---
 feature: audit-evidence
-source_commit: a91f1dc2
+source_commit: ba6009df
 last_verified_at: 2026-09-24
 verification_status: passed
 covers:
@@ -18,7 +18,7 @@ drive:
         tests/test_ws3_audit_chain_remaining.py tests/test_audit_export.py \
         tests/test_audit_schema_conformance.py tests/test_dogfood_audit_release_g25_g28.py
   - id: lifecycle-events-recorded
-    expect: an approved write run logs run_started, tool_call_requested, tool_call_started, tool_call_completed, run_completed; tool_call_* events redact the file content (the h4_governance_shadow event does not — known finding F-2, oracle A6)
+    expect: an approved write run logs run_started, tool_call_requested, tool_call_started, tool_call_completed, run_completed; tool_call_* events redact the file content (every event, including nested h4_governance_shadow arguments, is checked by oracle A6)
     run: |
       TEAAGENT_FAKE_SCRIPT="$FIX/write-probe.json" "$T" run fake "write probe" --root . --permission-mode workspace-write --skip-plan-check --json --no-summary > out.json 2> /dev/null
       log=".teaagent/runs/$(jget 'd["run_id"]' < out.json).jsonl"

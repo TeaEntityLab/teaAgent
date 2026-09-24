@@ -42,7 +42,7 @@ new session.
 
 | Gate | Release condition | Releaser | Evidence tier | Auto-release |
 |---|---|---|---|---|
-| intent | `intent_record` signed; F-1/F-2 rulings owned | repo owner | human decision | no |
+| intent | `intent_record` signed; unknowns owned | repo owner | human decision | no |
 | spec | `acceptance.yaml` + feature `drive:` blocks committed at a known HEAD | repo owner | artifact | no |
 | plan | feature list = `verify/features/*.md` minus README | `sweep.sh` | artifact | yes (deterministic glob) |
 | execution | each branch ran under `run-verifier.sh read-only` | `sweep.sh` / `refresh.sh` | runtime | yes (exit codes, scope guard) |
@@ -67,7 +67,7 @@ status: artifact-complete
 
 - `direct_agent_exec_via_AGENT_CMD` — any `AGENT_CMD` override skips the claude allowlist; only the post-hoc scope guard (refresh) and verdict gate (sweep) remain.
 - `bash_write_via_verify_checks` — `Bash(verify/checks/*.sh)` runs arbitrary drive snippets that write under `$TMPDIR`; a verifier cannot use it to write the repo only because those scripts `cd` into scratch dirs.
-- **Product-level (F-1)** `mcp_tools_call_direct_execute` — `teaagent mcp serve` runs `registry.execute()` on client request with no policy or audit. Outside this map's governance; recorded as oracle A5 `known_failing`.
+- **Product-level (closed, F-1)** `mcp_tools_call_direct_execute` — `teaagent mcp serve` used to run `registry.execute()` with no policy or audit; since G-P2-20 every MCP entry point requires `MCPGovernance` (oracle A5 `expected_pass`).
 
 ## Fifteen-invariant checklist
 
@@ -75,7 +75,7 @@ status: artifact-complete
 |---|---|---|---|---|
 | `verifier-agent.md` (no-edit, data-not-instructions) | #1, #12 | claude allowlist | contract parses; allowlist flags in `run-verifier.sh` | OS sandbox for Bash |
 | `sweep.sh` verdict gate | #3, #10, #12 | script exit codes | stub dry run exits 0/2/3 | none for control flow |
-| `acceptance.yaml` + `oracle_manifest` | #2, #7, #10 | `verify-map.sh` diff check | A1–A4 PASS, A5/A6 XFAIL | CODEOWNERS / branch protection |
+| `acceptance.yaml` + `oracle_manifest` | #2, #7, #10 | `verify-map.sh` diff check | A1–A6 PASS | CODEOWNERS / branch protection |
 | `verify-map.sh` drive lock | #11, #15 | script | clone run (Evidence) | seal on `verify/checks/**` |
 | `refresh.sh` scope guard + ledger | #1, #4, #13 | script | stub exits 0/2/3/4; SCOPE VIOLATION caught | broker-owned receipt store |
 | `authorizations` + `effect_budget` | #9, #14 | `MAX_ITER`, lease expiry at script end | cap exit 2 observed | cross-run principal budget |
@@ -116,3 +116,4 @@ Rig-tier unless marked otherwise; none of it is enforcement proof.
 | Fresh agent, clone with an **unlabeled** seeded runner bug (`>=`→`>` on the tool-call cap, committed as "refactor: simplify runner loop bookkeeping") | run-lifecycle `PRODUCT_REGRESSION` via `tool-call-cap` + A3 FAIL, root cause named; all other features PASS. The runner unit tests did **not** catch the seed; only the CLI drive item and the oracle did |
 | Fresh agent, clone with a stale map (`status=idle` → `status=ready` in a drive item, committed as a doc tweak) | operator-cli `DOC_DRIFT` (reproduced `status=idle` and cited `teaagent/ergonomics/status_short.py`); also cross-read the real repo's map, so this arm is not fully blind |
 | Navigation help needed | once: the seeded-bug agent asked which feature `verifier-agent.md`'s Assignment meant. Fixed by the "Verifying by hand" paragraph in `VERIFY.md` |
+| Re-verification at `ba6009df` (F-1..F-4 fixed) | drive: mcp-surface 6/6, governed-tool-execution 8/8, audit-evidence 4/4 PASS; acceptance A1–A6 PASS (A5/A6 flipped from `known_failing` to `expected_pass` in the reviewed commit after the fix); full suite 6759 passed |

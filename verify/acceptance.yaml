@@ -6,7 +6,7 @@
 # $T teaagent, $P venv python, $FIX fixtures, and the lib.sh helpers; exit 0 = holds).
 # status: expected_pass | known_failing (with finding id; a pass then reports XPASS).
 version: 1
-source_commit: a91f1dc2
+source_commit: ba6009df
 checks:
   - id: A1-destructive-needs-approval
     invariant: "AGENTS.md Tool Governance: in read-only and prompt modes a destructive tool does not run without an approval for that exact call"
@@ -56,8 +56,8 @@ checks:
 
   - id: A5-mcp-destructive-call-governed
     invariant: "AGENTS.md Tool Governance: side effects route through ApprovalPolicy; direct ToolRegistry.execute() without policy context is unsupported (docs/api/mcp-api.md Trust Model)"
-    status: known_failing
-    finding: F-1
+    status: expected_pass
+    resolved_finding: F-1
     run: |
       printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"workspace_write_file","arguments":{"path":"mcp.txt","content":"y"}}}' \
         | "$T" mcp serve --root . > frame.json 2> /dev/null
@@ -66,8 +66,8 @@ checks:
 
   - id: A6-audit-redacts-sensitive-arguments
     invariant: "audit level L2 (default) stores sensitive tool arguments (teaagent.audit.SENSITIVE_ARGUMENT_KEYS) redacted in every event"
-    status: known_failing
-    finding: F-2
+    status: expected_pass
+    resolved_finding: F-2
     run: |
       TEAAGENT_FAKE_SCRIPT="$FIX/write-probe.json" "$T" run fake "write probe" --root . --permission-mode workspace-write --skip-plan-check --json --no-summary > out.json 2> /dev/null
       "$P" - ".teaagent/runs/$(jget 'd["run_id"]' < out.json).jsonl" <<'PY'
