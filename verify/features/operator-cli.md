@@ -70,7 +70,7 @@ Everyday operator commands that do not execute tools: first-run
 | First run | `teaagent init --root . --provider fake` (legacy) / `teaagent setup` (guided) |
 | Checks | `teaagent doctor {all,providers,project,config,mcp,git-sandbox,selftest,…} --root .`; `teaagent selftest --root .` |
 | Situational | `teaagent status`, `teaagent daily "<task>" --dry-run`, `teaagent preflight "<task>"`, `teaagent cockpit` |
-| Help | `teaagent surfaces`, `teaagent <cmd> --help` |
+| Help | `teaagent surfaces explain` (bare `surfaces` is a usage error, exit 2), `teaagent <cmd> --help` |
 
 ## Observable outcomes (healthy product)
 

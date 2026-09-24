@@ -56,7 +56,7 @@ drive:
 
 | Surface | Command |
 |---|---|
-| Verify | `teaagent audit verify [<run_id>] [--path FILE] --root . --ci` (JSON `{"event_count", "status": "valid"|"invalid", "failure_count"}`) |
+| Verify | `teaagent audit verify [<run_id>] [--path FILE] --root . --ci` (JSON `{"event_count", "status": "valid"}`, exit 0; or `{"event_count", "failure_count", "status": "invalid"}`, exit 1) |
 | Inspect | `teaagent audit list|show|tail`, `teaagent runs --root . show|trace <id>` |
 | Export | `teaagent audit export <run_id> --root . [-o FILE]` |
 | Denials | `teaagent approval why-denied <run_id> [--call-id ID] [--verbose] --root .` |
