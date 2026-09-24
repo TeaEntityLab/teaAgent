@@ -1,0 +1,132 @@
+# Governance contracts for running the TeaAgent verification map with agents.
+# Static, host-run templates (agent-governance-scaffold + governed-delivery). Nothing here is
+# enforced by being on disk; HANDOVER.md lists which host preconditions are met.
+# Constitutional file: agents never edit it; changes land by reviewed commit only.
+
+# --- governed-delivery -------------------------------------------------------------------------
+
+intent_record:
+  intent_id: teaagent-verify-map-2026-09-24
+  goal: "A fresh agent can doctor, drive, and classify TeaAgent failures from VERIFY.md alone"
+  out_of_scope: ["fixing product findings F-1..F-4", "mapping features listed as Not mapped", "real LLM providers"]
+  unknowns:
+    - {item: "F-1 ruling: gate mcp serve tools/call, or rewrite docs/api/mcp-api.md trust model", owner: "repo owner"}
+    - {item: "F-2 ruling: redact nested shadow-receipt arguments", owner: "repo owner"}
+  irreversible_assumptions: []
+  signed_by: ""
+  status: unsigned
+
+oracle_manifest:
+  spec_version: "verify-map@a91f1dc2"
+  oracles:
+    - {name: verify/acceptance.yaml, class: authoritative, owner: "repo owner", host_seal: none, change_protocol: out_of_band}
+    - {name: "verify/checks/**", class: authoritative, owner: "repo owner", host_seal: none, change_protocol: out_of_band}
+    - {name: "verify/features/*.md drive blocks", class: authoritative, owner: "repo owner", host_seal: none, change_protocol: out_of_band}
+    - {name: "tests/** (per-feature pytest sets)", class: developer, owner: "repo owner", host_seal: none, change_protocol: normal_review}
+  in_run_lock: "verify/checks/verify-map.sh fails on any diff to these paths vs HEAD (detects, does not prevent)"
+
+task_packet:
+  spec_version: "verify-map@a91f1dc2"
+  state_ledger_ref: "$STATE/ledger.md (refresh.sh) | $STATE/summary.md (sweep.sh)"
+  oracle_manifest_ref: "verify/governance/contracts.yaml#oracle_manifest"
+  files: [VERIFY.md, "verify/features/<assigned>.md", verify/governance/verifier-agent.md]
+  missing_acceptance: stop_and_repair
+
+verification_plan:
+  channels:
+    - {kind: deterministic, independent: true, what: "drive.sh / acceptance.sh / verify-map.sh exit codes"}
+    - {kind: runtime, independent: true, what: "offline fake-provider runs + MCP stdio/HTTP probes in scratch workspaces"}
+    - {kind: independent_model, independent: false, what: "fresh verifier verdicts via sweep.sh (same model family as the author)"}
+  high_risk_pass_requires_non_model: true
+  compatibility_bounds: {tools: "bash 3.2+, git, curl, claude CLI (sweep/refresh only)", models: "any; verdicts are advisory above the deterministic floor", repos: "teaagent @ a91f1dc2"}
+
+evidence_ledger_format:
+  entries:
+    - {claim: "", source: "log path or command", attester: "script name | human", freshness_kind: tracking_event, date_checked: ""}
+
+envelope:
+  budget: "sweep: 1 agent call per feature (5), MAX_JOBS=2, AGENT_TIMEOUT=1800s when timeout(1) exists; refresh: MAX_ITER=5"
+  pause_actions: ["any edit outside verify/features/*.md", "any change to a drive block, acceptance.yaml, checks/"]
+  kill_conditions: ["refresh scope guard trips (exit 3)", "agent STOP line (exit 3)", "no progress (exit 3)", "cap (exit 2)"]
+  failure_signature_limit: "refresh: identical workspace snapshot after one iteration ends the run"
+  allowed_sinks: ["$TMPDIR scratch workspaces", "verify/features/*.md (refresh only)"]
+  accepter: ""
+  strictness: L2
+
+acceptance_record:
+  spec_version: "verify-map@a91f1dc2"
+  accepter: ""
+  oracle_manifest_ref: "verify/governance/contracts.yaml#oracle_manifest"
+  product_evidence_refs: ["verify/checks/drive.sh all", "verify/checks/acceptance.sh", "fresh-agent sweep verdicts (HANDOVER.md)"]
+  closed: false
+
+# --- agent-governance-scaffold -----------------------------------------------------------------
+
+authorizations:
+  - authorization_id: verify-sweep-read-only
+    capability_class: read_only
+    principal: "repo owner"
+    delegated_to: "agent:teaagent-map-verifier"
+    purpose: "classify one feature of the verification map"
+    resource_scope: ["repo: read", "$TMPDIR/teaagent-verify.*: scratch writes via verify/checks/*.sh only"]
+    allowed_effects: [read, run_verify_checks]
+    forbidden_effects: [write_repo, network_send, credential_read]
+    state_predicate: {repo_head: "<HEAD at sweep start>"}
+    expires_at: "end of sweep.sh run"
+  - authorization_id: verify-refresh-features
+    capability_class: workspace_write
+    principal: "repo owner"
+    delegated_to: "agent:teaagent-map-verifier (refresh prompt)"
+    purpose: "re-verify stale feature files"
+    resource_scope: ["verify/features/*.md"]
+    allowed_effects: [read, write, run_verify_checks]
+    forbidden_effects: [write_outside_scope, edit_drive_block, network_send, credential_read]
+    state_predicate: {repo_head: "<HEAD at refresh start>", worktree_clean_outside_scope: true}
+    expires_at: "end of refresh.sh run"
+
+cumulative_effect_key:
+  principal: "repo owner"
+  purpose: "re-verify stale feature files"
+  authorization_id: verify-refresh-features
+  resource_domain: "repository:teaagent/verify/features"
+effect_budget:
+  max_operations: 5
+  max_files_touched: 5
+  max_external_recipients: 0
+  valid_until: "end of refresh.sh run"
+  reset_requires: new_out_of_band_authorization
+
+escalate_if:
+  - drive.item_failed: true
+  - acceptance.result_in: [FAIL, XPASS]
+  - diff.touches_outside_contract_scope: true
+  - feature.drive_block_changed: true
+  - refresh.consecutive_no_progress: ">= 1"
+
+constitutional_paths:
+  - VERIFY.md
+  - verify/acceptance.yaml
+  - "verify/checks/**"
+  - "verify/fixtures/**"
+  - "verify/governance/**"
+  - "verify/prompts/**"
+  - verify/run-verifier.sh
+  - verify/sweep.sh
+  - verify/refresh.sh
+worker_writable_exclusions:
+  deny_write: [VERIFY.md, verify/acceptance.yaml, "verify/checks/**", "verify/fixtures/**", "verify/governance/**", "verify/prompts/**", "verify/*.sh", "teaagent/**", "tests/**"]
+  enforcement_owner: host_runtime
+policy_activation:
+  proposed_by: "map author"
+  activation_event: {type: human_signed, actor: "repo owner", out_of_band: true}
+  activation_store: "git history (reviewed commit)"
+  worker_may_write_activation_record: false
+  same_transaction_as_policy_change: false
+  activation_epoch: 1
+  usable_by_existing_leases: false
+
+mutation_suite:   # host-run; see HANDOVER.md for which cases were exercised
+  - worker_edits_acceptance_yaml
+  - worker_edits_drive_block
+  - worker_edits_product_source_during_refresh
+  - seeded_unlabeled_product_bug_must_not_verify_pass

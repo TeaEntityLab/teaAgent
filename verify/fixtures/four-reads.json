@@ -1,0 +1,7 @@
+[
+  {"type": "tool", "tool_name": "workspace_list_files", "arguments": {"pattern": "*"}, "call_id": "l1"},
+  {"type": "tool", "tool_name": "workspace_list_files", "arguments": {"pattern": "*"}, "call_id": "l2"},
+  {"type": "tool", "tool_name": "workspace_list_files", "arguments": {"pattern": "*"}, "call_id": "l3"},
+  {"type": "tool", "tool_name": "workspace_list_files", "arguments": {"pattern": "*"}, "call_id": "l4"},
+  {"type": "final", "content": "done"}
+]

@@ -4,6 +4,15 @@ All notable changes to TeaAgent are tracked here.
 
 ## Unreleased
 
+- **Verification map** (`VERIFY.md`, `verify/`): offline control surface for a
+  fresh agent — `doctor.sh`, per-feature `drive.sh` over five feature files
+  (governed tool execution, run lifecycle, audit evidence, MCP surface,
+  operator CLI), a locked `acceptance.yaml` oracle (A1–A4 pass; A5/A6
+  `known_failing`), `verify-map.sh` lock/staleness check, a read-only
+  fresh-agent `sweep.sh`, and a `refresh.sh` loop limited to
+  `verify/features/*.md`. Open findings recorded, not fixed: F-1 `mcp serve`
+  `tools/call` runs destructive tools without approval or audit; F-2
+  `h4_governance_shadow` audit events keep raw `content`/`command` arguments.
 - **EFX durable-effect governance guards** (`87d1c61`, `26e80d4`, `62ddf99`):
   - `external_effect` tool annotation: GitHub PR create/review, browser
     navigate/click/fill/evaluate, and ALL remote MCP tools fail closed in

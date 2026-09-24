@@ -1,0 +1,4 @@
+[
+  {"type": "tool", "tool_name": "workspace_write_file", "arguments": {"path": "probe.txt", "content": "x"}, "call_id": "c1"},
+  {"type": "final", "content": "done"}
+]
