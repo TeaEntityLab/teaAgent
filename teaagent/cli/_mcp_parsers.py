@@ -3,7 +3,9 @@ from __future__ import annotations
 import argparse
 from typing import Callable
 
+from teaagent.ergonomics.workspace_defaults import _UNSET
 from teaagent.mcp_http import DEFAULT_PORT as MCP_HTTP_DEFAULT_PORT
+from teaagent.policy import PermissionMode
 
 
 def register(
@@ -19,6 +21,23 @@ def register(
     )
     serve.add_argument(
         '--root', default='.', help='Workspace root. Defaults to current directory.'
+    )
+    serve.add_argument(
+        '--permission-mode',
+        choices=[mode.value for mode in PermissionMode],
+        default=_UNSET,
+        help='Approval policy for tools/call (default: workspace config, else prompt). '
+        'No interactive prompt exists over MCP: in prompt mode an unapproved '
+        'destructive call is denied (JSON-RPC -32001) unless an approval preset '
+        '(teaagent approval grant) or --approve-scoped digest matches.',
+    )
+    serve.add_argument(
+        '--approve-scoped',
+        action='append',
+        default=[],
+        metavar='TOOL:SHA256',
+        help='Preapprove one exact tool call by payload digest (repeatable). '
+        'Compute via teaagent.policy.compute_scoped_payload_digest.',
     )
     serve.add_argument(
         '--http',

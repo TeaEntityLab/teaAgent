@@ -413,7 +413,7 @@ teaagent mcp serve --root /path/to/repo
 teaagent mcp serve --http --port 7330 --auth-token "$MCP_TOKEN"
 ```
 
-`initialize` issues a fresh `Mcp-Session-Id` header; every later request must echo it. Pass `--allowed-origin` (repeatable) to restrict browser callers. See [docs/cli.md](docs/cli.md#mcp-server) for full transport details.
+`initialize` issues a fresh `Mcp-Session-Id` header; every later request must echo it. Pass `--allowed-origin` (repeatable) to restrict browser callers. Every `tools/call` goes through the workspace approval policy and a run log; destructive tools need `--permission-mode allow`, an approval preset, or `--approve-scoped`. See [docs/cli.md](docs/cli.md#mcp-server) for full transport and governance details.
 
 #### MCP Filtering & Sampling
 

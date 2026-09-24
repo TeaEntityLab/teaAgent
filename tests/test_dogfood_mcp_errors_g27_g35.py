@@ -23,6 +23,7 @@ from teaagent.cli._handlers._mcp_trust import (
 )
 from teaagent.mcp_server import serve_mcp_stdio
 from teaagent.workspace_tools import build_workspace_tool_registry
+from test_support import mcp_test_governance
 
 
 def test_stdio_session_survives_unknown_tool_call(tmp_path, capsys) -> None:
@@ -51,7 +52,12 @@ def test_stdio_session_survives_unknown_tool_call(tmp_path, capsys) -> None:
     reader = io.StringIO('\n'.join(json.dumps(frame) for frame in frames) + '\n')
     writer = io.StringIO()
 
-    rc = serve_mcp_stdio(registry, stdin=reader, stdout=writer)
+    rc = serve_mcp_stdio(
+        registry,
+        governance=mcp_test_governance(tmp_path),
+        stdin=reader,
+        stdout=writer,
+    )
 
     assert rc == 0
     lines = [line for line in writer.getvalue().splitlines() if line]
@@ -108,7 +114,12 @@ def test_stdio_session_survives_internal_error(tmp_path, monkeypatch) -> None:
     reader = io.StringIO('\n'.join(json.dumps(frame) for frame in frames) + '\n')
     writer = io.StringIO()
 
-    rc = serve_mcp_stdio(registry, stdin=reader, stdout=writer)
+    rc = serve_mcp_stdio(
+        registry,
+        governance=mcp_test_governance(tmp_path),
+        stdin=reader,
+        stdout=writer,
+    )
 
     assert rc == 0
     first, second = (

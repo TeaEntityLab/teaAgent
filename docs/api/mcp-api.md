@@ -1,362 +1,113 @@
 # MCP Server API Specification
 
 **Protocol version:** `2024-11-05`  
-**Transport:** stdin/stdout JSON-RPC 2.0  
+**Transports:** stdio JSON-RPC 2.0 (one request per line) · Streamable HTTP (`--http`)  
 **Entry point:** `teaagent mcp serve`  
-**Source:** `teaagent/mcp_server.py`, `teaagent/tools.py`
+**Source:** `teaagent/mcp_server.py`, `teaagent/mcp_http/__init__.py`, `teaagent/tools.py`
+
+Every statement below is exercised by `verify/features/mcp-surface.md` or
+`tests/test_mcp_server.py` / `tests/test_mcp_http.py`.
 
 ---
 
-## Server Info
+## Starting the server
 
-```json
-{
-  "name": "teaagent",
-  "version": "0.1.0",
-  "protocolVersion": "2024-11-05"
-}
+```bash
+teaagent mcp serve --root /path/to/project                          # stdio
+teaagent mcp serve --http --port 7330 --auth-token "$TOKEN" --root .  # Streamable HTTP
 ```
+
+stdio reads requests from stdin and writes responses to stdout. HTTP details
+(`POST/GET/DELETE /mcp`, `Mcp-Session-Id`, bearer/OAuth auth, loopback default)
+are in [docs/cli.md § MCP Server](../cli.md#mcp-server).
+
+| Flag | Meaning |
+|---|---|
+| `--root` | Workspace served and governed (default `.`) |
+| `--permission-mode` | `read-only`, `prompt`, `allow`, `danger-full-access` (default: workspace config, else `prompt`). `workspace-write` is refused (exit 2): it depends on a bound plan, which MCP clients cannot provide |
+| `--approve-scoped TOOL:SHA256` | Preapprove one exact call by payload digest (repeatable); digest = `teaagent.policy.compute_scoped_payload_digest(tool_name, arguments)` |
 
 ---
 
-## Protocol Overview
+## Methods
 
-The MCP server uses the [Model Context Protocol](https://modelcontextprotocol.io/) over stdin/stdout JSON-RPC 2.0. Clients (LLMs, orchestrators) send requests; the server responds with tool results or resource contents.
+| Method | Result |
+|---|---|
+| `initialize` | `{"protocolVersion": "2024-11-05", "capabilities": {"tools": {}}, "serverInfo": {"name": "teaagent", "version": "0.1.0"}}` |
+| `tools/list` | `{"tools": [{"name", "description", "inputSchema", "annotations"}]}` |
+| `tools/call` | `{"content": [{"type": "text", "text": "<JSON result>"}], "isError": false}` |
 
-### Request Format
+Requests without an `id` (notifications) get no response. Any other method is
+`-32601`. The server exposes no resources.
 
-```json
-{
-  "jsonrpc": "2.0",
-  "id": "string | number",
-  "method": "string",
-  "params": { ... }
-}
-```
-
-### Response Format
+`annotations` in `tools/list`:
 
 ```json
-{
-  "jsonrpc": "2.0",
-  "id": "string | number",
-  "result": { ... }
-}
+{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "statefulHint": false}
 ```
 
-### Error Format
+These describe the local tool pack. The server's own approval decision uses
+the registry's annotations, never client-supplied hints.
 
-```json
-{
-  "jsonrpc": "2.0",
-  "id": "string | number",
-  "error": {
-    "code": -32000,
-    "message": "Human-readable error",
-    "data": { "tool": "tool_name", "details": "..." }
-  }
-}
-```
+### Errors
 
----
-
-## Lifecycle Methods
-
-### `initialize`
-
-Negotiate protocol version and capabilities.
-
-**Request:**
-```json
-{
-  "method": "initialize",
-  "params": {
-    "protocolVersion": "2024-11-05",
-    "clientInfo": { "name": "client", "version": "1.0.0" },
-    "capabilities": {}
-  }
-}
-```
-
-**Response:**
-```json
-{
-  "protocolVersion": "2024-11-05",
-  "serverInfo": { "name": "teaagent", "version": "0.1.0" },
-  "capabilities": {
-    "tools": {},
-    "resources": {}
-  }
-}
-```
-
----
-
-### `notifications/initialized`
-
-Sent by the client after `initialize` completes. No response expected.
-
----
-
-## Tool Methods
-
-### `tools/list`
-
-List all registered tools.
-
-**Response:**
-```json
-{
-  "tools": [
-    {
-      "name": "string",
-      "description": "string",
-      "inputSchema": {
-        "type": "object",
-        "properties": { ... },
-        "required": [ ... ]
-      },
-      "annotations": {
-        "readOnly": true,
-        "destructive": false,
-        "idempotent": true,
-        "stateful": false,
-        "securityTier": "Low | Medium | High | Critical"
-      }
-    }
-  ]
-}
-```
-
----
-
-### `tools/call`
-
-Invoke a registered tool.
-
-**Request:**
-```json
-{
-  "method": "tools/call",
-  "params": {
-    "name": "tool_name",
-    "arguments": { ... }
-  }
-}
-```
-
-**Response (success):**
-```json
-{
-  "content": [
-    {
-      "type": "text",
-      "text": "Tool output as a string"
-    }
-  ],
-  "isError": false
-}
-```
-
-**Response (tool error):**
-```json
-{
-  "content": [
-    {
-      "type": "text",
-      "text": "Error description"
-    }
-  ],
-  "isError": true
-}
-```
-
-**JSON-RPC error codes for tool/call:**
-
-| Code | Meaning |
-|------|---------|
-| `-32601` | Method not found (unknown tool name) |
-| `-32602` | Invalid params (schema validation failed) |
-| `-32000` | Tool execution error |
-| `-32001` | Approval denied |
-| `-32002` | Rate limit exceeded |
-| `-32003` | Workspace lock conflict |
-
----
-
-## Resource Methods
-
-### `resources/list`
-
-List available resources.
-
-**Response:**
-```json
-{
-  "resources": [
-    {
-      "uri": "teaagent://workspace/<path>",
-      "name": "string",
-      "description": "string",
-      "mimeType": "text/plain | application/json"
-    }
-  ]
-}
-```
-
----
-
-### `resources/read`
-
-Read a resource by URI.
-
-**Request:**
-```json
-{
-  "method": "resources/read",
-  "params": {
-    "uri": "teaagent://workspace/src/auth.py"
-  }
-}
-```
-
-**Response:**
-```json
-{
-  "contents": [
-    {
-      "uri": "teaagent://workspace/src/auth.py",
-      "mimeType": "text/plain",
-      "text": "file contents..."
-    }
-  ]
-}
-```
-
----
-
-## Tool Annotations Schema
-
-Each registered tool carries annotations that control approval and display:
-
-```json
-{
-  "readOnly": false,
-  "destructive": true,
-  "idempotent": false,
-  "stateful": true,
-  "securityTier": "High"
-}
-```
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `readOnly` | bool | Tool never mutates state |
-| `destructive` | bool | Tool may delete or overwrite data |
-| `idempotent` | bool | Calling twice has the same effect as once |
-| `stateful` | bool | Tool modifies persistent external state |
-| `securityTier` | enum | `Low`, `Medium`, `High`, `Critical` |
-
-**Security tier meanings:**
-
-| Tier | Description |
-|------|-------------|
-| `Low` | Read-only, no external side-effects |
-| `Medium` | Writes to workspace only |
-| `High` | Writes to external systems or executes shell |
-| `Critical` | Irreversible or affects production systems |
-
----
-
-## Workspace Registry
-
-The MCP server manages a global workspace registry to prevent concurrent access conflicts.
-
-**Registry location:** `~/.teaagent/workspace_registry.json`
-
-**Lock record:**
-```json
-{
-  "workspace_path": "/abs/path/to/project",
-  "owner_pid": 12345,
-  "acquired_at": "2026-06-02T10:00:00Z"
-}
-```
-
-**Acquisition:** `WorkspaceRegistry.acquire_lock(workspace_path)` — acquires with zombie-process cleanup (a lock held by a dead PID is automatically released).
-
-**Release:** `WorkspaceRegistry.release_lock(workspace_path)` — releases on clean MCP server shutdown.
-
----
-
-## Rate Limiting
-
-Tools can declare a rate limit via `ToolRateLimit`:
-
-```json
-{
-  "maxCalls": 10,
-  "windowSeconds": 60.0
-}
-```
-
-When the rate limit is exceeded, `tools/call` returns JSON-RPC error code `-32002`:
-
-```json
-{
-  "code": -32002,
-  "message": "Rate limit exceeded for tool 'shell_exec': 10 calls per 60s"
-}
-```
+| Condition | Frame |
+|---|---|
+| Unknown method | JSON-RPC error `-32601` |
+| `tools/call` without string `name` / object `arguments`, or unregistered tool | JSON-RPC error `-32602` |
+| Denied by the approval policy (see Trust Model) | JSON-RPC error `-32001`, message names the rule |
+| Tool raised (validation failure, missing file, rate limit from `ToolRateLimit`) | result with `isError: true` and the error text |
+| Unexpected failure inside one request | JSON-RPC error `-32603`; the server keeps serving |
 
 ---
 
 ## Trust Model
 
-The MCP server applies teaagent's approval policy to all `tools/call` requests. Tools marked `destructive: true` require one of:
+Every `tools/call` passes the workspace `ApprovalPolicy` before
+`ToolRegistry.execute()`, the same policy `teaagent run` uses (AGENTS.md Tool
+Governance). There is no interactive prompt over MCP (stdio owns the terminal
+streams; HTTP has no operator), so a destructive tool runs only when:
 
-1. `permission_mode` set to `allow` or `danger-full-access`, **or**
-2. a live JIT/session approval, scoped approval grant, or payload-digest preapproval matching the exact tool call, **or**
-3. an interactive approval prompt (if `permission_mode` is `prompt`). `--approve-call-id` preapproval is deprecated/inert and does not satisfy this boundary.
+1. `--permission-mode allow` or `danger-full-access`, **or**
+2. an approval preset in `.teaagent/approvals.json` allows it (`teaagent approval grant …`), **or**
+3. its payload digest matches an `--approve-scoped` value.
 
-Denied calls return JSON-RPC error `-32001` with details on which rule blocked the call.
+A matching deny preset (`teaagent approval deny …`) blocks the call in every mode, including `allow`.
+
+`read-only` blocks every destructive tool. `prompt` without a matching preset
+or digest denies with `-32001`. `--approve-call-id` does not exist here and is
+inert elsewhere. JSON-RPC request ids are client-chosen and never grant approval.
+
+### Audit
+
+Each server process writes one hash-chained run log,
+`.teaagent/runs/mcp-<hex>.jsonl` (`origin: mcp`): `run_started` at startup,
+then per call `tool_call_requested` followed by `tool_call_blocked`, or by
+`tool_call_started` and `tool_call_completed` / `tool_call_failed`;
+`run_completed` on clean shutdown. Tool arguments and results are redacted
+like any run log. Verify with `teaagent audit verify mcp-<hex> --root . --ci`.
+
+Library callers construct the same binding explicitly:
+
+```python
+from teaagent import MCPGovernance, PermissionMode, handle_mcp_request
+
+governance = MCPGovernance.for_workspace(
+    root, permission_mode=PermissionMode.PROMPT, transport='embedded'
+)
+response = handle_mcp_request(registry, request, governance=governance)
+governance.close()
+```
 
 ---
 
-## Starting the MCP Server
+## Consuming remote MCP servers
+
+`teaagent mcp trust {list,inspect,allow,deny,revoke,audit}` manages the trust
+policy for **remote** MCP servers whose tools an agent run consumes; it does
+not affect this server.
 
 ```bash
-teaagent mcp serve
-```
-
-The server reads from stdin and writes to stderr. Clients connect via stdio transport as per the MCP specification.
-
-**With a specific workspace root:**
-```bash
-teaagent mcp serve --root /path/to/project
-```
-
-**With a permission mode:**
-```bash
-teaagent mcp serve --permission-mode workspace-write
-```
-
-All `teaagent run` flags apply when starting the server — they set defaults for tool calls made through MCP.
-
----
-
-## Trust Management
-
-```bash
-# List trusted MCP server certificates
-teaagent mcp trust list
-
-# Allow an external MCP server
-teaagent mcp trust allow my-custom-server
-
-# Block an external MCP server
-teaagent mcp trust deny suspicious-server
-
-# Inspect trust configuration for a server
-teaagent mcp trust inspect my-custom-server
+teaagent mcp trust allow --tools search fetch --server my-server --root .
+teaagent mcp trust inspect --server my-server --root .
 ```

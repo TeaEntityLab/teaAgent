@@ -1307,3 +1307,28 @@ def test_audit_thread_safety_with_exception_in_sink() -> None:
 
     # Should have recorded all events despite sink failures
     assert len(logger.events) == 50
+
+
+def test_nested_tool_arguments_are_redacted_like_top_level(tmp_path: Path) -> None:
+    """Receipts that nest a tool's arguments (h4_governance_shadow ``context``)
+    must not keep file content or shell commands that tool_call_* events redact."""
+    log_path = tmp_path / 'run.jsonl'
+    audit = AuditLogger(path=log_path)
+    arguments = {'path': 'a.txt', 'content': 'file body', 'command': 'rm -rf x'}
+
+    audit.record('tool_call_started', 'r1', tool_name='w', arguments=arguments)
+    audit.record(
+        'h4_governance_shadow',
+        'r1',
+        context={'action': 'approve_tool', 'arguments': arguments},
+    )
+
+    top, nested = (
+        json.loads(line)['payload'] for line in log_path.read_text().splitlines()
+    )
+    assert nested['context']['arguments'] == top['arguments']
+    assert nested['context']['arguments'] == {
+        'path': 'a.txt',
+        'content': AUDIT_REDACTED,
+        'command': AUDIT_REDACTED,
+    }

@@ -19,7 +19,7 @@ from teaagent.mcp_http import (
     build_mcp_http_server,
 )
 from teaagent.workspace_tools import build_workspace_tool_registry
-from test_support import skip_if_socket_bind_is_blocked
+from test_support import mcp_test_governance, skip_if_socket_bind_is_blocked
 
 
 class _ServerFixture:
@@ -34,6 +34,7 @@ class _ServerFixture:
         self.registry = build_workspace_tool_registry(root)
         self.server, self.sessions = build_mcp_http_server(
             self.registry,
+            governance=mcp_test_governance(root),
             host='127.0.0.1',
             port=0,
             auth_token=auth_token,
@@ -430,6 +431,7 @@ def _build_oauth_fixture(**oauth_kwargs):
         registry = build_workspace_tool_registry(root)
         server, sessions = build_mcp_http_server(
             registry,
+            governance=mcp_test_governance(root),
             host='127.0.0.1',
             port=0,
             oauth_server=oauth_server,

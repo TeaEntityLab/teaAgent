@@ -13,6 +13,7 @@ from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
 from teaagent.mcp_http import MCP_PATH, SESSION_HEADER, build_mcp_http_server
 from teaagent.run_store import RunStore
 from teaagent.workspace_tools import build_workspace_tool_registry
+from test_support import mcp_test_governance
 
 
 def test_agent_loop_persists_audit_and_workspace_result() -> None:
@@ -84,7 +85,10 @@ def test_mcp_http_initialize_and_tool_call() -> None:
         root = Path(tmp)
         (root / 'hello.txt').write_text('hello', encoding='utf-8')
         server, _sessions = build_mcp_http_server(
-            build_workspace_tool_registry(root), host='127.0.0.1', port=0
+            build_workspace_tool_registry(root),
+            governance=mcp_test_governance(root),
+            host='127.0.0.1',
+            port=0,
         )
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()

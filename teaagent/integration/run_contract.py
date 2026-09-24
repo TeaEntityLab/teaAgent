@@ -36,6 +36,9 @@ class RunSetupRequest:
     skip_plan_check: bool = False
     registry: ToolRegistry | None = None
     tenant_id: str = 'default'
+    # Interactive TTY approval prompts. Transports that own stdin/stdout (MCP)
+    # or have no operator attached must disable them.
+    enable_jit_prompt: bool = True
 
 
 @dataclass
@@ -93,6 +96,7 @@ def build_approval_policy(
         multi_sig_config=MultiSigQuorumConfig.from_workspace_config(request.root),
         workspace_root=str(Path(request.root).resolve()),
         tenant_id=request.tenant_id,
+        enable_jit_prompt=request.enable_jit_prompt,
         audit=audit,
     )
 

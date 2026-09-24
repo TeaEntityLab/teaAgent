@@ -5,14 +5,26 @@ import json
 import sys
 from pathlib import Path
 
+from teaagent.cli._handlers._agent.config import _parse_approve_scoped
 from teaagent.mcp_http import is_loopback_host
-from teaagent.mcp_server import serve_mcp_stdio
+from teaagent.mcp_server import MCPGovernance, serve_mcp_stdio
 from teaagent.oauth21 import OAuth21AuthorizationServer, OAuthKeyRing
+from teaagent.policy import PermissionMode, parse_permission_mode
 from teaagent.workspace_tools import build_workspace_tool_registry
 
 
 def mcp_serve_command(args: argparse.Namespace) -> int:
-
+    if args.permission_mode == PermissionMode.WORKSPACE_WRITE.value:
+        # workspace-write lets file writes through on the strength of a bound
+        # plan (PLAN_GATE on `run`); MCP clients bind no plan, so the mode would
+        # silently become "write anything". Fail closed instead.
+        print(
+            'mcp serve does not support --permission-mode workspace-write: it relies '
+            'on a bound plan, which MCP clients cannot provide. Use prompt (with '
+            '`teaagent approval grant` presets or --approve-scoped), read-only, or allow.',
+            file=sys.stderr,
+        )
+        return 2
     registry = build_workspace_tool_registry(args.root)
     if args.http:
         oauth_server = None
@@ -66,15 +78,34 @@ def mcp_serve_command(args: argparse.Namespace) -> int:
                 file=sys.stderr,
             )
             return 1
-        return args._serve_mcp_http(
-            registry,
-            host=args.host,
-            port=args.port,
-            auth_token=args.auth_token,
-            allowed_origins=args.allowed_origin or None,
-            oauth_server=oauth_server,
-        )
-    return serve_mcp_stdio(registry)
+        governance = _open_governance(args, transport='http')
+        try:
+            return args._serve_mcp_http(
+                registry,
+                governance=governance,
+                host=args.host,
+                port=args.port,
+                auth_token=args.auth_token,
+                allowed_origins=args.allowed_origin or None,
+                oauth_server=oauth_server,
+            )
+        finally:
+            governance.close()
+    governance = _open_governance(args, transport='stdio')
+    try:
+        return serve_mcp_stdio(registry, governance=governance)
+    finally:
+        governance.close()
+
+
+def _open_governance(args: argparse.Namespace, *, transport: str) -> MCPGovernance:
+    """Bind the server to the workspace approval policy and a run log."""
+    return MCPGovernance.for_workspace(
+        args.root,
+        permission_mode=parse_permission_mode(args.permission_mode),
+        transport=transport,
+        approved_payload_digests=_parse_approve_scoped(args.approve_scoped),
+    )
 
 
 def _load_key_ring(

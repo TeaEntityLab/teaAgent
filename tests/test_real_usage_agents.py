@@ -20,6 +20,7 @@ from __future__ import annotations
 import io
 import json
 import os
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -35,6 +36,7 @@ from teaagent.chat_agent import run_chat_agent
 from teaagent.cli import EXIT_BLOCKING, main
 from teaagent.subagents import SubagentManager, register_subagent_tools
 from teaagent.types import PermissionMode, ToolAnnotations, ToolRegistry
+from test_support import mcp_test_governance
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -1062,6 +1064,9 @@ class McpAcpServerScenarios(unittest.TestCase):
         from teaagent.types import ToolRegistry
 
         registry = ToolRegistry()
+        workspace = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, workspace, True)
+        governance = mcp_test_governance(workspace)
         registry.register(
             name='workspace_read_file',
             handler=lambda args: {'output': 'content'},
@@ -1083,6 +1088,7 @@ class McpAcpServerScenarios(unittest.TestCase):
                 'method': 'initialize',
                 'params': {'protocolVersion': '2024-11-05'},
             },
+            governance=governance,
         )
         self.assertIsNotNone(init_response)
         self.assertIn('result', init_response)
@@ -1095,6 +1101,7 @@ class McpAcpServerScenarios(unittest.TestCase):
                 'id': 2,
                 'method': 'tools/list',
             },
+            governance=governance,
         )
         self.assertIsNotNone(list_response)
         self.assertIn('result', list_response)
@@ -1114,6 +1121,7 @@ class McpAcpServerScenarios(unittest.TestCase):
                     'arguments': {'path': 'test.txt'},
                 },
             },
+            governance=governance,
         )
         self.assertIsNotNone(call_response)
         self.assertIn('result', call_response)
@@ -1806,7 +1814,11 @@ class McpHttpScenarios(unittest.TestCase):
         from teaagent.types import ToolRegistry
 
         registry = ToolRegistry()
-        server, store = build_mcp_http_server(registry)
+        workspace = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, workspace, True)
+        server, store = build_mcp_http_server(
+            registry, governance=mcp_test_governance(workspace)
+        )
         self.assertIsInstance(server, ThreadingHTTPServer)
         self.assertIsInstance(store, MCPSessionStore)
         # Defaults: bound to loopback on the default MCP port.
@@ -1826,8 +1838,11 @@ class McpHttpScenarios(unittest.TestCase):
         from teaagent.types import ToolRegistry
 
         registry = ToolRegistry()
+        workspace = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, workspace, True)
         server, store = build_mcp_http_server(
             registry,
+            governance=mcp_test_governance(workspace),
             auth_token='secret-token-123',
         )
         self.assertIsInstance(server, ThreadingHTTPServer)
@@ -1858,8 +1873,11 @@ class McpHttpScenarios(unittest.TestCase):
             signing_key='a' * 32,
             issuer='https://example.com',
         )
+        workspace = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, workspace, True)
         server, store = build_mcp_http_server(
             registry,
+            governance=mcp_test_governance(workspace),
             oauth_server=oauth,
         )
         self.assertIsInstance(server, ThreadingHTTPServer)

@@ -172,7 +172,7 @@ if TYPE_CHECKING:
     from teaagent.managed_runtime import managed_runtime_context
     from teaagent.mcp_client import MCPClientError, MCPHTTPClient
     from teaagent.mcp_http import build_mcp_http_server, serve_mcp_http
-    from teaagent.mcp_server import handle_mcp_request, serve_mcp_stdio
+    from teaagent.mcp_server import MCPGovernance, handle_mcp_request, serve_mcp_stdio
     from teaagent.mcp_tool_adapter import register_mcp_tools
     from teaagent.memory import MemoryCatalog, MemoryEntry
     from teaagent.model_routing import ModelRoute, classify_task, route_model

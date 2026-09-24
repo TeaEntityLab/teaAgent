@@ -7,7 +7,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Optional
 
-from teaagent.mcp_server import handle_mcp_request
+from teaagent.mcp_server import MCPGovernance, handle_mcp_request
 from teaagent.oauth21 import (
     _AUTHORIZATION_HEADER,
     _AUTHORIZE_PATH,
@@ -71,6 +71,7 @@ class MCPSessionStore:
 def build_mcp_http_server(
     registry: ToolRegistry,
     *,
+    governance: MCPGovernance,
     host: str = '127.0.0.1',
     port: int = DEFAULT_PORT,
     auth_token: Optional[str] = None,
@@ -95,7 +96,9 @@ def build_mcp_http_server(
         )
     sessions = MCPSessionStore()
     origins = frozenset(allowed_origins) if allowed_origins else None
-    handler_cls = _make_handler(registry, sessions, auth_token, origins, oauth_server)
+    handler_cls = _make_handler(
+        registry, governance, sessions, auth_token, origins, oauth_server
+    )
     server = ThreadingHTTPServer((host, port), handler_cls)
     return server, sessions
 
@@ -103,6 +106,7 @@ def build_mcp_http_server(
 def serve_mcp_http(
     registry: ToolRegistry,
     *,
+    governance: MCPGovernance,
     host: str = '127.0.0.1',
     port: int = DEFAULT_PORT,
     auth_token: Optional[str] = None,
@@ -111,6 +115,7 @@ def serve_mcp_http(
 ) -> int:
     server, _sessions = build_mcp_http_server(
         registry,
+        governance=governance,
         host=host,
         port=port,
         auth_token=auth_token,
@@ -129,6 +134,7 @@ def serve_mcp_http(
 
 def _make_handler(  # noqa: C901
     registry: ToolRegistry,
+    governance: MCPGovernance,
     sessions: MCPSessionStore,
     auth_token: Optional[str],
     allowed_origins: Optional[frozenset[str]],
@@ -348,7 +354,7 @@ def _make_handler(  # noqa: C901
             session_header = self.headers.get(SESSION_HEADER)
 
             if isinstance(payload, dict) and payload.get('method') == 'initialize':
-                response = handle_mcp_request(registry, payload)
+                response = handle_mcp_request(registry, payload, governance=governance)
                 if response is None:
                     self._send_status(400, 'initialize requires an id')
                     return
@@ -367,7 +373,7 @@ def _make_handler(  # noqa: C901
                 for item in payload:
                     if not isinstance(item, dict):
                         continue
-                    response = handle_mcp_request(registry, item)
+                    response = handle_mcp_request(registry, item, governance=governance)
                     if response is not None:
                         responses.append(response)
                 if not responses:
@@ -378,7 +384,7 @@ def _make_handler(  # noqa: C901
                 self._send_json(200, responses, extra_headers=extra)
                 return
 
-            response = handle_mcp_request(registry, payload)
+            response = handle_mcp_request(registry, payload, governance=governance)
             if response is None:
                 self._send_status(202)
                 return

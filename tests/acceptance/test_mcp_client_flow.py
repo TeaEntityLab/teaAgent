@@ -46,6 +46,7 @@ import pytest
 from teaagent.mcp_client import MCPClientError, MCPHTTPClient
 from teaagent.mcp_http import build_mcp_http_server
 from teaagent.workspace_tools import build_workspace_tool_registry
+from test_support import mcp_test_governance
 
 
 def test_mcp_client_auth_session_list_call_and_close_flow() -> None:
@@ -54,6 +55,7 @@ def test_mcp_client_auth_session_list_call_and_close_flow() -> None:
         (root / 'hello.txt').write_text('hello mcp', encoding='utf-8')
         server, sessions = build_mcp_http_server(
             build_workspace_tool_registry(root),
+            governance=mcp_test_governance(root),
             host='127.0.0.1',
             port=0,
             auth_token='secret-token',

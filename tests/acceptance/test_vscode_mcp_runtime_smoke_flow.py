@@ -21,6 +21,7 @@ from teaagent.llm import available_providers
 from teaagent.mcp_client import MCPHTTPClient
 from teaagent.mcp_http import build_mcp_http_server
 from teaagent.workspace_tools import build_workspace_tool_registry
+from test_support import mcp_test_governance
 
 
 def test_vscode_mcp_runtime_smoke_flow() -> None:
@@ -54,6 +55,7 @@ def test_vscode_mcp_runtime_smoke_flow() -> None:
         (workspace / 'hello.txt').write_text('hello from vscode mcp', encoding='utf-8')
         server, sessions = build_mcp_http_server(
             build_workspace_tool_registry(workspace),
+            governance=mcp_test_governance(workspace),
             host='127.0.0.1',
             port=0,
             auth_token='secret-token',

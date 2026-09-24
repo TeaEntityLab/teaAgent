@@ -791,9 +791,7 @@ def redact_audit_payload(
     )
     redacted: dict[str, Any] = {}
     for key, value in payload.items():
-        if key == 'arguments' and isinstance(value, dict):
-            redacted[key] = redact_tool_arguments(value, string_patterns=patterns)
-        elif key == 'result' and isinstance(value, dict):
+        if key == 'result' and isinstance(value, dict):
             redacted[key] = redact_tool_result(value, string_patterns=patterns)
         else:
             redacted[key] = redact_audit_value(key, value, string_patterns=patterns)
@@ -891,6 +889,11 @@ def redact_audit_value(key: str, value: Any, *, string_patterns: Any = None) -> 
     # Numeric, bool, and None values are telemetry data and are never sensitive.
     if is_sensitive_key(key) and isinstance(value, (str, bytes)):
         return AUDIT_REDACTED
+    # A tool-arguments dict gets tool-argument redaction at any depth, so
+    # payloads that nest it (e.g. h4_governance_shadow ``context.arguments``)
+    # cannot leak file content or shell commands that top-level events redact.
+    if key == 'arguments' and isinstance(value, dict):
+        return redact_tool_arguments(value, string_patterns=string_patterns)
     if isinstance(value, dict):
         return {
             str(child_key): redact_audit_value(

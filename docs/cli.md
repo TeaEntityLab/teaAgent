@@ -630,6 +630,13 @@ Streamable HTTP details:
 
 Supported methods: `initialize`, `tools/list`, `tools/call`. Each tool is exposed with its `inputSchema` and read-only / destructive / idempotent annotations. Tool *execution* errors are returned as `result.isError = true` rather than JSON-RPC errors so the client can recover; a `tools/call` for an unregistered tool is a JSON-RPC `-32602` (Invalid params) error frame (`tool 'X' is not registered`), and any other unexpected failure inside one request is returned as `-32603` (Internal error) and logged — the server keeps serving in both cases (stdio and HTTP).
 
+Governance: every `tools/call` passes the workspace approval policy and is recorded in a run log (`.teaagent/runs/mcp-<hex>.jsonl`). There is no interactive prompt over MCP, so a destructive tool runs only under `--permission-mode allow|danger-full-access`, a matching `teaagent approval grant` preset, or an `--approve-scoped TOOL:SHA256` digest; otherwise the call is denied with JSON-RPC `-32001`. `--permission-mode` defaults to the workspace config (else `prompt`); `workspace-write` is refused because it depends on a bound plan. See [api/mcp-api.md § Trust Model](api/mcp-api.md#trust-model).
+
+```bash
+teaagent approval grant workspace_write_file --path-glob 'notes/**' --scope session --root .
+teaagent mcp serve --root . --permission-mode prompt   # writes under notes/** allowed, others -32001
+```
+
 ## Subagent Delegation
 
 Expose a `subagent` tool so the model can delegate one focused sub-task to a fresh agent run that shares the same workspace tools, ApprovalPolicy, RunBudget, and permission mode:

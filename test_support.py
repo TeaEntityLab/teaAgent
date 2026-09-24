@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import socket
 import threading
+from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -48,3 +50,13 @@ def skip_if_thread_start_is_blocked(count: int = 1) -> None:
 
     if not can_start_threads(count):
         pytest.skip('environment has thread resource limits')
+
+
+def mcp_test_governance(root: str | Path, permission_mode: str = 'prompt') -> Any:
+    """Build a governed MCP server context (approval policy + run log) under ``root``."""
+    from teaagent.mcp_server import MCPGovernance
+    from teaagent.policy import PermissionMode
+
+    return MCPGovernance.for_workspace(
+        root, permission_mode=PermissionMode(permission_mode), transport='test'
+    )

@@ -511,6 +511,9 @@ teaagent mcp serve --http --port 7330 --auth-token "$TOKEN"
 ```
 
 Exposes the full workspace tool pack to any MCP-compatible client over Streamable HTTP.
+Every `tools/call` passes the workspace approval policy and is audited; destructive
+tools need `--permission-mode allow`, an approval preset, or `--approve-scoped`
+(see [cli.md § MCP Server](cli.md#mcp-server)).
 IDE plugins, CI/CD pipelines, and custom web UIs can all connect. Use `--allowed-origin`
 to restrict browser callers.
 

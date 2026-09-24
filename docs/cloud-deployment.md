@@ -14,7 +14,7 @@ TeaAgent supports three deployment models beyond the interactive CLI/TUI session
 | Model | Trigger | Persistence | Best for |
 |-------|---------|-------------|----------|
 | **CLI background run** | `teaagent agent run --background` | `.teaagent/runs/` JSONL | Long-running local tasks, cron |
-| **MCP HTTP server** | `teaagent mcp serve --http` | In-process audit log | IDE integration, CI/CD pipelines |
+| **MCP HTTP server** | `teaagent mcp serve --http` | `.teaagent/runs/mcp-*.jsonl` | IDE integration, CI/CD pipelines |
 | **OpenCode scheduler** | `opencode schedule` | OpenCode run store | Periodic audits, daily reviews |
 
 This guide covers operational patterns, security hardening, and CI/CD integration.

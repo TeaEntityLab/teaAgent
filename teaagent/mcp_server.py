@@ -7,11 +7,84 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Optional, TextIO
+from uuid import uuid4
 
-from teaagent.errors import AgentHarnessError
+from teaagent.audit import AuditLogger
+from teaagent.errors import AgentHarnessError, ToolPermissionError
+from teaagent.policy import ApprovalPolicy, PermissionMode
 from teaagent.resource_monitor import is_process_alive
 from teaagent.storage import file_lock
 from teaagent.tools import ToolRegistry
+
+PROTOCOL_VERSION = '2024-11-05'
+SERVER_INFO = {'name': 'teaagent', 'version': '0.1.0'}
+logger = logging.getLogger(__name__)
+REGISTRY_PATH = Path.home() / '.teaagent' / 'workspace_registry.json'
+# JSON-RPC server-defined error: a tools/call denied by the approval policy.
+POLICY_DENIED_CODE = -32001
+
+
+@dataclass(frozen=True)
+class MCPGovernance:
+    """Approval policy and audit log every MCP ``tools/call`` passes through.
+
+    AGENTS.md Tool Governance: side effects route through ``ApprovalPolicy``
+    before ``ToolRegistry.execute()``, and every tool call is audited. One
+    governance object spans one server process and writes one run log
+    (``.teaagent/runs/<run_id>.jsonl``).
+    """
+
+    policy: ApprovalPolicy
+    audit: AuditLogger
+    run_id: str
+
+    @classmethod
+    def for_workspace(
+        cls,
+        root: str | Path,
+        *,
+        permission_mode: PermissionMode,
+        transport: str,
+        approved_payload_digests: frozenset[str] = frozenset(),
+    ) -> MCPGovernance:
+        """Open the run log and build the workspace approval policy.
+
+        Interactive JIT prompts are disabled: stdio owns stdin/stdout and the
+        HTTP transport has no operator attached, so an unapproved destructive
+        call is denied instead of prompting.
+        """
+        from teaagent.integration.run_contract import (
+            RunSetupRequest,
+            build_approval_policy,
+        )
+        from teaagent.run_store import RunStore
+
+        resolved = Path(root).resolve()
+        run_id = f'mcp-{uuid4().hex}'
+        audit = RunStore(resolved).audit_logger(run_id)
+        policy = build_approval_policy(
+            RunSetupRequest(
+                root=resolved,
+                permission_mode=permission_mode,
+                approved_payload_digests=approved_payload_digests,
+                run_id=run_id,
+                enable_jit_prompt=False,
+            ),
+            audit=audit,
+        )
+        audit.record(
+            'run_started',
+            run_id,
+            task=f'mcp serve ({transport})',
+            origin='mcp',
+            permission_mode=permission_mode.value,
+        )
+        return cls(policy=policy, audit=audit, run_id=run_id)
+
+    def close(self) -> None:
+        """Mark the server session finished in the run log."""
+        self.audit.record('run_completed', self.run_id, answer='mcp server stopped')
+
 
 PROTOCOL_VERSION = '2024-11-05'
 SERVER_INFO = {'name': 'teaagent', 'version': '0.1.0'}
@@ -131,7 +204,10 @@ class WorkspaceRegistry:
 
 
 def handle_mcp_request(
-    registry: ToolRegistry, request: dict[str, Any]
+    registry: ToolRegistry,
+    request: dict[str, Any],
+    *,
+    governance: MCPGovernance,
 ) -> Optional[dict[str, Any]]:
     request_id = request.get('id')
     method = request.get('method')
@@ -141,7 +217,7 @@ def handle_mcp_request(
         return None
 
     try:
-        return _dispatch(registry, request_id, method, params)
+        return _dispatch(registry, request_id, method, params, governance)
     except Exception as exc:
         # Protocol boundary: one failing request must not end the session
         # (stdio or HTTP). The failure is preserved in the error frame and the
@@ -151,7 +227,11 @@ def handle_mcp_request(
 
 
 def _dispatch(
-    registry: ToolRegistry, request_id: Any, method: Any, params: dict[str, Any]
+    registry: ToolRegistry,
+    request_id: Any,
+    method: Any,
+    params: dict[str, Any],
+    governance: MCPGovernance,
 ) -> dict[str, Any]:
     if method == 'initialize':
         return _ok(
@@ -165,13 +245,14 @@ def _dispatch(
     if method == 'tools/list':
         return _ok(request_id, {'tools': _tools_payload(registry)})
     if method == 'tools/call':
-        return _call_tool(registry, request_id, params)
+        return _call_tool(registry, request_id, params, governance)
     return _error(request_id, -32601, f"method '{method}' not found")
 
 
 def serve_mcp_stdio(
     registry: ToolRegistry,
     *,
+    governance: MCPGovernance,
     stdin: Optional[TextIO] = None,
     stdout: Optional[TextIO] = None,
 ) -> int:
@@ -182,7 +263,7 @@ def serve_mcp_stdio(
             request = json.loads(line)
         except json.JSONDecodeError:
             continue
-        response = handle_mcp_request(registry, request)
+        response = handle_mcp_request(registry, request, governance=governance)
         if response is not None:
             writer.write(json.dumps(response, ensure_ascii=False) + '\n')
             writer.flush()
@@ -211,7 +292,10 @@ def _tools_payload(registry: ToolRegistry) -> list[dict[str, Any]]:
 
 
 def _call_tool(
-    registry: ToolRegistry, request_id: Any, params: dict[str, Any]
+    registry: ToolRegistry,
+    request_id: Any,
+    params: dict[str, Any],
+    governance: MCPGovernance,
 ) -> dict[str, Any]:
     name = params.get('name')
     arguments = params.get('arguments') or {}
@@ -220,12 +304,63 @@ def _call_tool(
     if not isinstance(arguments, dict):
         return _error(request_id, -32602, "tools/call requires object 'arguments'")
     try:
-        registry.get(name)
+        tool = registry.get(name)
     except KeyError as exc:
         return _error(request_id, -32602, str(exc.args[0]))
+
+    audit, run_id = governance.audit, governance.run_id
+    # The JSON-RPC id is client-chosen; it only correlates audit events and
+    # never grants approval (approval binds payload digests, presets, or mode).
+    call_id = f'mcp-{request_id}'
+    audit.record(
+        'tool_call_requested',
+        run_id,
+        call_id=call_id,
+        tool_name=name,
+        arguments=arguments,
+    )
+    try:
+        governance.policy.assert_allowed(
+            tool_name=name,
+            call_id=call_id,
+            destructive=tool.annotations.destructive,
+            arguments=arguments,
+            read_only=tool.annotations.read_only,
+            description=tool.description,
+            handler=tool.handler,
+            external_effect=bool(getattr(tool.annotations, 'external_effect', False)),
+        )
+    except ToolPermissionError as exc:
+        reason_code = exc.reason_code.value if exc.reason_code else None
+        audit.record(
+            'tool_call_blocked',
+            run_id,
+            call_id=call_id,
+            tool_name=name,
+            arguments=arguments,
+            reason=str(exc),
+            reason_code=reason_code,
+            authority_type=reason_code or 'policy_blocked',
+        )
+        return _error(request_id, POLICY_DENIED_CODE, str(exc))
+
+    audit.record(
+        'tool_call_started',
+        run_id,
+        call_id=call_id,
+        tool_name=name,
+        arguments=arguments,
+    )
     try:
         result = registry.execute(name, arguments)
     except AgentHarnessError as exc:
+        audit.record(
+            'tool_call_failed',
+            run_id,
+            call_id=call_id,
+            tool_name=name,
+            error=str(exc),
+        )
         return _ok(
             request_id,
             {
@@ -233,6 +368,13 @@ def _call_tool(
                 'isError': True,
             },
         )
+    audit.record(
+        'tool_call_completed',
+        run_id,
+        call_id=call_id,
+        tool_name=name,
+        result=result,
+    )
     return _ok(
         request_id,
         {

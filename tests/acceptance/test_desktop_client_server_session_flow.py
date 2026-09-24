@@ -13,6 +13,7 @@ from teaagent.cli import main
 from teaagent.mcp_client import MCPHTTPClient
 from teaagent.mcp_http import build_mcp_http_server
 from teaagent.workspace_tools import build_workspace_tool_registry
+from test_support import mcp_test_governance
 
 
 def test_mcp_http_client_server_and_cli_session_list() -> None:
@@ -21,6 +22,7 @@ def test_mcp_http_client_server_and_cli_session_list() -> None:
         (root / 'hello.txt').write_text('client-server', encoding='utf-8')
         server, sessions = build_mcp_http_server(
             build_workspace_tool_registry(root),
+            governance=mcp_test_governance(root),
             host='127.0.0.1',
             port=0,
             auth_token='desktop-token',

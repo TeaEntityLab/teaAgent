@@ -133,6 +133,7 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     'LocalKnowledgeAdapter': ('teaagent.external_backends', 'LocalKnowledgeAdapter'),
     'OkfKnowledgeAdapter': ('teaagent.external_backends', 'OkfKnowledgeAdapter'),
     'MCPClientError': ('teaagent.mcp_client', 'MCPClientError'),
+    'MCPGovernance': ('teaagent.mcp_server', 'MCPGovernance'),
     'MCPHTTPClient': ('teaagent.mcp_client', 'MCPHTTPClient'),
     'MemoryCatalog': ('teaagent.memory', 'MemoryCatalog'),
     'MemoryEntry': ('teaagent.memory', 'MemoryEntry'),

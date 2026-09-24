@@ -21,6 +21,7 @@ from teaagent.types import (
     verify_audit_chain,
 )
 from teaagent.vote_relay import VoteRelayPayload, verify_relay_vote
+from test_support import mcp_test_governance
 
 
 def test_dev_hash_rejected_by_default() -> None:
@@ -95,13 +96,18 @@ def test_brace_expansion() -> None:
     assert '/production/app' in normalized
 
 
-def test_loopback_requires_auth_when_strict() -> None:
+def test_loopback_requires_auth_when_strict(tmp_path) -> None:
     from teaagent.mcp_http import build_mcp_http_server
 
     registry = ToolRegistry()
     with mock.patch('teaagent.security_env.strict_local_services', return_value=True):
         with pytest.raises(ValueError) as ctx:
-            build_mcp_http_server(registry, host='127.0.0.1', port=0)
+            build_mcp_http_server(
+                registry,
+                governance=mcp_test_governance(tmp_path),
+                host='127.0.0.1',
+                port=0,
+            )
         assert 'TEAAGENT_STRICT_LOCAL' in str(ctx.value)
 
 

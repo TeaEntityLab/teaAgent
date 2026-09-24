@@ -4,6 +4,23 @@ All notable changes to TeaAgent are tracked here.
 
 ## Unreleased
 
+- **MCP server governance (breaking for ungoverned callers)**: `teaagent mcp serve`
+  `tools/call` now passes the workspace `ApprovalPolicy` and is recorded in a
+  hash-chained run log (`.teaagent/runs/mcp-<hex>.jsonl`). Destructive tools
+  run only under `--permission-mode allow|danger-full-access`, a matching
+  `teaagent approval grant` preset, or `--approve-scoped TOOL:SHA256`;
+  otherwise JSON-RPC `-32001`. There is no interactive prompt over MCP;
+  `--permission-mode workspace-write` is refused (it depends on a bound plan).
+  `handle_mcp_request`, `serve_mcp_stdio`, `build_mcp_http_server`, and
+  `serve_mcp_http` require `governance=MCPGovernance.for_workspace(...)`.
+  MCP clients (including the VS Code extension) that wrote files without
+  approval now get `-32001` until a preset or mode authorizes them.
+  Risk report: `docs/reviews/mcp-server-governance-2026-09-24-risk.md`.
+- **Audit redaction**: tool arguments nested in any audit payload (e.g.
+  `h4_governance_shadow` `context.arguments`) are redacted like top-level
+  `arguments`; shadow receipts no longer store raw file content or shell commands.
+- `approval approve <call_id> --resume` no longer prints the `--approve-call-id`
+  deprecation notice; `CONTRIBUTING.md` installs `.[dev]` (no `oauth` extra exists).
 - **Verification map** (`VERIFY.md`, `verify/`): offline control surface for a
   fresh agent — `doctor.sh`, per-feature `drive.sh` over five feature files
   (governed tool execution, run lifecycle, audit evidence, MCP surface,

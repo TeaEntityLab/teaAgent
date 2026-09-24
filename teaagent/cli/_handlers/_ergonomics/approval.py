@@ -517,7 +517,7 @@ def approval_approve_command(args: argparse.Namespace) -> int:  # noqa: C901
                 provider=None,
                 model=None,
                 fresh_restart=False,
-                approve_call_id=[call_id],
+                approve_call_id=[],  # inert since G-P2-2; resume approves the pending call by payload digest
                 clarify=False,
                 route_model=False,
                 max_iterations=10,
