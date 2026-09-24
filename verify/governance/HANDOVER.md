@@ -53,7 +53,7 @@ new session.
 ## Host preconditions
 
 ```yaml
-oracle_sealing: unmet            # no CODEOWNERS/branch protection on verify/; verify-map.sh only detects diffs vs HEAD
+oracle_sealing: unmet            # no in-run write protection; since 2026-09-24 acceptance.yaml + checks/ are high-risk paths (pre-commit + CI require a reflective-risk report); verify-map.sh detects diffs vs HEAD
 sink_isolation: unmet            # read-only verifier still has Bash(verify/checks/*.sh), which writes $TMPDIR scratch; no OS sandbox
 budget_enforcement: met          # MAX_JOBS / MAX_ITER / per-call timeout (timeout(1) absent on stock macOS -> no wall-clock cap)
 durable_ledger_storage: unmet    # $STATE lives in $TMPDIR, per run

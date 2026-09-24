@@ -14,6 +14,8 @@ patterns:
   - "teaagent/tool_permissions.py"
   - "teaagent/workspace_tools/_shell.py"
   - "teaagent/mcp_trust.py"
+  - "teaagent/mcp_server.py"
+  - "teaagent/mcp_http/"
   - "teaagent/provenance_gate.py"
   - "teaagent/prompt_gate.py"
   - "teaagent/runner/_core.py"
@@ -21,3 +23,6 @@ patterns:
   - "teaagent/budget_monitor.py"
   - "teaagent/scope_budget.py"
   - "docs/audit-event.schema.json"
+  # Locked verification oracle (VERIFY.md): weakening it hides regressions.
+  - "verify/acceptance.yaml"
+  - "verify/checks/"

@@ -82,6 +82,20 @@ Inspect commands are executed via `shlex.split()` with `shell=False`, which:
 
 ## MCP HTTP Security
 
+### Tool-call governance (stdio and HTTP)
+
+Authentication decides who may talk to the server; it does not authorize
+effects. Every `tools/call` passes the workspace `ApprovalPolicy` before
+`ToolRegistry.execute()` and is recorded in a hash-chained run log
+(`.teaagent/runs/mcp-<hex>.jsonl`), via `MCPGovernance` in
+`teaagent/mcp_server.py`. There is no interactive prompt over MCP: a
+destructive tool runs only under `--permission-mode allow|danger-full-access`,
+a matching approval preset, or an `--approve-scoped` payload digest; anything
+else is denied with JSON-RPC `-32001`. `workspace-write` is refused because it
+depends on a bound plan. Client-supplied JSON-RPC ids and annotation hints
+never grant approval. (Before 2026-09-24 the server executed tools with no
+policy or audit — finding F-1, `docs/reviews/mcp-server-governance-2026-09-24-risk.md`.)
+
 ### Bind Enforcement
 
 The MCP HTTP server enforces authentication at two layers:

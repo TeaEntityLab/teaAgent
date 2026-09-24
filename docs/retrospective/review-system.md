@@ -88,6 +88,8 @@ Trigger conditions (any one is sufficient):
 - Modify `teaagent/sandbox/`, `teaagent/docker_sandbox.py`, or `teaagent/git_sandbox.py`
 - Modify `teaagent/tool_permissions.py` or `teaagent/workspace_tools/_shell.py`
 - Modify `teaagent/mcp_trust.py`, `teaagent/provenance_gate.py`, or `teaagent/prompt_gate.py`
+- Modify the MCP server approval/audit path: `teaagent/mcp_server.py` or `teaagent/mcp_http/`
+- Modify the locked verification oracle: `verify/acceptance.yaml` or `verify/checks/`
 - Modify the budget/approval/JIT sections of `teaagent/runner/_core.py`
 - Modify `teaagent/budget.py`, `teaagent/budget_monitor.py`, or `teaagent/scope_budget.py`
 - Add a destructive tool or change `ToolAnnotations.security_tier`
