@@ -299,6 +299,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0  # full history for review institution git diff and commit gates
 
       - name: Set up Python
         uses: actions/setup-python@v6
