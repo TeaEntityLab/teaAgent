@@ -184,10 +184,17 @@ def _try_tree_sitter_parse(path: Path, language: str) -> Any:
         ) from exc
     try:
         parser = get_parser(language)
-        tree = parser.parse(path.read_text(encoding='utf-8'))
+        source: Any = path.read_bytes()
+        try:
+            tree = parser.parse(source)
+        except (TypeError, ValueError):
+            fallback: Any = path.read_text(encoding='utf-8')
+            tree = parser.parse(fallback)
     except Exception as exc:
         raise RuntimeError(f'failed to parse {path} with tree-sitter') from exc
-    if tree is None or tree.root_node() is None:
+    root_node = getattr(tree, 'root_node', None)
+    root = root_node() if callable(root_node) else root_node
+    if tree is None or root is None:
         raise RuntimeError(f'failed to parse {path} with tree-sitter')
     return tree
 
@@ -197,7 +204,10 @@ def _extract_generic_tree_sitter_relations(
 ) -> list[CodeRelation]:
     tree = _try_tree_sitter_parse(path, language)
     content = path.read_bytes()
-    root = tree.root_node()
+    root_node = getattr(tree, 'root_node', None)
+    root = root_node() if callable(root_node) else root_node
+    if root is None:
+        return []
     relations: list[CodeRelation] = []
     scope = path.stem
     stack = [root]
