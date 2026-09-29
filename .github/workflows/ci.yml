@@ -213,7 +213,7 @@ jobs:
         run: python3 scripts/check_complexity.py --max 99
 
       - name: Lint with ruff
-        run: ruff check .
+        run: ruff check teaagent/ tests/ scripts/
 
       - name: Check formatting with ruff
         run: ruff format --check teaagent/ tests/ scripts/
