@@ -3540,7 +3540,7 @@ requires-dist = [
     { name = "pyyaml", marker = "extra == 'yaml'", specifier = ">=6.0" },
     { name = "redis", marker = "extra == 'dev'", specifier = ">=5.0.0" },
     { name = "redis", marker = "extra == 'redis'", specifier = ">=5.0.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.15.17" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.15.17,<0.16" },
     { name = "sigstore", marker = "extra == 'dev'", specifier = ">=4.3.0" },
     { name = "sigstore", marker = "extra == 'sigstore'", specifier = ">=4.3.0" },
     { name = "starlette", specifier = ">=1.3.1" },
