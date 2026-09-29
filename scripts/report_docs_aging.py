@@ -422,7 +422,9 @@ def check_docs_aging_dashboard(
     stale_days: int = STALE_DAYS,
 ) -> list[str]:
     if _is_shallow_repo(repo_root):
-        return []
+        return [
+            'shallow clone: docs aging check requires full git history (set actions/checkout fetch-depth: 0)'
+        ]
     expected = generate_docs_aging_dashboard(repo_root=repo_root, stale_days=stale_days)
     if not output_path.is_file():
         try:
@@ -455,15 +457,6 @@ def main(argv: list[str] | None = None) -> int:
 
     output_path = Path(args.output)
     if args.check:
-        if _is_shallow_repo(
-            output_path.parent.parent
-            if output_path.is_relative_to(Path('.'))
-            else _REPO_ROOT
-        ):
-            print(
-                'Docs aging dashboard check skipped (shallow git clone has truncated history).'
-            )
-            return 0
         errors = check_docs_aging_dashboard(
             output_path=output_path,
             stale_days=args.stale_days,
