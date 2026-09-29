@@ -401,12 +401,28 @@ def write_docs_aging_dashboard(
     return output_path
 
 
+def _is_shallow_repo(repo_root: Path) -> bool:
+    try:
+        proc = subprocess.run(
+            ['git', 'rev-parse', '--is-shallow-repository'],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return proc.returncode == 0 and proc.stdout.strip() == 'true'
+    except Exception:
+        return False
+
+
 def check_docs_aging_dashboard(
     *,
     repo_root: Path = _REPO_ROOT,
     output_path: Path = _DEFAULT_OUTPUT,
     stale_days: int = STALE_DAYS,
 ) -> list[str]:
+    if _is_shallow_repo(repo_root):
+        return []
     expected = generate_docs_aging_dashboard(repo_root=repo_root, stale_days=stale_days)
     if not output_path.is_file():
         try:
@@ -439,6 +455,15 @@ def main(argv: list[str] | None = None) -> int:
 
     output_path = Path(args.output)
     if args.check:
+        if _is_shallow_repo(
+            output_path.parent.parent
+            if output_path.is_relative_to(Path('.'))
+            else _REPO_ROOT
+        ):
+            print(
+                'Docs aging dashboard check skipped (shallow git clone has truncated history).'
+            )
+            return 0
         errors = check_docs_aging_dashboard(
             output_path=output_path,
             stale_days=args.stale_days,
