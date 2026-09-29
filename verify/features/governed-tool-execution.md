@@ -1,7 +1,7 @@
 ---
 feature: governed-tool-execution
-source_commit: ba6009df
-last_verified_at: 2026-09-24
+source_commit: dc60c1eb
+last_verified_at: 2026-09-29
 verification_status: passed
 covers:
   - teaagent/policy.py

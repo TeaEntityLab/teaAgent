@@ -1,7 +1,7 @@
 ---
 feature: run-lifecycle
-source_commit: a91f1dc2
-last_verified_at: 2026-09-24
+source_commit: dc60c1eb
+last_verified_at: 2026-09-29
 verification_status: passed
 covers:
   - teaagent/runner/
