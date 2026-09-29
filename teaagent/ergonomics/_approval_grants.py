@@ -3,7 +3,6 @@ from __future__ import annotations
 import fnmatch
 import hashlib
 import json
-import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -20,7 +19,11 @@ PENDING_APPROVAL_TTL_SECONDS = int(APPROVAL_TTL_HOURS * 3600)
 
 def get_pending_approval_ttl_seconds() -> int:
     """Configurable pending-approval expiry; may be overridden via environment."""
-    raw = os.environ.get('TEAAGENT_PENDING_APPROVAL_TTL_SECONDS', '')
+    from teaagent.security_env import env_value
+
+    raw = env_value('TEAAGENT_PENDING_APPROVAL_TTL_SECONDS')
+    if not raw:
+        return PENDING_APPROVAL_TTL_SECONDS
     try:
         override = int(raw)
     except ValueError:

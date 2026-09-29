@@ -18,7 +18,9 @@ def sync_acceptance_tiers_doc(*, acceptance_doc: Path) -> None:
     prefix = text[: start + len(START)]
     suffix = text[end:]
     block = '\n\n' + render_tier_markdown().rstrip() + '\n\n'
-    acceptance_doc.write_text(prefix + block + suffix, encoding='utf-8')
+    new_text = prefix + block + suffix
+    if new_text != text:
+        acceptance_doc.write_text(new_text, encoding='utf-8')
 
 
 def main() -> int:

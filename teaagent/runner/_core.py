@@ -446,9 +446,9 @@ class AgentRunner:
             # run_started_extra; otherwise honor TEAAGENT_RUN_ORIGIN so an
             # owner shell alias can mark organic runs. Default 'unknown' —
             # never silently claim 'owner'.
-            import os
+            from teaagent.security_env import env_value
 
-            started_payload['origin'] = os.environ.get('TEAAGENT_RUN_ORIGIN', 'unknown')
+            started_payload['origin'] = env_value('TEAAGENT_RUN_ORIGIN', 'unknown')
         self.event_spine.emit(RunEventType.RUN_STARTED, current_run_id, started_payload)
         return (
             current_run_id,

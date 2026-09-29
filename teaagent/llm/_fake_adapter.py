@@ -59,9 +59,10 @@ class FakeLLMAdapter:
         approval flows without a real provider.
         """
         import json
-        import os
 
-        path = os.environ.get('TEAAGENT_FAKE_SCRIPT')
+        from teaagent.security_env import env_value
+
+        path = env_value('TEAAGENT_FAKE_SCRIPT')
         if not path:
             return []
         try:

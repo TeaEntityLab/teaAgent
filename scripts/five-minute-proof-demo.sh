@@ -56,7 +56,7 @@ import os
 import subprocess
 import sys
 import tempfile
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
@@ -183,9 +183,11 @@ with tempfile.TemporaryDirectory(prefix="teaagent-proof-") as _tmp:
     note("Running:  agent run gpt 'Fix ...' --require-plan  (no --from-plan)")
 
     gate_out = io.StringIO()
+    gate_err = io.StringIO()
     with (
         patch("teaagent.cli.create_llm_adapter", return_value=_noop_adapter()),
         redirect_stdout(gate_out),
+        redirect_stderr(gate_err),
     ):
         gate_code = main([
             "agent", "run", "gpt",
@@ -197,12 +199,14 @@ with tempfile.TemporaryDirectory(prefix="teaagent-proof-") as _tmp:
             "--max-tool-calls", "2",
         ])
 
-    gate_payload = json.loads(gate_out.getvalue())
     assert gate_code == 2, f"Expected exit 2 from plan gate, got {gate_code}"
     assert "a - b" in calc.read_text(encoding="utf-8"), "File must be unchanged"
+    assert "Plan-before-write enforcement requires a bound plan" in gate_err.getvalue()
 
     ok(f"Exit code: {gate_code}  →  gate fired before any LLM call")
-    show_json("error", gate_payload)
+    for line in gate_err.getvalue().splitlines():
+        if "PLAN_GATE" in line or "Plan-before-write" in line:
+            print(f"  {_c('0;90', line)}")
     ok("calc.py unchanged — no write without a plan")
 
     # ── STEP 2-4: Full governed run ─────────────────────────────────────────

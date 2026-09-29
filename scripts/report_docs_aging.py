@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import re
+import subprocess
 import sys
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -167,6 +168,32 @@ def _parse_review_date(text: str) -> datetime | None:
         return None
 
 
+def _file_mtime(path: Path, repo_root: Path) -> datetime:
+    try:
+        rel = path.relative_to(repo_root).as_posix()
+        status = subprocess.run(
+            ['git', 'status', '--porcelain', '--', rel],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if status.returncode == 0 and status.stdout.strip():
+            return datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
+        log = subprocess.run(
+            ['git', 'log', '-1', '--format=%ct', '--', rel],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if log.returncode == 0 and log.stdout.strip():
+            return datetime.fromtimestamp(int(log.stdout.strip()), tz=timezone.utc)
+    except Exception:
+        pass
+    return datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
+
+
 def _scan_doc(
     entry: DocReviewEntry, *, repo_root: Path, stale_days: int
 ) -> DocAgingRow:
@@ -188,7 +215,7 @@ def _scan_doc(
 
     text = path.read_text(encoding='utf-8')
     reviewed = _parse_review_date(text)
-    mtime = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
+    mtime = _file_mtime(path, repo_root)
     file_mtime = mtime.strftime('%Y-%m-%d')
 
     if not _REVIEW_TRIGGER.search(text):
