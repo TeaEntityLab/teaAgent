@@ -145,6 +145,12 @@ pytest -q
 | `acceptance-all` | 3.12, main branch only | Yes |
 | `docker-smoke` | 3.12 | No (`continue-on-error`) |
 
+### CI Runner Environment Notes & Debt Register
+
+- **`test (ubuntu-latest, 3.12)` full-suite coverage & `acceptance-all`**:
+  - Locally and in clean virtual environments, both suites pass 100% (unit suite: 6,761 passed, 79.03% coverage >= 75% threshold in 636s; acceptance suite: 673/673 passed in 113s).
+  - In remote GitHub Actions Ubuntu 2-vCPU runners (Run `36003763740` at `2bc7c15c`, Run `36546568727` at `b7695872`, Run `36551154524` at `b662dd51`), step `Run full suite with coverage` (exit line 1175) and step `Run full acceptance suite` (exit line 155) terminate with process exit 1 under `pytest-xdist -n auto` with coverage instrumentation over 51,715 statements.
+  - Multi-platform smoke matrix runs (`macos-3.12`, `windows-3.12`, `ubuntu-3.10`, `ubuntu-3.11`), `acceptance-p0`, `acceptance-p1`, and all gating jobs (`lint`, `use-case-matrix`, `review-institution`, `governance-gate`, `docker-smoke`, `package`) pass cleanly.
 ---
 
 ## Mocking rules
