@@ -138,6 +138,7 @@ teaagent = "teaagent.cli:main"
 [tool.uv]
 constraint-dependencies = [
     "jaraco-context>=6.1.0",
+    "pyasn1>=0.6.4",
 ]
 override-dependencies = [
     "tuf>=7.0.0,<8",
