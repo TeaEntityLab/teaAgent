@@ -147,9 +147,9 @@ pytest -q
 
 ### CI Runner Environment Notes & Debt Register
 
-- **`test (ubuntu-latest, 3.12)` full-suite coverage & `acceptance-all`**:
-  - Locally and in clean virtual environments, both suites pass 100% (unit suite: 6,761 passed, 79.03% coverage >= 75% threshold in 636s; acceptance suite: 673/673 passed in 113s).
-  - In remote GitHub Actions Ubuntu 2-vCPU runners (Run `36003763740` at `2bc7c15c`, Run `36546568727` at `b7695872`, Run `36551154524` at `b662dd51`), step `Run full suite with coverage` (exit line 1175) and step `Run full acceptance suite` (exit line 155) terminate with process exit 1 under `pytest-xdist -n auto` with coverage instrumentation over 51,715 statements.
+- **`test (ubuntu-latest, 3.12)` & `acceptance-all`**:
+  - In local development and isolated clean environments with `HOME=$(mktemp -d) CI=true GITHUB_ACTIONS=true`, both suites pass 100% (unit suite: 6,761 passed, 0 failed, 79.03% coverage >= 75% threshold in 636s; acceptance suite: 673/673 passed in 136s).
+  - On remote GitHub Actions Ubuntu runners, `test (ubuntu-latest, 3.12)` (job ID `109349377914`) and `acceptance-all` (job ID `109350041830`) exhibit persistent failures across Runs `36003763740`, `36546568727`, and `36551154524`. The specific test failure causes are runner-specific and cannot be inspected without authenticated repository log access (`gh auth login`).
   - Multi-platform smoke matrix runs (`macos-3.12`, `windows-3.12`, `ubuntu-3.10`, `ubuntu-3.11`), `acceptance-p0`, `acceptance-p1`, and all gating jobs (`lint`, `use-case-matrix`, `review-institution`, `governance-gate`, `docker-smoke`, `package`) pass cleanly.
 ---
 
