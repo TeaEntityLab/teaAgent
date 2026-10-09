@@ -6,6 +6,7 @@ Edge case: missing key file raises FileNotFoundError; bad key fails verification
 
 from __future__ import annotations
 
+import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -17,6 +18,11 @@ from teaagent.ssh_signatures import (
     is_ssh_signature_blob,
     sign_message_ssh,
     verify_message_ssh,
+)
+
+_requires_ssh_keygen = pytest.mark.skipif(
+    shutil.which('ssh-keygen') is None,
+    reason='ssh-keygen not installed',
 )
 
 
@@ -69,6 +75,7 @@ class TestIsSSHSignatureBlob:
 
 
 class TestSignAndVerify:
+    @_requires_ssh_keygen
     def test_round_trip_sign_and_verify(self):
         import os
         import shutil
@@ -98,6 +105,7 @@ class TestSignAndVerify:
                 f'Temporary directory {key_dir} was not cleaned up'
             )
 
+    @_requires_ssh_keygen
     def test_tampered_message_fails_verification(self):
         import os
         import shutil
@@ -126,6 +134,7 @@ class TestSignAndVerify:
                 f'Temporary directory {key_dir} was not cleaned up'
             )
 
+    @_requires_ssh_keygen
     def test_wrong_key_fails_verification(self):
         import os
         import shutil

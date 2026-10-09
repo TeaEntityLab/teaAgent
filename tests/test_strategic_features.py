@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -166,7 +167,7 @@ def test_wasm_manifest_written(tmp_path: Path) -> None:
 
 
 @pytest.mark.skipif(
-    subprocess.run(['which', 'ssh-keygen'], capture_output=True).returncode != 0,
+    shutil.which('ssh-keygen') is None,
     reason='ssh-keygen not installed',
 )
 def test_ssh_sign_produces_signature_blob(tmp_path: Path) -> None:

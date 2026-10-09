@@ -4,6 +4,7 @@ from __future__ import annotations
 import io
 import json
 from contextlib import redirect_stdout
+from pathlib import Path
 
 from teaagent.cli import main
 from teaagent.intent import build_task_spec, clarify_task
@@ -48,11 +49,23 @@ def test_cli_clarify_outputs_json() -> None:
     assert payload['question'] == 'What action do you want TeaAgent to take?'
 
 
-def test_cli_agent_run_clarify_stops_before_model_when_ambiguous() -> None:
+def test_cli_agent_run_clarify_stops_before_model_when_ambiguous(
+    tmp_path: Path,
+) -> None:
     output = io.StringIO()
 
     with redirect_stdout(output):
-        exit_code = main(['agent', 'run', 'gpt', 'improve stuff', '--clarify'])
+        exit_code = main(
+            [
+                'agent',
+                'run',
+                'gpt',
+                'improve stuff',
+                '--clarify',
+                '--root',
+                str(tmp_path),
+            ]
+        )
 
     payload = json.loads(output.getvalue())
     assert exit_code == 2
