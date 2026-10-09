@@ -25,7 +25,9 @@ def test_preflight_marks_ambiguous_task_not_ready() -> None:
         assert payload['tool_count'] > 0
 
 
-def test_preflight_includes_routing_and_matching_memories() -> None:
+def test_preflight_includes_routing_and_matching_memories(
+    offline_provider_connectivity: None,
+) -> None:
     with tempfile.TemporaryDirectory() as tmp:
         MemoryCatalog(tmp).add('review this patch in the test suite for regressions')
 
@@ -64,7 +66,9 @@ def test_cli_agent_preflight_returns_needs_clarification_exit_code() -> None:
         assert not payload['ready']
 
 
-def test_cli_agent_preflight_with_route_model_reports_routing() -> None:
+def test_cli_agent_preflight_with_route_model_reports_routing(
+    offline_provider_connectivity: None,
+) -> None:
     with tempfile.TemporaryDirectory() as tmp:
         output = io.StringIO()
 

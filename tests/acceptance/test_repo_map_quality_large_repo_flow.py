@@ -12,7 +12,9 @@ from teaagent.cli import main
 from teaagent.hybrid_search import LocalHybridSearchBackend
 
 
-def test_large_repo_context_pack_hits_target_file_within_slo(tmp_path: Path) -> None:
+def test_large_repo_context_pack_hits_target_file_within_slo(
+    tmp_path: Path, offline_provider_connectivity: None
+) -> None:
     pkg = tmp_path / 'teaagent' / 'core'
     pkg.mkdir(parents=True)
     for index in range(40):
@@ -49,6 +51,7 @@ def test_large_repo_context_pack_hits_target_file_within_slo(tmp_path: Path) -> 
 
 def test_large_repo_context_pack_promotes_index_hit_without_path_mention(
     tmp_path: Path,
+    offline_provider_connectivity: None,
 ) -> None:
     pkg = tmp_path / 'teaagent' / 'routing'
     pkg.mkdir(parents=True)

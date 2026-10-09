@@ -66,7 +66,9 @@ _GIT_ENV = {
 }
 
 
-def test_first_hour_setup_daily_plan_edit_undo(tmp_path: Path) -> None:
+def test_first_hour_setup_daily_plan_edit_undo(
+    tmp_path: Path, offline_provider_connectivity: None
+) -> None:
     calc = tmp_path / 'calc.py'
     test_file = tmp_path / 'test_calc.py'
     calc.write_text('def add(a, b):\n    return a - b\n', encoding='utf-8')

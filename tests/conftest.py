@@ -288,6 +288,36 @@ def empty_tool_registry() -> ToolRegistry:
     return ToolRegistry()
 
 
+@pytest.fixture
+def offline_provider_connectivity(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Report remote-provider connectivity as OK without a DNS lookup.
+
+    ``check_provider_connectivity`` resolves the provider hostname, so readiness
+    tests fail in sandboxes where ``api.openai.com`` does not resolve. Opt in
+    with this fixture for tests that exercise readiness output, not DNS. It is
+    deliberately not autouse, so DNS-path tests keep the real check.
+    """
+    import sys
+
+    import teaagent.preflight as preflight_module
+
+    original = preflight_module.check_provider_connectivity
+
+    def _offline_check(provider: str | None) -> tuple[bool, str]:
+        return True, 'connectivity check skipped (offline test fixture)'
+
+    monkeypatch.setattr(preflight_module, 'check_provider_connectivity', _offline_check)
+    # Also patch any teaagent module that imported the symbol by name. Read
+    # __dict__ rather than getattr() so lazy package __getattr__ hooks never run.
+    for module in list(sys.modules.values()):
+        name = getattr(module, '__name__', '') or ''
+        if not name.startswith('teaagent') or module is preflight_module:
+            continue
+        namespace = getattr(module, '__dict__', None) or {}
+        if namespace.get('check_provider_connectivity') is original:
+            monkeypatch.setattr(module, 'check_provider_connectivity', _offline_check)
+
+
 def make_minimal_registry() -> ToolRegistry:
     """Create a minimal ToolRegistry for testing."""
     return ToolRegistry()
