@@ -48,7 +48,7 @@ class TestShellCommandInjectionFix:
             assert 'stderr' in result
             assert 'exit_code' in result
 
-    def test_shell_dangerous_commands_are_governed_not_executed(self, monkeypatch):
+    def test_shell_blocks_dangerous_commands(self, monkeypatch):
         """Dangerous commands must be refused by governance before any process starts.
 
         `run_shell` has no command denylist by design; safety comes from the

@@ -106,6 +106,9 @@ def test_real_delivery_ledger_passes() -> None:
         pytest.skip(
             reason='no local delivery ledgers under .teaagent/delivery/ (directory is gitignored)'
         )
+    assert all(
+        ledger.is_file() and ledger.name == 'evidence-ledger.yaml' for ledger in ledgers
+    )
     errors: list[str] = []
     for ledger in ledgers:
         errors.extend(validate_ledger(ledger))
