@@ -1,21 +1,21 @@
 {
   "ok": true,
-  "created_at": "2026-09-24T10:31:20+00:00",
-  "repo_root": "/Users/teee/dev/teaagent",
+  "created_at": "2026-10-09T12:20:05+00:00",
+  "repo_root": "/home/user/teaAgent",
   "git": {
-    "branch": "main",
-    "commit": "16a8617c3653508c9f54577296b498c7d3d582ef",
+    "branch": "claude/gracious-wright-p34vu8",
+    "commit": "4bd6b5679fabdb3aae31506a219b737cdd1e0890",
     "dirty": false
   },
   "commands": [
     {
-      "cmd": "/opt/homebrew/opt/python@3.14/bin/python3.14 scripts/validate_docs_consistency.py",
+      "cmd": "/tmp/claude-0/-home-user-teaAgent/85b3f922-99e2-589b-9c9a-2f4fb7529027/scratchpad/venv/bin/python3 scripts/validate_docs_consistency.py",
       "exit_code": 0,
       "stdout": "Risk register evidence coverage: 29/29 rows verified (100%)\nTicket index evidence coverage: 21/21 rows verified (100%)\nDocs consistency check passed.\n",
       "stderr": ""
     },
     {
-      "cmd": "/opt/homebrew/opt/python@3.14/bin/python3.14 scripts/report_docs_aging.py --check",
+      "cmd": "/tmp/claude-0/-home-user-teaAgent/85b3f922-99e2-589b-9c9a-2f4fb7529027/scratchpad/venv/bin/python3 scripts/report_docs_aging.py --check",
       "exit_code": 0,
       "stdout": "Docs aging dashboard check passed.\n",
       "stderr": ""
@@ -23,13 +23,11 @@
   ],
   "docs_freshness": {
     "scanned": 17,
-    "needs_attention": 6,
+    "needs_attention": 4,
     "by_owner": {
       "project": 1,
-      "docs": 1,
       "daily-driver": 2,
-      "cli": 1,
-      "roadmap": 1
+      "cli": 1
     },
     "stale_threshold_days": 90
   },
@@ -61,7 +59,7 @@
         "name": "Durable owner/agent operations",
         "status": "On Hold — shadow wiring exists; ADR-0031 evidence packet prepared 2026-08-27, refreshed 2026-08-31 and re-verified 2026-09-12 over the closed decision window 2026-08-13→2026-09-11 (0 observed / 0 reachable, verdict `unexercised`); extended window 2026-08-13→2026-09-15 after the booked 2026-09-15 M4 dogfood: 8 in-log approval receipts + 1 orphan-sourced D1 subagent_launch denial candidate across 22 reachable runs (21 at dogfood close + 1 hook-fixture run; no new organic receipts), verdict `needs_review`, packet 4/5 prepared (criterion 4 human sign-off `human_required`); `promotion_ready=false` is a hardcoded literal, not a metric; H4 demo `scripts/exercise_h4_shadow_demo.py` exercisable (2 synthetic candidates, must not launder into C1) and guarded (`tests/test_h4_shadow_demo.py`); 2026-09-12 expiry-day state: no dogfood session booked, zero new runs and zero new friction entries since review, so promotion is unreachable — owner decided 2026-09-14: extend with a booked co-maintainer dogfood session (new window close set on booking)",
         "confidence": "Low",
-        "next_gate": "Dogfood session booked 2026-09-15 (background+cockpit, docs/work-log/m4-dogfood-2026-09-15.md) — new ADR-0031 window close 2026-09-15 (decision deadline 2026-09-29 per risk report — G1–G5 condition); EFX live-proof closure remains pending owner authorization"
+        "next_gate": "ADR-0031 decision deadline **2026-11-15** (owner decision 2026-10-09: extend once, bound to a booked B1 owner-observed coding session, date to be booked; revert if it does not occur) — the 2026-09-29 deadline passed without a recorded disposition; dogfood session held 2026-09-15 (background+cockpit, docs/work-log/m4-dogfood-2026-09-15.md); EFX live-proof closure remains pending owner authorization"
       },
       {
         "id": "H6",

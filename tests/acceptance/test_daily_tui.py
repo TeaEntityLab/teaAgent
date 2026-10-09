@@ -78,7 +78,9 @@ def test_daily_tui_prompt_approval_is_auditable() -> None:
         assert (Path(tmp) / 'TODO.md').read_text(encoding='utf-8') == 'done'
 
 
-def test_daily_tui_command_reports_brief() -> None:
+def test_daily_tui_command_reports_brief(
+    offline_provider_connectivity: None,
+) -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         (root / 'README.md').write_text('hello teaagent', encoding='utf-8')

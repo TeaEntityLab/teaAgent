@@ -48,7 +48,21 @@ def _make_adapter(responses: list[str]) -> FakeAdapter:
 # ============================================================================
 
 
-class TuiBasicFlowScenarios(unittest.TestCase):
+class _ScratchRootMixin(unittest.TestCase):
+    """Give each test a throwaway TeaAgentTUI/CLI root.
+
+    Without a root, runtime state (runs, sessions, suspensions) is written into
+    the repository checkout's own .teaagent/ directory.
+    """
+
+    def setUp(self) -> None:
+        super().setUp()
+        scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(scratch.cleanup)
+        self.tui_root = scratch.name
+
+
+class TuiBasicFlowScenarios(_ScratchRootMixin, unittest.TestCase):
     """Core TUI operations: ask, run, help, exit."""
 
     def test_t1_help_command_shows_all_commands(self) -> None:
@@ -142,6 +156,7 @@ class TuiBasicFlowScenarios(unittest.TestCase):
             raise AssertionError('adapter should not be called')
 
         tui = TeaAgentTUI(
+            root=self.tui_root,
             input_fn=lambda _prompt: 'exit',
             output_fn=output.append,
             adapter_factory=fail_factory,
@@ -180,6 +195,7 @@ class TuiBasicFlowScenarios(unittest.TestCase):
         """exit command returns False to signal loop termination."""
         output: list[str] = []
         tui = TeaAgentTUI(
+            root=self.tui_root,
             input_fn=lambda _prompt: 'exit',
             output_fn=output.append,
         )
@@ -190,6 +206,7 @@ class TuiBasicFlowScenarios(unittest.TestCase):
         """quit command also returns False."""
         output: list[str] = []
         tui = TeaAgentTUI(
+            root=self.tui_root,
             input_fn=lambda _prompt: 'exit',
             output_fn=output.append,
         )
@@ -202,13 +219,14 @@ class TuiBasicFlowScenarios(unittest.TestCase):
 # ============================================================================
 
 
-class TuiPermissionApprovalScenarios(unittest.TestCase):
+class TuiPermissionApprovalScenarios(_ScratchRootMixin, unittest.TestCase):
     """Permission mode switching and destructive tool approval in TUI."""
 
     def test_t2a_permission_command_switches_mode(self) -> None:
         """permission command updates the TUI permission_mode."""
         output: list[str] = []
         tui = TeaAgentTUI(
+            root=self.tui_root,
             input_fn=lambda _prompt: 'exit',
             output_fn=output.append,
         )
@@ -227,6 +245,7 @@ class TuiPermissionApprovalScenarios(unittest.TestCase):
         """destructive on/off toggles allow_destructive."""
         output: list[str] = []
         tui = TeaAgentTUI(
+            root=self.tui_root,
             input_fn=lambda _prompt: 'exit',
             output_fn=output.append,
         )
@@ -301,6 +320,7 @@ class TuiPermissionApprovalScenarios(unittest.TestCase):
         """approve/unapprove commands manage the approved_call_ids set."""
         output: list[str] = []
         tui = TeaAgentTUI(
+            root=self.tui_root,
             input_fn=lambda _prompt: 'exit',
             output_fn=output.append,
         )
@@ -321,13 +341,14 @@ class TuiPermissionApprovalScenarios(unittest.TestCase):
 # ============================================================================
 
 
-class TuiProviderModelScenarios(unittest.TestCase):
+class TuiProviderModelScenarios(_ScratchRootMixin, unittest.TestCase):
     """Switching provider and model during a TUI session."""
 
     def test_t3a_provider_command(self) -> None:
         """provider command sets the active provider."""
         output: list[str] = []
         tui = TeaAgentTUI(
+            root=self.tui_root,
             input_fn=lambda _prompt: 'exit',
             output_fn=output.append,
         )
@@ -341,6 +362,7 @@ class TuiProviderModelScenarios(unittest.TestCase):
         """model command sets the model override."""
         output: list[str] = []
         tui = TeaAgentTUI(
+            root=self.tui_root,
             input_fn=lambda _prompt: 'exit',
             output_fn=output.append,
         )
@@ -352,6 +374,7 @@ class TuiProviderModelScenarios(unittest.TestCase):
         """model default clears the override."""
         output: list[str] = []
         tui = TeaAgentTUI(
+            root=self.tui_root,
             input_fn=lambda _prompt: 'exit',
             output_fn=output.append,
         )
@@ -402,13 +425,14 @@ class TuiProviderModelScenarios(unittest.TestCase):
 # ============================================================================
 
 
-class TuiCostAndUndoScenarios(unittest.TestCase):
+class TuiCostAndUndoScenarios(_ScratchRootMixin, unittest.TestCase):
     """Cost tracking, undo, and checkpoint operations in TUI."""
 
     def test_t4a_cost_command(self) -> None:
         """cost command displays the current session cost."""
         output: list[str] = []
         tui = TeaAgentTUI(
+            root=self.tui_root,
             input_fn=lambda _prompt: 'exit',
             output_fn=output.append,
         )
@@ -452,6 +476,7 @@ class TuiCostAndUndoScenarios(unittest.TestCase):
         """budget command shows current budget status."""
         output: list[str] = []
         tui = TeaAgentTUI(
+            root=self.tui_root,
             input_fn=lambda _prompt: 'exit',
             output_fn=output.append,
         )
@@ -463,6 +488,7 @@ class TuiCostAndUndoScenarios(unittest.TestCase):
         """effort command sets the effort level."""
         output: list[str] = []
         tui = TeaAgentTUI(
+            root=self.tui_root,
             input_fn=lambda _prompt: 'exit',
             output_fn=output.append,
         )
@@ -477,13 +503,14 @@ class TuiCostAndUndoScenarios(unittest.TestCase):
 # ============================================================================
 
 
-class TuiSessionMemoryScenarios(unittest.TestCase):
+class TuiSessionMemoryScenarios(_ScratchRootMixin, unittest.TestCase):
     """Chat session lifecycle and memory operations."""
 
     def test_t5a_session_new_command(self) -> None:
         """session new creates a new chat session."""
         output: list[str] = []
         tui = TeaAgentTUI(
+            root=self.tui_root,
             input_fn=lambda _prompt: 'exit',
             output_fn=output.append,
             database=':memory:',
@@ -497,6 +524,7 @@ class TuiSessionMemoryScenarios(unittest.TestCase):
         """session list shows saved sessions."""
         output: list[str] = []
         tui = TeaAgentTUI(
+            root=self.tui_root,
             input_fn=lambda _prompt: 'exit',
             output_fn=output.append,
         )
@@ -540,6 +568,7 @@ class TuiSessionMemoryScenarios(unittest.TestCase):
         """session show displays current session details."""
         output: list[str] = []
         tui = TeaAgentTUI(
+            root=self.tui_root,
             input_fn=lambda _prompt: 'exit',
             output_fn=output.append,
         )
@@ -553,7 +582,7 @@ class TuiSessionMemoryScenarios(unittest.TestCase):
 # ============================================================================
 
 
-class TuiPreflightPlanDailyScenarios(unittest.TestCase):
+class TuiPreflightPlanDailyScenarios(_ScratchRootMixin, unittest.TestCase):
     """Read-only planning and readiness from the TUI."""
 
     def test_t6a_preflight_command(self) -> None:
@@ -611,6 +640,7 @@ class TuiPreflightPlanDailyScenarios(unittest.TestCase):
         """clarify command scores ambiguity without model call."""
         output: list[str] = []
         tui = TeaAgentTUI(
+            root=self.tui_root,
             input_fn=lambda _prompt: 'exit',
             output_fn=output.append,
         )
@@ -622,6 +652,7 @@ class TuiPreflightPlanDailyScenarios(unittest.TestCase):
         """complexity command analyzes task difficulty."""
         output: list[str] = []
         tui = TeaAgentTUI(
+            root=self.tui_root,
             input_fn=lambda _prompt: 'exit',
             output_fn=output.append,
         )
@@ -638,6 +669,7 @@ class TuiPreflightPlanDailyScenarios(unittest.TestCase):
         """route command shows model routing for a task."""
         output: list[str] = []
         tui = TeaAgentTUI(
+            root=self.tui_root,
             input_fn=lambda _prompt: 'exit',
             output_fn=output.append,
         )
@@ -650,13 +682,14 @@ class TuiPreflightPlanDailyScenarios(unittest.TestCase):
 # ============================================================================
 
 
-class TuiOutputModeScenarios(unittest.TestCase):
+class TuiOutputModeScenarios(_ScratchRootMixin, unittest.TestCase):
     """Progress, stream, and subagent toggling."""
 
     def test_t7a_progress_toggle(self) -> None:
         """progress on/off toggles verbose audit output."""
         output: list[str] = []
         tui = TeaAgentTUI(
+            root=self.tui_root,
             input_fn=lambda _prompt: 'exit',
             output_fn=output.append,
         )
@@ -670,6 +703,7 @@ class TuiOutputModeScenarios(unittest.TestCase):
         """stream on/off toggles token-by-token output."""
         output: list[str] = []
         tui = TeaAgentTUI(
+            root=self.tui_root,
             input_fn=lambda _prompt: 'exit',
             output_fn=output.append,
         )
@@ -683,6 +717,7 @@ class TuiOutputModeScenarios(unittest.TestCase):
         """subagent on/off exposes the subagent delegation tool."""
         output: list[str] = []
         tui = TeaAgentTUI(
+            root=self.tui_root,
             input_fn=lambda _prompt: 'exit',
             output_fn=output.append,
         )
@@ -696,6 +731,7 @@ class TuiOutputModeScenarios(unittest.TestCase):
         """chat on/off toggles multi-turn conversation mode."""
         output: list[str] = []
         tui = TeaAgentTUI(
+            root=self.tui_root,
             input_fn=lambda _prompt: 'exit',
             output_fn=output.append,
         )
@@ -709,6 +745,7 @@ class TuiOutputModeScenarios(unittest.TestCase):
         """heartbeat sets the interval for run liveness checks."""
         output: list[str] = []
         tui = TeaAgentTUI(
+            root=self.tui_root,
             input_fn=lambda _prompt: 'exit',
             output_fn=output.append,
         )
@@ -722,7 +759,7 @@ class TuiOutputModeScenarios(unittest.TestCase):
 # ============================================================================
 
 
-class TuiAdvancedOperationsScenarios(unittest.TestCase):
+class TuiAdvancedOperationsScenarios(_ScratchRootMixin, unittest.TestCase):
     """Pin/unpin files, context compaction, runs, resume, root change."""
 
     def test_t8a_pin_and_unpin_files(self) -> None:
@@ -794,6 +831,7 @@ class TuiAdvancedOperationsScenarios(unittest.TestCase):
         """skill-diagnostics shows loaded skill information."""
         output: list[str] = []
         tui = TeaAgentTUI(
+            root=self.tui_root,
             input_fn=lambda _prompt: 'exit',
             output_fn=output.append,
         )
@@ -804,6 +842,7 @@ class TuiAdvancedOperationsScenarios(unittest.TestCase):
         """skill-health shows skill ecosystem health."""
         output: list[str] = []
         tui = TeaAgentTUI(
+            root=self.tui_root,
             input_fn=lambda _prompt: 'exit',
             output_fn=output.append,
         )
@@ -816,7 +855,7 @@ class TuiAdvancedOperationsScenarios(unittest.TestCase):
 # ============================================================================
 
 
-class TuiRunMethodScenarios(unittest.TestCase):
+class TuiRunMethodScenarios(_ScratchRootMixin, unittest.TestCase):
     """TeaAgentTUI.run() entry point with various initial configurations."""
 
     def test_t9a_run_with_initial_task(self) -> None:
@@ -850,6 +889,7 @@ class TuiRunMethodScenarios(unittest.TestCase):
         """run() with exit command returns 0."""
         output: list[str] = []
         tui = TeaAgentTUI(
+            root=self.tui_root,
             input_fn=lambda _prompt: 'exit',
             output_fn=output.append,
         )
@@ -991,42 +1031,6 @@ class TuiConflictResolutionScenarios(unittest.TestCase):
             text=True,
         )
         return td
-
-    def _make_conflicting_branches(self, git_root: str) -> None:
-        """Create two branches with conflicting edits to file.txt."""
-        import subprocess as _sp
-
-        root = Path(git_root)
-        # Create branch-a with different content
-        _sp.run(
-            ['git', 'checkout', '-b', 'branch-a'],
-            cwd=root,
-            capture_output=True,
-            text=True,
-        )
-        (root / 'file.txt').write_text('branch a content', encoding='utf-8')
-        _sp.run(['git', 'add', 'file.txt'], cwd=root, capture_output=True, text=True)
-        _sp.run(
-            ['git', 'commit', '-m', 'branch-a change'],
-            cwd=root,
-            capture_output=True,
-            text=True,
-        )
-        # Back to main and create branch-b
-        _sp.run(
-            ['git', 'checkout', '-b', 'branch-b', 'main'],
-            cwd=root,
-            capture_output=True,
-            text=True,
-        )
-        (root / 'file.txt').write_text('branch b content', encoding='utf-8')
-        _sp.run(['git', 'add', 'file.txt'], cwd=root, capture_output=True, text=True)
-        _sp.run(
-            ['git', 'commit', '-m', 'branch-b change'],
-            cwd=root,
-            capture_output=True,
-            text=True,
-        )
 
     def test_i1_has_merge_conflicts_false_when_clean(self) -> None:
         """has_merge_conflicts returns False in a clean repo with no merge."""

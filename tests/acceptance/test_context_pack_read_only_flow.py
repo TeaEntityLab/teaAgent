@@ -29,7 +29,9 @@ from test_support import can_bind_loopback
 from tests.test_graphqlite_store import FakeGraphQLiteGraph
 
 
-def test_preflight_includes_read_only_context_pack_evidence() -> None:
+def test_preflight_includes_read_only_context_pack_evidence(
+    offline_provider_connectivity: None,
+) -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         module = root / 'teaagent' / 'runner.py'
@@ -68,7 +70,9 @@ def test_preflight_includes_read_only_context_pack_evidence() -> None:
         assert context_pack['graph_rag']['status'] in {'indexed', 'not_indexed'}
 
 
-def test_preflight_graph_rag_includes_hybrid_hits_when_indexed() -> None:
+def test_preflight_graph_rag_includes_hybrid_hits_when_indexed(
+    offline_provider_connectivity: None,
+) -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         doc = root / 'teaagent' / 'runner.py'
@@ -97,7 +101,9 @@ def test_preflight_graph_rag_includes_hybrid_hits_when_indexed() -> None:
         assert 'hybrid' in graph['sources']
 
 
-def test_preflight_graph_rag_includes_knowledge_hits_when_marker_exists() -> None:
+def test_preflight_graph_rag_includes_knowledge_hits_when_marker_exists(
+    offline_provider_connectivity: None,
+) -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         doc = root / 'docs' / 'runner.md'
@@ -128,7 +134,9 @@ def test_preflight_graph_rag_includes_knowledge_hits_when_marker_exists() -> Non
         assert len(graph['sources']['knowledge']['hits']) >= 1
 
 
-def test_preflight_graph_rag_includes_graphqlite_hits_when_db_exists() -> None:
+def test_preflight_graph_rag_includes_graphqlite_hits_when_db_exists(
+    offline_provider_connectivity: None,
+) -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         task = 'runner audit chain regressions in tests'

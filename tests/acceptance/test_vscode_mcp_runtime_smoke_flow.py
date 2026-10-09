@@ -17,13 +17,18 @@ import tempfile
 import threading
 from pathlib import Path
 
+import pytest
+
 from teaagent.llm import available_providers
 from teaagent.mcp_client import MCPHTTPClient
 from teaagent.mcp_http import build_mcp_http_server
 from teaagent.workspace_tools import build_workspace_tool_registry
-from test_support import mcp_test_governance
+from test_support import can_bind_loopback, mcp_test_governance
 
 
+@pytest.mark.skipif(
+    not can_bind_loopback(), reason='loopback bind unavailable in this sandbox'
+)
 def test_vscode_mcp_runtime_smoke_flow() -> None:
     root = Path(__file__).resolve().parents[2]
     package_json = root / 'vscode' / 'package.json'

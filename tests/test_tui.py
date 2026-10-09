@@ -35,6 +35,11 @@ class CapturingAdapterFactory:
 
 
 class TUITests(unittest.TestCase):
+    def setUp(self) -> None:
+        scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(scratch.cleanup)
+        self.tui_root = scratch.name
+
     def test_tui_handles_doctor_smoke_query_and_exit(self) -> None:
         from unittest.mock import patch
 
@@ -48,7 +53,9 @@ class TUITests(unittest.TestCase):
         )
         output = []
         tui = TeaAgentTUI(
-            input_fn=lambda _prompt: next(commands), output_fn=output.append
+            root=self.tui_root,
+            input_fn=lambda _prompt: next(commands),
+            output_fn=output.append,
         )
         graph_store = doctor_graph_store_stub()
 
@@ -79,13 +86,17 @@ class TUITests(unittest.TestCase):
 
     def test_tui_slash_alias_help(self) -> None:
         output: list[str] = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
         self.assertTrue(tui.handle_command('/help'))
         self.assertTrue(any('Commands:' in line for line in output))
 
     def test_tui_use_switches_database_label(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('use ./graph.db'))
 
@@ -94,7 +105,9 @@ class TUITests(unittest.TestCase):
 
     def test_tui_smoke_reports_graphqlite_runtime_error(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         with patch.object(
             tui,
@@ -107,7 +120,9 @@ class TUITests(unittest.TestCase):
 
     def test_tui_query_reports_graphqlite_runtime_error(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         with patch.object(
             tui,
@@ -119,7 +134,7 @@ class TUITests(unittest.TestCase):
         self.assertEqual(output, ['error: sqlite extension unavailable'])
 
     def test_tui_state_save_ignores_os_write_failures(self) -> None:
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit')
+        tui = TeaAgentTUI(root=self.tui_root, input_fn=lambda _prompt: 'exit')
 
         with patch.object(
             Path, 'write_text', side_effect=PermissionError('denied')
@@ -154,6 +169,7 @@ class TUITests(unittest.TestCase):
                 ]
             )
             tui = TeaAgentTUI(
+                root=self.tui_root,
                 input_fn=lambda _prompt: next(commands),
                 output_fn=output.append,
                 adapter_factory=lambda _provider, _model: adapter,
@@ -201,7 +217,9 @@ class TUITests(unittest.TestCase):
 
     def test_tui_destructive_toggle(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('destructive on'))
         self.assertTrue(tui.allow_destructive)
@@ -209,7 +227,9 @@ class TUITests(unittest.TestCase):
 
     def test_tui_permission_mode(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('permission read-only'))
 
@@ -218,7 +238,9 @@ class TUITests(unittest.TestCase):
 
     def test_tui_approval_commands(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('approve write-1'))
         self.assertTrue(tui.handle_command('approvals'))
@@ -444,7 +466,9 @@ class TUITests(unittest.TestCase):
 
     def test_tui_clarify_command(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('clarify improve stuff'))
 
@@ -584,6 +608,12 @@ class TUITests(unittest.TestCase):
             self.assertEqual(output[-1], 'error: no active session')
 
     def test_tui_preflight_command_uses_current_settings(self) -> None:
+        patcher = patch(
+            'teaagent.preflight.check_provider_connectivity',
+            return_value=(True, 'connectivity check skipped (offline test fixture)'),
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
         with tempfile.TemporaryDirectory() as tmp:
             output: list[str] = []
             tui = TeaAgentTUI(
@@ -661,6 +691,7 @@ class TUITests(unittest.TestCase):
             raise AssertionError('adapter should not be created')
 
         tui = TeaAgentTUI(
+            root=self.tui_root,
             input_fn=lambda _prompt: 'exit',
             output_fn=output.append,
             adapter_factory=fail_factory,
@@ -684,13 +715,17 @@ class TUITests(unittest.TestCase):
 
     def test_tui_empty_command_continues(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command(''))
 
     def test_tui_help_command(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('help'))
         self.assertIn('help', output[0])
@@ -699,20 +734,26 @@ class TUITests(unittest.TestCase):
 
     def test_tui_unknown_command(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('unknown-cmd'))
         self.assertIn('unknown command', output[0])
 
     def test_tui_malformed_shlex_input(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('unclosed "quote'))
 
     def test_tui_provider_requires_one_arg(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('provider'))
         self.assertIn('requires exactly one', output[0])
@@ -721,14 +762,18 @@ class TUITests(unittest.TestCase):
 
     def test_tui_provider_unknown_name(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('provider made-up-provider'))
         self.assertIn('unknown provider', output[0])
 
     def test_tui_model_requires_one_arg(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('model'))
         self.assertIn('requires a model name', output[0])
@@ -736,7 +781,10 @@ class TUITests(unittest.TestCase):
     def test_tui_model_default_clears_override(self) -> None:
         output = []
         tui = TeaAgentTUI(
-            input_fn=lambda _prompt: 'exit', output_fn=output.append, model='custom'
+            root=self.tui_root,
+            input_fn=lambda _prompt: 'exit',
+            output_fn=output.append,
+            model='custom',
         )
 
         self.assertTrue(tui.handle_command('model default'))
@@ -744,154 +792,198 @@ class TUITests(unittest.TestCase):
 
     def test_tui_route_model_invalid_arg(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('route-model yes'))
         self.assertIn("requires 'on' or 'off'", output[0])
 
     def test_tui_route_requires_task(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('route'))
         self.assertIn('requires a task', output[0])
 
     def test_tui_root_requires_one_arg(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('root'))
         self.assertIn('requires exactly one path', output[0])
 
     def test_tui_destructive_invalid_arg(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('destructive yes'))
         self.assertIn("requires 'on' or 'off'", output[0])
 
     def test_tui_progress_invalid_arg(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('progress enabled'))
         self.assertIn('not found', output[0])
 
     def test_tui_subagent_invalid_arg(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('subagent enabled'))
         self.assertIn("requires 'on' or 'off'", output[0])
 
     def test_tui_heartbeat_with_number(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('heartbeat 5.5'))
         self.assertEqual(tui.heartbeat_seconds, 5.5)
 
     def test_tui_heartbeat_zero_disables(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('heartbeat 0'))
         self.assertEqual(tui.heartbeat_seconds, 0.0)
 
     def test_tui_heartbeat_negative_clamped(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('heartbeat -1'))
         self.assertEqual(tui.heartbeat_seconds, 0.0)
 
     def test_tui_heartbeat_non_numeric(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('heartbeat abc'))
         self.assertIn('must be a number', output[0])
 
     def test_tui_heartbeat_requires_one_arg(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('heartbeat'))
         self.assertIn('requires a seconds', output[0])
 
     def test_tui_status_requires_run_id(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('status'))
         self.assertIn('requires a run id', output[0])
 
     def test_tui_permission_invalid_raises(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('permission'))
         self.assertIn('requires one mode', output[0])
 
     def test_tui_permission_invalid_mode(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('permission bogus'))
         self.assertIn('unknown permission mode', output[0])
 
     def test_tui_approve_requires_call_id(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('approve'))
         self.assertIn('requires one call id', output[0])
 
     def test_tui_unapprove_requires_call_id(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('unapprove'))
         self.assertIn('requires one call id', output[0])
 
     def test_tui_ask_requires_task(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('ask'))
         self.assertIn('requires a task', output[0])
 
     def test_tui_ask_clarify_requires_task(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('ask --clarify'))
         self.assertIn('requires a task', output[0])
 
     def test_tui_clarify_requires_task(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('clarify'))
         self.assertIn('requires a task', output[0])
 
     def test_tui_preflight_requires_task(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('preflight'))
         self.assertIn('requires a task', output[0])
 
     def test_tui_show_requires_run_id(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('show'))
         self.assertIn('requires a run id', output[0])
 
     def test_tui_resume_requires_run_id(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('resume'))
         self.assertIn('requires a run id', output[0])
@@ -908,28 +1000,36 @@ class TUITests(unittest.TestCase):
 
     def test_tui_use_requires_one_arg(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('use'))
         self.assertIn('requires exactly one database path', output[0])
 
     def test_tui_query_requires_cypher(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('query'))
         self.assertIn('requires a Cypher string', output[0])
 
     def test_tui_memory_no_subcommand(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('memory'))
         self.assertIn('requires add, list, search, or show', output[0])
 
     def test_tui_memory_add_no_text(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('memory add'))
         self.assertIn('requires text', output[0])
@@ -946,21 +1046,27 @@ class TUITests(unittest.TestCase):
 
     def test_tui_memory_search_no_query(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('memory search'))
         self.assertIn('requires a query', output[0])
 
     def test_tui_memory_show_requires_id(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('memory show'))
         self.assertIn('requires one id', output[0])
 
     def test_tui_memory_unknown_subcommand(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('memory delete'))
         self.assertIn('unknown memory command', output[0])
@@ -981,7 +1087,9 @@ class TUITests(unittest.TestCase):
         def raise_eof(_prompt: str) -> str:
             raise EOFError()
 
-        tui = TeaAgentTUI(input_fn=raise_eof, output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=raise_eof, output_fn=output.append
+        )
 
         exit_code = tui.run()
         self.assertEqual(exit_code, 0)
@@ -989,7 +1097,9 @@ class TUITests(unittest.TestCase):
 
     def test_tui_subagent_on_off(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('subagent on'))
         self.assertTrue(tui.subagent)
@@ -998,7 +1108,9 @@ class TUITests(unittest.TestCase):
 
     def test_tui_clarify_accepts_concrete_task(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(
             tui.handle_command('clarify Update docs/cli.md to document clarify command')
@@ -1008,7 +1120,9 @@ class TUITests(unittest.TestCase):
 
     def test_tui_print_header_output(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
         tui._print_header()
 
         self.assertEqual(output[0], 'TeaAgent TUI 0.1.0')
@@ -1087,7 +1201,9 @@ class TUITests(unittest.TestCase):
     def test_tui_cost_command_falls_back_to_local_when_controller_is_zero(self) -> None:
         """When controller returns 0 but local has accumulated cost, use local."""
         output: list[str] = []
-        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _: '', output_fn=output.append
+        )
         tui._session_cost_cents = 250.0
         tui._max_cost_budget_cents = 1000  # set cap for deterministic state
         tui._handle_cost()
@@ -1192,7 +1308,9 @@ class TUITests(unittest.TestCase):
 
     def test_tui_background_command_is_honest_checkpoint(self) -> None:
         output = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
 
         self.assertTrue(tui.handle_command('background'))
 
@@ -1320,7 +1438,9 @@ class TUITests(unittest.TestCase):
 
     def test_tui_effort_requires_valid_level(self) -> None:
         output: list[str] = []
-        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _: '', output_fn=output.append
+        )
         tui._handle_effort([])
         self.assertIn('effort:', output[-1])
         tui._handle_effort(['invalid'])
@@ -1328,7 +1448,9 @@ class TUITests(unittest.TestCase):
 
     def test_tui_effort_sets_level_and_budget(self) -> None:
         output: list[str] = []
-        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _: '', output_fn=output.append
+        )
         tui._handle_effort(['high'])
         self.assertEqual(tui._effort_level, 'high')
         self.assertEqual(tui._max_cost_budget_cents, 5000)
@@ -1338,7 +1460,9 @@ class TUITests(unittest.TestCase):
 
     def test_tui_effort_low_sets_200_cents(self) -> None:
         output: list[str] = []
-        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _: '', output_fn=output.append
+        )
         tui._handle_effort(['low'])
         self.assertEqual(tui._effort_level, 'low')
         self.assertEqual(tui._max_cost_budget_cents, 200)
@@ -1346,14 +1470,18 @@ class TUITests(unittest.TestCase):
         self.assertIn('budget=$2', ' '.join(output))
 
     def test_tui_effort_default_is_unlimited(self) -> None:
-        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=list.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _: '', output_fn=list.append
+        )
         self.assertEqual(tui._effort_level, 'unlimited')
         self.assertIsNone(tui._max_cost_budget_cents)
         self.assertIsNone(tui._runtime_max_cost_cents)
 
     def test_tui_effort_unlimited_clears_budget(self) -> None:
         output: list[str] = []
-        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _: '', output_fn=output.append
+        )
         # Switch to low first to change from default unlimited
         tui._handle_effort(['low'])
         tui._handle_effort(['unlimited'])
@@ -1363,7 +1491,9 @@ class TUITests(unittest.TestCase):
 
     def test_tui_effort_unlimited_shows_unlimited_text(self) -> None:
         output: list[str] = []
-        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _: '', output_fn=output.append
+        )
         tui._handle_effort(['unlimited'])
         text = ' '.join(output)
         self.assertIn('unlimited', text)
@@ -1371,7 +1501,9 @@ class TUITests(unittest.TestCase):
 
     def test_tui_budget_unlimited_shows_unlimited_text(self) -> None:
         output: list[str] = []
-        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _: '', output_fn=output.append
+        )
         tui._max_cost_budget_cents = None
         tui._session_cost_cents = 50.0
         tui._handle_budget()
@@ -1419,7 +1551,9 @@ class TUITests(unittest.TestCase):
 
     def test_tui_budget_shows_remaining(self) -> None:
         output: list[str] = []
-        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _: '', output_fn=output.append
+        )
         # Switch to normal so budget has a finite limit
         tui._handle_effort(['normal'])
         tui._session_cost_cents = 50.0
@@ -1458,7 +1592,9 @@ class TUITests(unittest.TestCase):
 
     def test_tui_compact_no_session(self) -> None:
         output: list[str] = []
-        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _: '', output_fn=output.append
+        )
         tui._handle_compact()
         self.assertIn('no active chat session', ' '.join(output))
 
@@ -1466,7 +1602,9 @@ class TUITests(unittest.TestCase):
 
     def test_tui_checkpoint_not_created_yet_returns_false(self) -> None:
         output: list[str] = []
-        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _: '', output_fn=output.append
+        )
         ok = tui._restore_checkpoint()
         self.assertFalse(ok)
         self.assertIn('no checkpoint', ' '.join(output))
@@ -1486,7 +1624,9 @@ class TUITests(unittest.TestCase):
 
     def test_tui_handle_undo_delegates(self) -> None:
         output: list[str] = []
-        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _: '', output_fn=output.append
+        )
         tui._handle_undo()
         # Without a chat controller journal, undo emits a "nothing to undo" message
         self.assertIn('nothing to undo', ' '.join(output))
@@ -1607,7 +1747,9 @@ class TUITests(unittest.TestCase):
     def test_tui_ask_safe_wrapper_handles_exception(self) -> None:
         """_safe_run_agent_task in _commands.py should catch exceptions from _run_agent_task."""
         output: list[str] = []
-        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _: '', output_fn=output.append
+        )
         with patch.object(
             tui, '_run_agent_task', side_effect=RuntimeError('API failure')
         ):
@@ -1622,7 +1764,9 @@ class TUITests(unittest.TestCase):
 
     def test_tui_pin_requires_path(self) -> None:
         output: list[str] = []
-        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _: '', output_fn=output.append
+        )
         tui._handle_pin([])
         self.assertIn('requires a file path', ' '.join(output))
 
@@ -1637,13 +1781,17 @@ class TUITests(unittest.TestCase):
 
     def test_tui_unpin_requires_path(self) -> None:
         output: list[str] = []
-        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _: '', output_fn=output.append
+        )
         tui._handle_unpin([])
         self.assertIn('requires a file path', ' '.join(output))
 
     def test_tui_pinned_empty(self) -> None:
         output: list[str] = []
-        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _: '', output_fn=output.append
+        )
         tui._handle_pinned()
         self.assertIn('no files pinned', ' '.join(output))
 
@@ -1669,7 +1817,9 @@ class TUITests(unittest.TestCase):
     def test_tui_file_watcher_start_stop(self) -> None:
         """Verify watcher starts and stops cleanly."""
         output: list[str] = []
-        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        tui = TeaAgentTUI(
+            root=self.tui_root, input_fn=lambda _: '', output_fn=output.append
+        )
         with (
             patch.object(tui, '_start_file_watcher') as mock_start,
             patch.object(tui, '_stop_file_watcher') as mock_stop,
@@ -1802,6 +1952,7 @@ class TUITests(unittest.TestCase):
         """
         calls: list[str] = []
         tui = TeaAgentTUI(
+            root=self.tui_root,
             input_fn=lambda _: (_ for _ in ()).throw(EOFError),  # exits immediately
             output_fn=lambda msg: calls.append(str(msg)),
         )

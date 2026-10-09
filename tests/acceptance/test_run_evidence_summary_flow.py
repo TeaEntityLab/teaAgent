@@ -310,7 +310,10 @@ def test_real_run_receipt_completeness_from_plan(tmp_path: Path) -> None:
                 {
                     'type': 'tool',
                     'tool_name': 'workspace_run_shell_inspect',
-                    'arguments': {'command': "rg 'return a \\+ b' calc.py"},
+                    # POSIX grep (BRE: '+' is literal), not rg: GitHub ubuntu runners
+                    # ship no ripgrep, and the receipt then lacked '[exit 0]' because
+                    # the inspect command never started (R0-5, 2026-10-09).
+                    'arguments': {'command': "grep 'return a + b' calc.py"},
                     'call_id': 'verify-calc',
                 }
             ),

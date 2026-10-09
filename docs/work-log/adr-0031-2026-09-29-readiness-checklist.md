@@ -1,23 +1,28 @@
-# ADR-0031 2026-09-29 Close — Owner Readiness Checklist
+# ADR-0031 Close — Owner Readiness Checklist (now 2026-11-15)
 
 > **Claim class:** Working document for the ADR-0031 expiry close. Not a
 > scheduling authority. Does not flip H4 mode.
-> **Trigger:** ADR-0031 shadow-to-enforce expiry review, 2026-09-29
-> (extended 2026-09-15 conditioned on G1–G5 landing and re-dogfood).
+> **Trigger:** ADR-0031 shadow-to-enforce expiry review, **2026-11-15**
+> (extended 2026-10-09 by owner decision, bound to a booked B1 session; the
+> 2026-09-29 close passed with this checklist 0/8 and no disposition — see
+> `adr-0031-2026-10-09-extension-decision.md`; earlier extension 2026-09-15
+> conditioned on G1–G5 landing and re-dogfood).
 > **Authority:** `docs/adr/0031-shadow-mode-exit-criteria.md`,
 > `docs/plans/current-roadmap-execution-plan-2026-08-26.md` §6,
 > `docs/specs/rbac-shadow-to-enforce-promotion-spec-2026-07-11.md`,
 > `docs/work-log/dogfood-findings-2026-09-15.md`.
 > **Owner surface:** The owner must complete and sign this checklist before
-> the 2026-09-29 close; agents may prepare and update it but may not check
+> the 2026-11-15 close; agents may prepare and update it but may not check
 > the sign-off boxes. Delete or supersede this file at the close.
 
-## Close this checklist no later than 2026-09-29
+## Close this checklist no later than 2026-11-15
+
+> Item 0 (added 2026-10-09): **B1 session booked and held** — date: _to be booked_. If unbooked or not held by 2026-11-15, the disposition is revert (owner decision 2026-10-09); items 1–8 are then closed by the revert work-log instead of by sign-off.
 
 - [ ] 1. Final evidence window is selected. Window must end on or before
   2026-09-29 and contain at least one real run per week, or a documented gap.
 - [ ] 2. Criterion 1 — 30-day shadow receipts:
-  `prepare_h4_evidence.py --since <start> --until 2026-09-29` was run; all
+  `prepare_h4_evidence.py --since <start> --until 2026-11-15` was run; all
   `h4_governance_shadow` denial candidates have owner verdicts (true/false
   positive). D1 verdict recorded.
 - [ ] 3. Criterion 2 — coverage: `check_h4_coverage.py --matrix <matrix> --output <report.json>` reports `gaps: []`
@@ -47,9 +52,9 @@ After the owner checks all boxes, run:
 python3 scripts/build_h4_decision_packet.py \
   --audit-log "$AUDIT_LOG" \
   --since <start> \
-  --until 2026-09-29 \
+  --until 2026-11-15 \
   --threshold-ms 50.0 \
-  --output .teaagent/reviews/adr-0031/decision-packet-2026-09-29.json
+  --output .teaagent/reviews/adr-0031/decision-packet-2026-11-15.json
 python3 scripts/validate_docs_consistency.py
 ./scripts/verify_docs.sh
 ```

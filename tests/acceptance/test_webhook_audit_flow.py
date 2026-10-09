@@ -20,9 +20,12 @@ import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any
 
+import pytest
+
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
 from teaagent.types import AuditLogger
 from teaagent.webhook_sink import WebhookAuditSink
+from test_support import can_bind_loopback
 
 
 class _Collector(BaseHTTPRequestHandler):
@@ -67,6 +70,9 @@ class _StubAdapter:
         )
 
 
+@pytest.mark.skipif(
+    not can_bind_loopback(), reason='loopback bind unavailable in this sandbox'
+)
 def test_run_events_delivered_to_webhook(tmp_path):
     server, url = _start()
     try:
@@ -85,6 +91,9 @@ def test_run_events_delivered_to_webhook(tmp_path):
         server.shutdown()
 
 
+@pytest.mark.skipif(
+    not can_bind_loopback(), reason='loopback bind unavailable in this sandbox'
+)
 def test_webhook_hmac_verifiable(tmp_path):
     server, url = _start()
     secret = 'my-webhook-secret'
@@ -105,6 +114,9 @@ def test_webhook_hmac_verifiable(tmp_path):
         server.shutdown()
 
 
+@pytest.mark.skipif(
+    not can_bind_loopback(), reason='loopback bind unavailable in this sandbox'
+)
 def test_webhook_event_filter_limits_delivery(tmp_path):
     server, url = _start()
     try:

@@ -474,6 +474,10 @@ def test_config_file_is_directory(tmp_path):
     assert rc.get('permission_mode') == 'prompt'
 
 
+@pytest.mark.skipif(
+    getattr(os, 'geteuid', lambda: -1)() == 0,
+    reason='file-mode tests cannot run as root (chmod is not enforced)',
+)
 def test_permission_denied_on_config_file(tmp_path):
     """Test that permission denied on config file is handled."""
     cfg_dir = tmp_path / '.teaagent'

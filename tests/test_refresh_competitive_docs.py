@@ -2,8 +2,33 @@ from __future__ import annotations
 
 # test-type: behavior
 import sys
+from collections.abc import Iterator
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
+
+import pytest
+
+from test_support import repo_is_shallow
+
+# refresh_competitive_docs regenerates these two tracked files in place and the
+# docs-consistency validator then reads them back, so the tests must run against
+# the repo. Restore the prior bytes afterwards so a test run leaves git clean.
+_TRACKED_GENERATED_DOCS = (
+    'docs/generated/docs-aging-dashboard.md',
+    'docs/generated/docs-inventory.md',
+)
+
+
+@pytest.fixture(autouse=True)
+def _restore_tracked_generated_docs() -> Iterator[None]:
+    root = Path(__file__).resolve().parents[1]
+    paths = [root / rel for rel in _TRACKED_GENERATED_DOCS]
+    prior = {path: path.read_bytes() for path in paths}
+    try:
+        yield
+    finally:
+        for path, data in prior.items():
+            path.write_bytes(data)
 
 
 def _load_refresh_module():
@@ -19,6 +44,10 @@ def _load_refresh_module():
 
 
 def test_refresh_competitive_docs_passes_for_repo(tmp_path: Path) -> None:
+    if repo_is_shallow():
+        pytest.skip(
+            reason='shallow clone: docs aging check needs full git history (actions/checkout fetch-depth: 0)'
+        )
     root = Path(__file__).resolve().parents[1]
     module = _load_refresh_module()
     acceptance_copy = tmp_path / 'acceptance.md'
@@ -44,6 +73,10 @@ def test_refresh_competitive_docs_passes_for_repo(tmp_path: Path) -> None:
 
 
 def test_check_competitive_docs_passes_without_mutating_tracked_docs() -> None:
+    if repo_is_shallow():
+        pytest.skip(
+            reason='shallow clone: docs aging check needs full git history (actions/checkout fetch-depth: 0)'
+        )
     root = Path(__file__).resolve().parents[1]
     module = _load_refresh_module()
     tracked_paths = [
@@ -69,6 +102,10 @@ def test_check_competitive_docs_passes_without_mutating_tracked_docs() -> None:
 
 
 def test_check_competitive_docs_reports_stale_generated_file(tmp_path: Path) -> None:
+    if repo_is_shallow():
+        pytest.skip(
+            reason='shallow clone: docs aging check needs full git history (actions/checkout fetch-depth: 0)'
+        )
     root = Path(__file__).resolve().parents[1]
     module = _load_refresh_module()
     acceptance_copy = tmp_path / 'acceptance.md'
@@ -108,6 +145,10 @@ def test_check_competitive_docs_reports_stale_generated_file(tmp_path: Path) -> 
 
 
 def test_main_check_mode_accepts_argv() -> None:
+    if repo_is_shallow():
+        pytest.skip(
+            reason='shallow clone: docs aging check needs full git history (actions/checkout fetch-depth: 0)'
+        )
     module = _load_refresh_module()
     result = module.main(['--check'])
     # The test may fail due to provider count mismatches or missing ergonomics-kpi.json

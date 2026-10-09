@@ -251,9 +251,17 @@ def format_run_receipt(  # noqa: C901
             )
             if command:
                 exit_code = getattr(cmd, 'exit_code', None)
+                error = getattr(cmd, 'error', None)
                 if isinstance(cmd, dict):
                     exit_code = cmd.get('exit_code', exit_code)
-                suffix = f' [exit {exit_code}]' if exit_code is not None else ''
+                    error = cmd.get('error', error)
+                if exit_code is not None:
+                    suffix = f' [exit {exit_code}]'
+                elif error:
+                    # Flatten whitespace so a multi-line error cannot break the receipt.
+                    suffix = f' [failed: {" ".join(str(error).split())}]'
+                else:
+                    suffix = ' [outcome unknown]'
                 lines.append(f'  - {command}{suffix}')
 
     if summary.tests_executed:

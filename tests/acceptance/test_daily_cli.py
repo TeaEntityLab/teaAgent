@@ -52,7 +52,9 @@ from teaagent.cli import main
 from test_support import can_bind_loopback
 
 
-def test_daily_cli_read_only_run_preflight_and_audit_summary() -> None:
+def test_daily_cli_read_only_run_preflight_and_audit_summary(
+    offline_provider_connectivity: None,
+) -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         (root / 'README.md').write_text('hello teaagent', encoding='utf-8')
@@ -122,7 +124,9 @@ def test_daily_cli_read_only_run_preflight_and_audit_summary() -> None:
         assert preflight_payload['context_pack']['read_only'] is True
 
 
-def test_daily_cli_brief_is_read_only_and_reports_token_budget() -> None:
+def test_daily_cli_brief_is_read_only_and_reports_token_budget(
+    offline_provider_connectivity: None,
+) -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         (root / 'README.md').write_text('hello teaagent', encoding='utf-8')

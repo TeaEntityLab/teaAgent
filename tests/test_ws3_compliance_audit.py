@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -21,6 +22,10 @@ def test_compliance_mode_env_helper(monkeypatch: pytest.MonkeyPatch) -> None:
     assert compliance_mode() is True
 
 
+@pytest.mark.skipif(
+    getattr(os, 'geteuid', lambda: -1)() == 0,
+    reason='file-mode tests cannot run as root (chmod is not enforced)',
+)
 def test_compliance_mode_raises_on_disk_write_failure() -> None:
     with TemporaryDirectory() as tmp:
         log = Path(tmp) / 'nested' / 'run.jsonl'
@@ -34,6 +39,10 @@ def test_compliance_mode_raises_on_disk_write_failure() -> None:
             log.parent.chmod(0o755)
 
 
+@pytest.mark.skipif(
+    getattr(os, 'geteuid', lambda: -1)() == 0,
+    reason='file-mode tests cannot run as root (chmod is not enforced)',
+)
 def test_non_compliance_mode_continues_in_memory_on_disk_failure() -> None:
     with TemporaryDirectory() as tmp:
         log = Path(tmp) / 'nested' / 'run.jsonl'

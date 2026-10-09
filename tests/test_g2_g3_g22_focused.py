@@ -19,6 +19,13 @@ from teaagent.runner import RunResult
 def test_rollback_refuses_when_head_not_on_sandbox_branch(tmp_path: Path) -> None:
     """G2: rollback() must not reset the original branch after keep()."""
     subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
+    # Pin the initial branch to main regardless of init.defaultBranch.
+    subprocess.run(
+        ['git', 'symbolic-ref', 'HEAD', 'refs/heads/main'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
     subprocess.run(
         ['git', 'config', 'user.email', 'test@example.com'],
         cwd=tmp_path,
@@ -68,6 +75,13 @@ def test_rollback_refuses_when_head_not_on_sandbox_branch(tmp_path: Path) -> Non
 def test_sandbox_stores_original_sha_for_preview_diff(tmp_path: Path) -> None:
     """G2: sandbox captures the original SHA at start."""
     subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
+    # Pin the initial branch to main regardless of init.defaultBranch.
+    subprocess.run(
+        ['git', 'symbolic-ref', 'HEAD', 'refs/heads/main'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
     subprocess.run(
         ['git', 'config', 'user.email', 'test@example.com'],
         cwd=tmp_path,

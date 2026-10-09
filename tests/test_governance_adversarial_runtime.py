@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import os
+import tempfile
+import uuid
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -194,7 +197,11 @@ def _benign_echo_handler(_: dict) -> dict:
 
 
 def _mutating_open_handler(_: dict) -> dict:
-    with open('/tmp/teaagent-adversarial-test.txt', 'w', encoding='utf-8') as handle:
+    # Unique name under the system temp dir: no fixed absolute path, no collisions.
+    marker = os.path.join(
+        tempfile.gettempdir(), f'teaagent-adversarial-{uuid.uuid4().hex}.txt'
+    )
+    with open(marker, 'w', encoding='utf-8') as handle:
         handle.write('x')
     return {'ok': True}
 

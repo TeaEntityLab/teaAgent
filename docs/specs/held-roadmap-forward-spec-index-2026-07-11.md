@@ -209,7 +209,7 @@ not create authority.
 
 | Date / trigger | Decision | Required packet |
 | --- | --- | --- |
-| 2026-09-29 (extended 2026-09-15 from 2026-09-12) | ADR-0031: promote, extend, or revert H4 shadow wiring | 30-day receipt analysis, policy/RBAC coverage, benchmark, rollback proof, owner D1 verdict, owner sign-off |
+| 2026-11-15 (extended 2026-10-09 from 2026-09-29, which passed without a recorded disposition; bound to a booked B1 session, else revert) | ADR-0031: promote, extend, or revert H4 shadow wiring | 30-day receipt analysis, policy/RBAC coverage, benchmark, rollback proof, owner D1 verdict, owner sign-off |
 | First dated owner decision to widen ADR-0042 or first provider-specific settlement need | Decide whether EFX-FUTURE enters the product promise | EFX-001–003 closure, provider idempotency/status/reconciliation contract, effect-specific crash evidence, non-goals, and owner rationale |
 | First qualifying participant | Start WDH-002 real session | Consent/privacy pre-flight; protocol §5 |
 | First owner update friction | Consider `teaagent update` | Signed update trust boundary + dormant blocker fixes |

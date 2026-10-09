@@ -147,11 +147,38 @@ pytest -q
 
 ### CI Runner Environment Notes & Debt Register
 
-- **`test (ubuntu-latest, 3.12)` & `acceptance-all`**:
-  - The unit test suite with coverage instrumentation passes 100% locally under `PYTHONHASHSEED="0"` (6,761 passed, 0 failed, 79.03% coverage >= 75% threshold in 636s).
-  - The acceptance test suite passes 100% in a clean git worktree with no repo `.venv`, clean `HOME=$(mktemp -d)`, `CI=true`, and `GITHUB_ACTIONS=true` (673/673 passed in 95s).
-  - On remote GitHub Actions Ubuntu runners, `test (ubuntu-latest, 3.12)` (job ID `109349377914`) and `acceptance-all` (job ID `109350041830`) exhibit persistent failures across Runs `36003763740`, `36546568727`, and `36551154524`. The specific test failure causes are not yet reproduced off-runner; `pytest-github-actions-annotate-failures` is installed in CI so subsequent runs self-report failing test names via public check-run annotations.
-  - Multi-platform smoke matrix runs (`macos-3.12`, `windows-3.12`, `ubuntu-3.10`, `ubuntu-3.11`), `acceptance-p0`, `acceptance-p1`, and all gating jobs (`lint`, `use-case-matrix`, `review-institution`, `governance-gate`, `docker-smoke`, `package`) pass cleanly.
+> **Corrected 2026-10-09.** The 2026-09-30 wording ("specific test failure causes
+> are not yet reproduced off-runner") was wrong: the CI job logs reach the pytest
+> summary and name the failing tests, and all 9 reproduce off-runner (8 in a shallow clone, the ninth with `rg` removed from `PATH`). Record
+> in [Roadmap Review 2026-10-09](../reviews/roadmap-review-and-improvement-plan-2026-10-09.md) §3.1.
+
+- **Observed:** `main` runs 851–858 (2026-09-29→09-30) failed only in
+  `test (ubuntu-latest, 3.12)` (job `109721112346`: `9 failed, 6752 passed,
+  25 skipped`, coverage 78.97% ≥ 75%) and `acceptance-all` (job `109721655607`:
+  `1 failed, 672 passed`). The 13 other jobs were green. The failures are
+  deterministic test failures, not runner resource termination.
+- **Root causes (verified by re-running the 9 tests in a `--depth 50` clone and
+  again after `git fetch --unshallow`):**
+
+  | Tests | Cause | Repair (R0-1…R0-4, landed 2026-10-09) |
+  | --- | --- | --- |
+  | `test_check_dr006_gate_trailer.py::test_real_history_87d1c61_passes` | commit `87d1c61` absent from a shallow checkout | `fetch-depth: 0` on the `test` and `acceptance-all` checkouts; test skips with a reason when the commit is absent |
+  | `test_refresh_competitive_docs.py` (4 tests), `test_report_docs_aging.py::test_check_docs_aging_dashboard_passes_for_repo` | `cc7bed6` made the docs-aging check fail loud on shallow clones; these tests run the real repo check | same `fetch-depth: 0`; tests skip with a reason on a shallow clone |
+  | `test_evidence_ledger.py::test_real_delivery_ledger_passes` | globbed `.teaagent/delivery/**`, which is gitignored, so it could only pass on the author's machine | skip with a reason when no local ledger exists; validation still runs when one does |
+  | `test_g2_g3_g22_focused.py::test_rollback_refuses_when_head_not_on_sandbox_branch` | `git init` then `git checkout main`; runners default to `master` | pin the initial branch with `git symbolic-ref HEAD refs/heads/main` after `git init` |
+  | `acceptance/test_run_evidence_summary_flow.py::test_real_run_receipt_completeness_from_plan` | the fake-adapter verify step ran `rg`; GitHub `ubuntu-latest` has no ripgrep, so the inspect tool raised `FileNotFoundError`, the runner recorded `tool_call_failed`, and the receipt rendered the command without any outcome (reproduced off-runner by removing `rg` from `PATH`) | test uses POSIX `grep`; receipt builder now renders `[failed: …]` / `[outcome unknown]` for commands that did not complete (R0-5) |
+
+- **Still true:** the multi-platform smoke matrix (`macos-3.12`, `windows-3.12`,
+  `ubuntu-3.10`, `ubuntu-3.11`), `acceptance-p0`, `acceptance-p1`, and the gating
+  jobs (`lint`, `use-case-matrix`, `review-institution`, `governance-gate`,
+  `docker-smoke`, `package`) pass. The unit suite with coverage passes locally
+  (6,761 passed, 79.03% coverage, 636 s on 2026-09-30).
+- **Rule derived from this incident:** a test that reads repository history, the
+  repo-root `.teaagent/` directory, or the user's git configuration must either
+  create that state itself under `tmp_path` or skip with an explicit `reason=`
+  when the state is absent. `pytest-github-actions-annotate-failures` stays
+  installed in CI so failing test names are always public.
+
 ---
 
 ## Mocking rules

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import subprocess
+import sys
 from pathlib import Path
 
 TIERS: dict[str, tuple[str, ...]] = {
@@ -66,7 +67,7 @@ def tier_paths(tier: str, *, acceptance_dir: Path) -> list[str]:
 
 def run_tier(tier: str, *, acceptance_dir: Path) -> int:
     targets = tier_paths(tier, acceptance_dir=acceptance_dir)
-    cmd = ['python3', '-m', 'pytest', '-q', *targets]
+    cmd = [sys.executable, '-m', 'pytest', '-q', *targets]
     result = subprocess.run(cmd, check=False)
     return result.returncode
 

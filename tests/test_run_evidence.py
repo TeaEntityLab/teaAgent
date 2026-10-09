@@ -48,6 +48,89 @@ def test_extract_commands_run():
     assert commands[1].command == 'echo "hello"'
 
 
+def test_extract_commands_run_attaches_failed_start_error_without_exit_code():
+    """A shell call that failed to start keeps exit_code None and records its error."""
+    events = [
+        {
+            'event_type': 'tool_call_started',
+            'payload': {
+                'tool_name': 'workspace_run_shell_inspect',
+                'call_id': 'verify-1',
+                'arguments': {'command': 'nosuchtool --check'},
+            },
+            'created_at': 1234567890.0,
+        },
+        {
+            'event_type': 'tool_call_failed',
+            'payload': {
+                'tool_name': 'workspace_run_shell_inspect',
+                'call_id': 'verify-1',
+                'error': 'FileNotFoundError: nosuchtool',
+            },
+            'created_at': 1234567891.0,
+        },
+    ]
+
+    commands = extract_commands_run(events)
+    assert len(commands) == 1
+    assert commands[0].command == 'nosuchtool --check'
+    assert commands[0].exit_code is None
+    assert commands[0].error == 'FileNotFoundError: nosuchtool'
+    assert commands[0].timestamp == 1234567890.0
+    data = RunEvidenceBundle(run_id='failed-start', commands_run=commands).to_dict()
+    assert data['commands_run'][0]['error'] == 'FileNotFoundError: nosuchtool'
+    assert data['commands_run'][0]['exit_code'] is None
+
+
+def test_extract_commands_run_started_only_has_no_error():
+    """A started call with no completion event has neither exit code nor error."""
+    events = [
+        {
+            'event_type': 'tool_call_started',
+            'payload': {
+                'tool_name': 'workspace_run_shell_inspect',
+                'call_id': 'verify-2',
+                'arguments': {'command': 'python -m pytest -q'},
+            },
+            'created_at': 1234567890.0,
+        },
+    ]
+
+    commands = extract_commands_run(events)
+    assert len(commands) == 1
+    assert commands[0].exit_code is None
+    assert commands[0].error is None
+
+
+def test_extract_commands_run_completed_call_keeps_exit_code_and_no_error():
+    """The success path still reports the exit code and no error."""
+    events = [
+        {
+            'event_type': 'tool_call_started',
+            'payload': {
+                'tool_name': 'workspace_run_shell_inspect',
+                'call_id': 'verify-3',
+                'arguments': {'command': 'python -m pytest -q'},
+            },
+            'created_at': 1234567890.0,
+        },
+        {
+            'event_type': 'tool_call_completed',
+            'payload': {
+                'tool_name': 'workspace_run_shell_inspect',
+                'call_id': 'verify-3',
+                'result': {'command': 'python -m pytest -q', 'exit_code': 0},
+            },
+            'created_at': 1234567891.0,
+        },
+    ]
+
+    commands = extract_commands_run(events)
+    assert len(commands) == 1
+    assert commands[0].exit_code == 0
+    assert commands[0].error is None
+
+
 def test_extract_tests():
     """Test extracting test execution evidence."""
     events = [
@@ -708,3 +791,124 @@ def test_m6_every_evidence_extractor_type_is_typed() -> None:
     )
 
     assert check_evidence_extractor_types_typed() == []
+
+
+def test_auto_derive_known_gaps_flags_failed_start_and_outcome_unknown():
+    """Failed-start and started-only commands each yield one known gap, in command order."""
+    commands = [
+        CommandEvidence(
+            command='nosuchtool --check',
+            tool_name='workspace_run_shell_inspect',
+            exit_code=None,
+            error='FileNotFoundError: nosuchtool',
+            timestamp=1234567890.0,
+        ),
+        CommandEvidence(
+            command='python -m pytest -q',
+            tool_name='workspace_run_shell_inspect',
+            exit_code=None,
+            timestamp=1234567891.0,
+        ),
+        CommandEvidence(
+            command='false',
+            tool_name='exec',
+            exit_code=1,
+            timestamp=1234567892.0,
+        ),
+    ]
+
+    gaps = auto_derive_known_gaps([], commands)
+    assert [g.description for g in gaps] == [
+        'Command did not complete: nosuchtool --check (FileNotFoundError: nosuchtool)',
+        'Command outcome unknown: python -m pytest -q',
+        'Command failed with exit code 1: false',
+    ]
+    assert [g.category for g in gaps] == [
+        'command_failure',
+        'command_outcome_unknown',
+        'command_failure',
+    ]
+    assert [g.timestamp for g in gaps] == [1234567890.0, 1234567891.0, 1234567892.0]
+    assert all(g.auto_derived for g in gaps)
+
+
+def test_startless_outcome_unknown_failure_gets_visible_placeholder():
+    """The runner's OUTCOME_UNKNOWN failure has no arguments and no prior start.
+
+    The entry keeps a placeholder command so it is not silently dropped, and the
+    failure is carried as the error with no fabricated exit code.
+    """
+    events = [
+        {
+            'event_type': 'tool_call_failed',
+            'payload': {
+                'tool_name': 'workspace_run_shell_inspect',
+                'call_id': 'outcome-1',
+                'error': 'OUTCOME_UNKNOWN',
+                'retry_safe': False,
+                'interrupted': True,
+            },
+            'created_at': 1234567890.0,
+        },
+    ]
+
+    commands = extract_commands_run(events)
+    assert len(commands) == 1
+    assert commands[0].command == '<workspace_run_shell_inspect: no command recorded>'
+    assert commands[0].tool_name == 'workspace_run_shell_inspect'
+    assert commands[0].exit_code is None
+    assert commands[0].error == 'OUTCOME_UNKNOWN'
+
+    gaps = auto_derive_known_gaps(events, commands)
+    assert [g.description for g in gaps] == [
+        'Command did not complete: <workspace_run_shell_inspect: no command recorded> '
+        '(OUTCOME_UNKNOWN)',
+    ]
+
+
+def test_startless_failure_for_non_shell_tool_is_still_ignored():
+    """The placeholder only applies to the shell tools extract_commands_run already accepts."""
+    events = [
+        {
+            'event_type': 'tool_call_failed',
+            'payload': {
+                'tool_name': 'workspace_read_file',
+                'call_id': 'read-1',
+                'error': 'OUTCOME_UNKNOWN',
+            },
+            'created_at': 1234567890.0,
+        },
+    ]
+
+    assert extract_commands_run(events) == []
+    assert auto_derive_known_gaps(events, []) == []
+
+
+def test_success_path_yields_no_gap_from_failed_or_unknown_rules():
+    """A completed exit-0 command produces neither a failed-start nor an outcome-unknown gap."""
+    events = [
+        {
+            'event_type': 'tool_call_started',
+            'payload': {
+                'tool_name': 'workspace_run_shell_inspect',
+                'call_id': 'verify-ok',
+                'arguments': {'command': 'python -m pytest -q'},
+            },
+            'created_at': 1234567890.0,
+        },
+        {
+            'event_type': 'tool_call_completed',
+            'payload': {
+                'tool_name': 'workspace_run_shell_inspect',
+                'call_id': 'verify-ok',
+                'result': {'command': 'python -m pytest -q', 'exit_code': 0},
+            },
+            'created_at': 1234567891.0,
+        },
+    ]
+
+    commands = extract_commands_run(events)
+    assert len(commands) == 1
+    assert commands[0].exit_code == 0
+    assert commands[0].error is None
+    assert auto_derive_known_gaps(events, commands) == []

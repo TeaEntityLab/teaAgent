@@ -3,9 +3,12 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
+
+import pytest
 
 from teaagent.preflight import check_env_health
 from test_support import can_bind_loopback
@@ -23,6 +26,10 @@ def test_health_check_passes_on_normal_dir() -> None:
         assert len(report['failures']) == 0
 
 
+@pytest.mark.skipif(
+    getattr(os, 'geteuid', lambda: -1)() == 0,
+    reason='file-mode tests cannot run as root (chmod is not enforced)',
+)
 def test_health_check_detects_readonly_dir() -> None:
     with TemporaryDirectory() as td:
         root = Path(td)

@@ -50,7 +50,8 @@ def _opencodezen_api_key() -> str | None:
     key = os.environ.get('OPENCODEZEN_API_KEY')
     if key:
         return key
-    env_file = Path.cwd() / '.teaagent' / 'env'
+    # Anchor to the repo root, never the process cwd (pytest may run elsewhere).
+    env_file = Path(__file__).resolve().parents[1] / '.teaagent' / 'env'
     if env_file.is_file():
         for line in env_file.read_text(encoding='utf-8').splitlines():
             line = line.strip()
@@ -80,7 +81,21 @@ def _make_tmp_root() -> Path:
 # ============================================================================
 
 
-class CliAgentRunScenarios(unittest.TestCase):
+class _ScratchRootMixin(unittest.TestCase):
+    """Give each test a throwaway TeaAgentTUI/CLI root.
+
+    Without a root, runtime state (runs, sessions, suspensions) is written into
+    the repository checkout's own .teaagent/ directory.
+    """
+
+    def setUp(self) -> None:
+        super().setUp()
+        scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(scratch.cleanup)
+        self.tui_root = scratch.name
+
+
+class CliAgentRunScenarios(_ScratchRootMixin, unittest.TestCase):
     """End-to-end CLI agent run with real provider connection.
 
     These tests call main() directly, exercising the full argument parsing →
@@ -112,6 +127,8 @@ class CliAgentRunScenarios(unittest.TestCase):
                         '--permission-mode',
                         'read-only',
                         '--human',
+                        '--root',
+                        self.tui_root,
                     ]
                 )
             self.assertEqual(exit_code, 0)
@@ -137,6 +154,8 @@ class CliAgentRunScenarios(unittest.TestCase):
                         '--max-iterations',
                         '2',
                         '--human',
+                        '--root',
+                        self.tui_root,
                     ]
                 )
             self.assertEqual(exit_code, EXIT_BLOCKING)
@@ -170,6 +189,8 @@ class CliAgentRunScenarios(unittest.TestCase):
                         '--max-iterations',
                         '3',
                         '--human',
+                        '--root',
+                        self.tui_root,
                     ]
                 )
             self.assertEqual(exit_code, 0)
@@ -187,6 +208,8 @@ class CliAgentRunScenarios(unittest.TestCase):
                     'Do something expensive',
                     '--dry-run',
                     '--human',
+                    '--root',
+                    self.tui_root,
                 ]
             )
         self.assertEqual(exit_code, EXIT_BLOCKING)
@@ -216,6 +239,8 @@ class CliAgentRunScenarios(unittest.TestCase):
                         '--max-iterations',
                         '3',
                         '--human',
+                        '--root',
+                        self.tui_root,
                     ]
                 )
             self.assertEqual(exit_code, 0)
@@ -243,6 +268,8 @@ class CliAgentRunScenarios(unittest.TestCase):
                         '--permission-mode',
                         'read-only',
                         '--human',
+                        '--root',
+                        self.tui_root,
                     ]
                 )
             output = out.getvalue().lower()
@@ -254,11 +281,17 @@ class CliAgentRunScenarios(unittest.TestCase):
 # ============================================================================
 
 
-class CliPreflightPlanScenarios(unittest.TestCase):
+class CliPreflightPlanScenarios(_ScratchRootMixin, unittest.TestCase):
     """Read-only planning and readiness commands."""
 
     def test_b1_cli_preflight(self) -> None:
         """preflight shows readiness without model call."""
+        patcher = patch(
+            'teaagent.preflight.check_provider_connectivity',
+            return_value=(True, 'connectivity check skipped (offline test fixture)'),
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
         out = io.StringIO()
         with redirect_stdout(out):
             exit_code = main(
@@ -267,6 +300,8 @@ class CliPreflightPlanScenarios(unittest.TestCase):
                     'opencodezen-go',
                     'Analyze test coverage',
                     '--human',
+                    '--root',
+                    self.tui_root,
                 ]
             )
         self.assertEqual(exit_code, 0)
@@ -286,6 +321,8 @@ class CliPreflightPlanScenarios(unittest.TestCase):
                     'opencodezen-go',
                     'What needs attention today?',
                     '--human',
+                    '--root',
+                    self.tui_root,
                 ]
             )
         output = out.getvalue().lower()
@@ -293,6 +330,12 @@ class CliPreflightPlanScenarios(unittest.TestCase):
 
     def test_b3_cli_plan_mode(self) -> None:
         """plan writes a plan artifact without executing tools."""
+        patcher = patch(
+            'teaagent.preflight.check_provider_connectivity',
+            return_value=(True, 'connectivity check skipped (offline test fixture)'),
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             out = io.StringIO()

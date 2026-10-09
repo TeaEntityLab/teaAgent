@@ -30,6 +30,9 @@ class CommandEvidence:
     stdout: Optional[str] = None
     stderr: Optional[str] = None
     timestamp: Optional[float] = None
+    # Classified failure text when the call errored before producing an exit code
+    # (e.g. executable missing). Stays None for commands that ran to completion.
+    error: Optional[str] = None
 
 
 @dataclass
@@ -230,6 +233,7 @@ class RunEvidenceBundle:
                     'stdout': cmd.stdout,
                     'stderr': cmd.stderr,
                     'timestamp': cmd.timestamp,
+                    'error': cmd.error,
                 }
                 for cmd in self.commands_run
             ],
@@ -475,6 +479,7 @@ def extract_commands_run(events: list[JsonMapping]) -> list[CommandEvidence]:
             'tool_use',
             'tool_call_started',
             'tool_call_completed',
+            'tool_call_failed',
         }:
             continue
 
@@ -499,6 +504,25 @@ def extract_commands_run(events: list[JsonMapping]) -> list[CommandEvidence]:
                 command=command,
                 timestamp=event.get('created_at'),
             )
+            continue
+
+        if event_type == 'tool_call_failed':
+            # Failure payloads carry no result; keep exit_code None and record the
+            # error so the receipt does not present a never-run command as run.
+            failed = _append_or_update(
+                call_id=call_id,
+                tool_name=tool_name,
+                command=command,
+                timestamp=event.get('created_at'),
+            )
+            error = payload.get('error')
+            if isinstance(error, str) and error.strip():
+                failed.error = error.strip()
+            if not failed.command:
+                # The runner's OUTCOME_UNKNOWN failure has no arguments and no prior
+                # start. Keep a visible placeholder rather than inventing a command,
+                # so the receipt renders the failure instead of dropping the entry.
+                failed.command = f'<{tool_name}: no command recorded>'
             continue
 
         result = payload.get('result')
@@ -804,6 +828,28 @@ def auto_derive_known_gaps(
                 KnownGap(
                     category='command_failure',
                     description=f'Command failed with exit code {cmd.exit_code}: {cmd.command[:100]}',
+                    severity='medium',
+                    auto_derived=True,
+                    timestamp=cmd.timestamp,
+                )
+            )
+        elif cmd.exit_code is None and cmd.error:
+            # The call errored before producing an exit code (e.g. executable missing).
+            gaps.append(
+                KnownGap(
+                    category='command_failure',
+                    description=f'Command did not complete: {cmd.command[:100]} ({cmd.error})',
+                    severity='medium',
+                    auto_derived=True,
+                    timestamp=cmd.timestamp,
+                )
+            )
+        elif cmd.exit_code is None:
+            # Started but never completed: no exit code and no error recorded.
+            gaps.append(
+                KnownGap(
+                    category='command_outcome_unknown',
+                    description=f'Command outcome unknown: {cmd.command[:100]}',
                     severity='medium',
                     auto_derived=True,
                     timestamp=cmd.timestamp,

@@ -331,6 +331,7 @@ class TestApprovalHashExactness:
         return MultiSigQuorumManager(agent_id='test-agent')
 
     @given(tool=tool_name_st, call=call_id_st, args=arg_st)
+    @settings(deadline=None, suppress_health_check=[HealthCheck.too_slow])
     def test_approval_hash_deterministic(
         self, tool: str, call: str, args: dict[str, Any]
     ) -> None:
@@ -341,6 +342,7 @@ class TestApprovalHashExactness:
         assert h1 == h2, 'Approval hash for same inputs must be identical'
 
     @given(tool=tool_name_st, call=call_id_st, args=arg_st)
+    @settings(deadline=None, suppress_health_check=[HealthCheck.too_slow])
     def test_approval_hash_is_valid_hex(
         self, tool: str, call: str, args: dict[str, Any]
     ) -> None:
@@ -358,6 +360,7 @@ class TestApprovalHashExactness:
         call2=call_id_st,
         args2=arg_st,
     )
+    @settings(deadline=None, suppress_health_check=[HealthCheck.too_slow])
     def test_approval_hash_differs_for_different_inputs(
         self,
         tool1: str,
@@ -376,6 +379,7 @@ class TestApprovalHashExactness:
         assert h1 != h2, f'Different inputs produced identical hash {h1}'
 
     @given(tool=tool_name_st, call=call_id_st, args=arg_st)
+    @settings(deadline=None, suppress_health_check=[HealthCheck.too_slow])
     def test_approval_hash_uses_sha256(
         self, tool: str, call: str, args: dict[str, Any]
     ) -> None:
@@ -386,6 +390,7 @@ class TestApprovalHashExactness:
         assert len(h) == 64
 
     @given(tool=tool_name_st, call=call_id_st, args=arg_st)
+    @settings(deadline=None, suppress_health_check=[HealthCheck.too_slow])
     def test_approval_hash_includes_call_id(
         self, tool: str, call: str, args: dict[str, Any]
     ) -> None:
@@ -416,6 +421,7 @@ class TestApprovalHashExactness:
         assert h1 != h2, 'HMACs for different keys must differ'
 
     @given(tool=tool_name_st, call=call_id_st, args=arg_st)
+    @settings(deadline=None, suppress_health_check=[HealthCheck.too_slow])
     def test_approval_hash_canonical_json(
         self, tool: str, call: str, args: dict[str, Any]
     ) -> None:

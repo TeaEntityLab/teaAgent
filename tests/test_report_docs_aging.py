@@ -7,6 +7,10 @@ import sys
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
+import pytest
+
+from test_support import repo_is_shallow
+
 
 def _load_module():
     scripts_dir = Path(__file__).resolve().parents[1] / 'scripts'
@@ -112,6 +116,10 @@ def test_generate_docs_aging_excludes_archive_from_stale_list(tmp_path: Path) ->
 
 
 def test_check_docs_aging_dashboard_passes_for_repo() -> None:
+    if repo_is_shallow():
+        pytest.skip(
+            reason='shallow clone: docs aging check needs full git history (actions/checkout fetch-depth: 0)'
+        )
     root = Path(__file__).resolve().parents[1]
     module = _load_module()
     output_path = root / 'docs' / 'generated' / 'docs-aging-dashboard.md'
@@ -146,3 +154,72 @@ def test_corpus_cost_section_counts_full_docs_tree(tmp_path: Path) -> None:
     assert 'unreferenced by INDEX.md:** 1' in text
     assert 'orphan.md' in text
     assert 'linked.md' not in text.split('Dead-weight')[-1]
+
+
+def test_archive_growth_buckets_by_first_add_month() -> None:
+    """Synthetic git-log input: earliest add month wins for re-added paths,
+    only archive paths are counted, untracked paths are skipped, and only the
+    six most recent months present are reported (oldest first)."""
+    module = _load_module()
+    log_lines = [
+        '@@commit 2026-06',
+        '',
+        'docs/analysis/a-2026-06-01.md',
+        'docs/cli.md',
+        '',
+        '@@commit 2026-05',
+        '',
+        'docs/analysis/a-2026-06-01.md',
+        'docs/analysis/b-2026-05-02.md',
+        '',
+        '@@commit 2026-01',
+        '',
+        'docs/analysis/c-2026-01-01.md',
+        '',
+    ]
+    first = module._first_add_months(log_lines)
+    assert first['docs/analysis/a-2026-06-01.md'] == '2026-05'
+    assert first['docs/cli.md'] == '2026-06'
+
+    archive = [
+        'docs/analysis/a-2026-06-01.md',
+        'docs/analysis/b-2026-05-02.md',
+        'docs/analysis/c-2026-01-01.md',
+        'docs/analysis/untracked-2026-07-01.md',
+    ]
+    assert module._archive_growth(first, archive) == [('2026-01', 1), ('2026-05', 2)]
+
+    eight_months = {
+        f'docs/x-{month}.md': month
+        for month in (
+            '2025-10',
+            '2025-11',
+            '2025-12',
+            '2026-01',
+            '2026-02',
+            '2026-03',
+            '2026-04',
+            '2026-05',
+        )
+    }
+    growth = module._archive_growth(eight_months, list(eight_months))
+    assert [month for month, _ in growth] == [
+        '2025-12',
+        '2026-01',
+        '2026-02',
+        '2026-03',
+        '2026-04',
+        '2026-05',
+    ]
+
+
+def test_real_dashboard_reports_archive_growth() -> None:
+    if repo_is_shallow():
+        pytest.skip(
+            reason='shallow clone: archive growth needs full git history (actions/checkout fetch-depth: 0)'
+        )
+    root = Path(__file__).resolve().parents[1]
+    module = _load_module()
+    output = module.generate_docs_aging_dashboard(repo_root=root)
+    assert '### Archive-tier growth (files added per month, last 6 months)' in output
+    assert '| 2026-' in output

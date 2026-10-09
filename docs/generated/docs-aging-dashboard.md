@@ -4,7 +4,7 @@
 
 **Stale threshold:** 90 days since `Last reviewed`
 **Current-truth docs scanned:** 17
-**Needs attention (working tier only):** 6
+**Needs attention (working tier only):** 4
 **Archive-tier docs (exempt from staleness):** 0
 
 Regenerate: `python3 scripts/report_docs_aging.py`
@@ -24,23 +24,11 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 | `docs/analysis/active-findings-status-ledger-2026-06-06.md` | stale_by_age | 2026-06-25 | 2026-06-25 | Last reviewed older than 90 days |
 | `docs/USAGE.md` | stale_by_mtime | 2026-08-26 | 2026-09-24 | Missing owner banner; File modified after last reviewed date |
 
-### docs
-
-| Document | Status | Last reviewed | File mtime | Notes |
-| --- | --- | --- | --- | --- |
-| `docs/INDEX.md` | stale_by_mtime | 2026-09-16 | 2026-09-17 | Missing owner banner; File modified after last reviewed date |
-
 ### project
 
 | Document | Status | Last reviewed | File mtime | Notes |
 | --- | --- | --- | --- | --- |
 | `README.md` | stale_by_mtime | 2026-09-15 | 2026-09-24 | Missing owner banner; File modified after last reviewed date |
-
-### roadmap
-
-| Document | Status | Last reviewed | File mtime | Notes |
-| --- | --- | --- | --- | --- |
-| `docs/roadmap-status.md` | stale_by_mtime | 2026-09-17 | 2026-09-24 | Missing review trigger banner; File modified after last reviewed date |
 
 ## Review Triggers (Current-Truth Docs)
 
@@ -66,8 +54,9 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 
 ## Corpus Cost (G5 Signal)
 
-**Total docs:** 667 (baseline 582 at diagnosis, delta +85)
+**Total docs:** 670 (baseline 582 at diagnosis, delta +88)
 **Live corpus (non-archive):** 377
+**Archive-tier docs (total):** 293
 **Working-tier docs unreferenced by INDEX.md:** 328
 
 Dead-weight candidates (working tier, not linked from INDEX.md):
@@ -93,3 +82,14 @@ Dead-weight candidates (working tier, not linked from INDEX.md):
 - `adr/0018-async-from-sync-pattern.md`
 - `adr/0019-phase-4-federated-swarm-consensus.md`
 - ... and 308 more
+
+### Archive-tier growth (files added per month, last 6 months)
+
+| Month | Archive docs added |
+| --- | --- |
+| 2026-05 | 14 |
+| 2026-06 | 229 |
+| 2026-07 | 13 |
+| 2026-08 | 5 |
+| 2026-09 | 29 |
+| 2026-10 | 3 |

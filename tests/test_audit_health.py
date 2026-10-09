@@ -8,10 +8,12 @@ import contextlib
 import errno
 import time
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
 
+import teaagent.audit as audit_module
 from teaagent.audit_health import (
     AuditDurabilityHealth,
     assess_audit_health,
@@ -175,8 +177,17 @@ def test_assess_with_live_logger_no_disk_error(tmp_path: Path) -> None:
     assert health.cooldown_active is False
 
 
-def test_assess_cooldown_expired(tmp_path: Path) -> None:
+def test_assess_cooldown_expired(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """After cooldown expiry, disk_error property returns None → cooldown_active=False."""
+    # teaagent.audit reads time.monotonic() for the cooldown; drive that clock
+    # directly instead of sleeping so the expiry is deterministic under load.
+    clock = {'now': 1000.0}
+    monkeypatch.setattr(
+        audit_module, 'time', SimpleNamespace(monotonic=lambda: clock['now'])
+    )
+
     log = tmp_path / 'run.jsonl'
     audit = AuditLogger(path=log, compliance_mode=False)
     audit._disk_error_cooldown_seconds = 0.001
@@ -188,7 +199,7 @@ def test_assess_cooldown_expired(tmp_path: Path) -> None:
 
     assert audit.disk_error is not None  # within cooldown
 
-    time.sleep(0.002)  # let cooldown expire
+    clock['now'] += 0.002  # advance fake clock past the cooldown
     assert audit.disk_error is None  # cooldown expired
 
     health = assess_audit_health([], live_logger=audit)
