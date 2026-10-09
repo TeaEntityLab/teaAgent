@@ -74,8 +74,7 @@ class TestShellCommandInjectionFix:
             'dd if=/dev/zero of=/dev/sda',
         ]
         with tempfile.TemporaryDirectory() as tmpdir:
-            config = WorkspaceToolConfig.from_root(tmpdir)
-            registry = build_workspace_tool_registry(config)
+            registry = build_workspace_tool_registry(tmpdir)
             for name in ('workspace_run_shell_mutate', 'workspace_run_shell'):
                 definition = registry.get(name)
                 assert definition.annotations.destructive is True
