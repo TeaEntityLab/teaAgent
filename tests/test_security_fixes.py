@@ -12,12 +12,19 @@ import pytest
 
 from teaagent.context_bus import ContextBus, ContextBusConfig
 from teaagent.llm._retry import LLMRetryConfig
+from teaagent.policy import ApprovalPolicy
 from teaagent.surface_auth import (
     hash_token,
     hash_token_with_salt,
     verify_token_with_salt,
 )
-from teaagent.types import ToolExecutionError, ToolValidationError
+from teaagent.types import (
+    PermissionMode,
+    ToolExecutionError,
+    ToolPermissionError,
+    ToolValidationError,
+)
+from teaagent.workspace_tools import _shell as shell_module
 from teaagent.workspace_tools._files import (
     WorkspaceToolConfig,
     build_workspace_tool_registry,
@@ -41,29 +48,52 @@ class TestShellCommandInjectionFix:
             assert 'stderr' in result
             assert 'exit_code' in result
 
-    def test_shell_blocks_dangerous_commands(self):
-        """Verify that dangerous commands are blocked."""
+    def test_shell_dangerous_commands_are_governed_not_executed(self, monkeypatch):
+        """Dangerous commands must be refused by governance before any process starts.
+
+        `run_shell` has no command denylist by design; safety comes from the
+        governed path (both shell tools are registered `destructive=True` and
+        `ApprovalPolicy` refuses them in read-only, workspace-write, and
+        unapproved prompt mode). An earlier version of this test called
+        `run_shell` with `rm -rf /`, `mkfs`, and `dd if=/dev/zero of=/dev/sda`
+        for real, relying on the host to refuse them; as root in a container it
+        overwrote a device-named file for the full 30 s timeout (2026-10-09).
+        This version fails loudly if any subprocess is ever spawned.
+        """
+
+        def _never_spawn(*args, **kwargs):
+            raise AssertionError(
+                'subprocess.run must not be reached for an ungoverned destructive command'
+            )
+
+        monkeypatch.setattr(shell_module.subprocess, 'run', _never_spawn)
+
+        dangerous_commands = [
+            'rm -rf /',
+            'mkfs',
+            'dd if=/dev/zero of=/dev/sda',
+        ]
         with tempfile.TemporaryDirectory() as tmpdir:
             config = WorkspaceToolConfig.from_root(tmpdir)
-
-            # Test dangerous command blocking
-            dangerous_commands = [
-                'rm -rf /',
-                'mkfs',
-                'dd if=/dev/zero of=/dev/sda',
-            ]
-
-            for cmd in dangerous_commands:
-                try:
-                    result = run_shell(config, {'command': cmd})
-                    # Should either block or fail safely
-                    assert (
-                        result['exit_code'] != 0
-                        or 'error' in result.get('stderr', '').lower()
-                    )
-                except FileNotFoundError:
-                    # Command binary not available on this system
-                    pass
+            registry = build_workspace_tool_registry(config)
+            for name in ('workspace_run_shell_mutate', 'workspace_run_shell'):
+                definition = registry.get(name)
+                assert definition.annotations.destructive is True
+                assert definition.annotations.read_only is False
+                for mode in (
+                    PermissionMode.READ_ONLY,
+                    PermissionMode.WORKSPACE_WRITE,
+                    PermissionMode.PROMPT,
+                ):
+                    policy = ApprovalPolicy(permission_mode=mode)
+                    for cmd in dangerous_commands:
+                        with pytest.raises(ToolPermissionError):
+                            policy.assert_allowed(
+                                tool_name=name,
+                                call_id=f'call-{mode.value}-{name}',
+                                destructive=True,
+                                arguments={'command': cmd},
+                            )
 
 
 class TestRegexValidationFix:
