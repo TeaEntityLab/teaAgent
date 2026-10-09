@@ -1,7 +1,7 @@
 # Release Documentation Evidence Bundle (Generated)
 
-**Generated:** 2026-09-24T10:31:20+00:00
-**Git commit:** `16a8617c3653508c9f54577296b498c7d3d582ef` on `main`
+**Generated:** 2026-10-09T09:05:54+00:00
+**Git commit:** `1c8b5afa57ad9a1ff0fadfbeb621ee7fd693ad79` on `claude/gracious-wright-p34vu8`
 **Working tree dirty:** no
 
 Regenerate: `python3 scripts/build_release_docs_evidence_bundle.py`
@@ -15,19 +15,17 @@ Regenerate: `python3 scripts/build_release_docs_evidence_bundle.py`
 ## Last Gate Run
 
 - Overall gate status: **pass**
-- `/opt/homebrew/opt/python@3.14/bin/python3.14 scripts/validate_docs_consistency.py` — **pass** (exit 0)
-- `/opt/homebrew/opt/python@3.14/bin/python3.14 scripts/report_docs_aging.py --check` — **pass** (exit 0)
+- `/tmp/claude-0/-home-user-teaAgent/85b3f922-99e2-589b-9c9a-2f4fb7529027/scratchpad/venv/bin/python3 scripts/validate_docs_consistency.py` — **pass** (exit 0)
+- `/tmp/claude-0/-home-user-teaAgent/85b3f922-99e2-589b-9c9a-2f4fb7529027/scratchpad/venv/bin/python3 scripts/report_docs_aging.py --check` — **pass** (exit 0)
 
 ## Documentation Freshness
 
 - Current-truth docs scanned: **17**
-- Needs attention: **6** (>90 days)
+- Needs attention: **4** (>90 days)
 - Stale by owner surface:
   - `cli`: 1
   - `daily-driver`: 2
-  - `docs`: 1
   - `project`: 1
-  - `roadmap`: 1
 
 ## Roadmap Excerpt
 

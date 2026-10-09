@@ -1,21 +1,21 @@
 {
   "ok": true,
-  "created_at": "2026-09-24T10:31:20+00:00",
-  "repo_root": "/Users/teee/dev/teaagent",
+  "created_at": "2026-10-09T09:05:54+00:00",
+  "repo_root": "/home/user/teaAgent",
   "git": {
-    "branch": "main",
-    "commit": "16a8617c3653508c9f54577296b498c7d3d582ef",
+    "branch": "claude/gracious-wright-p34vu8",
+    "commit": "1c8b5afa57ad9a1ff0fadfbeb621ee7fd693ad79",
     "dirty": false
   },
   "commands": [
     {
-      "cmd": "/opt/homebrew/opt/python@3.14/bin/python3.14 scripts/validate_docs_consistency.py",
+      "cmd": "/tmp/claude-0/-home-user-teaAgent/85b3f922-99e2-589b-9c9a-2f4fb7529027/scratchpad/venv/bin/python3 scripts/validate_docs_consistency.py",
       "exit_code": 0,
       "stdout": "Risk register evidence coverage: 29/29 rows verified (100%)\nTicket index evidence coverage: 21/21 rows verified (100%)\nDocs consistency check passed.\n",
       "stderr": ""
     },
     {
-      "cmd": "/opt/homebrew/opt/python@3.14/bin/python3.14 scripts/report_docs_aging.py --check",
+      "cmd": "/tmp/claude-0/-home-user-teaAgent/85b3f922-99e2-589b-9c9a-2f4fb7529027/scratchpad/venv/bin/python3 scripts/report_docs_aging.py --check",
       "exit_code": 0,
       "stdout": "Docs aging dashboard check passed.\n",
       "stderr": ""
@@ -23,13 +23,11 @@
   ],
   "docs_freshness": {
     "scanned": 17,
-    "needs_attention": 6,
+    "needs_attention": 4,
     "by_owner": {
       "project": 1,
-      "docs": 1,
       "daily-driver": 2,
-      "cli": 1,
-      "roadmap": 1
+      "cli": 1
     },
     "stale_threshold_days": 90
   },
