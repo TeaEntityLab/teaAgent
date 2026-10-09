@@ -101,6 +101,8 @@ jobs:
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0  # full history: acceptance flows run repo-level docs/history checks (R0-1, 2026-10-09)
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
@@ -131,6 +133,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0  # full history: test_check_dr006_gate_trailer, test_refresh_competitive_docs, test_report_docs_aging (R0-1, 2026-10-09)
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v6
@@ -211,6 +215,9 @@ jobs:
 
       - name: Complexity baseline
         run: python3 scripts/check_complexity.py --max 99
+
+      - name: Any-count baseline (typing-debt ratchet)
+        run: python3 scripts/check_any_count.py --fail-on-increase
 
       - name: Lint with ruff
         run: ruff check teaagent/ tests/ scripts/
