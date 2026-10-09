@@ -4,6 +4,46 @@ All notable changes to TeaAgent are tracked here.
 
 ## Unreleased
 
+- Nothing yet.
+
+## 0.1.1 - 2026-10-09
+
+First tagged release since `v0.1.0-p4-remediation`. `main` had been red since
+2026-09-29; this release restores it and records the 2026-10-09 roadmap review.
+
+- **CI restored**: `test` and `acceptance-all` jobs check out full history;
+  six history-dependent tests skip with a reason on shallow clones; the
+  default-branch, gitignored-ledger, and missing-`rg` test assumptions fixed;
+  `review-institution` inspects the PR head commit instead of the merge
+  commit; job timeouts added (`test` 30 min, `acceptance-all` 20 min).
+- **Receipts tell the truth about failed commands**: `extract_commands_run`
+  consumes `tool_call_failed`; receipts render `[failed: <error>]` /
+  `[outcome unknown]` instead of a bare command; `auto_derive_known_gaps`
+  flags both; startless OUTCOME_UNKNOWN failures get a visible placeholder
+  (`Gate: governance-gap`).
+- **Test-suite hardening**: scratch roots for TUI/CLI scenario tests (no more
+  writes into the repo's own `.teaagent/`), DNS-independent readiness tests
+  (`offline_provider_connectivity` fixture), root/`ssh-keygen`/SSL-env skips
+  with reasons, Hypothesis deadline and audit-cooldown flakes removed, and
+  the test that executed `rm -rf /`, `mkfs`, and `dd if=/dev/zero of=/dev/sda`
+  for real replaced by a governance-boundary test that fails if any
+  subprocess is spawned.
+- **Ratchets and signals**: `scripts/check_any_count.py` typing-debt ratchet
+  (baseline 2,177) in CI lint; archive-tier growth table on the docs aging
+  dashboard.
+- **Records**: `docs/reviews/roadmap-review-and-improvement-plan-2026-10-09.md`
+  (review, Phase 0–4 plan, execution record, owner decisions), ADR-0031
+  extended to ≤ 2026-11-15 bound to a booked B1 session (revert otherwise),
+  ADR-0043 disposition packet prepared, DR-006 falsifier review and T5
+  outcome recorded, CI debt register corrected.
+- **Release workflow**: `publish` to PyPI now runs only on manual
+  `workflow_dispatch` (owner decision 2026-10-09: tag without publishing);
+  the tag build installs `git-cliff` and calls the evidence bundle script
+  with its real options.
+
+### Previously unreleased (accumulated before 0.1.1)
+
+
 - **MCP server governance (breaking for ungoverned callers)**: `teaagent mcp serve`
   `tools/call` now passes the workspace `ApprovalPolicy` and is recorded in a
   hash-chained run log (`.teaagent/runs/mcp-<hex>.jsonl`). Destructive tools

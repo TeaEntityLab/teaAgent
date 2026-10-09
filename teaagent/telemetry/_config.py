@@ -9,7 +9,7 @@ class TelemetryConfig:
     """Configuration for telemetry exporters."""
 
     service_name: str = 'teaagent'
-    service_version: str = '0.1.0'
+    service_version: str = '0.1.1'
     otlp_endpoint: Optional[str] = None
     metrics_otlp_endpoint: Optional[str] = None
     otlp_headers: dict[str, str] = field(default_factory=dict)

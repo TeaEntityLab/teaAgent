@@ -16,6 +16,7 @@ from tui_boundaries import (
     patch_run_agent_task_boundary,
 )
 
+from teaagent import __version__ as teaagent_version
 from teaagent.cli import main
 from teaagent.ergonomics._approval_grants import _compute_argument_digest
 from teaagent.graphqlite_store import GraphQLiteRuntimeError
@@ -71,7 +72,7 @@ class TUITests(unittest.TestCase):
             exit_code = tui.run()
 
         self.assertEqual(exit_code, 0)
-        self.assertEqual(output[0], 'TeaAgent TUI 0.1.0')
+        self.assertEqual(output[0], f'TeaAgent TUI {teaagent_version}')
         parsed = []
         for line in output:
             try:
@@ -1125,7 +1126,7 @@ class TUITests(unittest.TestCase):
         )
         tui._print_header()
 
-        self.assertEqual(output[0], 'TeaAgent TUI 0.1.0')
+        self.assertEqual(output[0], f'TeaAgent TUI {teaagent_version}')
 
     def test_tui_status_with_valid_run(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
