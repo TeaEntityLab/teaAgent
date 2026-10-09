@@ -1,11 +1,41 @@
 from __future__ import annotations
 
 import socket
+import subprocess
 import threading
 from pathlib import Path
 from typing import Any
 
 import pytest
+
+
+def _git(
+    args: list[str], repo_root: Path | None
+) -> subprocess.CompletedProcess[str] | None:
+    """Run a git command in ``repo_root`` (default: this checkout); None if git cannot run."""
+    cwd = repo_root if repo_root is not None else Path(__file__).resolve().parent
+    try:
+        return subprocess.run(
+            ['git', *args],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError:
+        return None
+
+
+def repo_is_shallow(repo_root: Path | None = None) -> bool:
+    """Return True when the git checkout is shallow; git errors count as not shallow."""
+    proc = _git(['rev-parse', '--is-shallow-repository'], repo_root)
+    return proc is not None and proc.returncode == 0 and proc.stdout.strip() == 'true'
+
+
+def commit_exists(sha: str, repo_root: Path | None = None) -> bool:
+    """Return True when ``sha`` resolves to a commit present in the checkout."""
+    proc = _git(['cat-file', '-e', f'{sha}^{{commit}}'], repo_root)
+    return proc is not None and proc.returncode == 0
 
 
 def can_bind_loopback() -> bool:

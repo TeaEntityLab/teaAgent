@@ -7,6 +7,10 @@ import sys
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
+import pytest
+
+from test_support import repo_is_shallow
+
 
 def _load_module():
     scripts_dir = Path(__file__).resolve().parents[1] / 'scripts'
@@ -112,6 +116,10 @@ def test_generate_docs_aging_excludes_archive_from_stale_list(tmp_path: Path) ->
 
 
 def test_check_docs_aging_dashboard_passes_for_repo() -> None:
+    if repo_is_shallow():
+        pytest.skip(
+            reason='shallow clone: docs aging check needs full git history (actions/checkout fetch-depth: 0)'
+        )
     root = Path(__file__).resolve().parents[1]
     module = _load_module()
     output_path = root / 'docs' / 'generated' / 'docs-aging-dashboard.md'

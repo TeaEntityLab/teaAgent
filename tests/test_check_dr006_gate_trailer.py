@@ -5,11 +5,14 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 from scripts.check_dr006_gate_trailer import (
     _has_gate_trailer,
     _is_feat_subject,
     _touches_teaagent,
 )
+from test_support import commit_exists
 
 SCRIPT = Path(__file__).resolve().parents[1] / 'scripts' / 'check_dr006_gate_trailer.py'
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -224,6 +227,10 @@ def test_base_mode_iterates_range(tmp_path: Path) -> None:
 
 
 def test_real_history_12e7148_fails() -> None:
+    if not commit_exists('12e7148', REPO_ROOT):
+        pytest.skip(
+            reason='commit 12e7148 not present in this checkout (shallow clone)'
+        )
     result = subprocess.run(
         [sys.executable, str(SCRIPT), '--commit', '12e7148'],
         cwd=REPO_ROOT,
@@ -236,6 +243,10 @@ def test_real_history_12e7148_fails() -> None:
 
 
 def test_real_history_87d1c61_passes() -> None:
+    if not commit_exists('87d1c61', REPO_ROOT):
+        pytest.skip(
+            reason='commit 87d1c61 not present in this checkout (shallow clone)'
+        )
     result = subprocess.run(
         [sys.executable, str(SCRIPT), '--commit', '87d1c61'],
         cwd=REPO_ROOT,

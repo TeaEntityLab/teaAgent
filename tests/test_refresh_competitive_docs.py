@@ -5,6 +5,10 @@ import sys
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
+import pytest
+
+from test_support import repo_is_shallow
+
 
 def _load_refresh_module():
     script = (
@@ -19,6 +23,10 @@ def _load_refresh_module():
 
 
 def test_refresh_competitive_docs_passes_for_repo(tmp_path: Path) -> None:
+    if repo_is_shallow():
+        pytest.skip(
+            reason='shallow clone: docs aging check needs full git history (actions/checkout fetch-depth: 0)'
+        )
     root = Path(__file__).resolve().parents[1]
     module = _load_refresh_module()
     acceptance_copy = tmp_path / 'acceptance.md'
@@ -44,6 +52,10 @@ def test_refresh_competitive_docs_passes_for_repo(tmp_path: Path) -> None:
 
 
 def test_check_competitive_docs_passes_without_mutating_tracked_docs() -> None:
+    if repo_is_shallow():
+        pytest.skip(
+            reason='shallow clone: docs aging check needs full git history (actions/checkout fetch-depth: 0)'
+        )
     root = Path(__file__).resolve().parents[1]
     module = _load_refresh_module()
     tracked_paths = [
@@ -69,6 +81,10 @@ def test_check_competitive_docs_passes_without_mutating_tracked_docs() -> None:
 
 
 def test_check_competitive_docs_reports_stale_generated_file(tmp_path: Path) -> None:
+    if repo_is_shallow():
+        pytest.skip(
+            reason='shallow clone: docs aging check needs full git history (actions/checkout fetch-depth: 0)'
+        )
     root = Path(__file__).resolve().parents[1]
     module = _load_refresh_module()
     acceptance_copy = tmp_path / 'acceptance.md'
@@ -108,6 +124,10 @@ def test_check_competitive_docs_reports_stale_generated_file(tmp_path: Path) -> 
 
 
 def test_main_check_mode_accepts_argv() -> None:
+    if repo_is_shallow():
+        pytest.skip(
+            reason='shallow clone: docs aging check needs full git history (actions/checkout fetch-depth: 0)'
+        )
     module = _load_refresh_module()
     result = module.main(['--check'])
     # The test may fail due to provider count mismatches or missing ergonomics-kpi.json
