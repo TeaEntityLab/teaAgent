@@ -204,6 +204,21 @@ Full unit suite on this tree (`pytest --random-order -n auto --dist worksteal`, 
 
 None of the 27 touches `run_evidence.py`, `run_receipt.py`, `test_support.py`, or the files changed in Phase 0; the 9 originally red tests all pass here (the shallow-clone ones skip on a `--depth 1` clone and pass on full history). The CI run for this branch is the authoritative check; this local run is evidence that the Phase 0 changes introduce no new failure, not proof that `main` is green.
 
+### 7.2 Follow-up batch from the test-suite state-dependence sweep (2026-10-09, same day)
+
+A read-only sweep of `tests/` for state a fresh CI checkout does not have (repo-root `.teaagent/`, git history, default-branch name, `HOME`, network/tool presence, absolute paths) produced one safety incident and a bounded repair batch; all landed as `fix(tests):` commits with no production change and no assertion weakened:
+
+| Commit | Repair |
+| --- | --- |
+| `17a55d9f`, `736f7497` | **Safety incident.** `tests/test_security_fixes.py::test_shell_blocks_dangerous_commands` called `run_shell()` with `rm -rf /`, `mkfs`, and `dd if=/dev/zero of=/dev/sda` for real and relied on the host to refuse them; `run_shell` has no denylist by design. Run as root in this container, `dd` wrote zeros to a device-named path for the 30 s timeout (the path was a regular file here; the root filesystem was unaffected). On CI it "passed" only because the runner cannot write the device. Replaced by a test that fails if any subprocess is spawned and asserts the real boundary: both shell tools are `destructive=True` and `ApprovalPolicy` refuses them in read-only, workspace-write, and unapproved prompt mode. Sweep found no other test executing a destructive command for real. |
+| `4399a1cd`, `85073271` | Readiness tests no longer depend on live DNS: opt-in `offline_provider_connectivity` fixture (15 tests). Before: 15 failures wherever `api.openai.com` does not resolve; CI passed only by connectivity. |
+| `86994568` | chmod-based tests skip as root; `ssh-keygen` tests skip when absent (`shutil.which`); Hypothesis property tests get `deadline=None`; the audit cooldown test drives a fake `time.monotonic`; the adversarial handler no longer writes a fixed `/tmp` path; `test_intent` passes `--root`. |
+| `85073271` | TUI/CLI scenario tests get a scratch root (72 + 26 constructions, 8 CLI calls): measured leak into the repo's `.teaagent/` on clean HEAD was 5 tests / 7 files; now 0. |
+
+Full unit suite on the final tree (`pytest --random-order -n auto --dist worksteal`, `GITHUB_TOKEN`/`GH_TOKEN` removed from the environment, same container): **2 failed, 6,760 passed, 34 skipped in 10 min 54 s** (was 27 failed / 24 min 29 s before the batch; the `dd` timeout and DNS waits are gone). The two remaining failures are `test_llm_internals::TestBuildSslContextFromEnv` (2), caused by the container exporting `SSL_CERT_FILE`/`REQUESTS_CA_BUNDLE`; they pass where those variables are unset and were left alone (a fixture that clears them is the obvious follow-up).
+
+Not fixed, recorded: live-gated `_opencodezen_api_key` helpers still read `Path.cwd()/.teaagent/env`; `scripts/refresh_competitive_docs.py` rewrites tracked generated docs when its test runs; loopback-server tests have no `can_bind_loopback` guard; production default lookups read real-`HOME` paths (`~/.claude/skills`, `~/.config/teaagent`, MCP registry) unless a test overrides `HOME`.
+
 ## 8. Verification of this record
 
 Documentation-only. Validation for the recording commit: `bash scripts/verify_docs.sh` (inventory, aging, snippet inventory, release docs bundle, OKF bundles, docs consistency) must pass; `docs/INDEX.md` lists this file under Evidence And Review; `docs/roadmap-status.md` carries a one-line dated review note stating that no horizon, milestone, or gate status moved; the action register carries G-P2-21.
