@@ -188,6 +188,22 @@ EFX live proof (owner authorization), H2 continuity, H3 ecosystem trust, H5/M5 e
 - Do not open a new strategy document for the same question; amend this one or the authority docs.
 - Do not relabel agent or fixture runs as owner runs, and do not turn unknown provenance into either use or disuse.
 
+## 7.1 Addendum — Phase 0 execution record (2026-10-09, later the same day)
+
+Phase 0 was executed on branch `claude/gracious-wright-p34vu8` by one planner/reviewer with parallel implementation subagents; every change was reviewed by the planner before commit. Landed: R0-1 (`0b227fca`), R0-2 (`97f66fac`), R0-3/R0-4/R0-7 (`0b227fca`), R0-5 (`bf43d39b` test input; `c6b57f6c` receipt honesty, `Gate: governance-gap`), R0-6 (`163281b7`), plus the `Any` ratchet (`eb578a0e`, baseline 2,177). Not done: R0-8 (tag `v0.1.1`) waits for a green `main`, and the owner asks in §6 remain open.
+
+Full unit suite on this tree (`pytest --random-order -n auto --dist worksteal`, no coverage, venv Python 3.12.3, container with **no DNS for `api.openai.com`**, **no `ssh-keygen`**, **running as root**, `SSL_CERT_FILE` set, `GITHUB_TOKEN`/`GH_TOKEN` ambient): **27 failed, 6,736 passed, 27 skipped in 24 min 29 s**. Classification after re-running each failure in isolation and against an `origin/main` worktree:
+
+| Count | Tests | Cause | Verdict |
+| --- | --- | --- | --- |
+| 15 | `test_daily_cli` (2), `test_daily_tui`, `test_first_hour_e2e_flow`, `test_preflight` (2), `test_context_pack_read_only_flow` (4), `test_repo_map_quality_large_repo_flow` (2), `test_real_usage_agents` (2), `test_tui::test_tui_preflight_command_uses_current_settings` | provider readiness for `gpt` does `getaddrinfo('api.openai.com')`, which fails in this container, so `ready=False` / exit 2; identical failures on `origin/main` | environment; CI runners resolve DNS (`acceptance-p0` was green on run 858) |
+| 3 | `test_security_ssh_signatures_flow` (3) | `ssh-keygen` not installed here | environment |
+| 4 | `test_preflight_env_health::test_health_check_detects_readonly_dir`, `test_config_loader::test_permission_denied_on_config_file`, `test_ws3_compliance_audit` (2) | tests chmod a path and expect `PermissionError`; root bypasses file modes | environment (root) |
+| 2 | `test_llm_internals::TestBuildSslContextFromEnv` (2) | `SSL_CERT_FILE`/`REQUESTS_CA_BUNDLE` are set by the container | environment |
+| 3 | `test_audit_health::test_assess_cooldown_expired`, `test_hypothesis_invariants::test_approval_hash_deterministic`, `test_security_fixes::test_shell_blocks_dangerous_commands` | pass in isolation and in three `--random-order` reruns; failed once under `-n auto` load. The first sleeps 2 ms past a 1 ms cooldown (wall-clock dependent; testing-standards says inject the clock); the second is a Hypothesis property with the default 200 ms deadline | **flake candidates**, pre-existing; proposed follow-up: inject a clock in the cooldown test and set `deadline=None` on the property test |
+
+None of the 27 touches `run_evidence.py`, `run_receipt.py`, `test_support.py`, or the files changed in Phase 0; the 9 originally red tests all pass here (the shallow-clone ones skip on a `--depth 1` clone and pass on full history). The CI run for this branch is the authoritative check; this local run is evidence that the Phase 0 changes introduce no new failure, not proof that `main` is green.
+
 ## 8. Verification of this record
 
 Documentation-only. Validation for the recording commit: `bash scripts/verify_docs.sh` (inventory, aging, snippet inventory, release docs bundle, OKF bundles, docs consistency) must pass; `docs/INDEX.md` lists this file under Evidence And Review; `docs/roadmap-status.md` carries a one-line dated review note stating that no horizon, milestone, or gate status moved; the action register carries G-P2-21.
