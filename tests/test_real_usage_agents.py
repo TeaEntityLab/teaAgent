@@ -2040,7 +2040,7 @@ class TelemetryScenarios(unittest.TestCase):
 
         config = TelemetryConfig()
         self.assertEqual(config.service_name, 'teaagent')
-        self.assertEqual(config.service_version, '0.1.0')
+        self.assertEqual(config.service_version, '0.1.1')
         self.assertIsNone(config.otlp_endpoint)
         self.assertIsNone(config.metrics_otlp_endpoint)
         self.assertEqual(config.otlp_headers, {})
