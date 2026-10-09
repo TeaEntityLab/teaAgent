@@ -43,7 +43,10 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from threading import Thread
 
+import pytest
+
 from teaagent.cli import main
+from test_support import can_bind_loopback
 
 
 class _HookHandler(BaseHTTPRequestHandler):
@@ -62,6 +65,9 @@ class _HookHandler(BaseHTTPRequestHandler):
         return
 
 
+@pytest.mark.skipif(
+    not can_bind_loopback(), reason='loopback bind unavailable in this sandbox'
+)
 def test_automation_webhook_delivery_flow(tmp_path: Path) -> None:
     _HookHandler.payloads.clear()
     server = HTTPServer(('127.0.0.1', 0), _HookHandler)

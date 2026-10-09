@@ -2,12 +2,33 @@ from __future__ import annotations
 
 # test-type: behavior
 import sys
+from collections.abc import Iterator
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
 import pytest
 
 from test_support import repo_is_shallow
+
+# refresh_competitive_docs regenerates these two tracked files in place and the
+# docs-consistency validator then reads them back, so the tests must run against
+# the repo. Restore the prior bytes afterwards so a test run leaves git clean.
+_TRACKED_GENERATED_DOCS = (
+    'docs/generated/docs-aging-dashboard.md',
+    'docs/generated/docs-inventory.md',
+)
+
+
+@pytest.fixture(autouse=True)
+def _restore_tracked_generated_docs() -> Iterator[None]:
+    root = Path(__file__).resolve().parents[1]
+    paths = [root / rel for rel in _TRACKED_GENERATED_DOCS]
+    prior = {path: path.read_bytes() for path in paths}
+    try:
+        yield
+    finally:
+        for path, data in prior.items():
+            path.write_bytes(data)
 
 
 def _load_refresh_module():

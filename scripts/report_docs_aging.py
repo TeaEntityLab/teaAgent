@@ -13,6 +13,8 @@ import argparse
 import re
 import subprocess
 import sys
+from collections import Counter
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -41,6 +43,9 @@ STALE_DAYS = 90
 CORPUS_BASELINE_COUNT = 582
 
 _INDEX_LINK = re.compile(r'\(([^)]+\.md)(?:#[^)]*)?\)|`([^`]+\.md)`')
+
+_GIT_ADD_MARKER = '@@commit '
+ARCHIVE_GROWTH_MONTHS = 6
 
 
 def _is_archive_tier(rel_path: str) -> bool:
@@ -347,6 +352,9 @@ def _corpus_cost_section(repo_root: Path) -> list[str]:
     live = [
         p for p in all_docs if not _is_archive_tier(p.relative_to(docs_root).as_posix())
     ]
+    archive = [
+        p for p in all_docs if _is_archive_tier(p.relative_to(docs_root).as_posix())
+    ]
 
     index_path = docs_root / 'INDEX.md'
     referenced: set[str] = set()
@@ -373,6 +381,7 @@ def _corpus_cost_section(repo_root: Path) -> list[str]:
         f'**Total docs:** {total} (baseline {CORPUS_BASELINE_COUNT} at diagnosis, '
         f'delta {sign}{delta})',
         f'**Live corpus (non-archive):** {len(live)}',
+        f'**Archive-tier docs (total):** {len(archive)}',
         f'**Working-tier docs unreferenced by INDEX.md:** {len(unreferenced)}',
         '',
     ]
@@ -384,7 +393,82 @@ def _corpus_cost_section(repo_root: Path) -> list[str]:
         if len(unreferenced) > 20:
             lines.append(f'- ... and {len(unreferenced) - 20} more')
         lines.append('')
+
+    archive_paths = [p.relative_to(repo_root).as_posix() for p in archive]
+    growth = _archive_growth(_git_first_add_months(repo_root), archive_paths)
+    lines.append(
+        f'### Archive-tier growth (files added per month, last {ARCHIVE_GROWTH_MONTHS} months)'
+    )
+    lines.append('')
+    if growth:
+        lines.append('| Month | Archive docs added |')
+        lines.append('| --- | --- |')
+        for month, count in growth:
+            lines.append(f'| {month} | {count} |')
+    else:
+        lines.append('No archive-tier additions found in git history.')
+    lines.append('')
     return lines
+
+
+def _git_first_add_months(repo_root: Path) -> dict[str, str]:
+    """Map each docs/ path ever added to git to the YYYY-MM of its earliest add.
+
+    One ``git log`` pass over ``docs/``. ``--no-renames`` makes a move count as
+    an add at its new path, so an archived doc is bucketed by the month it
+    entered the archive path. Returns ``{}`` when git history is unavailable.
+    """
+    proc = subprocess.run(
+        [
+            'git',
+            '-c',
+            'core.quotepath=off',
+            'log',
+            '--diff-filter=A',
+            '--no-renames',
+            '--name-only',
+            f'--format={_GIT_ADD_MARKER}%ad',
+            '--date=format:%Y-%m',
+            '--',
+            'docs',
+        ],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return {}
+    return _first_add_months(proc.stdout.splitlines())
+
+
+def _first_add_months(log_lines: Iterable[str]) -> dict[str, str]:
+    """Parse ``git log --name-only`` output (marker-prefixed month headers).
+
+    Pure: the earliest month seen for each path wins, so a path added, removed
+    and re-added is bucketed by its first appearance.
+    """
+    first: dict[str, str] = {}
+    month = ''
+    for line in log_lines:
+        if line.startswith(_GIT_ADD_MARKER):
+            month = line[len(_GIT_ADD_MARKER) :].strip()
+        elif line and month and (line not in first or month < first[line]):
+            first[line] = month
+    return first
+
+
+def _archive_growth(
+    first_adds: Mapping[str, str], archive_paths: Iterable[str]
+) -> list[tuple[str, int]]:
+    """Count archive-tier paths per first-add month for the
+    ``ARCHIVE_GROWTH_MONTHS`` most recent months present, oldest first.
+    Paths with no add record (e.g. untracked) are skipped.
+    """
+    months = [first_adds[path] for path in archive_paths if path in first_adds]
+    counts = Counter(months)
+    recent = sorted(counts)[-ARCHIVE_GROWTH_MONTHS:]
+    return [(month, counts[month]) for month in recent]
 
 
 def write_docs_aging_dashboard(

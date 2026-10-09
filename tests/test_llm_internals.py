@@ -453,6 +453,18 @@ class TestExtractOpenaiContentEdgeCases:
 
 
 class TestBuildSslContextFromEnv:
+    @pytest.fixture(autouse=True)
+    def _clear_ssl_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # Every env var build_ssl_context_from_env reads; the host may export
+        # some of these (e.g. SSL_CERT_FILE), so start each test from a clean slate.
+        for name in (
+            'REQUESTS_CA_BUNDLE',
+            'SSL_CERT_FILE',
+            'TEAAGENT_TLS_CLIENT_CERT',
+            'TEAAGENT_TLS_CLIENT_KEY',
+        ):
+            monkeypatch.delenv(name, raising=False)
+
     def test_returns_none_without_env_vars(self) -> None:
         assert build_ssl_context_from_env() is None
 

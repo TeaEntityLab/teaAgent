@@ -3,13 +3,16 @@ from __future__ import annotations
 # test-type: behavior
 import io
 import json
+import socket
 import tempfile
 from contextlib import redirect_stdout
 from pathlib import Path
 
+import pytest
+
 from teaagent import MemoryCatalog, PermissionMode
 from teaagent.cli import main
-from teaagent.preflight import preflight
+from teaagent.preflight import check_provider_connectivity, preflight
 from test_support import can_bind_loopback
 
 
@@ -112,3 +115,22 @@ def test_preflight_detects_run_store_corruption() -> None:
         failures = payload['health'].get('failures', [])
         failure_text = '\n'.join(failures)
         assert 'corrupt' in failure_text.lower()
+
+
+def test_check_provider_connectivity_dns_failure_and_no_network_provider(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _fail_resolution(*args: object, **kwargs: object) -> None:
+        raise socket.gaierror(-2, 'Name or service not known')
+
+    monkeypatch.setattr('teaagent.preflight.socket.getaddrinfo', _fail_resolution)
+    ok, msg = check_provider_connectivity('gpt')
+    assert ok is False
+    assert 'could not be resolved' in msg
+
+    def _must_not_resolve(*args: object, **kwargs: object) -> None:
+        raise AssertionError('getaddrinfo must not run for a no-network provider')
+
+    monkeypatch.setattr('teaagent.preflight.socket.getaddrinfo', _must_not_resolve)
+    ok, _ = check_provider_connectivity('fake')
+    assert ok is True

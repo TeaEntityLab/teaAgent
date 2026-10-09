@@ -25,7 +25,8 @@ def _opencodezen_api_key() -> str | None:
     key = os.environ.get('OPENCODEZEN_API_KEY')
     if key:
         return key
-    env_file = Path.cwd() / '.teaagent' / 'env'
+    # Anchor to the repo root, never the process cwd (pytest may run elsewhere).
+    env_file = Path(__file__).resolve().parents[1] / '.teaagent' / 'env'
     if env_file.is_file():
         for line in env_file.read_text(encoding='utf-8').splitlines():
             line = line.strip()

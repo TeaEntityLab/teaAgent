@@ -19,8 +19,11 @@ import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any
 
+import pytest
+
 from teaagent.mcp_tool_adapter import register_mcp_tools
 from teaagent.types import ToolRateLimit, ToolRegistry
+from test_support import can_bind_loopback
 
 _TOOLS = [
     {
@@ -45,6 +48,11 @@ _TOOLS = [
         'annotations': {'readOnlyHint': False, 'destructiveHint': True},
     },
 ]
+
+
+pytestmark = pytest.mark.skipif(
+    not can_bind_loopback(), reason='loopback bind unavailable in this sandbox'
+)
 
 
 class _MockMCPHandler(BaseHTTPRequestHandler):
