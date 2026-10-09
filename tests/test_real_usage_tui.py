@@ -48,7 +48,7 @@ def _make_adapter(responses: list[str]) -> FakeAdapter:
 # ============================================================================
 
 
-class _ScratchRootMixin:
+class _ScratchRootMixin(unittest.TestCase):
     """Give each test a throwaway TeaAgentTUI/CLI root.
 
     Without a root, runtime state (runs, sessions, suspensions) is written into

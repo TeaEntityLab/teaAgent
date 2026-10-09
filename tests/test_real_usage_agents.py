@@ -81,7 +81,7 @@ def _make_tmp_root() -> Path:
 # ============================================================================
 
 
-class _ScratchRootMixin:
+class _ScratchRootMixin(unittest.TestCase):
     """Give each test a throwaway TeaAgentTUI/CLI root.
 
     Without a root, runtime state (runs, sessions, suspensions) is written into
