@@ -518,6 +518,11 @@ def extract_commands_run(events: list[JsonMapping]) -> list[CommandEvidence]:
             error = payload.get('error')
             if isinstance(error, str) and error.strip():
                 failed.error = error.strip()
+            if not failed.command:
+                # The runner's OUTCOME_UNKNOWN failure has no arguments and no prior
+                # start. Keep a visible placeholder rather than inventing a command,
+                # so the receipt renders the failure instead of dropping the entry.
+                failed.command = f'<{tool_name}: no command recorded>'
             continue
 
         result = payload.get('result')
@@ -823,6 +828,28 @@ def auto_derive_known_gaps(
                 KnownGap(
                     category='command_failure',
                     description=f'Command failed with exit code {cmd.exit_code}: {cmd.command[:100]}',
+                    severity='medium',
+                    auto_derived=True,
+                    timestamp=cmd.timestamp,
+                )
+            )
+        elif cmd.exit_code is None and cmd.error:
+            # The call errored before producing an exit code (e.g. executable missing).
+            gaps.append(
+                KnownGap(
+                    category='command_failure',
+                    description=f'Command did not complete: {cmd.command[:100]} ({cmd.error})',
+                    severity='medium',
+                    auto_derived=True,
+                    timestamp=cmd.timestamp,
+                )
+            )
+        elif cmd.exit_code is None:
+            # Started but never completed: no exit code and no error recorded.
+            gaps.append(
+                KnownGap(
+                    category='command_outcome_unknown',
+                    description=f'Command outcome unknown: {cmd.command[:100]}',
                     severity='medium',
                     auto_derived=True,
                     timestamp=cmd.timestamp,

@@ -567,3 +567,31 @@ def test_receipt_renders_completed_command_with_exit_code() -> None:
     assert '  - python -m pytest -q [exit 0]' in text
     assert '[failed:' not in text
     assert '[outcome unknown]' not in text
+
+
+def test_receipt_renders_startless_outcome_unknown_failure_as_failed() -> None:
+    events = [
+        {
+            'event_type': 'tool_call_failed',
+            'timestamp': '2026-06-06T10:01:01Z',
+            'payload': {
+                'tool_name': 'workspace_run_shell_inspect',
+                'call_id': 'outcome-1',
+                'error': 'OUTCOME_UNKNOWN',
+                'retry_safe': False,
+                'interrupted': True,
+            },
+        },
+        {
+            'event_type': 'run_completed',
+            'timestamp': '2026-06-06T10:05:00Z',
+            'payload': {'answer': 'done'},
+        },
+    ]
+    text = _receipt_for_shell_events(events)
+    assert (
+        '  - <workspace_run_shell_inspect: no command recorded> [failed: OUTCOME_UNKNOWN]'
+        in text
+    )
+    assert '[exit ' not in text
+    assert '[outcome unknown]' not in text
