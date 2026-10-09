@@ -1,7 +1,7 @@
 # Release Documentation Evidence Bundle (Generated)
 
-**Generated:** 2026-10-09T10:07:53+00:00
-**Git commit:** `19051eeb87bfe2cf96406a17c5d707ce8e2dc806` on `claude/gracious-wright-p34vu8`
+**Generated:** 2026-10-09T10:33:48+00:00
+**Git commit:** `ef2d262dc786ecd683f583f5e514b7d446f74e67` on `claude/gracious-wright-p34vu8`
 **Working tree dirty:** no
 
 Regenerate: `python3 scripts/build_release_docs_evidence_bundle.py`
