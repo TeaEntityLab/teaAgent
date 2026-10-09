@@ -4,7 +4,14 @@ All notable changes to TeaAgent are tracked here.
 
 ## Unreleased
 
-- Nothing yet.
+- **Dependency bumps** (one PR per bump, each reproduced on current `main`
+  with `uv lock --upgrade-package`; supersedes the stalled Dependabot PRs):
+  `actions/setup-python` 7, `github/codeql-action` 4.37.3, `pytest` 9.1.1,
+  `ruff` 0.15.20, `redis` 8.0.1, `hypothesis` 6.155.7, `google-adk` 2.3.0,
+  `pip` 26.1.2 (lock only). The lock now records the project version 0.1.1.
+- **Test robustness**: `test_heartbeat_writes_liveness_file` waits for the
+  first heartbeat tick with a 5 s deadline instead of a fixed 0.08 s sleep
+  (one red CI run on a loaded coverage runner; both assertions kept).
 
 ## 0.1.1 - 2026-10-09
 
