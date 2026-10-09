@@ -38,8 +38,15 @@ def test_heartbeat_writes_liveness_file() -> None:
             liveness_root=Path(tmp),
         )
         with beat:
-            time.sleep(0.08)
-        snap = liveness_snapshot(tmp, 'run-hb')
+            # Wait for the first tick with a deadline instead of a fixed sleep:
+            # on a loaded CI runner the heartbeat thread may not be scheduled
+            # within a few tens of milliseconds, and stop() would then exit the
+            # loop before any tick was written (observed 2026-10-09, PR #81).
+            deadline = time.monotonic() + 5.0
+            snap = liveness_snapshot(tmp, 'run-hb')
+            while snap is None and time.monotonic() < deadline:
+                time.sleep(0.01)
+                snap = liveness_snapshot(tmp, 'run-hb')
         assert snap is not None
         assert int(snap['tick']) >= 1
 
