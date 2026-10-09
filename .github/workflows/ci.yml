@@ -346,7 +346,10 @@ jobs:
           if [ -z "$BASE" ] || ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
             BASE="HEAD~1"
           fi
-          git log --format=%B -1 HEAD > /tmp/ci_head_commit_msg.txt
+          # On pull_request events HEAD is the synthetic merge commit ("Merge X
+          # into Y", no trailers); inspect the PR head commit instead (R0, 2026-10-09).
+          COMMIT="${{ github.event.pull_request.head.sha || github.sha }}"
+          git log --format=%B -1 "$COMMIT" > /tmp/ci_head_commit_msg.txt
           python3 scripts/check_action_register_link.py \
             --commit-msg /tmp/ci_head_commit_msg.txt --base "$BASE"
 
@@ -366,7 +369,10 @@ jobs:
         # commit bypassed both. Run the exact hook entrypoint on the HEAD
         # message file so local and CI can never diverge by argv.
         run: |
-          git log --format=%B -1 HEAD > /tmp/ci_head_commit_msg.txt
+          # Same PR-head resolution as the action-register step: the pull_request
+          # merge commit carries no trailers and would always fail here.
+          COMMIT="${{ github.event.pull_request.head.sha || github.sha }}"
+          git log --format=%B -1 "$COMMIT" > /tmp/ci_head_commit_msg.txt
           python3 .githooks/commit-msg /tmp/ci_head_commit_msg.txt
 
   docker-smoke:
