@@ -12,7 +12,7 @@
 > **Status:** Active for already-authorized verification and dated decision
 > preparation. Held rows remain held.
 >
-> **Last reviewed:** 2026-09-16 (reconciled with later owner records: the 2026-09-12 ADR-0031 review was extended to 2026-09-29 by owner decision conditioned on G1–G5 fixes + re-dogfood; the M4 co-maintainer dogfood session was booked and ran 2026-09-15 (B2 evidence collected, B1 owner testimony still pending); dogfood findings G1–G22 were owner-adjudicated with fixes in `1611e71b`; EFX live proof remains unauthorized. Sequencing unchanged — see [reviews/roadmap-rethink-2026-09-16.md](../reviews/roadmap-rethink-2026-09-16.md) for the proposed, unscheduled repair order)
+> **Last reviewed:** 2026-10-09 (ADR-0031 decision deadline is now 2026-11-15 by owner decision — the 2026-09-29 close passed without a disposition; bound to a booked B1 session, else revert; §6 dates below are historical; see `docs/work-log/adr-0031-2026-10-09-extension-decision.md`). Previous: 2026-09-16 (reconciled with later owner records: the 2026-09-12 ADR-0031 review was extended to 2026-09-29 by owner decision conditioned on G1–G5 fixes + re-dogfood; the M4 co-maintainer dogfood session was booked and ran 2026-09-15 (B2 evidence collected, B1 owner testimony still pending); dogfood findings G1–G22 were owner-adjudicated with fixes in `1611e71b`; EFX live proof remains unauthorized. Sequencing unchanged — see [reviews/roadmap-rethink-2026-09-16.md](../reviews/roadmap-rethink-2026-09-16.md) for the proposed, unscheduled repair order)
 
 > **Review trigger:** EFX live-proof evidence lands; ADR-0031 is decided; a
 > qualifying DR-006 signal is recorded; or an authority document changes.

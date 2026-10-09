@@ -219,6 +219,23 @@ Full unit suite on the final tree (`pytest --random-order -n auto --dist workste
 
 Not fixed, recorded: live-gated `_opencodezen_api_key` helpers still read `Path.cwd()/.teaagent/env`; `scripts/refresh_competitive_docs.py` rewrites tracked generated docs when its test runs; loopback-server tests have no `can_bind_loopback` guard; production default lookups read real-`HOME` paths (`~/.claude/skills`, `~/.config/teaagent`, MCP registry) unless a test overrides `HOME`.
 
+### 7.3 Owner decisions and their records (2026-10-09, same day)
+
+The owner answered the §6 asks in session. Records and the commits that carry them:
+
+| Ask | Owner decision | Record |
+| --- | --- | --- |
+| 1. Phase 0 as `fix:` work | Approved (implicitly, by directing "implement all") | §7.1, §7.2 |
+| 2. ADR-0031 | **Extend once to ≤ 2026-11-15**, bound to a booked B1 owner-observed coding session (date to be booked); **revert** if it does not occur, without further review | [adr-0031-2026-10-09-extension-decision.md](../work-log/adr-0031-2026-10-09-extension-decision.md); ADR-0031 decision log; H4 Next Gate; readiness checklist item 0 |
+| 3. Phase 2 session date | Deadline recorded, date to be booked by the owner | same |
+| 4. DR-006 falsifier review and T5 survey | Record "reviewed, no violation, F2–F4 unexercised". T5: owner directed a docs-only survey **now**; the attempt could not reach any vendor documentation host from the recording environment (proxy allowlist), so it is recorded as **attempted, blocked, deferred to ≤ 2026-12-31** | DR-006 §Falsifiers review record |
+| 5. ADR-0043 packet | **Prepare only**; deletion stays with the 2026-12-09 review | [adr-0043-disposition-packet-2026-10-09.md](../plans/adr-0043-disposition-packet-2026-10-09.md) |
+| 6. `v0.1.1` | Open a pull request to `main`; tag `v0.1.1` from the first green `main` | PR opened from `claude/gracious-wright-p34vu8` |
+| 7. Dependabot (8 PRs) | Rebase and merge one per CI cycle after `main` is green; close any superseded by the lockfile | tracked in this record's follow-ups |
+| 8. Friction-log hypotheses (4 open) | Owner validated and closed | operator-friction-log.md |
+
+**Corrections from the ADR-0043 packet.** The packet re-measured this review's Phase 3 numbers: the seven default-delete rows are 4,920 module lines (matches §4) but the exclusive test lines are **3,429 across 128 tests** (the 11,622 figure in §4 counted every file that mentions a quarantined module and does not reproduce; the strict file union is 10,926). More important, the packet found **import-time reachability from `teaagent.cli`** for `federated_sync`, the `consensus` package, and `jit_approval_server` (loaded on every CLI invocation; executed only behind opt-in flags), `RiskLevel` imported from `consensus/` by `skill_executor.py`, `skill_router.py`, and `governance/review_gate.py`, and five coupled modules missing from the ADR-0043 register (`vote_relay.py`, `control_plane_api.py`, `cli/_handlers/_sync.py`, `cli/_handlers/_control_plane.py`, parser modules). The register's "daily-path reachable: No" therefore needs re-scoring at the 2026-12-09 review, and any deletion must relocate `RiskLevel` first. §4 Phase 3 is superseded by the packet where they differ.
+
 ## 8. Verification of this record
 
 Documentation-only. Validation for the recording commit: `bash scripts/verify_docs.sh` (inventory, aging, snippet inventory, release docs bundle, OKF bundles, docs consistency) must pass; `docs/INDEX.md` lists this file under Evidence And Review; `docs/roadmap-status.md` carries a one-line dated review note stating that no horizon, milestone, or gate status moved; the action register carries G-P2-21.

@@ -14,10 +14,17 @@ UX work tied to real harness use instead of competitor feature parity.
 ## Current Intake Status
 
 - Owner evidence entries: 5, all closed (F2/F3/F6/F7/F8).
-- Open unvalidated hypotheses: 3 (approval call-id hunting, run-id confusion,
-  config-source confusion) — all three now carry verified closure evidence
-  (2026-09-14) and need only owner validation to close; the epistemology-gap
-  hypothesis is resolved by DR-006 ratification and likewise awaits owner sign-off.
+- Hypotheses rejected after owner validation 2026-10-09: 4 (approval call-id
+  hunting, run-id confusion, config-source confusion, epistemology gap) — the
+  owner confirmed each is not reproducible in the current build (closure
+  mechanisms verified in the entries); `rejected` is the log's state for a
+  hypothesis the owner did not confirm as real friction, and none of the four
+  became owner evidence.
+- Open hypothesis entries still `Status: open` after 2026-10-09: 3 (`agent run JSON
+  errors without hints`, competitor-derived `Governance vocabulary on daily path`,
+  competitor-derived `Receipts need plain-language first line`). Their closure
+  evidence cites owner evidence F7/F2/F3; the owner did not list them for closure
+  on 2026-10-09, so they stay open until the owner confirms.
 - Owner-validated/promoted hypotheses retained for provenance: 3 (F2/F3/F7).
 - Governance-process hypothesis resolved by DR-006: 1.
 - Direction implication: none of the retained hypotheses is open roadmap demand;
@@ -26,6 +33,11 @@ UX work tied to real harness use instead of competitor feature parity.
   session that F2/F3/F6/F7/F8 remain closed and reported no new daily-loop
   friction. This is an owner zero-friction attestation captured in-session (not
   a simulated entry); absence of new friction is not proof of continued daily use.
+- Owner revalidation (2026-10-09): the owner reviewed the roadmap record in session,
+  closed the four open hypotheses above, extended ADR-0031 to ≤ 2026-11-15 bound to
+  a B1 session (date to be booked), and recorded the DR-006 falsifier review. No new
+  friction entry was written; absence of friction remains dormancy evidence, not
+  ergonomics evidence.
 
 Use this log when:
 
@@ -195,8 +207,8 @@ fields only when the entry is promoted to work.
 - **Type:** hypothesis
 - **Source:** [hypothesis: UX survey 2026-06-06 + retrospective 04-ux-usability, 2026-06-22]
 - **One-line capture:** Blocked runs may require `approvals pending` → extract `call_id` → `approve` instead of inline "approve this edit."
-- **Status:** open
-- **Closure evidence:** `teaagent approval pending --human` prints a numbered list and `teaagent approval approve --selector N` approves by number — no call_id hunting needed (`teaagent/approval/selectors.py`, importable as `teaagent.approval_selectors` via `_compat_modules.py`; `tests/test_approval_selectors.py`; verified `approval approve --help` marks `call_id` positional as legacy, "Prefer --selector N"). Awaiting owner validation to close.
+- **Status:** rejected
+- **Closure evidence:** `teaagent approval pending --human` prints a numbered list and `teaagent approval approve --selector N` approves by number — no call_id hunting needed (`teaagent/approval/selectors.py`, importable as `teaagent.approval_selectors` via `_compat_modules.py`; `tests/test_approval_selectors.py`; verified `approval approve --help` marks `call_id` positional as legacy, "Prefer --selector N"). Owner validated in session 2026-10-09 that this friction is not reproducible in the current build (closure mechanism verified above); recorded as `rejected` because a hypothesis entry may only be rejected or promoted, and no owner evidence of the friction in real use exists.
 - **Promoted to:** n/a
 
 
@@ -213,8 +225,8 @@ fields only when the entry is promoted to work.
 - **Type:** hypothesis
 - **Source:** [hypothesis: owner capture batch (F5), 2026-06-22]
 - **One-line capture:** `agent run <run_id>` or `--background <run_id>` may be confused with task text; owner did not confirm in the capture batch (F5 not confirmed).
-- **Status:** open
-- **Closure evidence:** Guard verified live 2026-09-14 — `teaagent run <existing-run-id>` exits with `Error [RUN_ID]` and the corrective hint (`agent resume`/`interactive-review`); pinned by `tests/test_resume_lifecycle.py::test_background_rejects_existing_run_id_in_task_position` (:148) and `..._in_provider_position` (:174). Awaiting owner validation to close.
+- **Status:** rejected
+- **Closure evidence:** Guard verified live 2026-09-14 — `teaagent run <existing-run-id>` exits with `Error [RUN_ID]` and the corrective hint (`agent resume`/`interactive-review`); pinned by `tests/test_resume_lifecycle.py::test_background_rejects_existing_run_id_in_task_position` (:148) and `..._in_provider_position` (:174). Owner validated in session 2026-10-09 that this friction is not reproducible in the current build (closure mechanism verified above); recorded as `rejected` because a hypothesis entry may only be rejected or promoted, and no owner evidence of the friction in real use exists.
 - **Promoted to:** n/a
 
 
@@ -242,8 +254,8 @@ fields only when the entry is promoted to work.
 - **Type:** hypothesis
 - **Source:** [hypothesis: harness-first direction §5.2 / V8 lesson, 2026-06-22]
 - **One-line capture:** Effective permission mode may be unclear without `teaagent doctor config` provenance view.
-- **Status:** open
-- **Closure evidence:** `teaagent doctor config` verified live 2026-09-14 — prints every key with its source (`default` / `config:config.json` / env), e.g. `permission_mode` shows `config:config.json`; pinned by `tests/test_workspace_defaults_toml.py::test_doctor_config_command_reports_sources` (:379) and `::test_doctor_config_redacts_webhook_url` (:334), which call the `doctor_config` CLI handler directly; underlying resolution pinned by `::test_resolve_config_provenance_layers` (:246). Awaiting owner validation to close.
+- **Status:** rejected
+- **Closure evidence:** `teaagent doctor config` verified live 2026-09-14 — prints every key with its source (`default` / `config:config.json` / env), e.g. `permission_mode` shows `config:config.json`; pinned by `tests/test_workspace_defaults_toml.py::test_doctor_config_command_reports_sources` (:379) and `::test_doctor_config_redacts_webhook_url` (:334), which call the `doctor_config` CLI handler directly; underlying resolution pinned by `::test_resolve_config_provenance_layers` (:246). Owner validated in session 2026-10-09 that this friction is not reproducible in the current build (closure mechanism verified above); recorded as `rejected` because a hypothesis entry may only be rejected or promoted, and no owner evidence of the friction in real use exists.
 - **Promoted to:** n/a
 
 ### 2026-06-22 - Epistemology gap (friction log vs competitor backlog)
@@ -251,8 +263,8 @@ fields only when the entry is promoted to work.
 - **Type:** hypothesis
 - **Source:** [hypothesis: direction-review-agenda-2026-06-22, 2026-06-22]
 - **One-line capture:** Backlog may still prioritize competitive-survey items while owner friction log has zero evidence entries.
-- **Status:** open
-- **Closure evidence:** DR-006 T1 Option B+ ratified 2026-06-22 — the scheduling gate now requires friction-driven/governance-gap/owner-override for `feat:` work, mechanically enforcing the evidence-first ordering this hypothesis worried about. Awaiting owner validation to close.
+- **Status:** rejected
+- **Closure evidence:** DR-006 T1 Option B+ ratified 2026-06-22 — the scheduling gate now requires friction-driven/governance-gap/owner-override for `feat:` work, mechanically enforcing the evidence-first ordering this hypothesis worried about. Owner validated in session 2026-10-09 that this friction is not reproducible in the current build (closure mechanism verified above); recorded as `rejected` because a hypothesis entry may only be rejected or promoted, and no owner evidence of the friction in real use exists.
 - **Promoted to:** [DR-006 Owner Decision](../strategy/dr-006-owner-decision-2026-06-22.md)
 
 

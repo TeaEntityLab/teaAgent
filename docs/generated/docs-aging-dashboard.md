@@ -54,9 +54,9 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 
 ## Corpus Cost (G5 Signal)
 
-**Total docs:** 669 (baseline 582 at diagnosis, delta +87)
+**Total docs:** 670 (baseline 582 at diagnosis, delta +88)
 **Live corpus (non-archive):** 377
-**Archive-tier docs (total):** 292
+**Archive-tier docs (total):** 293
 **Working-tier docs unreferenced by INDEX.md:** 328
 
 Dead-weight candidates (working tier, not linked from INDEX.md):

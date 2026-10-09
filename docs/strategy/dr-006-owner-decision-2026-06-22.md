@@ -70,6 +70,31 @@ Agents completed permitted work. DR-001 acceptance = owner testimony only.
 | Quarterly survey skipped while README makes fresh comparison claims | T5 docs track broken |
 **Amendment (2026-09-09):** Falsifier 1 is now enforced mechanically by `scripts/check_dr006_gate_trailer.py`. `Gate:` is the canonical trailer; `Constraint:` trailers containing an accepted gate token are accepted during the transition because they were already in use (e.g. `87d1c61`).
 
+**Review record (2026-10-09, owner-ratified in session):** the three-month
+falsifier review due ~2026-09-22 was performed on 2026-10-09. F1 (gate
+trailer): mechanical check `python3 scripts/check_dr006_gate_trailer.py --base 3ff0fa24`
+exits 0 on this tree (no output; the script prints only on violation) — every
+`feat:` commit touching `teaagent/` since 2026-09-09 cites a gate; no violation.
+The `--base 3ff0fa24` range starts after 2026-09-09, so the full window was also
+checked with `--base 8b613392` (last commit before 2026-09-09), which exits 0.
+F2 (off-main release with stale generated docs): not exercised — no release
+tag exists after `v0.1.0-p4-remediation`; the only later tag is
+`tui-chat-not-merged-yet` (annotated, 2026-05-30, on `395f173`), a work marker
+by name rather than a release. F3 (UX tickets citing the competitive plan
+without a friction ID): not exercised — no new UX ticket was opened. F4 (survey
+skipped while README makes fresh comparison claims): no fresh comparison claim
+was added; the T5 quarterly survey itself is recorded below. Decision: T1
+Option B+ and T5 Option C stand unchanged.
+
+**T5 quarterly survey record (2026-10-09):** the Q3 (end-September) docs-only
+competitor UX survey was not run on time. The owner directed on 2026-10-09
+that it be run; the attempt in the recording environment could not reach any
+vendor documentation host (outbound access limited to the proxy allowlist),
+so no survey file was produced. Recorded as **attempted, blocked, deferred**:
+the next attempt must be made from an environment with vendor-docs access,
+remains docs-only hypothesis intake per harness-first §5.1, and is due no
+later than 2026-12-31. No positioning claim may be refreshed until it runs.
+
 ---
 
 ## Owner ratification
