@@ -1,7 +1,7 @@
 # Roadmap Review and Improvement Plan — 2026-10-09
 
 > **Claim class:** Dated whole-project review and **proposed** roadmap; not current truth and not a scheduling authority.
-> **Status:** Review recorded 2026-10-09. Every implementation row below is `Proposed` until the owner admits it through the DR-006 gate or it qualifies as a `fix:` on an existing contract.
+> **Status:** Review recorded 2026-10-09; Phase 0 and the owner decisions landed on `main` the same day (landing record in §7.4). Every implementation row below is `Proposed` until the owner admits it through the DR-006 gate or it qualifies as a `fix:` on an existing contract.
 > **Owner:** docs
 > **Last reviewed:** 2026-10-09
 > **Review trigger:** Owner disposition of §6 asks; `main` returns to green; ADR-0031 or ADR-0043 is decided; a new owner-use evidence entry lands.
@@ -235,6 +235,39 @@ The owner answered the §6 asks in session. Records and the commits that carry t
 | 8. Friction-log hypotheses (4 open) | Owner validated and closed | operator-friction-log.md |
 
 **Corrections from the ADR-0043 packet.** The packet re-measured this review's Phase 3 numbers: the seven default-delete rows are 4,920 module lines (matches §4) but the exclusive test lines are **3,429 across 128 tests** (the 11,622 figure in §4 counted every file that mentions a quarantined module and does not reproduce; the strict file union is 10,926). More important, the packet found **import-time reachability from `teaagent.cli`** for `federated_sync`, the `consensus` package, and `jit_approval_server` (loaded on every CLI invocation; executed only behind opt-in flags), `RiskLevel` imported from `consensus/` by `skill_executor.py`, `skill_router.py`, and `governance/review_gate.py`, and five coupled modules missing from the ADR-0043 register (`vote_relay.py`, `control_plane_api.py`, `cli/_handlers/_sync.py`, `cli/_handlers/_control_plane.py`, parser modules). The register's "daily-path reachable: No" therefore needs re-scoring at the 2026-12-09 review, and any deletion must relocate `RiskLevel` first. §4 Phase 3 is superseded by the packet where they differ.
+
+### 7.4 Landing record — pull requests, release tag, Dependabot (2026-10-09, same day)
+
+Everything above landed on `main` through pull requests, one CI cycle each; `main` has been green on every run since run 862 (the first green run since 2026-09-29). Merge commits are listed so the record can be checked against `git log origin/main`.
+
+| PR | Content | Head | Merge commit | `main` CI run |
+| --- | --- | --- | --- | --- |
+| #76 | Phase 0 repairs, this review, owner decisions (27 commits from `claude/gracious-wright-p34vu8`) | `41dd2ce7` | `27e5e273` | 862 green |
+| #77 | release `v0.1.1`: version bump, dated changelog, tag build without PyPI publish | `ed2b9a6b` | `609657eb` | 866 green |
+| #78 | `actions/setup-python` 6 → 7 (supersedes Dependabot #74) | `d2e07a7a` | `5a83bc80` | 867 green |
+| #79 | `github/codeql-action` 4 → 4.37.3 (supersedes #75) | `b3985195` | `20353be9` | 868 green |
+| #80 | `pytest` 9.0.3 → 9.1.1 (supersedes #71) | `7bf05308` | `12035023` | 870 green |
+| #81 | `ruff` 0.15.17 → 0.15.20 (supersedes #72) + deadline-based heartbeat liveness test | `401d875d` | `fcb6408a` | 873 green |
+| #82 | `redis` 8.0.0 → 8.0.1 (supersedes #70) | `701d8868` | `701ac84a` | 875 green |
+| #83 | `hypothesis` 6.155.2 → 6.155.7 (supersedes #69) | `151362b3` | `6d7eedeb` | 877 green |
+| #84 | `google-adk` 2.2.0 → 2.3.0 (supersedes #68) | `b4ac83a5` | `b4769e3a` | 879 green |
+| #85 | `pip` 26.1.1 → 26.1.2, uv group, lock-only (supersedes #73) | `aee8f0ae` | `5ab3bb9d` | 881 (in progress when this record was written; the PR run 37977279127 was green) |
+
+**Dependabot method (owner decision 7, refined in session to one branch and one PR per bump).** None of the eight Dependabot PRs could be merged as opened: their commits carry no Lore trailers, so the `review-institution` gate rejects them, and the uv-group `uv.lock` hunks no longer applied on `main` after #76 and #77 moved the lock. Each bump was therefore reproduced on current `main` with the repo's own tooling: the `pyproject.toml` floor change was copied from the Dependabot diff and checked to be byte-identical before each push (`redis` and `google-adk` raise two extras each; `hypothesis` one; `pytest`/`ruff` one; `pip` has no floor and is lock-only), and the lock was regenerated with `uv lock --upgrade-package <pkg>==<ver>`, never edited by hand. The regenerated lock also records the project version 0.1.1, which the #77 version bump had left at 0.1.0. The Dependabot PRs #74, #75, #71, #72, #70, #69, #68 were closed with a one-line pointer to the superseding PR; #73 was closed when #85 merged.
+
+**One red run and its root cause.** The first CI run on #81 (37965565659) failed a single test, `tests/test_run_liveness.py::test_heartbeat_writes_liveness_file`, with `assert None is not None`: the test slept a fixed 0.08 s for a heartbeat thread on a 0.02 s interval, and on the loaded coverage runner the thread was never scheduled before `stop()` set the stop event, so no liveness file existed. The same base commit was green on `main` (run 870), the one permitted re-run passed, and the test was then made deadline-based (polls `liveness_snapshot()` for up to 5 s, both assertions kept, A1 gate clean) in `401d875d`. This is the fixed-sleep timing class that §7.1 flagged; it is now closed for this test and remains the first suspect for any future single-test red run.
+
+**Release tag — blocked, owner action required.** `v0.1.1` is annotated locally at `609657eb` (the #77 merge, `main` run 866 green) but could not be pushed from the recording environment: `git push origin refs/tags/v0.1.1` returns HTTP 403 through the session's GitHub proxy, and the refs API (`POST /repos/.../git/refs`) is refused with "Write access to this GitHub API path is not permitted through this proxy". Remote tags are unchanged (`v0.1.0-p4-remediation`, `tui-chat-not-merged-yet`, `python3.9`). The owner creates the tag with:
+
+```bash
+git fetch origin main
+git tag -a v0.1.1 609657eb5ec3e02e2440ec92a22757867ed7546c -m "v0.1.1 — 2026-10-09"
+git push origin v0.1.1
+```
+
+Per owner decision 2026-10-09 ("tag only, no PyPI"), `release.yml` builds and attaches artifacts on the tag and its `publish` job runs only on `workflow_dispatch`. Because the tag points at `609657eb`, the dependency bumps in #78–#85 are post-0.1.1 and are listed under `Unreleased` in `CHANGELOG.md`.
+
+**Left for the owner, not fixable from here.** (1) The tag above. (2) The destructive test described in §7.2 left an 8.4 GB zero-filled regular file at `/dev/sda` inside the recording container; deleting it was refused by the session's permission classifier, so it is reported rather than removed (it does not exist on CI or on the owner's machine). (3) Three older friction-log hypotheses that were promoted to F2/F3/F7 remain `open` pending owner confirmation; only the four the owner named were closed. (4) Nothing else: after #76 no production code changed, only dependency floors, the lockfile, and the one test.
 
 ## 8. Verification of this record
 
