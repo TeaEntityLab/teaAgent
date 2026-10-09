@@ -1,24 +1,24 @@
 {
-  "ok": false,
-  "created_at": "2026-10-09T12:18:42+00:00",
+  "ok": true,
+  "created_at": "2026-10-09T12:20:05+00:00",
   "repo_root": "/home/user/teaAgent",
   "git": {
     "branch": "claude/gracious-wright-p34vu8",
-    "commit": "fb26ab08eac25049c1c1a0725506795a9669a821",
+    "commit": "4bd6b5679fabdb3aae31506a219b737cdd1e0890",
     "dirty": false
   },
   "commands": [
     {
       "cmd": "/tmp/claude-0/-home-user-teaAgent/85b3f922-99e2-589b-9c9a-2f4fb7529027/scratchpad/venv/bin/python3 scripts/validate_docs_consistency.py",
-      "exit_code": 1,
-      "stdout": "Risk register evidence coverage: 29/29 rows verified (100%)\nTicket index evidence coverage: 21/21 rows verified (100%)\nERROR: docs/generated/docs-aging-dashboard.md is out of date; run: python3 scripts/report_docs_aging.py\n",
+      "exit_code": 0,
+      "stdout": "Risk register evidence coverage: 29/29 rows verified (100%)\nTicket index evidence coverage: 21/21 rows verified (100%)\nDocs consistency check passed.\n",
       "stderr": ""
     },
     {
       "cmd": "/tmp/claude-0/-home-user-teaAgent/85b3f922-99e2-589b-9c9a-2f4fb7529027/scratchpad/venv/bin/python3 scripts/report_docs_aging.py --check",
-      "exit_code": 1,
-      "stdout": "",
-      "stderr": "docs/generated/docs-aging-dashboard.md is out of date; run: python3 scripts/report_docs_aging.py\n"
+      "exit_code": 0,
+      "stdout": "Docs aging dashboard check passed.\n",
+      "stderr": ""
     }
   ],
   "docs_freshness": {

@@ -1,7 +1,7 @@
 # Release Documentation Evidence Bundle (Generated)
 
-**Generated:** 2026-10-09T12:18:42+00:00
-**Git commit:** `fb26ab08eac25049c1c1a0725506795a9669a821` on `claude/gracious-wright-p34vu8`
+**Generated:** 2026-10-09T12:20:05+00:00
+**Git commit:** `4bd6b5679fabdb3aae31506a219b737cdd1e0890` on `claude/gracious-wright-p34vu8`
 **Working tree dirty:** no
 
 Regenerate: `python3 scripts/build_release_docs_evidence_bundle.py`
@@ -14,9 +14,9 @@ Regenerate: `python3 scripts/build_release_docs_evidence_bundle.py`
 
 ## Last Gate Run
 
-- Overall gate status: **fail**
-- `/tmp/claude-0/-home-user-teaAgent/85b3f922-99e2-589b-9c9a-2f4fb7529027/scratchpad/venv/bin/python3 scripts/validate_docs_consistency.py` — **fail** (exit 1)
-- `/tmp/claude-0/-home-user-teaAgent/85b3f922-99e2-589b-9c9a-2f4fb7529027/scratchpad/venv/bin/python3 scripts/report_docs_aging.py --check` — **fail** (exit 1)
+- Overall gate status: **pass**
+- `/tmp/claude-0/-home-user-teaAgent/85b3f922-99e2-589b-9c9a-2f4fb7529027/scratchpad/venv/bin/python3 scripts/validate_docs_consistency.py` — **pass** (exit 0)
+- `/tmp/claude-0/-home-user-teaAgent/85b3f922-99e2-589b-9c9a-2f4fb7529027/scratchpad/venv/bin/python3 scripts/report_docs_aging.py --check` — **pass** (exit 0)
 
 ## Documentation Freshness
 
