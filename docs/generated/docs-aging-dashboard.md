@@ -4,7 +4,7 @@
 
 **Stale threshold:** 90 days since `Last reviewed`
 **Current-truth docs scanned:** 17
-**Needs attention (working tier only):** 6
+**Needs attention (working tier only):** 4
 **Archive-tier docs (exempt from staleness):** 0
 
 Regenerate: `python3 scripts/report_docs_aging.py`
@@ -24,23 +24,11 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 | `docs/analysis/active-findings-status-ledger-2026-06-06.md` | stale_by_age | 2026-06-25 | 2026-06-25 | Last reviewed older than 90 days |
 | `docs/USAGE.md` | stale_by_mtime | 2026-08-26 | 2026-09-24 | Missing owner banner; File modified after last reviewed date |
 
-### docs
-
-| Document | Status | Last reviewed | File mtime | Notes |
-| --- | --- | --- | --- | --- |
-| `docs/INDEX.md` | stale_by_mtime | 2026-09-16 | 2026-09-17 | Missing owner banner; File modified after last reviewed date |
-
 ### project
 
 | Document | Status | Last reviewed | File mtime | Notes |
 | --- | --- | --- | --- | --- |
 | `README.md` | stale_by_mtime | 2026-09-15 | 2026-09-24 | Missing owner banner; File modified after last reviewed date |
-
-### roadmap
-
-| Document | Status | Last reviewed | File mtime | Notes |
-| --- | --- | --- | --- | --- |
-| `docs/roadmap-status.md` | stale_by_mtime | 2026-09-17 | 2026-09-24 | Missing review trigger banner; File modified after last reviewed date |
 
 ## Review Triggers (Current-Truth Docs)
 
@@ -66,7 +54,7 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 
 ## Corpus Cost (G5 Signal)
 
-**Total docs:** 667 (baseline 582 at diagnosis, delta +85)
+**Total docs:** 668 (baseline 582 at diagnosis, delta +86)
 **Live corpus (non-archive):** 377
 **Working-tier docs unreferenced by INDEX.md:** 328
 

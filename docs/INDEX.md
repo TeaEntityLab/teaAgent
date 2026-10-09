@@ -1,7 +1,7 @@
 # TeaAgent Documentation Index
-# 2026-09-16
+# 2026-10-09
 
-> **Last reviewed:** 2026-09-16 (roadmap rethink evidence and proposed-plan record indexed; scheduling authority unchanged)
+> **Last reviewed:** 2026-10-09 (2026-10-09 roadmap review and proposed improvement plan indexed; scheduling authority unchanged)
 > **Review trigger:** New front-door docs, supersession links, roadmap evidence, or validation command changes.
 > **Owner:** docs
 
@@ -88,6 +88,7 @@ Use this short list instead of scanning every dated analysis file.
 | 2026-08-26 whole-project lens review | [Whole-Project Lens Review](analysis/whole-project-lens-review-2026-08-26.md) | Dated evidence: six-lens panel on features/goals/intents, C1–C6 Candidate Adoption Ledger (North-Star G1–G6 visibility, doc-truth repairs, dormant-surface trigger lane), and worth-doing ranking; not current truth. |
 | 2026-09-09 roadmap and original-intent Socratic review | [Roadmap and Original-Intent Socratic Review](reviews/roadmap-intent-socratic-2026-09-09.md) | Dated evidence: seven-lens panel (5 DISAGREE / 2 AGREE-WITH-CHANGES), run-store audit showing 415 runs of 6 synthetic prompts and zero organic owner tasks, criterion-1 restated as unexercised, CI-dark enforcement findings, and R-01–R-10 adoption ledger; not current truth. |
 | 2026-09-16 roadmap rethink and proposed repair order | [Roadmap Rethink — Decision Rationale and Proposed Plan](reviews/roadmap-rethink-2026-09-16.md) | Dated evidence and continuation record: corrected finding interpretations, all G23–G38 dispositions, bounded acceptance criteria, and owner gates. Recommendations remain Proposed; recording is not adoption. |
+| 2026-10-09 whole-project roadmap review and proposed improvement plan | [Roadmap Review and Improvement Plan — 2026-10-09](reviews/roadmap-review-and-improvement-plan-2026-10-09.md) | Dated evidence and proposed plan: red-`main` root causes (8 of 9 CI failures reproduced off-runner), overdue ADR-0031 disposition, evidence starvation, Phase 0–4 proposal with owner asks and defaults. Recommendations remain Proposed; recording is not adoption. |
 | 2026-08-31 external advisor roadmap hypothesis | [External Advisor Roadmap Hypothesis — 2026-08-31](reviews/external-advisor-roadmap-hypothesis-2026-08-31.md) | Dated evidence: verbatim advisor output (promote nothing on 09-12, extend ADR-0031 only bound to a booked dogfood session, Horizons A/B/C) plus the 2026-09-17 disposition table; hypothesis, not authority. |
 | Documentation system review | [Historical Evidence Index](archive/INDEX.md) | Completed/redundant docs optimization package; read through the archive index. |
 | Older review packages, competitor surveys, daily-driver packages, and completed plans | [Historical Evidence Index](archive/INDEX.md) | Preserved provenance; do not treat as current status. |
