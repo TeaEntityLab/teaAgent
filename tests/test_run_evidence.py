@@ -48,6 +48,89 @@ def test_extract_commands_run():
     assert commands[1].command == 'echo "hello"'
 
 
+def test_extract_commands_run_attaches_failed_start_error_without_exit_code():
+    """A shell call that failed to start keeps exit_code None and records its error."""
+    events = [
+        {
+            'event_type': 'tool_call_started',
+            'payload': {
+                'tool_name': 'workspace_run_shell_inspect',
+                'call_id': 'verify-1',
+                'arguments': {'command': 'nosuchtool --check'},
+            },
+            'created_at': 1234567890.0,
+        },
+        {
+            'event_type': 'tool_call_failed',
+            'payload': {
+                'tool_name': 'workspace_run_shell_inspect',
+                'call_id': 'verify-1',
+                'error': 'FileNotFoundError: nosuchtool',
+            },
+            'created_at': 1234567891.0,
+        },
+    ]
+
+    commands = extract_commands_run(events)
+    assert len(commands) == 1
+    assert commands[0].command == 'nosuchtool --check'
+    assert commands[0].exit_code is None
+    assert commands[0].error == 'FileNotFoundError: nosuchtool'
+    assert commands[0].timestamp == 1234567890.0
+    data = RunEvidenceBundle(run_id='failed-start', commands_run=commands).to_dict()
+    assert data['commands_run'][0]['error'] == 'FileNotFoundError: nosuchtool'
+    assert data['commands_run'][0]['exit_code'] is None
+
+
+def test_extract_commands_run_started_only_has_no_error():
+    """A started call with no completion event has neither exit code nor error."""
+    events = [
+        {
+            'event_type': 'tool_call_started',
+            'payload': {
+                'tool_name': 'workspace_run_shell_inspect',
+                'call_id': 'verify-2',
+                'arguments': {'command': 'python -m pytest -q'},
+            },
+            'created_at': 1234567890.0,
+        },
+    ]
+
+    commands = extract_commands_run(events)
+    assert len(commands) == 1
+    assert commands[0].exit_code is None
+    assert commands[0].error is None
+
+
+def test_extract_commands_run_completed_call_keeps_exit_code_and_no_error():
+    """The success path still reports the exit code and no error."""
+    events = [
+        {
+            'event_type': 'tool_call_started',
+            'payload': {
+                'tool_name': 'workspace_run_shell_inspect',
+                'call_id': 'verify-3',
+                'arguments': {'command': 'python -m pytest -q'},
+            },
+            'created_at': 1234567890.0,
+        },
+        {
+            'event_type': 'tool_call_completed',
+            'payload': {
+                'tool_name': 'workspace_run_shell_inspect',
+                'call_id': 'verify-3',
+                'result': {'command': 'python -m pytest -q', 'exit_code': 0},
+            },
+            'created_at': 1234567891.0,
+        },
+    ]
+
+    commands = extract_commands_run(events)
+    assert len(commands) == 1
+    assert commands[0].exit_code == 0
+    assert commands[0].error is None
+
+
 def test_extract_tests():
     """Test extracting test execution evidence."""
     events = [

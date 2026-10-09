@@ -474,3 +474,96 @@ def test_emit_run_completion_output_tty_receipt_on_stderr(monkeypatch, capsys) -
         captured = capsys.readouterr()
         assert '"run_id"' in captured.out
         assert 'Run receipt: emit-tty' in captured.err
+
+
+def _receipt_for_shell_events(events: list[dict]) -> str:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        _write_run(tmpdir, 'receipt-cmd', events)
+        return build_run_receipt(RunStore(tmpdir), 'receipt-cmd', tmpdir)
+
+
+def test_receipt_renders_failed_start_as_failed_not_exit() -> None:
+    events = [
+        {
+            'event_type': 'tool_call_started',
+            'timestamp': '2026-06-06T10:01:00Z',
+            'payload': {
+                'tool_name': 'workspace_run_shell_inspect',
+                'call_id': 'verify-1',
+                'arguments': {'command': 'nosuchtool --check'},
+            },
+        },
+        {
+            'event_type': 'tool_call_failed',
+            'timestamp': '2026-06-06T10:01:01Z',
+            'payload': {
+                'tool_name': 'workspace_run_shell_inspect',
+                'call_id': 'verify-1',
+                'error': 'FileNotFoundError: nosuchtool',
+            },
+        },
+        {
+            'event_type': 'run_completed',
+            'timestamp': '2026-06-06T10:05:00Z',
+            'payload': {'answer': 'done'},
+        },
+    ]
+    text = _receipt_for_shell_events(events)
+    assert '  - nosuchtool --check [failed: FileNotFoundError: nosuchtool]' in text
+    assert '[exit ' not in text
+    assert '[outcome unknown]' not in text
+
+
+def test_receipt_renders_started_only_command_as_outcome_unknown() -> None:
+    events = [
+        {
+            'event_type': 'tool_call_started',
+            'timestamp': '2026-06-06T10:01:00Z',
+            'payload': {
+                'tool_name': 'workspace_run_shell_inspect',
+                'call_id': 'verify-2',
+                'arguments': {'command': 'python -m pytest -q'},
+            },
+        },
+        {
+            'event_type': 'run_completed',
+            'timestamp': '2026-06-06T10:05:00Z',
+            'payload': {'answer': 'done'},
+        },
+    ]
+    text = _receipt_for_shell_events(events)
+    assert '  - python -m pytest -q [outcome unknown]' in text
+    assert '[exit ' not in text
+    assert '[failed:' not in text
+
+
+def test_receipt_renders_completed_command_with_exit_code() -> None:
+    events = [
+        {
+            'event_type': 'tool_call_started',
+            'timestamp': '2026-06-06T10:01:00Z',
+            'payload': {
+                'tool_name': 'workspace_run_shell_inspect',
+                'call_id': 'verify-3',
+                'arguments': {'command': 'python -m pytest -q'},
+            },
+        },
+        {
+            'event_type': 'tool_call_completed',
+            'timestamp': '2026-06-06T10:01:30Z',
+            'payload': {
+                'tool_name': 'workspace_run_shell_inspect',
+                'call_id': 'verify-3',
+                'result': {'command': 'python -m pytest -q', 'exit_code': 0},
+            },
+        },
+        {
+            'event_type': 'run_completed',
+            'timestamp': '2026-06-06T10:05:00Z',
+            'payload': {'answer': 'done'},
+        },
+    ]
+    text = _receipt_for_shell_events(events)
+    assert '  - python -m pytest -q [exit 0]' in text
+    assert '[failed:' not in text
+    assert '[outcome unknown]' not in text
