@@ -1,10 +1,10 @@
 {
   "ok": true,
-  "created_at": "2026-10-09T19:20:56+00:00",
+  "created_at": "2026-10-10T03:41:22+00:00",
   "repo_root": "/home/user/teaAgent",
   "git": {
     "branch": "claude/gracious-wright-p34vu8",
-    "commit": "b0cb4ef520341ddd7a3cb6befc159a8f962dd6a4",
+    "commit": "683fb04a246e7b41d2569f00bfbb1e05153f6b95",
     "dirty": true
   },
   "commands": [
@@ -23,11 +23,13 @@
   ],
   "docs_freshness": {
     "scanned": 17,
-    "needs_attention": 4,
+    "needs_attention": 6,
     "by_owner": {
       "project": 1,
       "daily-driver": 2,
-      "cli": 1
+      "cli": 1,
+      "roadmap": 1,
+      "strategy": 1
     },
     "stale_threshold_days": 90
   },
