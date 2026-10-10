@@ -1,7 +1,7 @@
 # Release Documentation Evidence Bundle (Generated)
 
-**Generated:** 2026-10-09T19:20:56+00:00
-**Git commit:** `b0cb4ef520341ddd7a3cb6befc159a8f962dd6a4` on `claude/gracious-wright-p34vu8`
+**Generated:** 2026-10-10T03:41:22+00:00
+**Git commit:** `683fb04a246e7b41d2569f00bfbb1e05153f6b95` on `claude/gracious-wright-p34vu8`
 **Working tree dirty:** yes
 
 Regenerate: `python3 scripts/build_release_docs_evidence_bundle.py`
@@ -21,11 +21,13 @@ Regenerate: `python3 scripts/build_release_docs_evidence_bundle.py`
 ## Documentation Freshness
 
 - Current-truth docs scanned: **17**
-- Needs attention: **4** (>90 days)
+- Needs attention: **6** (>90 days)
 - Stale by owner surface:
   - `cli`: 1
   - `daily-driver`: 2
   - `project`: 1
+  - `roadmap`: 1
+  - `strategy`: 1
 
 ## Roadmap Excerpt
 

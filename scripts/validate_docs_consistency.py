@@ -1190,10 +1190,11 @@ def validate_operator_friction_log(friction_log_text: str) -> list[str]:
             )
 
         status = _normalize_friction_field(fields.get('Status', ''))
-        if status not in {'open', 'closed', 'rejected'}:
+        if status not in {'open', 'closed', 'rejected', 'promoted'}:
             errors.append(
                 f'operator-friction-log.md entry {title!r} at line {line_no} '
-                "has invalid Status; expected 'open', 'closed', or 'rejected'."
+                "has invalid Status; expected 'open', 'closed', 'rejected', "
+                "or 'promoted'."
             )
             continue
 
@@ -1203,6 +1204,30 @@ def validate_operator_friction_log(friction_log_text: str) -> list[str]:
                 f'{line_no} cannot be marked closed; reject it or promote it '
                 'after owner validation.'
             )
+
+        if status == 'promoted':
+            # A hypothesis the owner confirmed as real friction: it lives on as
+            # an owner evidence entry, so it must point at that entry and at the
+            # closure evidence the entry carries. Evidence entries are never
+            # "promoted"; they close.
+            if entry_type != 'hypothesis':
+                errors.append(
+                    f'operator-friction-log.md entry {title!r} at line {line_no} '
+                    'may not use Status: promoted; only hypothesis entries are '
+                    'promoted (evidence entries close).'
+                )
+            if _is_empty_friction_link(fields.get('Promoted to')):
+                errors.append(
+                    f'operator-friction-log.md promoted entry {title!r} at line '
+                    f'{line_no} must cite the owner evidence entry it became in '
+                    'Promoted to.'
+                )
+            if _is_empty_friction_link(fields.get('Closure evidence')):
+                errors.append(
+                    f'operator-friction-log.md promoted entry {title!r} at line '
+                    f'{line_no} must cite non-n/a Closure evidence.'
+                )
+            continue
 
         if status != 'closed':
             continue

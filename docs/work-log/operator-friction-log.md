@@ -20,12 +20,17 @@ UX work tied to real harness use instead of competitor feature parity.
   mechanisms verified in the entries); `rejected` is the log's state for a
   hypothesis the owner did not confirm as real friction, and none of the four
   became owner evidence.
-- Open hypothesis entries still `Status: open` after 2026-10-09: 3 (`agent run JSON
-  errors without hints`, competitor-derived `Governance vocabulary on daily path`,
-  competitor-derived `Receipts need plain-language first line`). Their closure
-  evidence cites owner evidence F7/F2/F3; the owner did not list them for closure
-  on 2026-10-09, so they stay open until the owner confirms.
-- Owner-validated/promoted hypotheses retained for provenance: 3 (F2/F3/F7).
+- Open hypothesis entries: 0.
+- Promoted hypotheses retained for provenance: 3 (`agent run JSON errors without
+  hints` → F7, `Governance vocabulary on daily path` → F2, `Receipts need
+  plain-language first line` → F3). The owner confirmed all three in the
+  2026-06-22 capture batch; until 2026-10-10 the log had no status for "confirmed
+  and promoted" (only open/closed/rejected, and a hypothesis may not close), so
+  they sat at `open` with an explanatory note. Owner decision 2026-10-10: add
+  `promoted` as the terminal state for confirmed hypotheses; the three carry it
+  now. Their closure mechanisms still hold on the current build
+  (`tests/test_friction_ux_fixes.py::test_soften_operator_copy`,
+  `::test_wants_human_cli_tty_default`, `tests/test_cli_run_error_formatting.py`).
 - Governance-process hypothesis resolved by DR-006: 1.
 - Direction implication: none of the retained hypotheses is open roadmap demand;
   new UX work still requires a cited owner-evidence entry or governance gap.
@@ -38,6 +43,8 @@ UX work tied to real harness use instead of competitor feature parity.
   a B1 session (date to be booked), and recorded the DR-006 falsifier review. No new
   friction entry was written; absence of friction remains dormancy evidence, not
   ergonomics evidence.
+- Owner decision (2026-10-10): the three hypotheses promoted to F2/F3/F7 move
+  from `open` to the new `promoted` status; no new friction was reported.
 
 Use this log when:
 
@@ -58,6 +65,10 @@ Use this log when:
   is allowed only for open or rejected entries.
 - A promoted entry must cite the ticket or acceptance-gap artifact in
   `Promoted to`; `n/a` is allowed only before promotion or for rejected entries.
+- `promoted` is the terminal state of a hypothesis the owner confirmed as real
+  friction: it points at the owner evidence entry it became (`Promoted to`) and
+  carries that entry's closure evidence. Evidence entries close; they are never
+  `promoted`. A hypothesis the owner did not confirm is `rejected`.
 - Closing promoted work requires both links: the downstream artifact in
   `Promoted to` and the commit/test/doc in `Closure evidence`.
 - Do not use this log for public positioning, competitor ranking, or feature
@@ -76,7 +87,7 @@ fields only when the entry is promoted to work.
 - **Type:** evidence | hypothesis
 - **Source:** owner real use | [hypothesis: source, date]
 - **One-line capture:** I tried __; expected __; got __.
-- **Status:** open | closed | rejected
+- **Status:** open | closed | rejected | promoted
 ```
 
 ## Socratic Intake Prompts
@@ -105,7 +116,7 @@ fields only when the entry is promoted to work.
 - **Expected:** What should have happened.
 - **Actual:** What happened instead.
 - **Harness impact:** approval | audit | rollback | cost | receipt | state | validation | ergonomics
-- **Status:** open | closed | rejected
+- **Status:** open | closed | rejected | promoted
 - **Closure evidence:** commit/test/doc link; `n/a` only while open or rejected
 - **Promoted to:** ticket/acceptance-gap link; `n/a` only before promotion or when rejected
 ```
@@ -217,7 +228,7 @@ fields only when the entry is promoted to work.
 - **Type:** hypothesis
 - **Source:** [hypothesis: retrospective 04-ux-usability.md, 2026-06-22]
 - **One-line capture:** `agent run` task/plan/background failures may bypass `format_error_block` hints.
-- **Status:** open
+- **Status:** promoted
 - **Closure evidence:** Owner evidence F7 (2026-06-22)
 - **Promoted to:** [Owner evidence: agent run errors without hints](#2026-06-22---agent-run-errors-without-hints-f7)
 ### 2026-06-22 - Run id passed as task [hypothesis]
@@ -237,7 +248,7 @@ fields only when the entry is promoted to work.
 - **Type:** hypothesis
 - **Source:** [hypothesis: harness-first direction §5.2 + intent debate, 2026-06-22]
 - **One-line capture:** Daily ask/approve/undo path may still surface tenant/envelope/cockpit nouns instead of plain-language receipts.
-- **Status:** open
+- **Status:** promoted
 - **Closure evidence:** Owner evidence F2 (2026-06-22)
 - **Promoted to:** [Owner evidence: Governance vocabulary on daily path (F2)](#2026-06-22---governance-vocabulary-on-daily-path-f2)
 
@@ -246,7 +257,7 @@ fields only when the entry is promoted to work.
 - **Type:** hypothesis
 - **Source:** [hypothesis: harness-first direction §5.2, 2026-06-22]
 - **One-line capture:** Run receipts may bury the actionable answer behind JSON unless `--json` is explicit.
-- **Status:** open
+- **Status:** promoted
 - **Closure evidence:** Owner evidence F3 (2026-06-22)
 - **Promoted to:** [Owner evidence: JSON before plain-language receipt (F3)](#2026-06-22---json-before-plain-language-receipt-f3)
 ### 2026-06-22 - Config source confusion ("why is it read-only")
