@@ -260,6 +260,52 @@ def test_validate_operator_friction_log_allows_open_unpromoted_entry() -> None:
     assert errors == []
 
 
+def test_validate_operator_friction_log_allows_promoted_hypothesis() -> None:
+    log = (
+        '# Operator Friction Log\n\n'
+        '## Competitor-Derived Hypotheses\n\n'
+        '### 2026-06-14 - Competitor clue\n\n'
+        '- **Type:** hypothesis\n'
+        '- **Source:** [hypothesis: example, 2026-06-14]\n'
+        '- **Status:** promoted\n'
+        '- **Closure evidence:** Owner evidence F9 (2026-06-14)\n'
+        '- **Promoted to:** [Owner evidence: Clue (F9)](#2026-06-14---clue-f9)\n'
+    )
+    errors = _VALIDATE_MODULE.validate_operator_friction_log(log)
+    assert errors == []
+
+
+def test_validate_operator_friction_log_promoted_requires_both_links() -> None:
+    log = (
+        '# Operator Friction Log\n\n'
+        '## Competitor-Derived Hypotheses\n\n'
+        '### 2026-06-14 - Competitor clue\n\n'
+        '- **Type:** hypothesis\n'
+        '- **Source:** [hypothesis: example, 2026-06-14]\n'
+        '- **Status:** promoted\n'
+        '- **Closure evidence:** n/a\n'
+        '- **Promoted to:** n/a\n'
+    )
+    errors = _VALIDATE_MODULE.validate_operator_friction_log(log)
+    assert any('must cite the owner evidence entry' in err for err in errors)
+    assert any('must cite non-n/a Closure evidence' in err for err in errors)
+
+
+def test_validate_operator_friction_log_rejects_promoted_evidence_entry() -> None:
+    log = (
+        '# Operator Friction Log\n\n'
+        '## Owner Evidence Entries\n\n'
+        '### 2026-06-14 - Real friction\n\n'
+        '- **Type:** evidence\n'
+        '- **Source:** owner real use\n'
+        '- **Status:** promoted\n'
+        '- **Closure evidence:** tests/test_example.py\n'
+        '- **Promoted to:** docs/work-log/example-ticket.md\n'
+    )
+    errors = _VALIDATE_MODULE.validate_operator_friction_log(log)
+    assert any('only hypothesis entries are promoted' in err for err in errors)
+
+
 def test_validate_operator_friction_log_detects_malformed_heading() -> None:
     log = (
         '# Operator Friction Log\n\n'

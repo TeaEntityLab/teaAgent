@@ -90,6 +90,24 @@ def test_organic_run_without_open_friction_is_frictionless(tmp_path):
     assert report.doc_lookup_instrumented is False
 
 
+def test_promoted_hypothesis_is_not_open_friction(tmp_path):
+    # A hypothesis the owner confirmed and promoted to an evidence entry is
+    # accounted for by that entry; it must not keep the verdict at
+    # friction_observed on its own.
+    log = _friction_log(
+        tmp_path,
+        '### 2026-09-10 - Promoted clue\n- **Status:** promoted\n'
+        '### 2026-09-11 - Its evidence entry\n- **Status:** closed\n',
+    )
+    entries = load_friction_entries(log)
+    report = build_g1_evidence_report(
+        [_run('Refactor the auth module', origin='owner')], entries
+    )
+    assert report.friction_entries_in_window['promoted'] == 1
+    assert report.friction_entries_in_window['open'] == 0
+    assert report.verdict == 'frictionless'
+
+
 def test_window_bounds_exclude_out_of_range_runs():
     runs = [
         _run('Organic task A', created_at='2026-09-01T00:00:00+00:00', origin='owner'),

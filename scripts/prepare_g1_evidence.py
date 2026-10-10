@@ -197,7 +197,12 @@ def build_g1_evidence_report(
         else:
             unknown += 1
 
-    friction_counts: dict[str, int] = {'open': 0, 'closed': 0, 'rejected': 0}
+    friction_counts: dict[str, int] = {
+        'open': 0,
+        'closed': 0,
+        'rejected': 0,
+        'promoted': 0,
+    }
     for entry in friction_entries:
         entry_dt = _parse_bound(entry.get('date'))
         if not _in_window(entry_dt):

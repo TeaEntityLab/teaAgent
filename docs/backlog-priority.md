@@ -59,7 +59,7 @@ was met on 2026-06-22; completing that intake does not authorize new work.
 
 | Tag | Meaning |
 | --- | --- |
-| `friction-driven` | Owner friction log evidence or closed hypothesis promoted after validation |
+| `friction-driven` | Owner friction log evidence or a hypothesis promoted (status `promoted`) to owner evidence after validation |
 | `governance-gap` | Security/audit/approval correctness; not UX speculation |
 | `legacy-competitive` | Pre–2026-06-13 competitive positioning or survey machinery |
 | `owner-override` | Explicit owner direction record or dated override rationale |
