@@ -1,7 +1,7 @@
 # TeaAgent Documentation Index
 # 2026-10-09
 
-> **Last reviewed:** 2026-10-09 (2026-10-09 roadmap review and proposed improvement plan indexed; scheduling authority unchanged)
+> **Last reviewed:** 2026-10-23 (owner experiment samples indexed; scheduling authority unchanged)
 > **Review trigger:** New front-door docs, supersession links, roadmap evidence, or validation command changes.
 > **Owner:** docs
 
@@ -89,6 +89,9 @@ Use this short list instead of scanning every dated analysis file.
 | 2026-09-09 roadmap and original-intent Socratic review | [Roadmap and Original-Intent Socratic Review](reviews/roadmap-intent-socratic-2026-09-09.md) | Dated evidence: seven-lens panel (5 DISAGREE / 2 AGREE-WITH-CHANGES), run-store audit showing 415 runs of 6 synthetic prompts and zero organic owner tasks, criterion-1 restated as unexercised, CI-dark enforcement findings, and R-01–R-10 adoption ledger; not current truth. |
 | 2026-09-16 roadmap rethink and proposed repair order | [Roadmap Rethink — Decision Rationale and Proposed Plan](reviews/roadmap-rethink-2026-09-16.md) | Dated evidence and continuation record: corrected finding interpretations, all G23–G38 dispositions, bounded acceptance criteria, and owner gates. Recommendations remain Proposed; recording is not adoption. |
 | 2026-10-09 whole-project roadmap review and proposed improvement plan | [Roadmap Review and Improvement Plan — 2026-10-09](reviews/roadmap-review-and-improvement-plan-2026-10-09.md) | Dated evidence and proposed plan: red-`main` root causes (8 of 9 CI failures reproduced off-runner), overdue ADR-0031 disposition, evidence starvation, Phase 0–4 proposal with owner asks and defaults. Recommendations remain Proposed; recording is not adoption. |
+| 2026-10-23 architecture rethink and external-system survey | [Architecture Rethink — 2026-10-23](reviews/architecture-rethink-2026-10-23.md) | Dated evidence: multi-lens disagreement on pivoting to a foreign-harness kernel, survey pins, a measured package size map, audit-chain tip resync, and an uninstalled observe-only hook. Not a concept change and not adoption. |
+| 2026-10-23 safer foreign-hook path | [Safer path for a foreign host hook](reviews/foreign-hook-safer-path-2026-10-23.md) | Dated design: install observe-only as an async post-tool hook on another computer. A veto is not built. Codex has no documented fail-closed switch. |
+| 2026-10-23 owner experiment samples | [Owner experiment samples](work-log/owner-experiment-samples-2026-10-23.md) | Sample steps for the other-computer observe install, one watched B1 task, the blank EFX live-proof worksheet, and the unbuilt veto. Not results. |
 | 2026-10-09 ADR-0043 disposition evidence packet | [ADR-0043 Disposition Evidence Packet — 2026-10-09](plans/adr-0043-disposition-packet-2026-10-09.md) | Prepared packet for the 2026-12-09 review: per-surface importer sweep, LOC/test counts, guards, recovery anchors, execution order if deleted. No disposition taken. |
 | 2026-10-09 ADR-0031 extension decision | [ADR-0031 Extension Decision — 2026-10-09](work-log/adr-0031-2026-10-09-extension-decision.md) | Owner decision record: extend to ≤ 2026-11-15 bound to a booked B1 session, revert if it does not occur. |
 | 2026-08-31 external advisor roadmap hypothesis | [External Advisor Roadmap Hypothesis — 2026-08-31](reviews/external-advisor-roadmap-hypothesis-2026-08-31.md) | Dated evidence: verbatim advisor output (promote nothing on 09-12, extend ADR-0031 only bound to a booked dogfood session, Horizons A/B/C) plus the 2026-09-17 disposition table; hypothesis, not authority. |

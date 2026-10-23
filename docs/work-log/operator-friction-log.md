@@ -13,24 +13,30 @@ UX work tied to real harness use instead of competitor feature parity.
 
 ## Current Intake Status
 
-- Owner evidence entries: 5, all closed (F2/F3/F6/F7/F8).
+- Owner evidence entries: 7. Five are closed (F2/F3/F6/F7/F8). Two are
+  open (F9, F10), admitted in session on 2026-10-23 and not yet fixed.
 - Hypotheses rejected after owner validation 2026-10-09: 4 (approval call-id
   hunting, run-id confusion, config-source confusion, epistemology gap) — the
   owner confirmed each is not reproducible in the current build (closure
   mechanisms verified in the entries); `rejected` is the log's state for a
   hypothesis the owner did not confirm as real friction, and none of the four
   became owner evidence.
-- Open hypothesis entries: 0.
-- Promoted hypotheses retained for provenance: 3 (`agent run JSON errors without
-  hints` → F7, `Governance vocabulary on daily path` → F2, `Receipts need
-  plain-language first line` → F3). The owner confirmed all three in the
-  2026-06-22 capture batch; until 2026-10-10 the log had no status for "confirmed
-  and promoted" (only open/closed/rejected, and a hypothesis may not close), so
-  they sat at `open` with an explanatory note. Owner decision 2026-10-10: add
-  `promoted` as the terminal state for confirmed hypotheses; the three carry it
-  now. Their closure mechanisms still hold on the current build
-  (`tests/test_friction_ux_fixes.py::test_soften_operator_copy`,
+- Open hypothesis entries: 0. The two 2026-10-23 survey hypotheses were
+  admitted in session and promoted to F9 and F10. Admission is not a fix
+  and not roadmap demand.
+- Promoted hypotheses retained for provenance: 5. Three are the 2026-06-22
+  batch (`agent run JSON errors without hints` → F7, `Governance vocabulary
+  on daily path` → F2, `Receipts need plain-language first line` → F3). The
+  owner confirmed those three in that capture batch; until 2026-10-10 the log
+  had no status for "confirmed and promoted" (only open/closed/rejected, and a
+  hypothesis may not close), so they sat at `open` with an explanatory note.
+  Owner decision 2026-10-10: add `promoted` as the terminal state for confirmed
+  hypotheses; those three carry it. Their closure mechanisms still hold on the
+  current build (`tests/test_friction_ux_fixes.py::test_soften_operator_copy`,
   `::test_wants_human_cli_tty_default`, `tests/test_cli_run_error_formatting.py`).
+  Two more were admitted on 2026-10-23 (`Foreign harness sessions are outside
+  the audit` → F9, `A host hook is not yet a governance boundary` → F10).
+  Those evidence entries stay open. Promotion is not a fix.
 - Governance-process hypothesis resolved by DR-006: 1.
 - Direction implication: none of the retained hypotheses is open roadmap demand;
   new UX work still requires a cited owner-evidence entry or governance gap.
@@ -45,6 +51,13 @@ UX work tied to real harness use instead of competitor feature parity.
   ergonomics evidence.
 - Owner decision (2026-10-10): the three hypotheses promoted to F2/F3/F7 move
   from `open` to the new `promoted` status; no new friction was reported.
+- Owner decision (2026-10-23): F9 and F10 admitted. The observe recorder will
+  be installed by the owner on another computer, not on this one. Code is
+  archived rather than deleted unless it is wrong. ADR-0043 stays archived
+  until 2026-12-09. The safer hook path is
+  [foreign-hook-safer-path-2026-10-23.md](../reviews/foreign-hook-safer-path-2026-10-23.md).
+  B1 was asked about and not booked. No live EFX provider call was authorized
+  with a target.
 
 Use this log when:
 
@@ -165,6 +178,34 @@ fields only when the entry is promoted to work.
 - **Closure evidence:** ADR-0038 HELP_TEXT + tests/tui/test_tui_command_truth.py; tui/core.py Run status labels
 - **Promoted to:** `tests/tui/test_tui_command_truth.py` (regression guard; U-P0-2 / ADR-0038)
 
+### 2026-10-23 - Foreign harness sessions outside the audit (F9)
+
+- **Type:** evidence
+- **Source:** owner real use
+- **Context:** owner admission in session, 2026-10-23, answering the survey hypothesis of the same date
+- **Run/receipt:** n/a
+- **Attempted:** Do the repo's agentic coding where the work actually happens.
+- **Expected:** TeaAgent's approval and audit would see that work.
+- **Actual:** The owner admitted the survey finding: those sessions show up in other harnesses, and this repo's run index has no owner-origin runs, so approval and audit do not see that work.
+- **Harness impact:** audit
+- **Status:** open
+- **Closure evidence:** n/a
+- **Promoted to:** n/a
+
+### 2026-10-23 - Host hook fails open (F10)
+
+- **Type:** evidence
+- **Source:** owner real use
+- **Context:** owner admission in session, 2026-10-23; safer path requested in the same answer
+- **Run/receipt:** n/a
+- **Attempted:** Treat a host command hook as the gate in front of a tool call.
+- **Expected:** A crash, timeout, or edited hook config would stop the tool.
+- **Actual:** The owner confirmed that those hosts fail open unless the host itself is set to block. The safer path is designed and not built as a veto: [foreign-hook-safer-path-2026-10-23.md](../reviews/foreign-hook-safer-path-2026-10-23.md).
+- **Harness impact:** approval
+- **Status:** open
+- **Closure evidence:** n/a
+- **Promoted to:** n/a
+
 ### 2026-06-22 - agent run errors without hints (F7)
 
 - **Type:** evidence
@@ -278,6 +319,24 @@ fields only when the entry is promoted to work.
 - **Closure evidence:** DR-006 T1 Option B+ ratified 2026-06-22 — the scheduling gate now requires friction-driven/governance-gap/owner-override for `feat:` work, mechanically enforcing the evidence-first ordering this hypothesis worried about. Owner validated in session 2026-10-09 that this friction is not reproducible in the current build (closure mechanism verified above); recorded as `rejected` because a hypothesis entry may only be rejected or promoted, and no owner evidence of the friction in real use exists.
 - **Promoted to:** [DR-006 Owner Decision](../strategy/dr-006-owner-decision-2026-06-22.md)
 
+
+### 2026-10-23 - Foreign harness sessions are outside the audit
+
+- **Type:** hypothesis
+- **Source:** [hypothesis: architecture rethink survey, 2026-10-23](../reviews/architecture-rethink-2026-10-23.md)
+- **One-line capture:** Coding sessions on this repo show up in other harnesses, while TeaAgent's run index has zero owner-origin runs, so approval and audit never see that work.
+- **Status:** promoted
+- **Closure evidence:** Owner evidence F9 (2026-10-23)
+- **Promoted to:** [Owner evidence: Foreign harness sessions outside the audit (F9)](#2026-10-23---foreign-harness-sessions-outside-the-audit-f9)
+
+### 2026-10-23 - A host hook is not yet a governance boundary
+
+- **Type:** hypothesis
+- **Source:** [hypothesis: Claude Code / pi / OpenCode hook seams, 2026-10-23](../reviews/architecture-rethink-2026-10-23.md)
+- **One-line capture:** Those hosts can call an external process before a tool runs, but a crash, timeout, or config edit fails open unless the owner opts into a host-side block. `python -m teaagent.foreign_hook` only records metadata and refuses `--enforce`.
+- **Status:** promoted
+- **Closure evidence:** Owner evidence F10 (2026-10-23)
+- **Promoted to:** [Owner evidence: Host hook fails open (F10)](#2026-10-23---host-hook-fails-open-f10)
 
 Add further hypotheses only after a dated source is captured through the
 [Signal-to-Acceptance-Gap Process](../processes/signal-to-acceptance-gap.md).

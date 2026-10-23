@@ -4,7 +4,7 @@
 
 **Stale threshold:** 90 days since `Last reviewed`
 **Current-truth docs scanned:** 17
-**Needs attention (working tier only):** 6
+**Needs attention (working tier only):** 5
 **Archive-tier docs (exempt from staleness):** 0
 
 Regenerate: `python3 scripts/report_docs_aging.py`
@@ -29,12 +29,6 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 | Document | Status | Last reviewed | File mtime | Notes |
 | --- | --- | --- | --- | --- |
 | `README.md` | stale_by_mtime | 2026-09-15 | 2026-09-24 | Missing owner banner; File modified after last reviewed date |
-
-### roadmap
-
-| Document | Status | Last reviewed | File mtime | Notes |
-| --- | --- | --- | --- | --- |
-| `docs/roadmap-status.md` | stale_by_mtime | 2026-10-09 | 2026-10-10 | Missing review trigger banner; File modified after last reviewed date |
 
 ### strategy
 
@@ -66,9 +60,9 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 
 ## Corpus Cost (G5 Signal)
 
-**Total docs:** 670 (baseline 582 at diagnosis, delta +88)
+**Total docs:** 675 (baseline 582 at diagnosis, delta +93)
 **Live corpus (non-archive):** 377
-**Archive-tier docs (total):** 293
+**Archive-tier docs (total):** 298
 **Working-tier docs unreferenced by INDEX.md:** 328
 
 Dead-weight candidates (working tier, not linked from INDEX.md):
@@ -104,4 +98,4 @@ Dead-weight candidates (working tier, not linked from INDEX.md):
 | 2026-07 | 13 |
 | 2026-08 | 5 |
 | 2026-09 | 29 |
-| 2026-10 | 3 |
+| 2026-10 | 4 |

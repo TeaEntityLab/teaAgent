@@ -95,6 +95,8 @@ the next attempt must be made from an environment with vendor-docs access,
 remains docs-only hypothesis intake per harness-first §5.1, and is due no
 later than 2026-12-31. No positioning claim may be refreshed until it runs.
 
+**T5 quarterly survey record (2026-10-23):** the deferred survey was run from an environment that could read vendor source and docs. Pins, lens disagreement, and the hypothesis list are in [Architecture Rethink — 2026-10-23](../reviews/architecture-rethink-2026-10-23.md). No positioning claim was refreshed. Intake stays hypothesis-only under harness-first §5.1. T1 Option B+ and T5 Option C are unchanged. The code in that record is an audit-chain integrity fix, an uninstalled observe-only recorder, a deferred OpenTelemetry import, and a CI change so a red lint job does not skip the governance jobs. None of that is an owner-override for a foreign-harness product.
+
 ---
 
 ## Owner ratification
