@@ -25,13 +25,6 @@ try:
 except ImportError:
     CRYPTO_AVAILABLE = False
 
-try:
-    from teaagent.telemetry import TelemetryConfig, configure_telemetry
-
-    _OPENTELEMETRY_AVAILABLE = True
-except ImportError:
-    _OPENTELEMETRY_AVAILABLE = False
-
 logger = logging.getLogger(__name__)
 
 _GENESIS_HASH = 'genesis'
@@ -97,6 +90,49 @@ SENSITIVE_STRING_PATTERNS = (
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _chain_tip(path: Path) -> tuple[str, str | None]:
+    """Return the last hashed event's ``(hash, created_at)`` in an audit log.
+
+    A missing or empty file, or a file with no hashed event, returns
+    ``('genesis', None)``. Lines without a ``hash`` are skipped, matching
+    startup recovery. The read walks backward from the end so a second
+    process can append without this logger trusting a stale in-memory tip.
+    """
+    if not path.is_file():
+        return _GENESIS_HASH, None
+    size = path.stat().st_size
+    if size <= 0:
+        return _GENESIS_HASH, None
+
+    window = 8192
+    with path.open('rb') as handle:
+        while True:
+            start = max(0, size - window)
+            handle.seek(start)
+            text = handle.read().decode('utf-8', errors='replace')
+            lines = text.splitlines()
+            # A window that does not start at offset 0 begins mid-line.
+            if start > 0 and lines:
+                lines = lines[1:]
+            for raw in reversed(lines):
+                line = raw.strip()
+                if not line:
+                    continue
+                try:
+                    obj = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if not isinstance(obj, dict):
+                    continue
+                digest = obj.get('hash')
+                if isinstance(digest, str) and digest:
+                    created = obj.get('created_at')
+                    return digest, created if isinstance(created, str) else None
+            if start == 0:
+                return _GENESIS_HASH, None
+            window = min(size, window * 4)
 
 
 @dataclass(frozen=True)
@@ -383,7 +419,9 @@ class AuditLogger:
             service_name: Service name for telemetry
             service_version: Service version for telemetry
         """
-        if not _OPENTELEMETRY_AVAILABLE:
+        try:
+            from teaagent.telemetry import TelemetryConfig, configure_telemetry
+        except ImportError:
             logger.warning(
                 'OpenTelemetry not available - install opentelemetry-api and opentelemetry-sdk'
             )
@@ -430,6 +468,16 @@ class AuditLogger:
 
             try:
                 with file_lock(path):
+                    # Re-read the tip under the lock. Another process may have
+                    # appended since this logger cached _prev_hash at startup;
+                    # chaining from that cache forks the hash chain.
+                    tip_hash, tip_ts = _chain_tip(path)
+                    if tip_ts is not None and (
+                        self._last_timestamp_str is None
+                        or tip_ts > self._last_timestamp_str
+                    ):
+                        self._last_timestamp_str = tip_ts
+
                     # Enforce monotonicity under file lock
                     created_at = utc_now()
                     if (
@@ -439,7 +487,7 @@ class AuditLogger:
                         created_at = self._last_timestamp_str
                     self._last_timestamp_str = created_at
 
-                    prev = self._prev_hash
+                    prev = tip_hash
 
                     # Encrypt payload for L3
                     payload_to_write = event_payload
