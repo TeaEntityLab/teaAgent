@@ -210,9 +210,11 @@ jobs:
         # Ratchet ceiling: must only ever DECREASE. Raised 65 -> 68 on 2026-09-09
         # because the real count was 68, so this step exited 1 and — via
         # `needs: lint` — silently disabled `governance-gate`, `review-institution`,
-        # and `docker-smoke` on main. A dark governance tier is worse than a
-        # loose ratchet; the 3-violation debt is recorded in
-        # docs/reviews/roadmap-intent-socratic-2026-09-09.md (R-06).
+        # and `docker-smoke` on main. governance-gate and review-institution no
+        # longer need lint (2026-10-23), so a red ratchet cannot skip them.
+        # docker-smoke still needs lint and is continue-on-error. package still
+        # needs both lint and governance-gate. The 3-violation debt is recorded
+        # in docs/reviews/roadmap-intent-socratic-2026-09-09.md (R-06).
         run: python3 scripts/audit_config_access.py --max 68
 
       - name: Complexity baseline
@@ -262,8 +264,9 @@ jobs:
 
   governance-gate:
     runs-on: ubuntu-latest
-    # Run after lint passes, before package build
-    needs: lint
+    # Do not need lint. A formatter or ratchet failure must not skip approval,
+    # plan-gate, or permission-matrix tests. package still needs this job and
+    # lint, so a red lint run still blocks the wheel.
 
     steps:
       - uses: actions/checkout@v7
@@ -304,7 +307,8 @@ jobs:
 
   review-institution:
     runs-on: ubuntu-latest
-    needs: lint
+    # Do not need lint. Audit-schema, DR-006, and commit-trailer checks must
+    # run when the lint job is red.
 
     steps:
       - uses: actions/checkout@v7
