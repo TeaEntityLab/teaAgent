@@ -1,6 +1,6 @@
 # Backlog Priority
 
-> **Last reviewed:** 2026-10-09 (owner decisions applied: ADR-0031 extended to 2026-11-15 bound to a B1 session; ADR-0043 packet prepared, deletions deferred to 2026-12-09; Phase 0 CI/test repairs landed; no priority or shipped/beta change — previous review 2026-09-17: roadmaps/progress/intents review: no priority or shipped/beta change; the "Open — High (P0)/(P1)" and "Open — Daily-use ergonomics" sections are fully shipped and retained for provenance — new work still enters only through the DR-006 gate; ADR-0043 register now carries the ANP row this file already listed; ADR-0031 close 2026-09-29 and ADR-0043 disposition 2026-12-09 are the next owner dates)
+> **Last reviewed:** 2026-10-26 (reconciliation: fixed cross-doc contradictions, added orphaned items as Untriaged; no priority or shipped/beta change). Previous: 2026-10-09 (owner decisions applied: ADR-0031 extended to 2026-11-15 bound to a B1 session; ADR-0043 packet prepared, deletions deferred to 2026-12-09; Phase 0 CI/test repairs landed; no priority or shipped/beta change — previous review 2026-09-17: roadmaps/progress/intents review: no priority or shipped/beta change; the "Open — High (P0)/(P1)" and "Open — Daily-use ergonomics" sections are fully shipped and retained for provenance — new work still enters only through the DR-006 gate; ADR-0043 register now carries the ANP row this file already listed; ADR-0031 close 2026-09-29 and ADR-0043 disposition 2026-12-09 are the next owner dates)
 > **Review trigger:** Backlog priorities or shipped/beta status claims change.
 > **Scheduling gate (2026-08-26):** DR-006 remains authoritative. EFX-001–003
 > are in-progress P0 `governance-gap` remediations on existing seams; no
@@ -40,11 +40,11 @@
 >
 > | Surface | Daily-path reachable | Disposition at expiry |
 > | --- | --- | --- |
-> | `teaagent/federated_sync.py` | No (`teaagent sync`; multisig off by default) | Promote under `owner-override` or delete |
+> | `teaagent/federated_sync.py` | No invocation (`teaagent sync`; multisig off by default); import-time yes ([ADR-0043 packet §0 item 1](plans/adr-0043-disposition-packet-2026-10-09.md)) | Promote under `owner-override` or delete |
 > | `teaagent/signature_relay.py` | No (`teaagent sync signature-relay`) | Delete with `federated_sync` unless WAN multisig ratified |
 > | `teaagent/domain/workflow_engine.py` | **No production caller**; execution simulated | Strongest deletion candidate (importer sweep done 2026-09-13: zero production callers) |
-> | `teaagent/consensus/` + `cli/_handlers/_consensus.py` | No (`teaagent consensus`; off by default) | Delete per ADR-0029 precedent unless ratified |
-> | `teaagent/jit_approval_server.py` | No (`teaagent control-plane serve`) | M4 carve-out only if dogfood scheduled; else delete |
+> | `teaagent/consensus/` + `cli/_handlers/_consensus.py` | No invocation (`teaagent consensus`; off by default); import-time yes (via `cli/_handlers/_consensus.py:10` and `RiskLevel` in `skill_router`/`skill_executor`; [ADR-0043 packet §0 item 1, §2.5](plans/adr-0043-disposition-packet-2026-10-09.md)) | Delete per ADR-0029 precedent unless ratified |
+> | `teaagent/jit_approval_server.py` | No invocation (`teaagent control-plane serve`); import-time yes ([ADR-0043 packet §0 item 1, §6](plans/adr-0043-disposition-packet-2026-10-09.md)) | M4 carve-out only if dogfood scheduled; else delete |
 > | `teaagent/anp_adapter.py` (ANP bidirectional federation adapter) | No — no production caller; symbols exported from `teaagent/__init__.py` and tests only | Promote under `owner-override` if ANP federation is wanted, else delete |
 
 Prioritized by impact order: security and production risk → core platform capabilities → developer experience and ecosystem.
@@ -74,7 +74,7 @@ was met on 2026-06-22; completing that intake does not authorize new work.
 | M4 cloud/background/control-plane cockpit | `legacy-competitive` | **Hold except DR-006 carve-out** — background lifecycle + operator cockpit eligible under owner-override co-maintainer dogfood; cloud/SaaS/multi-tenant GTM held (T4). 2026-09-15 co-maintainer dogfood session completed (B2 evidence, B1 still pending) |
 | RBAC enforce flip (ADR 0031, packet evaluated 2026-09-15) | `governance-gap` | **Hold** — 4/5 criteria prepared, promotion not ready; owner extended to 2026-09-29 conditioned on G1–G5 landing and re-dogfood; promotion_ready=false; no premature enforce flip; **2026-10-09 owner decision:** the 2026-09-29 close passed without a disposition; extended once more to ≤ 2026-11-15 bound to a booked B1 session (date to be booked), revert if it does not occur; `promotion_ready` stays `false` |
 | Dogfood findings G23–G38 (2026-09-15 sweep; decisions in `work-log/dogfood-findings-2026-09-15.md` §"Owner decisions (2026-09-16)", reasoning in `reviews/roadmap-rethink-2026-09-16.md` §5) | 9 `governance-gap`, 6 `owner-override`, 1 `legacy-competitive` (G34) | **Done 2026-09-16** except G34 (**Hold**, ADR-0043 expiry review 2026-12-09) — owner "Yes for all"; landed with per-finding behavior regressions and an integrated first-run scratch journey; residual twins listed in the findings record |
-| TASK-006 RunEvent taxonomy + M0 | `harness-migration` | **Done** — ADR-0032 run-event taxonomy; `teaagent/runner/_events.py` spine + audit dual-write (M0–M7 in work-log) |
+| TASK-006 RunEvent taxonomy + M0 | `harness-migration` | **Done as rescoped** (guard + document, 2026-06-13); original ContextBus/webhook-on-spine goal **not done** — see `docs/plans/adr-0032-m1-m6-work-plan-2026-06-13.md` M7 row; G3 remains Partial in `roadmap-status.md`. ADR-0032 run-event taxonomy; `teaagent/runner/_events.py` spine + audit dual-write (M0–M7 in work-log) |
 | TASK-001 constitution repositioning | `owner-override` | **Done (Human Review 2026-07-22)** — owner ratified harness-first positioning; no README/product-contract changes required |
 | TASK-002 docs tiering | `harness-migration` | **Done** — tier column in `docs/generated/docs-inventory.md` + aging dashboard; `check-docs-inventory` pre-commit regen |
 | TASK-003 test typing pass | `harness-migration` | **Done** — all 608 test files typed (as of 2026-09-15; contract/behavior/adversarial/lifecycle) per `scripts/audit_test_quality.py` |
@@ -84,7 +84,7 @@ was met on 2026-06-22; completing that intake does not authorize new work.
 | Competitive refresh release gate | `legacy-competitive` | **Resolved (DR-006 T5):** split gate — CI blocks on `main`; manual survey quarterly |
 | Seven-control-loops SCL follow-on work | `legacy-competitive` | Listed implementation rows are historical `Complete`; follow-on scheduling is **held** without friction, governance-gap proof, or owner override |
 | Community-pain-point CPP follow-on work | `legacy-competitive` | Listed implementation rows are historical `Complete`; follow-on scheduling is **held** without friction, governance-gap proof, or owner override |
-| Consensus validation (ADR-0029) | `governance-gap` | **Deleted/quarantined (2026-07-22)** — owner-ratified Option D executed; no production importers; feature intent and git recovery path preserved in ADR-0029 disposition spec |
+| Consensus validation (ADR-0029) | `governance-gap` | **Deleted/quarantined (2026-07-22)** — owner-ratified Option D executed; no production importers (this row is the deleted `consensus_validation` module, not the `teaagent/consensus/` package of ADR-0043 row 5, which still has production importers: `RiskLevel` in `teaagent/skill_executor.py:14`, `teaagent/skill_router.py:15`, `teaagent/governance/review_gate.py:20`; see [ADR-0043 packet §0 item 2](plans/adr-0043-disposition-packet-2026-10-09.md)); feature intent and git recovery path preserved in ADR-0029 disposition spec |
 | EFX-001 | Refuse blind redispatch after an unmatched mutating-tool start; surface the attempt as unconfirmed/`UNKNOWN` | `governance-gap` | **In progress (2026-08-25)** — runner commits `pending_effect` before execute; unmatched non-idempotent starts become `OUTCOME_UNKNOWN` and refuse blind redispatch (`tests/test_efx001_interrupted_dispatch.py`, `tests/acceptance/test_efx_durable_effect_flow.py`). Live GitHub/browser/provider proof still required for Complete |
 | EFX-002 | Inventory effectful tools and fail closed when local policy sees external mutation, regardless of misleading read-only/destructive hints | `governance-gap` | **In progress (2026-08-25)** — local `external_effect` + fail-closed Prompt/read-only/workspace-write; MCP hint isolation; providerless `tests/acceptance/test_efx_durable_effect_flow.py` (`test_efx002_effect_classification.py`). Live GitHub/browser/provider proof still required for Complete |
 | EFX-003 | Bind one-time approval to run, tool, canonical payload/effect intent, then consume or expire it before dispatch | `governance-gap` | **In progress (2026-08-25)** — digest-bound consume-once JIT; providerless `tests/acceptance/test_efx_durable_effect_flow.py` (`test_efx003_one_time_approval.py`). Live GitHub/browser/provider proof still required for Complete |
@@ -139,7 +139,7 @@ Items below were deferred at baseline and have since been implemented in-repo.
 
 ---
 
-## Open — High (P0)
+## Open — High (P0) — all shipped (retained for provenance)
 
 **Note:** All P0 items below have been implemented with acceptance tests. See `docs/specs/` for technical specifications.
 
@@ -190,7 +190,7 @@ Items below were deferred at baseline and have since been implemented in-repo.
 
 ---
 
-## Open — High (P1)
+## Open — High (P1) — all shipped (retained for provenance)
 
 **Note:** Items extracted from strategic reference documents (competitive positioning, UX improvements, future roadmap).
 
@@ -506,3 +506,25 @@ Then manually refresh [scripts/refresh_agent_readme_survey.md](../scripts/refres
 | New index backends | `teaagent/context_pack.py` read-only graph evidence when adding search stores |
 | Strategic P2 research | hosted/cloud surface docs, background sessions, desktop/client-server packaging, repo-map quality evaluation |
 | Ergonomics KPI | `python3 scripts/measure_time_to_first_run.py --write docs/ergonomics-kpi.json` before regenerating the use-case matrix |
+
+---
+
+## Untriaged — orphaned items from older plans (added 2026-10-26)
+
+Items below were found in older plan and review documents and are not tracked in this file or `roadmap-status.md`. They carry **no priority, no schedule, and no shipped/beta status**. New work enters only through the DR-006 gate (see the Backlog Provenance rules above). Each row was checked against its cited source line on 2026-10-26.
+
+| ID | Title | Source file:line | Provenance | Status |
+| --- | --- | --- | --- | --- |
+| CQ-001 (remaining) | Eliminate remaining `type: ignore` comments (source says 28; current count of `type: ignore` lines under `teaagent/*.py` = 19 on 2026-10-26) | docs/plans/improvement-work-items.md:1202 | unclassified | Untriaged — needs DR-006 gate |
+| ARC-001 / ARC-002 | Retire legacy shim modules after downstream import migration stabilizes (same IDs at :1198-1199 carry different wording: approval consolidation; shared-types extraction) | docs/plans/improvement-work-items.md:1161 | unclassified | Untriaged — needs DR-006 gate |
+| Complexity violations | Remaining complexity violations (97 across ~80 functions; target <50) | docs/plans/improvement-work-items.md:524 | unclassified | Untriaged — needs DR-006 gate |
+| approval_manager.py split | Split `approval_manager.py` (1205 lines); listed as still pending follow-up | docs/plans/improvement-work-items.md:100 | unclassified | Untriaged — needs DR-006 gate |
+| WS1-002 | Replace raw approval-ID-first UX with readable selectors | docs/plans/system-improvement-work-directions-2026-06-06.md:66 | unclassified | Untriaged — needs DR-006 gate |
+| WS1-003 | Add default progress summaries for long runs | docs/plans/system-improvement-work-directions-2026-06-06.md:67 | unclassified | Untriaged — needs DR-006 gate |
+| WS2-002 | Add batch-level timeout and cancellation to subagent batch execution | docs/plans/system-improvement-work-directions-2026-06-06.md:81 | unclassified | Untriaged — needs DR-006 gate |
+| WS3-004 | Define cost state taxonomy (estimated, provider-reported, pending, unknown) | docs/plans/system-improvement-work-directions-2026-06-06.md:99 | unclassified | Untriaged — needs DR-006 gate |
+| WS4-002 | Expose approval queue depth and age | docs/plans/system-improvement-work-directions-2026-06-06.md:112 | unclassified | Untriaged — needs DR-006 gate |
+| WDA-006 | Decide and document whether consensus validation gates destructive actions behind the approval queue or is explicitly deferred (ADR with expiry) | docs/plans/work-direction-decomposition-2026-06-10.md:41 | unclassified | Untriaged — needs DR-006 gate |
+| WDE-003 | Close open verification gaps: WS2-004 depth/concurrency bypass test; WS2-003 cost-cents inheritance test | docs/plans/work-direction-decomposition-2026-06-10.md:89 | unclassified | Untriaged — needs DR-006 gate |
+| Remote HTTP approval | Remote approval orchestration over HTTP (backend stub exists; implementation deferred) | docs/plans/subagent-swarm-orchestration-unification-2026-06-06.md:102 | unclassified | Untriaged — needs DR-006 gate |
+| Foreign-hook fail-open friction F10 / SRV-PI-07 veto | Host hook fail-open on failure; a TeaAgent PreToolUse veto over foreign tool calls is not built | docs/reviews/architecture-rethink-2026-10-23.md:76 (SRV-PI-07); :123 (F10) | unclassified | Tracked; deliberately not built (see review) |
