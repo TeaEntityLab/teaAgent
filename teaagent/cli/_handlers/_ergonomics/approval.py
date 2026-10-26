@@ -11,6 +11,7 @@ from teaagent.approval.selectors import (
     format_pending_approvals,
     resolve_selector,
 )
+from teaagent.cli._formatting import format_error_block
 from teaagent.cli.execution import AgentExecutionFactory
 from teaagent.ergonomics.approval_store import ApprovalPresetStore
 from teaagent.ergonomics.cli_output import wants_human_cli
@@ -42,6 +43,20 @@ class _PrintJsonProxy:
 
 
 print_json = _PrintJsonProxy()
+
+
+_SCOPE_FIX_HINT = (
+    'pass --path-glob <glob> (repeatable) or --command-prefix <prefix> (repeatable)'
+)
+
+
+def _scope_usage_error(verb: str, detail: str) -> str:
+    return format_error_block(
+        'Usage error',
+        f'approval {verb} needs a scope: {detail}',
+        hint=f'retry with {_SCOPE_FIX_HINT}',
+        category='USAGE',
+    )
 
 
 def _wrap_approval_store_errors(func: Callable[[], int]) -> int:
@@ -92,11 +107,15 @@ def _parse_approval_arguments(args: argparse.Namespace) -> dict[str, Any] | None
             key, value = arg_pair.split('=', 1)
             arguments[key] = value
 
-        # Fall back to --path and --command for compatibility
+        # Fall back to --path and --command for compatibility. --command is
+        # stored under `shell_command`: `args.command` is the top-level
+        # subcommand name ('approval'), which must never be evaluated as a
+        # tool argument.
         if args.path and 'path' not in arguments:
             arguments['path'] = args.path
-        if args.command and 'command' not in arguments:
-            arguments['command'] = args.command
+        shell_command = getattr(args, 'shell_command', None)
+        if shell_command and 'command' not in arguments:
+            arguments['command'] = shell_command
 
     return arguments or None
 
@@ -308,20 +327,32 @@ def approval_grant_command(args: argparse.Namespace) -> int:
             # For non-session scopes, require explicit patterns
             if not args.path_glob and not args.command_prefix:
                 print(
-                    f'[error] scope={args.scope} requires at least one path_glob or command_prefix',
+                    _scope_usage_error(
+                        'grant',
+                        f'scope={args.scope} requires --path-glob or --command-prefix',
+                    ),
                     file=sys.stderr,
                 )
-                return 1
+                return 2
             path_globs = args.path_glob or None
             command_prefixes = args.command_prefix or None
-        grant = store.grant(
-            args.tool_name,
-            scope=args.scope,
-            permission_mode=args.permission_mode,
-            path_globs=path_globs,
-            command_prefixes=command_prefixes,
-            ttl_hours=args.ttl_hours,
-        )
+        try:
+            grant = store.grant(
+                args.tool_name,
+                scope=args.scope,
+                permission_mode=args.permission_mode,
+                path_globs=path_globs,
+                command_prefixes=command_prefixes,
+                ttl_hours=args.ttl_hours,
+            )
+        except ValueError as exc:
+            print(
+                format_error_block(
+                    'Usage error', str(exc), hint=_SCOPE_FIX_HINT, category='USAGE'
+                ),
+                file=sys.stderr,
+            )
+            return 2
         print_json(grant.to_dict())
         return 0
 
@@ -330,12 +361,30 @@ def approval_grant_command(args: argparse.Namespace) -> int:
 
 def approval_deny_command(args: argparse.Namespace) -> int:
     def _deny() -> int:
+        # Deny is never global: it must name the paths or commands it blocks.
+        if not args.path_glob and not args.command_prefix:
+            print(
+                _scope_usage_error(
+                    'deny', 'a deny grant must be limited to matching paths or commands'
+                ),
+                file=sys.stderr,
+            )
+            return 2
         preset = ApprovalPresetStore(args.root)
-        grant = preset.deny(
-            args.tool_name,
-            path_globs=args.path_glob or None,
-            command_prefixes=args.command_prefix or None,
-        )
+        try:
+            grant = preset.deny(
+                args.tool_name,
+                path_globs=args.path_glob or None,
+                command_prefixes=args.command_prefix or None,
+            )
+        except ValueError as exc:
+            print(
+                format_error_block(
+                    'Usage error', str(exc), hint=_SCOPE_FIX_HINT, category='USAGE'
+                ),
+                file=sys.stderr,
+            )
+            return 2
         print_json(grant.to_dict())
         return 0
 
