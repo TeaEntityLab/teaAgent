@@ -172,7 +172,7 @@ runtime/test path divergence.
    UX journey and severity survey for TUI, TUI chat, CLI chat, and agent mode.
 6. **`daily-driver-defeat-modes-2026-06-01.md`** *(analysis)*
    Failure modes where TeaAgent can technically work but lose daily-user trust.
-7. **`../plans/daily-driver-usefulness-master-plan-2026-06-01.md`** *(plans)*
+7. **`../archive/plans/daily-driver-usefulness-master-plan-2026-06-01.md`** *(plans)*
    Phased plan for making the project daily-useful.
 8. **`../plans/daily-driver-stability-test-plan-2026-06-01.md`** *(plans)*
    Test strategy and readiness gates.

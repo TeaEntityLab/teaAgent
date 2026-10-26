@@ -137,6 +137,7 @@ Use this short list instead of scanning every dated analysis file.
 | [Documentation Optimization Master Plan](plans/documentation-optimization-master-plan-2026-06-04.md) | Prioritizing documentation work by stability, UX, risk, and ROI. |
 | [Documentation Optimization Work Items](work-log/documentation-optimization-work-items-2026-06-04.md) | Concrete task execution ledger. |
 | [Daily-Driver Complete Work Plan](plans/daily-driver-complete-work-plan-risk-roi-2026-06-04.md) | Historical daily-driver risk, feasibility, ROI, and sequence; use harness-first direction for current persona claims. |
+| Phase 01–06 plans ([01](plans/phase-01-persistent-context.md), [02](plans/phase-02-scope-audit.md), [03](plans/phase-03-competitive-analysis.md), [04](plans/phase-04-pmf-framework.md), [05](plans/phase-05-founder-systematization.md), [06](plans/phase-06-data-flywheel.md)) | Architecture-reflection follow-ups, tracked as PHASE-01…06 in the backlog Untriaged section (115 open boxes, none started); no work before a DR-006 verdict. |
 | [Roadmap Work Items](work-log/roadmap-work-items-2026-06-04.md) | Product roadmap work items and acceptance criteria. |
 | [Phase 0 Priority Work Items](work-log/phase-0-priority-work-items-2026-06-04.md) | Trust-repair tasks derived from project-state review. |
 | [Phase 0 Governance Closure Report](work-log/phase-0-governance-closure-report-2026-06-04.md) | Closure evidence for coverage omit, dependency audit, and ADR-state governance. |

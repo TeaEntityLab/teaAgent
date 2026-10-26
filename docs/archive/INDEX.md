@@ -58,10 +58,10 @@ at the time of the move. Relative links inside them were updated to the new dept
 | [daily-driver-hardening-plan-2026-06-01.md](plans/daily-driver-hardening-plan-2026-06-01.md) | Complete | [Daily-Driver Current Status](../daily-driver-current-status.md) |
 | [daily-driver-tui-postfix-execution-sheets-2026-06-01.md](plans/daily-driver-tui-postfix-execution-sheets-2026-06-01.md) | Complete (TICKET-12..15 fixed) | [Ticket Plans Index](../plans/ticket-plans/index.md) |
 | [daily-driver-second-pass-task-plan-2026-06-01.md](plans/daily-driver-second-pass-task-plan-2026-06-01.md) | Complete (TASK-DD2 items fixed) | [Ticket Plans Index](../plans/ticket-plans/index.md) |
+| [daily-driver-usefulness-master-plan-2026-06-01.md](plans/daily-driver-usefulness-master-plan-2026-06-01.md) | 14/24 closed; 10 open DU items moved to the backlog Untriaged table | [Backlog Priority](../backlog-priority.md) |
 
-Not archived in this pass because an item is still open or unverified:
-`plans/daily-driver-usefulness-master-plan-2026-06-01.md` (DU-IDs are not
-tracked in any current ledger).
+The usefulness master plan followed later the same day, after its DU items were
+checked and the 10 open ones registered in the backlog.
 
 ## High-Overlap Clusters
 

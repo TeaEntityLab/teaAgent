@@ -1,4 +1,7 @@
 # Phase 01: Persistent Context — Create CLAUDE.md & Refactor AGENTS.md
+
+> **Status (2026-10-26):** Tracked as `PHASE-01` in [backlog-priority.md](../backlog-priority.md) (Untriaged section) — 0 of 13 boxes done; needs a DR-006 gate verdict before work starts.
+
 Last updated: 2026-06-09
 
 **Priority:** P0

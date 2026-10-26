@@ -70,7 +70,7 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 **Total docs:** 675 (baseline 582 at diagnosis, delta +93)
 **Live corpus (non-archive):** 377
 **Archive-tier docs (total):** 298
-**Working-tier docs unreferenced by INDEX.md:** 328
+**Working-tier docs unreferenced by INDEX.md:** 323
 
 Dead-weight candidates (working tier, not linked from INDEX.md):
 
@@ -94,14 +94,14 @@ Dead-weight candidates (working tier, not linked from INDEX.md):
 - `adr/0017-backend-adapter-interfaces.md`
 - `adr/0018-async-from-sync-pattern.md`
 - `adr/0019-phase-4-federated-swarm-consensus.md`
-- ... and 308 more
+- ... and 303 more
 
 ### Archive-tier growth (files added per month, last 6 months)
 
 | Month | Archive docs added |
 | --- | --- |
 | 2026-05 | 8 |
-| 2026-06 | 224 |
+| 2026-06 | 223 |
 | 2026-07 | 13 |
 | 2026-08 | 5 |
 | 2026-09 | 29 |
