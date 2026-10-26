@@ -1,3 +1,4 @@
+# test-type: behavior
 """DU-010A: `agent tick --max-cost-cents 0` must mean "unset", not a zero-spend cap.
 
 Trace (before the fix):
