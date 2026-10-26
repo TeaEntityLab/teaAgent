@@ -900,6 +900,145 @@ def validate_roadmap_horizon_milestone_consistency(roadmap_text: str) -> list[st
     return errors
 
 
+ROADMAP_BACKLOG_ITEM_ID = re.compile(
+    r'(?:EFX|VND|AGF|GOV|DSK|SCL|CPP|TASK)-[A-Z0-9]+(?:-[A-Z0-9]+)*'
+)
+ROADMAP_BACKLOG_RANGE_TAIL = re.compile(
+    r'^\s*(?:\.\.|–|—|through\b|to\b)', re.IGNORECASE
+)
+ROADMAP_BACKLOG_STATUS_HEADERS = frozenset({'scheduling', 'state', 'disposition'})
+ROADMAP_BACKLOG_BUCKETS: dict[str, str] = {
+    'complete': 'done',
+    'completed': 'done',
+    'done': 'done',
+    'fixed': 'done',
+    'shipped': 'done',
+    'implemented': 'done',
+    'resolved': 'done',
+    'in progress': 'active',
+    'active': 'active',
+    'on hold': 'hold',
+    'hold': 'hold',
+    'blocked': 'hold',
+    'deferred': 'hold',
+    'pending': 'pending',
+    'untriaged': 'pending',
+}
+
+
+def _roadmap_backlog_status_bucket(cell: str) -> str | None:
+    """Map a status cell to done/active/hold/pending, or None when unrecognised.
+
+    Only the leading phrase is compared, so ``In Progress — details`` and
+    ``**Done (2026-09-13)**`` both parse; anything else (``Absent``, ``TBD``,
+    ``Hold except DR-006``) is left unparsed so the checker stays silent.
+    """
+    text = re.sub(r'[*_`]', '', cell).strip()
+    lead = re.split(r'\s[—–-]\s|\s*\(|;|:|\|', text, maxsplit=1)[0]
+    lead = ' '.join(lead.rstrip('.').split()).lower()
+    return ROADMAP_BACKLOG_BUCKETS.get(lead)
+
+
+def _roadmap_backlog_status_records(
+    text: str,
+) -> dict[str, list[tuple[str, int, str]]]:
+    """Collect ``item id -> [(bucket, line_no, status_text)]`` from table rows.
+
+    The item ID must lead the first cell. The status is read from the first
+    status-like column (header contains ``status``, or is ``scheduling`` /
+    ``state`` / ``disposition``) whose cell parses to a known bucket. Rows in
+    tables without a header, and ranges such as ``EFX-001..003``, are skipped.
+    """
+    records: dict[str, list[tuple[str, int, str]]] = {}
+    lines = text.splitlines()
+    index = 0
+    while index < len(lines):
+        if not lines[index].strip().startswith('|'):
+            index += 1
+            continue
+        start = index
+        while index < len(lines) and lines[index].strip().startswith('|'):
+            index += 1
+        block = lines[start:index]
+        if len(block) < 2 or not _is_markdown_table_separator(block[1]):
+            continue
+        headers = [
+            re.sub(r'[*_`]', '', cell).strip().lower()
+            for cell in _split_markdown_table_row(block[0])
+        ]
+        status_columns = [
+            column
+            for column, header in enumerate(headers)
+            if 'status' in header or header in ROADMAP_BACKLOG_STATUS_HEADERS
+        ]
+        if not status_columns:
+            continue
+        for offset, row in enumerate(block[2:], start=start + 3):
+            cells = _split_markdown_table_row(row)
+            if not cells:
+                continue
+            first = re.sub(r'[*_`~]', '', cells[0]).strip()
+            match = ROADMAP_BACKLOG_ITEM_ID.match(first)
+            if match is None:
+                continue
+            if ROADMAP_BACKLOG_RANGE_TAIL.match(first[match.end() :]):
+                continue
+            if len(cells) == len(headers):
+                candidates = [
+                    column for column in status_columns if column < len(cells)
+                ]
+            else:
+                # Row width disagrees with the header (e.g. backlog EFX/AGF/VND
+                # rows carry a title column the header lacks). Fall back to the
+                # rightmost cell after ID and title that parses to a bucket.
+                candidates = list(range(len(cells) - 1, 1, -1))
+            for column in candidates:
+                bucket = _roadmap_backlog_status_bucket(cells[column])
+                if bucket is None:
+                    continue
+                records.setdefault(match.group(0), []).append(
+                    (bucket, offset, cells[column].strip())
+                )
+                break
+    return records
+
+
+def check_roadmap_backlog_status(
+    roadmap_text: str,
+    backlog_text: str,
+    *,
+    roadmap_label: str = 'docs/roadmap-status.md',
+    backlog_label: str = 'docs/backlog-priority.md',
+) -> list[str]:
+    """Flag item IDs whose status bucket differs between roadmap and backlog.
+
+    Conservative by design: an ID is compared only when it appears in both
+    documents, each side yields exactly one parsed bucket for it, and the
+    buckets differ. Anything ambiguous or unparsed produces no error.
+    """
+    roadmap_records = _roadmap_backlog_status_records(roadmap_text)
+    backlog_records = _roadmap_backlog_status_records(backlog_text)
+    errors: list[str] = []
+    for item_id in sorted(set(roadmap_records) & set(backlog_records)):
+        roadmap_rows = roadmap_records[item_id]
+        backlog_rows = backlog_records[item_id]
+        if len({row[0] for row in roadmap_rows}) != 1:
+            continue
+        if len({row[0] for row in backlog_rows}) != 1:
+            continue
+        roadmap_bucket, roadmap_line, roadmap_status = roadmap_rows[0]
+        backlog_bucket, backlog_line, backlog_status = backlog_rows[0]
+        if roadmap_bucket == backlog_bucket:
+            continue
+        errors.append(
+            f'Roadmap/backlog status drift: {item_id} is {roadmap_bucket} at '
+            f'{roadmap_label}:{roadmap_line} ({roadmap_status[:60]!r}) but '
+            f'{backlog_bucket} at {backlog_label}:{backlog_line} '
+            f'({backlog_status[:60]!r})'
+        )
+    return errors
+
+
 def _extract_coverage_omit_patterns(pyproject_text: str) -> set[str]:
     match = COVERAGE_OMIT_BLOCK.search(pyproject_text)
     if not match:
@@ -2346,6 +2485,11 @@ def main() -> int:
     )
     parser.add_argument('--catalog-doc', default='docs/plugin-skill-catalog.md')
     parser.add_argument('--roadmap-status', default='docs/roadmap-status.md')
+    parser.add_argument(
+        '--backlog-priority',
+        default='docs/backlog-priority.md',
+        help='Backlog priority markdown compared against the roadmap status table.',
+    )
     parser.add_argument('--pyproject', default='pyproject.toml')
     parser.add_argument(
         '--coverage-omit-ledger',
@@ -2419,6 +2563,22 @@ def main() -> int:
         security_workflow_path=Path(args.security_workflow),
         guarded_claims_registry_path=Path(args.guarded_claims_registry),
     )
+    roadmap_path = Path(args.roadmap_status)
+    backlog_path = Path(args.backlog_priority)
+    if roadmap_path.is_file() and backlog_path.is_file():
+        errors.extend(
+            check_roadmap_backlog_status(
+                roadmap_path.read_text(encoding='utf-8'),
+                backlog_path.read_text(encoding='utf-8'),
+                roadmap_label=str(roadmap_path),
+                backlog_label=str(backlog_path),
+            )
+        )
+    else:
+        for missing in (roadmap_path, backlog_path):
+            if not missing.is_file():
+                errors.append(f'Roadmap/backlog status input not found: {missing}')
+
     risk_register_path = Path(args.risk_register)
     if not args.skip_risk_register:
         if risk_register_path.is_file():
