@@ -4,7 +4,7 @@
 
 **Stale threshold:** 90 days since `Last reviewed`
 **Current-truth docs scanned:** 17
-**Needs attention (working tier only):** 5
+**Needs attention (working tier only):** 7
 **Archive-tier docs (exempt from staleness):** 0
 
 Regenerate: `python3 scripts/report_docs_aging.py`
@@ -22,7 +22,14 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 | Document | Status | Last reviewed | File mtime | Notes |
 | --- | --- | --- | --- | --- |
 | `docs/analysis/active-findings-status-ledger-2026-06-06.md` | stale_by_age | 2026-06-25 | 2026-06-25 | Last reviewed older than 90 days |
+| `docs/plans/ticket-plans/index.md` | stale_by_mtime | 2026-08-26 | 2026-10-26 | File modified after last reviewed date |
 | `docs/USAGE.md` | stale_by_mtime | 2026-08-26 | 2026-09-24 | Missing owner banner; File modified after last reviewed date |
+
+### governance
+
+| Document | Status | Last reviewed | File mtime | Notes |
+| --- | --- | --- | --- | --- |
+| `docs/maturity-matrix.md` | stale_by_mtime | 2026-09-16 | 2026-10-26 | Missing owner banner; File modified after last reviewed date |
 
 ### project
 
@@ -30,11 +37,11 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 | --- | --- | --- | --- | --- |
 | `README.md` | stale_by_mtime | 2026-09-15 | 2026-09-24 | Missing owner banner; File modified after last reviewed date |
 
-### strategy
+### roadmap
 
 | Document | Status | Last reviewed | File mtime | Notes |
 | --- | --- | --- | --- | --- |
-| `docs/backlog-priority.md` | stale_by_mtime | 2026-10-09 | 2026-10-10 | Missing owner banner; File modified after last reviewed date |
+| `docs/roadmap-status.md` | stale_by_mtime | 2026-10-23 | 2026-10-26 | Missing review trigger banner; File modified after last reviewed date |
 
 ## Review Triggers (Current-Truth Docs)
 
@@ -98,4 +105,4 @@ Dead-weight candidates (working tier, not linked from INDEX.md):
 | 2026-07 | 13 |
 | 2026-08 | 5 |
 | 2026-09 | 29 |
-| 2026-10 | 8 |
+| 2026-10 | 19 |

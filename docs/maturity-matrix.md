@@ -5,7 +5,7 @@
 
 Content last changed: 2026-05-31 (TUI evolution Phase A-C + doc review); the 2026-09-16 review above confirmed labels unchanged since.
 
-**Audit artifacts:** `docs/analysis/comprehensive-audit-2026-05-29.md`, `docs/plans/remediation-roadmap.md`
+**Audit artifacts:** `docs/analysis/comprehensive-audit-2026-05-29.md`, `docs/archive/plans/remediation-roadmap.md`
 
 ## Status Key
 
