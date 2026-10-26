@@ -315,7 +315,10 @@ def _register_batch(
 
         results: list[tuple[int, dict[str, Any]]] = []
         deadline = time.monotonic() + max(timeout_seconds, 1)
-        with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        # Not a context manager: its __exit__ calls shutdown(wait=True), which
+        # would block until every running subagent finishes and defeat the deadline.
+        pool = ThreadPoolExecutor(max_workers=max_workers)
+        try:
             futures = {
                 pool.submit(_run_one, task, index): index
                 for index, task in enumerate(tasks)
@@ -338,16 +341,32 @@ def _register_batch(
                         results.append((idx, _subagent_error(str(exc))))
 
             for future in pending:
-                future.cancel()
                 idx = futures[future]
-                results.append(
-                    (
-                        idx,
-                        _subagent_error(
-                            f'batch timeout after {timeout_seconds}s before task started'
-                        ),
+                if future.cancel():
+                    message = (
+                        f'batch timeout after {timeout_seconds}s before task started'
                     )
-                )
+                elif future.done():
+                    # Finished between the last wait() and now: keep its real result.
+                    try:
+                        results.append((idx, future.result()))
+                    except Exception as exc:
+                        results.append((idx, _subagent_error(str(exc))))
+                    continue
+                else:
+                    # Python threads cannot be killed and subagent runs expose no
+                    # cooperative cancel hook, so the still-running thread is
+                    # abandoned: it keeps running in the background and its result
+                    # is ignored.
+                    message = (
+                        f'batch timeout after {timeout_seconds}s while task was '
+                        'running; result discarded'
+                    )
+                results.append((idx, _subagent_error(message)))
+        finally:
+            # Do not wait for abandoned threads; completed results were already
+            # collected above.
+            pool.shutdown(wait=False, cancel_futures=True)
 
         results.sort(key=lambda x: x[0])
         ordered = [r for _, r in results]
