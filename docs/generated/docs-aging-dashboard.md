@@ -105,4 +105,4 @@ Dead-weight candidates (working tier, not linked from INDEX.md):
 | 2026-07 | 13 |
 | 2026-08 | 5 |
 | 2026-09 | 29 |
-| 2026-10 | 19 |
+| 2026-10 | 20 |
