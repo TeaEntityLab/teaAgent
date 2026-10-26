@@ -65,7 +65,7 @@ only the daily-driver fixes:
 | [TASK-DD2-003](TASK-DD2-003-plan.md) | P1 | M | `tui/__init__.py`, `chat_session_controller.py` | Fixed: make TUI cost ledger authoritative |
 | [TASK-DD2-004](TASK-DD2-004-plan.md) | P0 | M | `teaagent/ergonomics/_approval_grants.py`, `teaagent/cli/_handlers/agent_helpers.py` | Fixed: path-scoped approvals hardened; tests: `test_empty_path_globs_rejected_ds12`, `test_smart_hitl_approval_p_without_path_stays_denied` |
 | [TASK-DD2-005](TASK-DD2-005-plan.md) | P1 | M | `_agent.py`, `git_sandbox.py` | Fixed: git sandbox lifecycle preserves sandbox object through run completion (core fix). Broader ACs partially addressed — see plan file. |
-| [TASK-DD2-006](TASK-DD2-006-plan.md) | P1 | S | `teaagent/cli/_handlers/chat_repl.py`, `docs/cli.md` | Fixed: lifecycle wording made honest; covered by chat command/help tests |
+| [TASK-DD2-006](TASK-DD2-006-plan.md) | P1 | S | `teaagent/cli/_handlers/_chat.py` (was `chat_repl.py`, file removed), `docs/cli.md` | Fixed: lifecycle wording made honest; covered by chat command/help tests |
 | [TASK-DD2-007](TASK-DD2-007-plan.md) | P2 | M | `teaagent/cli/_handlers/_chat.py`, `tests/test_cli_chat.py` | Fixed: stale chat code removed/retired |
 | [TASK-DD2-008](TASK-DD2-008-plan.md) | P1 | S | `teaagent/ergonomics/dry_run.py`, `tests/test_context_pack.py` | Fixed: read-only and dry-run side-effect contract enforced |
 | [TASK-DD2-009](TASK-DD2-009-plan.md) | P1 | XS | `context_pack.py` | Fixed: context-pack read-only truth label passes through caller's readonly argument |
@@ -83,7 +83,7 @@ only the daily-driver fixes:
 |------|-----------------|
 | [`teaagent/tui/__init__.py`](../../../teaagent/tui/__init__.py) | TICKET-12, TICKET-14, TASK-DD2-001, TASK-DD2-002 |
 | [`teaagent/chat_session_controller.py`](../../../teaagent/chat_session_controller.py) | TICKET-12, TICKET-13 |
-| [`teaagent/cli/_handlers/chat_repl.py`](../../../teaagent/cli/_handlers/chat_repl.py) | TICKET-15, TICKET-16 |
+| [`teaagent/cli/_handlers/_agent/resume.py`](../../../teaagent/cli/_handlers/_agent/resume.py) (was `chat_repl.py`, file removed) | TICKET-15, TICKET-16 |
 | [`teaagent/cli/_handlers/_agent/resume.py`](../../../teaagent/cli/_handlers/_agent/resume.py) | TICKET-15, TICKET-16 |
 | [`teaagent/run_store.py`](../../../teaagent/run_store.py) | TICKET-16 |
 | [`teaagent/cli/_handlers/_chat.py`](../../../teaagent/cli/_handlers/_chat.py) | TASK-DD2-001 |

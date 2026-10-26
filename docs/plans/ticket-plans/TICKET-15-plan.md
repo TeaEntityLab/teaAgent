@@ -7,7 +7,7 @@
 
 ### CG-14 — Redundant `audit_trail` in suspension JSON
 `suspend_to_background` at
-[`teaagent/cli/_handlers/chat_repl.py:89-93`](../../../teaagent/cli/_handlers/chat_repl.py)
+[`teaagent/cli/_handlers/_agent/resume.py`](../../../teaagent/cli/_handlers/_agent/resume.py) (file removed; was `chat_repl.py:89-93`)
 writes a `'audit_trail'` key into the suspension JSON:
 
 ```python
@@ -28,7 +28,7 @@ perpetuating the false signal.
 
 ### CG-15-doc — Stale REPL `/undo` help text
 `print_chat_help` (or the help string) in
-[`teaagent/cli/_handlers/chat_repl.py`](../../../teaagent/cli/_handlers/chat_repl.py)
+[`teaagent/cli/_handlers/_chat.py`](../../../teaagent/cli/_handlers/_chat.py) (file removed; was `chat_repl.py`)
 contains:
 
 ```
@@ -87,7 +87,7 @@ def test_chat_help_undo_text_accurate():
 
 ### Step 1 — Remove `audit_trail` from `suspend_to_background`
 
-In `chat_repl.py:89-93`, delete the `'audit_trail'` key from
+In `_agent/resume.py` (was `chat_repl.py:89-93`), delete the `'audit_trail'` key from
 `suspension_data`:
 
 ```python
@@ -115,7 +115,7 @@ Or, if the field was used to populate a display field, replace with an explicit
 
 ### Step 3 — Fix REPL `/undo` help text
 
-In `print_chat_help` (`chat_repl.py:150+`), update:
+In `print_chat_help` (was `chat_repl.py:150+`; file removed), update:
 
 ```
 /undo  - Undo last agent edit (journal-first; fallback to checkpoint).

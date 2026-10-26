@@ -2,7 +2,7 @@
 
 **Priority:** P1
 **Status:** Fixed (2026-06-09) — run_id pre-generated before sandbox start; squash/discard/keep resolution paths implemented; stash pop uses labeled stash ref; `git_sandbox_started` / `git_sandbox_resolved` audit events persisted; `RunEvidenceBundle.git_sandbox` extracts lifecycle state.
-**Primary files:** `teaagent/cli/_handlers/_agent.py`, `teaagent/git_sandbox.py`, `tests/test_git_tools.py`
+**Primary files:** `teaagent/cli/_handlers/_agent/ (directory; was `_agent.py`)`, `teaagent/git_sandbox.py`, `tests/test_git_tools.py`
 
 ## Problem
 

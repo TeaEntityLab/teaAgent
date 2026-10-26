@@ -164,6 +164,23 @@ Use:
 - `Archived` when the file is retained only for context.
 - `Fixed` when the active behavior has proof.
 
+## Status vocabulary mapping
+
+Canonical roadmap states are defined in `docs/roadmap-status.md` (Status
+Definitions): **Proposed**, **Complete**, **In Progress**, **Pending**,
+**Blocked**, **On Hold**. Legacy ticket-plan labels map to them as follows:
+
+| Legacy label (ticket plans) | Canonical label | Note |
+|-----------------------------|-----------------|------|
+| `Fixed` | Complete | Only with active-behavior proof (Step 7). |
+| `Fixed in branch` / `Fixed in current branch` | In Progress | Until merged; then Complete. |
+| `Active` | In Progress | |
+| `Newly discovered` | Pending | Not yet started. |
+
+New ticket plans must use the canonical labels above. Do not introduce
+`Fixed` or `Active` in new plans. Existing legacy labels are historical and
+are not rewritten.
+
 ## Classic references
 
 Use these reference models without turning them into heavyweight process:

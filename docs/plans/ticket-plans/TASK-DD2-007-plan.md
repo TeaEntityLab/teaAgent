@@ -2,7 +2,7 @@
 
 **Priority:** P2
 **Status:** Fixed — `_chat.py` consolidated into `chat_repl.py` (-1296 lines, commit 464ce046); one execution path remains; stale production cost `session_cost_cents += 10` removed (commit 29975a63). Verified by comprehensive audit (see docs/work-log/roadmap-work-items-2026-06-04.md).
-**Primary files:** `teaagent/cli/_handlers/_chat.py`, `teaagent/cli/_handlers/chat_repl.py`, `tests/*chat*`
+**Primary files:** `teaagent/cli/_handlers/_chat.py`, `teaagent/cli/_handlers/chat_repl.py` (file removed; see `_chat.py`), `tests/*chat*`
 
 ## Problem
 

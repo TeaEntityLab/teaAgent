@@ -2,7 +2,7 @@
 
 **Priority:** P1
 **Status:** Active
-**Primary files:** `teaagent/cli/_handlers/chat_repl.py`, `teaagent/cli/_handlers/_chat.py`, `docs/*`
+**Primary files:** `teaagent/cli/_handlers/chat_repl.py` (file removed; see `_chat.py`), `teaagent/cli/_handlers/_chat.py`, `docs/*`
 
 ## Problem
 

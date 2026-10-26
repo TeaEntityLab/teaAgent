@@ -3,7 +3,9 @@
 **Priority:** P0  
 **Status:** Fixed  
 **Sprint:** 2026-06-10 → 2026-06-17  
-**Primary files:** `teaagent/rbac.py`, `teaagent/policy_engine.py`, `teaagent/policy_routing.py`, `teaagent/consensus_validation.py`, `teaagent/eval_suite.py`, `teaagent/release_gate.py`, `teaagent/scope_creep.py`, `teaagent/prompt_regression.py`, `teaagent/repo_map_benchmark.py`, `teaagent/update/*`, `docs/roadmap-status.md`
+**Primary files:** `teaagent/governance/rbac.py`, `teaagent/governance/policy_engine.py`, `teaagent/governance/policy_routing.py`, `teaagent/consensus_validation.py` (retired 2026-07-22, ADR-0029 Option D), `teaagent/eval_suite.py`, `teaagent/governance/release_gate.py`, `teaagent/governance/scope_creep.py`, `teaagent/prompt_regression.py`, `teaagent/governance/repo_map_benchmark.py`, `teaagent/update/*`, `docs/roadmap-status.md`
+
+> Note 2026-10-26: the "no production import path" premise is no longer true. `teaagent/subagents/_manager.py:10` imports `teaagent.governance.rbac`, and `:277` calls `teaagent.governance.h4_integration.check_subagent_launch_rbac` at subagent launch (shadow by default; enforced when `rbac_governance_mode` is set). `teaagent/runner/_approval_manager.py:52` calls `evaluate_approval_policy_shadow`. Policy/RBAC are wired in shadow mode; see `docs/roadmap-status.md` H4.
 
 ## Problem
 
