@@ -1,4 +1,7 @@
 # Phase 05: Founder Systematization — Reduce Single-Point-of-Failure Risk
+
+> **Status (2026-10-26):** Tracked as `PHASE-05` in [backlog-priority.md](../backlog-priority.md) (Untriaged section) — 0 of 24 boxes done; needs a DR-006 gate verdict before work starts.
+
 Last updated: 2026-06-09
 
 **Priority:** P2

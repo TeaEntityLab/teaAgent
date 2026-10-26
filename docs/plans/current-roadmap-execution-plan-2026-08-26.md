@@ -30,7 +30,7 @@ Current execution order:
 1. close the live-evidence gap for EFX-001 through EFX-003, but only after the
    owner explicitly authorizes the target, credential, effect, and call budget;
 2. prepare the agent-completable ADR-0031 evidence before the owner review
-   (2026-09-29; the 2026-09-12 review was extended on 2026-09-15), then let
+   (2026-09-29; the 2026-09-12 review was extended on 2026-09-15) (superseded: now 2026-11-15, see line 15), then let
    the owner choose promote, extend, or revert;
 3. keep every other horizon and milestone trigger-only until its documented
    admission gate is met.
@@ -78,7 +78,7 @@ Anti-pattern guards:
 | EFX-001 | P0 `governance-gap`; Promote | runner effect sandwich, process-death fault test, providerless acceptance | authorized live target plus reconciliation receipt | Verify/close in Phase 1; run last because interruption has the highest external ambiguity |
 | EFX-002 | P0 `governance-gap`; Promote | local `external_effect`, fail-closed Prompt/read-only/workspace-write, MCP hint isolation | authorized live GitHub/browser/provider proof | Verify/close first in Phase 1 |
 | EFX-003 | P0 `governance-gap`; Promote | digest-bound consume-once JIT grant, providerless acceptance | authorized exact-call and replay proof at a live boundary | Verify/close second in Phase 1 |
-| ADR-0031 / H4 policy-RBAC | `governance-gap`; Hold until review | evidence tooling and RBAC enforce path exist; policy enforce label remains advisory | 30-day receipts, coverage, latency, rollback, owner sign-off; review 2026-09-12 | Prepare evidence in Phase 2; no default flip before owner decision |
+| ADR-0031 / H4 policy-RBAC | `governance-gap`; Hold until review | evidence tooling and RBAC enforce path exist; policy enforce label remains advisory | 30-day receipts, coverage, latency, rollback, owner sign-off; review 2026-11-15 | Prepare evidence in Phase 2; no default flip before owner decision |
 | H2 / H3 | Hold | M2/M3 foundation evidence complete | owner-validated continuity need or cited friction | No scheduled work |
 | M4 background / cockpit | Hold except dogfood carve-out | dormant lifecycle and cockpit surfaces exist | dated co-maintainer dogfood record | Trigger-only; cloud/SaaS remains excluded |
 | H5 / M5 | Blocked | offline fixture release gates exist | funded live-provider variance/cost evidence and owner decision | Trigger-only |
@@ -114,7 +114,7 @@ flowchart TD
 
     LOGS[Real H4 shadow receipts through 2026-09-11]
     LOGS --> PACKET[Build ADR-0031 evidence packet]
-    PACKET --> REVIEW{Owner review 2026-09-12}
+    PACKET --> REVIEW{Owner review 2026-11-15}
     CLOSE --> REVIEW
     REVIEW -->|all criteria and sign-off| PROMOTE[Separate promotion change]
     REVIEW -->|evidence incomplete| EXTEND[Bounded extension with blockers/date]
@@ -307,7 +307,7 @@ Agent-completable evidence scripts were re-run on 2026-08-31 at commit
 Aggregate packet (`build_h4_decision_packet.py`): unchanged —
 4 agent-prepared, 1 human-required, `promotion_ready=false`.
 No new shadow receipts appeared; the 12-day runway to the
-2026-09-12 decision remains. Owner adjudication of criterion 1
+2026-09-12 decision remains (superseded: now 2026-11-15, see line 15). Owner adjudication of criterion 1
 (whether 0 observations satisfies the 30-day window or requires
 live shadow exercise before promotion) is still the blocking
 decision. This refresh confirms evidence tooling remains green

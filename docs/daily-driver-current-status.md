@@ -11,7 +11,7 @@
 > `docs/analysis/`.
 >
 > **Review trigger:** TUI, chat, agent mode, approval, cost, undo, or resume behavior changes.
-> **Last reviewed:** 2026-09-16 (first-run and error-contract fixes G23–G38:
+> **Last reviewed:** 2026-10-26 (foreign-hook fail-open row added to Known issues; TUI `/undo` wording corrected to journal-only). Prior: 2026-09-16 (first-run and error-contract fixes G23–G38:
 > offline-ready `fake` provider, `init`/`setup` gitignore `.teaagent/` and fail
 > fast on non-interactive stdin, `--background` honors plan flags, run-list JSON
 > arrays contain only runs, MCP unknown-tool calls no longer end the session)
@@ -169,19 +169,20 @@ bug or that TeaAgent has already fixed the class.
 | Seven-control-loop package is not daily-driver runtime proof by itself. | `docs/roadmap-status.md` owns SCL row status, while DR-006/backlog provenance keep competitor-derived SCL-P0 scheduling on hold unless owner friction evidence, governance-gap proof, or owner override promotes it. Treat completed SCL rows as control-model/docs evidence until runtime receipts prove daily behavior. | SCL-P0-001 through SCL-P0-007; DR-006 |
 | Community pain-point docs are not mitigation proof by themselves. | `docs/roadmap-status.md` owns CPP row status. Daily-driver claims still need implementation receipts and tests before survey-derived pain points can be claimed fixed in user-visible behavior. | CPP-P0-001 through CPP-P0-008 |
 | External-effect approval and one-time JIT guards landed; live provider proof is still missing. | Prompt/read-only/workspace-write now escalate GitHub/browser/MCP mutations; one-time grants bind payload digest and consume. Providerless acceptance exists; do not treat this as production-proven GitHub/browser safety until a live-credential dry-run exists. | EFX-002, EFX-003 |
+| Foreign host command hooks fail open. | A host `PreToolUse` hook that crashes, times out, or returns bad JSON lets the tool run unless the host entry sets `onFailure: "block"`. Removing the hook from host settings also fails open. TeaAgent cannot veto a foreign-host tool call; only an observe-only recorder exists (`python -m teaagent.foreign_hook`, async `PostToolUse`, no `--enforce`). Workaround: keep the host's own sandbox and approval mode as the boundary, install the observe snippet from `--print-install` using the absolute interpreter path, and do not point it at `PreToolUse`. The veto is not built. | F10; [foreign-hook safer path](reviews/foreign-hook-safer-path-2026-10-23.md); [architecture rethink](reviews/architecture-rethink-2026-10-23.md) |
 | Interrupted mutating-tool execution is disclosed as `OUTCOME_UNKNOWN`, not settled. | Process death after mutation now leaves a checkpointed unmatched start; resume refuses blind non-idempotent redispatch. Inspect the run, workspace, and external system before any new authorized attempt. | EFX-001; [Recovery And Continuity Guide](recovery-and-continuity-guide.md#interrupted-mutating-tool-execution) |
 
 ## Recently fixed
 
 | Fix | What changed | Tracking |
 |-----|-------------|----------|
-| Cost display now labels actual vs estimated vs unavailable vs unlimited. | BudgetState includes explicit `cost_state` field; TUI /cost, /budget, run summary, and evidence bundle all use the same 4 cost states consistently. UI never implies actual cost when only an estimate is available. | P0-B-001 through P0-B-003 |
+| Cost display now labels actual vs estimated vs unavailable vs unlimited. | BudgetState includes explicit `cost_state` field; TUI /cost, /budget, run summary, and evidence bundle all use the same 4 cost states consistently. UI never implies actual cost when only an estimate is available. | P0-B-001 through P0-B-004 |
 | Cost state propagated to all surfaces. | RunEvidenceSummary, RunEvidenceBundle, run_summary.py, TUI /cost and /budget commands all show cost_state label with the canonical set: actual, estimated, unavailable, unlimited. | P0-B-001 |
 | Cost accumulation tests added. | `tests/test_tui_cost.py` covers 4 cost states, cost/budget consistency, multi-task accumulation, evidence bundle fields, and run summary cost_state. | P0-B-002 |
 | Path-scoped approval without a path now fails closed. | `p` no longer falls back to a global grant when no path can be extracted, and blank scoped patterns are rejected at the store boundary. | DS-12 / approval UX |
 | Budget semantics are explicit. | `None` means unlimited, `0` is a real zero cap, and the TUI/CLI budget displays reflect that distinction. | DS-13 / budget UX |
 | Explicit `--root` no longer overwritten by saved TUI state. | `_load_tui_state` condition was inverted (checked `'root' not in data` instead of finding saved root). Root restoration now guarded by `_root_explicit` flag, set by CLI entry points via `run_tui()`. | TASK-DD2-002 |
-| TUI undo now uses `ChatSessionController.undo_last_run()` with checkpoint fallback. | TUI `/undo` first tries undo journal (file-level restore), falls back to git-stash checkpoint. | CG-15 / TICKET-12 |
+| TUI undo now uses `ChatSessionController.undo_last_run()` (undo journal only). | TUI `/undo` restores via the undo journal (file-level restore), the same mechanism as the CLI. The git-stash checkpoint fallback was removed (U-P2-3; guarded by `tests/tui/test_tui_undo_scope.py`). | CG-15 / TICKET-12 |
 | TUI cost display now reads from `ChatSessionController` session state (source of truth). | `_handle_cost` uses `controller.get_session_cost()` with local fallback. | CG-11 / TICKET-12 |
 | Exception swallowing removed from `ChatSessionController`. | `try/except (AttributeError, TypeError): pass` blocks removed from `execute_task`. Fault-injection test added. | CG-13 / TICKET-13 |
 | Redundant `audit_trail` field removed from suspension data. | `audit_trail` key removed from `suspend_to_background` and reference in `_agent.py` commented out. | CG-14 / TICKET-15 |

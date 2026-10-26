@@ -6,6 +6,8 @@
 **Depends on:** WDA-001 evidence  
 **Primary files:** `docs/roadmap-status.md`, `scripts/validate_docs_consistency.py`, `tests/test_validate_docs_consistency_mode.py`
 
+> Note 2026-10-26: H3/H5 are not rows in the current Horizons table (`docs/roadmap-status.md`); mapping is historical.
+
 ## Problem
 
 ENG-R2: `roadmap-status.md` shows H2/H3 Pending while M2/M3 Complete; H4–H6

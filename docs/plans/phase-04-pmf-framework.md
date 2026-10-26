@@ -1,5 +1,7 @@
 # Phase 04: PMF Measurement Framework
 
+> **Status (2026-10-26):** Tracked as `PHASE-04` in [backlog-priority.md](../backlog-priority.md) (Untriaged section) — 0 of 24 boxes done; needs a DR-006 gate verdict before work starts.
+
 **Priority:** P1
 **Concept doc:** [PMF Measurement Framework](../architecture-reflection/05-pmf-measurement-framework.md)
 **Estimated effort:** 3-5 sessions

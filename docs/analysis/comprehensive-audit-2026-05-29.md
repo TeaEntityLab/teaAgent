@@ -97,7 +97,7 @@ This tranche **fixed** actionable defects: `cleanup_old_deltas` cross-workflow d
 | docker-smoke “shipped” | architecture | `continue-on-error: true` in CI | Clarify as advisory gate |
 | README Foundation vs Beta | §8–9 Foundation | maturity-matrix Beta | Reconcile labels (roadmap item) |
 
-See also: `docs/plans/remediation-roadmap.md`.
+See also: `docs/archive/plans/remediation-roadmap.md`.
 
 ---
 
@@ -150,7 +150,7 @@ Untrusted: Model output, external MCP payloads, plugin handlers
 
 | Document | Purpose |
 |----------|---------|
-| `docs/plans/remediation-roadmap.md` | Phased fix plan P0–P3 |
+| `docs/archive/plans/remediation-roadmap.md` | Phased fix plan P0–P3 |
 | `docs/analysis/strategic-features-report.md` | Relay / WASM / tenant tranche |
 | `docs/threat-model.md` | Threat → mitigation matrix |
 | `docs/context-bus-and-federated-sync.md` | Operator guide for Phase 5 stores |

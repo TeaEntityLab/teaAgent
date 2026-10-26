@@ -1,5 +1,7 @@
 # Future Roadmap, Risk, and Usability Backlog - 2026-05-31
 
+> **Archived 2026-10-26:** moved from `docs/plans/` to `docs/archive/plans/`. This plan is superseded or complete and is kept as provenance only. Current truth: [Documentation Index](../../INDEX.md) and [Historical Evidence Index](../INDEX.md).
+
 > Supersession note, 2026-06-05: This file is historical evidence from the
 > Phase 0 competitive and risk survey. The roadmap items were restructured into
 > the P0–P3 priority stack in

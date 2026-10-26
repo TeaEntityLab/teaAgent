@@ -1,4 +1,6 @@
 # TUI Post-Fix Execution Sheets (TICKET-12…15)
+
+> **Archived 2026-10-26:** moved from `docs/plans/` to `docs/archive/plans/`. This plan is superseded or complete and is kept as provenance only. Current truth: [Documentation Index](../../INDEX.md) and [Historical Evidence Index](../INDEX.md).
 # 2026-06-01
 
 **Purpose.** Make the third-pass tickets executable by a developer/agent without

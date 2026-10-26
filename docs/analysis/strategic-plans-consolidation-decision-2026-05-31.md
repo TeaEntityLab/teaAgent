@@ -57,9 +57,9 @@
    ## Strategic Reference Documents
 
    For long-term planning, positioning, and UX research, see:
-   - `docs/plans/competitive-positioning-plan-2026-05-31.md`
-   - `docs/plans/ux-improvement-roadmap-2026-05-31.md`
-   - `docs/plans/future-roadmap-risk-usability-backlog-2026-05-31.md`
+   - `docs/archive/plans/competitive-positioning-plan-2026-05-31.md`
+   - `docs/archive/plans/ux-improvement-roadmap-2026-05-31.md`
+   - `docs/archive/plans/future-roadmap-risk-usability-backlog-2026-05-31.md`
    ```
 
 4. **Archive truly obsolete plans** to `docs/archive/`:

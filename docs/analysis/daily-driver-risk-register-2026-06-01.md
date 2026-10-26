@@ -5,7 +5,7 @@
 current code does to users *today*, derived from
 `daily-driver-code-grounded-ux-findings-2026-06-01.md`; and (B) **execution risks** —
 what could go wrong while applying
-`docs/plans/daily-driver-hardening-plan-2026-06-01.md`. This is the
+`docs/archive/plans/daily-driver-hardening-plan-2026-06-01.md`. This is the
 `reflective-risk` gate for that plan.
 
 **Scoring.** Likelihood × Impact, each Low/Med/High. Severity = the higher of the two
@@ -27,7 +27,7 @@ unless a single dimension is High-and-irreversible (then severity is High).
 | PR-8 | Background suspension bypasses the audit chain → governance hole | Med | Med-High | Med | `chat_repl.py:85-96` writes JSON `audit_trail`, no `AuditLogger` (CG-10) | TICKET-3b |
 
 **Note:** A *spec-level* risk register (SR-1…SR-11 — risks introduced by building the
-design specs) lives in `docs/plans/daily-driver-execution-readiness-2026-06-01.md`.
+design specs) lives in `docs/archive/plans/daily-driver-execution-readiness-2026-06-01.md`.
 
 ### Highest-priority product risk
 

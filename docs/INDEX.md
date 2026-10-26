@@ -1,7 +1,7 @@
 # TeaAgent Documentation Index
 # 2026-10-09
 
-> **Last reviewed:** 2026-10-23 (owner experiment samples indexed; scheduling authority unchanged)
+> **Last reviewed:** 2026-10-26 (owner experiment samples indexed; scheduling authority unchanged; superseded and completed daily-driver/May plans archived under `archive/plans/`)
 > **Review trigger:** New front-door docs, supersession links, roadmap evidence, or validation command changes.
 > **Owner:** docs
 
@@ -137,6 +137,7 @@ Use this short list instead of scanning every dated analysis file.
 | [Documentation Optimization Master Plan](plans/documentation-optimization-master-plan-2026-06-04.md) | Prioritizing documentation work by stability, UX, risk, and ROI. |
 | [Documentation Optimization Work Items](work-log/documentation-optimization-work-items-2026-06-04.md) | Concrete task execution ledger. |
 | [Daily-Driver Complete Work Plan](plans/daily-driver-complete-work-plan-risk-roi-2026-06-04.md) | Historical daily-driver risk, feasibility, ROI, and sequence; use harness-first direction for current persona claims. |
+| Phase 01–06 plans ([01](plans/phase-01-persistent-context.md), [02](plans/phase-02-scope-audit.md), [03](plans/phase-03-competitive-analysis.md), [04](plans/phase-04-pmf-framework.md), [05](plans/phase-05-founder-systematization.md), [06](plans/phase-06-data-flywheel.md)) | Architecture-reflection follow-ups, tracked as PHASE-01…06 in the backlog Untriaged section (115 open boxes, none started); no work before a DR-006 verdict. |
 | [Roadmap Work Items](work-log/roadmap-work-items-2026-06-04.md) | Product roadmap work items and acceptance criteria. |
 | [Phase 0 Priority Work Items](work-log/phase-0-priority-work-items-2026-06-04.md) | Trust-repair tasks derived from project-state review. |
 | [Phase 0 Governance Closure Report](work-log/phase-0-governance-closure-report-2026-06-04.md) | Closure evidence for coverage omit, dependency audit, and ADR-state governance. |
@@ -159,14 +160,19 @@ for current status.
 | --- | --- |
 | [Daily-Driver Ticket Closure Index](plans/ticket-plans/index.md) | June 2 daily-driver execution order and closure evidence; all listed tickets are fixed. |
 | [Work Direction Execution Index](plans/work-direction-execution-index-2026-06-10.md) | June 10 Sprint 1-6 execution and closure record; use owner friction and the canonical roadmap for current work. |
-| [Competitive Positioning Plan](plans/competitive-positioning-plan-2026-05-31.md) | May 2026 competitive baseline; superseded by [Competitor Signal Survey](analysis/competitor-signal-survey-2026-06-04.md). |
-| [Remediation Roadmap](plans/remediation-roadmap.md) | Post-audit remediation from 2026-05-29; absorbed into Phase 0 trust repair. |
-| [Governance Hardening](plans/governance-hardening.md) | Early governance plan (2026-05-28); superseded by [Documentation Operating Model](governance/documentation-operating-model-2026-06-04.md). |
-| [Comprehensive Plan All Aspects](plans/comprehensive-plan-all-aspects-2026-05-31.md) | Phase 0 audit consolidation; superseded by [Complete Work Plan](plans/daily-driver-complete-work-plan-risk-roi-2026-06-04.md). |
-| [UX Improvement Roadmap](plans/ux-improvement-roadmap-2026-05-31.md) | Early UX gap survey; absorbed into P0-A through P1-D workstreams. |
-| [System Transparency Engineering Plan](plans/system-transparency-engineering-plan-2026-05-31.md) | Transparency pass; absorbed into P0-B, P0-D, P1-B, P2-B. |
-| [Future Roadmap Backlog](plans/future-roadmap-risk-usability-backlog-2026-05-31.md) | Phase 0 horizon roadmap; restructured into P0–P3 priority stack. |
-| [Agent Ecosystem Acceptance Roadmap](plans/agent-ecosystem-acceptance-roadmap-2026-05-31.md) | Early ecosystem roadmap; acceptance tracking now in ticket index. |
+| [Competitive Positioning Plan](archive/plans/competitive-positioning-plan-2026-05-31.md) | May 2026 competitive baseline; superseded by [Competitor Signal Survey](analysis/competitor-signal-survey-2026-06-04.md). |
+| [Remediation Roadmap](archive/plans/remediation-roadmap.md) | Post-audit remediation from 2026-05-29; absorbed into Phase 0 trust repair. |
+| [Governance Hardening](archive/plans/governance-hardening.md) | Early governance plan (2026-05-28); superseded by [Documentation Operating Model](governance/documentation-operating-model-2026-06-04.md). |
+| [Comprehensive Plan All Aspects](archive/plans/comprehensive-plan-all-aspects-2026-05-31.md) | Phase 0 audit consolidation; superseded by [Complete Work Plan](plans/daily-driver-complete-work-plan-risk-roi-2026-06-04.md). |
+| [UX Improvement Roadmap](archive/plans/ux-improvement-roadmap-2026-05-31.md) | Early UX gap survey; absorbed into P0-A through P1-D workstreams. |
+| [System Transparency Engineering Plan](archive/plans/system-transparency-engineering-plan-2026-05-31.md) | Transparency pass; absorbed into P0-B, P0-D, P1-B, P2-B. |
+| [Future Roadmap Backlog](archive/plans/future-roadmap-risk-usability-backlog-2026-05-31.md) | Phase 0 horizon roadmap; restructured into P0–P3 priority stack. |
+| [Agent Ecosystem Acceptance Roadmap](archive/plans/agent-ecosystem-acceptance-roadmap-2026-05-31.md) | Early ecosystem roadmap; acceptance tracking now in ticket index. |
+| [Daily-Driver Backlog](archive/plans/daily-driver-backlog-2026-06-01.md) | Completed June 1 ticket backlog; status is in the daily-driver current status page. |
+| [Daily-Driver Execution Readiness](archive/plans/daily-driver-execution-readiness-2026-06-01.md) | Completed June 1 execution sheets; status is in the daily-driver current status page. |
+| [Daily-Driver Hardening Plan](archive/plans/daily-driver-hardening-plan-2026-06-01.md) | Completed June 1 TUI/chat/agent hardening phases. |
+| [Daily-Driver TUI Post-Fix Sheets](archive/plans/daily-driver-tui-postfix-execution-sheets-2026-06-01.md) | TICKET-12..15 execution sheets; all fixed per the ticket plans index. |
+| [Daily-Driver Second-Pass Task Plan](archive/plans/daily-driver-second-pass-task-plan-2026-06-01.md) | June 1 second-pass task list; per-task closure is in the ticket plans index. |
 
 ## Security And Reliability
 

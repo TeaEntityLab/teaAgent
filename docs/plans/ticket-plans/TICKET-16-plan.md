@@ -27,7 +27,7 @@ calls `store.task_for_run(args.run_id)`. `task_for_run` at
 a `run_started` event and **raises `ValueError`** if none exists (`:149`).
 
 `suspend_to_background` at
-[`teaagent/cli/_handlers/chat_repl.py:56-136`](../../../teaagent/cli/_handlers/chat_repl.py)
+[`teaagent/cli/_handlers/_agent/resume.py`](../../../teaagent/cli/_handlers/_agent/resume.py) (file removed; was `chat_repl.py:56-136`)
 generates a `uuid4()[:8]` run ID (`:56`) and records only a
 `session_suspended` event (`:129-136`). It never writes a `run_started` event
 to `RunStore`. So `task_for_run` always raises for REPL-originated suspensions.
@@ -136,7 +136,7 @@ def test_agent_run_background_rejects_existing_id(tmp_path):
 
 ### Phase 1 — Honesty patch (XS)
 
-In `suspend_to_background` at `chat_repl.py:140-145`, replace the printed
+In `suspend_to_background` (now `teaagent/cli/_handlers/_agent/resume.py`; was `chat_repl.py:140-145`), replace the printed
 block:
 
 ```python

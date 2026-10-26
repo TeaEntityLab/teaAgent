@@ -107,7 +107,7 @@ All ADRs include detailed git history with:
 ## References
 
 - [Architecture Documentation](../architecture.md)
-- [Governance Hardening Plan](../plans/governance-hardening.md)
+- [Governance Hardening Plan](../archive/plans/governance-hardening.md)
 - [Backlog Priority](../backlog-priority.md)
 - [Threat Model](../threat-model.md)
 

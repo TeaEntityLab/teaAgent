@@ -547,4 +547,4 @@ The plan is considered actionable when:
 - [docs/reviews/daily-driver-critique-and-counterarguments-2026-06-04.md](../reviews/daily-driver-critique-and-counterarguments-2026-06-04.md)
 - [docs/work-log/roadmap-work-items-2026-06-04.md](../work-log/roadmap-work-items-2026-06-04.md)
 - [docs/plans/daily-driver-implementation-sequencing-board-2026-06-02.md](daily-driver-implementation-sequencing-board-2026-06-02.md)
-- [docs/plans/daily-driver-usefulness-master-plan-2026-06-01.md](daily-driver-usefulness-master-plan-2026-06-01.md)
+- [docs/archive/plans/daily-driver-usefulness-master-plan-2026-06-01.md](../archive/plans/daily-driver-usefulness-master-plan-2026-06-01.md)

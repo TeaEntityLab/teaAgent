@@ -1,4 +1,6 @@
 # Daily-Driver Backlog — Ticket-Ready Items
+
+> **Archived 2026-10-26:** moved from `docs/plans/` to `docs/archive/plans/`. This plan is superseded or complete and is kept as provenance only. Current truth: [Documentation Index](../../INDEX.md) and [Historical Evidence Index](../INDEX.md).
 # 2026-06-01
 
 **Status: ✅ COMPLETE** - All tickets implemented and shipped (2026-05-31 session)

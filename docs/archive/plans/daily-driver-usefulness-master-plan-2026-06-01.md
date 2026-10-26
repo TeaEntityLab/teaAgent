@@ -1,5 +1,7 @@
 # Daily-Driver Usefulness Master Plan
 
+> **Archived 2026-10-26:** 14 of 24 DU items verified closed; the 10 open items (DU-008, 010, 010A, 011, 014, 015, 016, 017, 018, 020) are registered in [backlog-priority.md](../../backlog-priority.md) under Untriaged.
+
 > Supersession note, 2026-06-05: This file is historical evidence from the
 > first daily-driver pass (2026-06-01). The work was restructured and
 > reprioritized in
@@ -96,7 +98,7 @@ docs or defaults.
 ## Second-Pass Delta
 
 The newest second-pass plan is
-`docs/plans/daily-driver-second-pass-task-plan-2026-06-01.md`. Treat it as the
+`docs/archive/plans/daily-driver-second-pass-task-plan-2026-06-01.md`. Treat it as the
 execution queue for DU-005A, DU-005B, DU-010A, DU-010B, and the verification gaps
 discovered after the controller-backed chat improvements.
 

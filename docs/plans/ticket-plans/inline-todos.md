@@ -8,7 +8,7 @@
 | File | Line | Comment | Context | Action |
 |------|------|---------|---------|--------|
 | [`teaagent/domain/issue_intake.py`](../../../teaagent/domain/issue_intake.py) | 194 | GitHub API integration | **Fixed (2026-06-09):** `extract_github_issue()` uses PyGithub with `GITHUB_TOKEN`; raises actionable errors when library/token missing. | None — closed. |
-| [`teaagent/tui/cockpit_data_sources.py`](../../../teaagent/tui/cockpit_data_sources.py) | 158 | Cost period attribution | **Fixed (2026-06-30):** `CostDataSource.get_costs()` now derives `CostRow.period` from `RunSummary.updated_at` with an `unknown` fallback. | None — closed. |
+| `teaagent/tui/cockpit_data_sources.py` (file removed 2026-09-15, G17 `1611e71b`; see [`teaagent/tui/core.py`](../../../teaagent/tui/core.py)) | 158 | Cost period attribution | **Fixed (2026-06-30):** `CostDataSource.get_costs()` now derives `CostRow.period` from `RunSummary.updated_at` with an `unknown` fallback. | None — closed. |
 
 ---
 
@@ -56,8 +56,8 @@ audit remains traceable without re-opening closed work.
 |----------|---------|------------------------|
 | `tui/__init__.py::_handle_undo` | `_handle_undo` called `_restore_checkpoint` (git-stash) | Fixed: TICKET-12 now routes through `ChatSessionController.undo_last_run()` before checkpoint fallback |
 | `chat_session_controller.py` | `except (AttributeError, TypeError): pass` | Fixed: TICKET-13 removed exception-swallowing mock detection |
-| `chat_repl.py` | `suspension_data['audit_trail']` | Fixed: TICKET-15 removed redundant suspension `audit_trail` |
-| `chat_repl.py::suspend_to_background` | Broken resume commands printed at suspend | Fixed: TICKET-16 Phase 1 now prints the working `interactive-review` path only |
+| `chat_repl.py` (file removed; suspend logic now in `teaagent/cli/_handlers/_agent/resume.py`) | `suspension_data['audit_trail']` | Fixed: TICKET-15 removed redundant suspension `audit_trail` |
+| `teaagent/cli/_handlers/_agent/resume.py::suspend_to_background` (was `chat_repl.py`) | Broken resume commands printed at suspend | Fixed: TICKET-16 Phase 1 now prints the working `interactive-review` path only |
 | `run_store.py:143-149` | `task_for_run` raises on REPL suspensions | Fixed: TICKET-16 Phase 2 writes `run_started` at suspend time |
 | `_chat.py:538-586` | `chat_command` ignores `args.task` | Fixed: TASK-DD2-001 forwards positional task to `run_tui` |
 | `tui/__init__.py:1107` | `_load_tui_state` unconditionally overwrites `self.root` | Fixed: TASK-DD2-002 guards with `_root_explicit` flag |

@@ -11,7 +11,7 @@
 
 ## Summary
 
-The external implementation_plan.md at `.gemini/antigravity/brain/.../implementation_plan.md` proposes changes to core governance files that appear to have already been completed according to `docs/plans/governance-hardening.md`.
+The external implementation_plan.md at `.gemini/antigravity/brain/.../implementation_plan.md` proposes changes to core governance files that appear to have already been completed according to `docs/archive/plans/governance-hardening.md`.
 
 ---
 

@@ -263,7 +263,7 @@ class ConsensusConfig:
 - [ADR 0001: P0 Agent Harness Framework](0001-p0-framework.md) (Post-Implementation section)
 - [ADR 0009: 5-Loop Governance System](0009-5-loop-governance-system.md)
 - [Architecture - Phase 4-5 Roadmap](../architecture.md#phase-4-5-roadmap-beta)
-- [Governance Hardening Plan](../plans/governance-hardening.md)
+- [Governance Hardening Plan](../archive/plans/governance-hardening.md)
 - [Backlog Priority](../backlog-priority.md)
 
 ## Verification Commands

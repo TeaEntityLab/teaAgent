@@ -7,6 +7,17 @@ labels: roadmap
 
 <!-- What is this task? Provide a brief summary of the work item. -->
 
+## Workflow Fields
+
+<!-- Required by docs/governance/risk-issue-roadmap-workflow.md (Steps 1, 3, 4, 4b). -->
+
+- **Stable ID:** <!-- Step 1, e.g. PREFIX-P1-001 -->
+- **Horizon:** <!-- H0 / H1 / H2 / H4 / H6 (roadmap-status.md) -->
+- **Affected files:** <!-- Step 3: files or surfaces this change touches -->
+- **DR-006 provenance verdict:** <!-- friction-driven / governance-gap / owner-override, or "pending owner adjudication". Agents must not assign this (Step 4b). -->
+- **Human review required:** yes / no
+- **Reviewer:** <!-- name, required when Human review required is yes -->
+
 ## Rationale
 
 <!-- Why is this task needed? What problem does it solve or what value does it add? -->

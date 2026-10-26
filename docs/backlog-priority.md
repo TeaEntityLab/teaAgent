@@ -1,6 +1,6 @@
 # Backlog Priority
 
-> **Last reviewed:** 2026-10-09 (owner decisions applied: ADR-0031 extended to 2026-11-15 bound to a B1 session; ADR-0043 packet prepared, deletions deferred to 2026-12-09; Phase 0 CI/test repairs landed; no priority or shipped/beta change — previous review 2026-09-17: roadmaps/progress/intents review: no priority or shipped/beta change; the "Open — High (P0)/(P1)" and "Open — Daily-use ergonomics" sections are fully shipped and retained for provenance — new work still enters only through the DR-006 gate; ADR-0043 register now carries the ANP row this file already listed; ADR-0031 close 2026-09-29 and ADR-0043 disposition 2026-12-09 are the next owner dates)
+> **Last reviewed:** 2026-10-26 (reconciliation: fixed cross-doc contradictions, added orphaned items as Untriaged; no priority or shipped/beta change). Previous: 2026-10-09 (owner decisions applied: ADR-0031 extended to 2026-11-15 bound to a B1 session; ADR-0043 packet prepared, deletions deferred to 2026-12-09; Phase 0 CI/test repairs landed; no priority or shipped/beta change — previous review 2026-09-17: roadmaps/progress/intents review: no priority or shipped/beta change; the "Open — High (P0)/(P1)" and "Open — Daily-use ergonomics" sections are fully shipped and retained for provenance — new work still enters only through the DR-006 gate; ADR-0043 register now carries the ANP row this file already listed; ADR-0031 close 2026-09-29 and ADR-0043 disposition 2026-12-09 are the next owner dates)
 > **Review trigger:** Backlog priorities or shipped/beta status claims change.
 > **Scheduling gate (2026-08-26):** DR-006 remains authoritative. EFX-001–003
 > are in-progress P0 `governance-gap` remediations on existing seams; no
@@ -40,11 +40,11 @@
 >
 > | Surface | Daily-path reachable | Disposition at expiry |
 > | --- | --- | --- |
-> | `teaagent/federated_sync.py` | No (`teaagent sync`; multisig off by default) | Promote under `owner-override` or delete |
+> | `teaagent/federated_sync.py` | No invocation (`teaagent sync`; multisig off by default); import-time yes ([ADR-0043 packet §0 item 1](plans/adr-0043-disposition-packet-2026-10-09.md)) | Promote under `owner-override` or delete |
 > | `teaagent/signature_relay.py` | No (`teaagent sync signature-relay`) | Delete with `federated_sync` unless WAN multisig ratified |
 > | `teaagent/domain/workflow_engine.py` | **No production caller**; execution simulated | Strongest deletion candidate (importer sweep done 2026-09-13: zero production callers) |
-> | `teaagent/consensus/` + `cli/_handlers/_consensus.py` | No (`teaagent consensus`; off by default) | Delete per ADR-0029 precedent unless ratified |
-> | `teaagent/jit_approval_server.py` | No (`teaagent control-plane serve`) | M4 carve-out only if dogfood scheduled; else delete |
+> | `teaagent/consensus/` + `cli/_handlers/_consensus.py` | No invocation (`teaagent consensus`; off by default); import-time yes (via `cli/_handlers/_consensus.py:10` and `RiskLevel` in `skill_router`/`skill_executor`; [ADR-0043 packet §0 item 1, §2.5](plans/adr-0043-disposition-packet-2026-10-09.md)) | Delete per ADR-0029 precedent unless ratified |
+> | `teaagent/jit_approval_server.py` | No invocation (`teaagent control-plane serve`); import-time yes ([ADR-0043 packet §0 item 1, §6](plans/adr-0043-disposition-packet-2026-10-09.md)) | M4 carve-out only if dogfood scheduled; else delete |
 > | `teaagent/anp_adapter.py` (ANP bidirectional federation adapter) | No — no production caller; symbols exported from `teaagent/__init__.py` and tests only | Promote under `owner-override` if ANP federation is wanted, else delete |
 
 Prioritized by impact order: security and production risk → core platform capabilities → developer experience and ecosystem.
@@ -74,7 +74,7 @@ was met on 2026-06-22; completing that intake does not authorize new work.
 | M4 cloud/background/control-plane cockpit | `legacy-competitive` | **Hold except DR-006 carve-out** — background lifecycle + operator cockpit eligible under owner-override co-maintainer dogfood; cloud/SaaS/multi-tenant GTM held (T4). 2026-09-15 co-maintainer dogfood session completed (B2 evidence, B1 still pending) |
 | RBAC enforce flip (ADR 0031, packet evaluated 2026-09-15) | `governance-gap` | **Hold** — 4/5 criteria prepared, promotion not ready; owner extended to 2026-09-29 conditioned on G1–G5 landing and re-dogfood; promotion_ready=false; no premature enforce flip; **2026-10-09 owner decision:** the 2026-09-29 close passed without a disposition; extended once more to ≤ 2026-11-15 bound to a booked B1 session (date to be booked), revert if it does not occur; `promotion_ready` stays `false` |
 | Dogfood findings G23–G38 (2026-09-15 sweep; decisions in `work-log/dogfood-findings-2026-09-15.md` §"Owner decisions (2026-09-16)", reasoning in `reviews/roadmap-rethink-2026-09-16.md` §5) | 9 `governance-gap`, 6 `owner-override`, 1 `legacy-competitive` (G34) | **Done 2026-09-16** except G34 (**Hold**, ADR-0043 expiry review 2026-12-09) — owner "Yes for all"; landed with per-finding behavior regressions and an integrated first-run scratch journey; residual twins listed in the findings record |
-| TASK-006 RunEvent taxonomy + M0 | `harness-migration` | **Done** — ADR-0032 run-event taxonomy; `teaagent/runner/_events.py` spine + audit dual-write (M0–M7 in work-log) |
+| TASK-006 RunEvent taxonomy + M0 | `harness-migration` | **Done as rescoped** (guard + document, 2026-06-13); original ContextBus/webhook-on-spine goal **not done** — see `docs/plans/adr-0032-m1-m6-work-plan-2026-06-13.md` M7 row; G3 remains Partial in `roadmap-status.md`. ADR-0032 run-event taxonomy; `teaagent/runner/_events.py` spine + audit dual-write (M0–M7 in work-log) |
 | TASK-001 constitution repositioning | `owner-override` | **Done (Human Review 2026-07-22)** — owner ratified harness-first positioning; no README/product-contract changes required |
 | TASK-002 docs tiering | `harness-migration` | **Done** — tier column in `docs/generated/docs-inventory.md` + aging dashboard; `check-docs-inventory` pre-commit regen |
 | TASK-003 test typing pass | `harness-migration` | **Done** — all 608 test files typed (as of 2026-09-15; contract/behavior/adversarial/lifecycle) per `scripts/audit_test_quality.py` |
@@ -84,10 +84,10 @@ was met on 2026-06-22; completing that intake does not authorize new work.
 | Competitive refresh release gate | `legacy-competitive` | **Resolved (DR-006 T5):** split gate — CI blocks on `main`; manual survey quarterly |
 | Seven-control-loops SCL follow-on work | `legacy-competitive` | Listed implementation rows are historical `Complete`; follow-on scheduling is **held** without friction, governance-gap proof, or owner override |
 | Community-pain-point CPP follow-on work | `legacy-competitive` | Listed implementation rows are historical `Complete`; follow-on scheduling is **held** without friction, governance-gap proof, or owner override |
-| Consensus validation (ADR-0029) | `governance-gap` | **Deleted/quarantined (2026-07-22)** — owner-ratified Option D executed; no production importers; feature intent and git recovery path preserved in ADR-0029 disposition spec |
-| EFX-001 | Refuse blind redispatch after an unmatched mutating-tool start; surface the attempt as unconfirmed/`UNKNOWN` | `governance-gap` | **In progress (2026-08-25)** — runner commits `pending_effect` before execute; unmatched non-idempotent starts become `OUTCOME_UNKNOWN` and refuse blind redispatch (`tests/test_efx001_interrupted_dispatch.py`, `tests/acceptance/test_efx_durable_effect_flow.py`). Live GitHub/browser/provider proof still required for Complete |
-| EFX-002 | Inventory effectful tools and fail closed when local policy sees external mutation, regardless of misleading read-only/destructive hints | `governance-gap` | **In progress (2026-08-25)** — local `external_effect` + fail-closed Prompt/read-only/workspace-write; MCP hint isolation; providerless `tests/acceptance/test_efx_durable_effect_flow.py` (`test_efx002_effect_classification.py`). Live GitHub/browser/provider proof still required for Complete |
-| EFX-003 | Bind one-time approval to run, tool, canonical payload/effect intent, then consume or expire it before dispatch | `governance-gap` | **In progress (2026-08-25)** — digest-bound consume-once JIT; providerless `tests/acceptance/test_efx_durable_effect_flow.py` (`test_efx003_one_time_approval.py`). Live GitHub/browser/provider proof still required for Complete |
+| Consensus validation (ADR-0029) | `governance-gap` | **Deleted/quarantined (2026-07-22)** — owner-ratified Option D executed; no production importers (this row is the deleted `consensus_validation` module, not the `teaagent/consensus/` package of ADR-0043 row 5, which still has production importers: `RiskLevel` in `teaagent/skill_executor.py:14`, `teaagent/skill_router.py:15`, `teaagent/governance/review_gate.py:20`; see [ADR-0043 packet §0 item 2](plans/adr-0043-disposition-packet-2026-10-09.md)); feature intent and git recovery path preserved in ADR-0029 disposition spec |
+| EFX-001 Refuse blind redispatch after an unmatched mutating-tool start; surface the attempt as unconfirmed/`UNKNOWN`| `governance-gap` | **In progress (2026-08-25)** — runner commits `pending_effect` before execute; unmatched non-idempotent starts become `OUTCOME_UNKNOWN` and refuse blind redispatch (`tests/test_efx001_interrupted_dispatch.py`, `tests/acceptance/test_efx_durable_effect_flow.py`). Live GitHub/browser/provider proof still required for Complete |
+| EFX-002 Inventory effectful tools and fail closed when local policy sees external mutation, regardless of misleading read-only/destructive hints| `governance-gap` | **In progress (2026-08-25)** — local `external_effect` + fail-closed Prompt/read-only/workspace-write; MCP hint isolation; providerless `tests/acceptance/test_efx_durable_effect_flow.py` (`test_efx002_effect_classification.py`). Live GitHub/browser/provider proof still required for Complete |
+| EFX-003 Bind one-time approval to run, tool, canonical payload/effect intent, then consume or expire it before dispatch| `governance-gap` | **In progress (2026-08-25)** — digest-bound consume-once JIT; providerless `tests/acceptance/test_efx_durable_effect_flow.py` (`test_efx003_one_time_approval.py`). Live GitHub/browser/provider proof still required for Complete |
 | AGF-001 cross-host skill conflict audit (agentflow v8.2.0 delta) | `governance-gap` | **Done (2026-09-13)** — `teaagent skill audit` inventories active + foreign roots, marks `loadable`, reports collisions, embeds conflict protocol; `tests/test_skill_audit_inventory.py` |
 | AGF-002 inline incident citations on two uncited guards | `governance-gap` | **Done (verified 2026-09-13)** — `Origin:` paragraphs present in both guards since `86fa25ea` |
 | VND-001 live supervisor/monitor lane (vendor survey 2026-09-13) | `governance-gap` | **Done (2026-09-14)** — `teaagent/run_review.py` post-run reviewer classifies each tool call against the insider-threat taxonomy via `teaagent runs review <run_id>`; `tests/test_run_review.py` 7/7; in-run live monitor remains future |
@@ -139,7 +139,7 @@ Items below were deferred at baseline and have since been implemented in-repo.
 
 ---
 
-## Open — High (P0)
+## Open — High (P0) — all shipped (retained for provenance)
 
 **Note:** All P0 items below have been implemented with acceptance tests. See `docs/specs/` for technical specifications.
 
@@ -149,7 +149,7 @@ Items below were deferred at baseline and have since been implemented in-repo.
 **Acceptance test:** `test_issue_to_plan_acceptance_flow.py`
 **Dependencies:** Plan mode, issue parsing, ambiguity detection, plan generation
 **Size:** Large (2-3 weeks)
-**Reference:** `docs/plans/agent-ecosystem-acceptance-roadmap-2026-05-31.md`
+**Reference:** `docs/archive/plans/agent-ecosystem-acceptance-roadmap-2026-05-31.md`
 **Files:** `teaagent/issue_intake.py`, `tests/test_issue_intake.py`, `docs/specs/issue-to-plan-intake-spec-2026-05-31.md`
 
 ### Plan Review and Revision
@@ -158,7 +158,7 @@ Items below were deferred at baseline and have since been implemented in-repo.
 **Acceptance test:** `test_plan_review_revision_flow.py`
 **Dependencies:** Plan versioning, plan diff, run-to-plan binding, hash verification
 **Size:** Large (2-3 weeks)
-**Reference:** `docs/plans/agent-ecosystem-acceptance-roadmap-2026-05-31.md`
+**Reference:** `docs/archive/plans/agent-ecosystem-acceptance-roadmap-2026-05-31.md`
 **Files:** `teaagent/plan_storage.py`, `tests/test_plan_storage.py`, `docs/specs/plan-review-revision-spec-2026-05-31.md`
 
 ### Guided Recovery
@@ -167,7 +167,7 @@ Items below were deferred at baseline and have since been implemented in-repo.
 **Acceptance test:** `test_guided_recovery_flow.py`
 **Dependencies:** Failure classification, recovery strategy selection, undo/resume integration
 **Size:** Medium (1-2 weeks)
-**Reference:** `docs/plans/agent-ecosystem-acceptance-roadmap-2026-05-31.md`
+**Reference:** `docs/archive/plans/agent-ecosystem-acceptance-roadmap-2026-05-31.md`
 **Files:** `teaagent/guided_recovery.py`, `tests/test_guided_recovery.py`, `tests/acceptance/test_guided_recovery_flow.py`, `docs/specs/guided-recovery-spec-2026-05-31.md`
 
 ### Execution Evidence Summary
@@ -176,7 +176,7 @@ Items below were deferred at baseline and have since been implemented in-repo.
 **Acceptance test:** `test_run_evidence_summary_flow.py`
 **Dependencies:** Audit event extraction, evidence bundle serialization, sensitive value redaction
 **Size:** Medium (1-2 weeks)
-**Reference:** `docs/plans/agent-ecosystem-acceptance-roadmap-2026-05-31.md`
+**Reference:** `docs/archive/plans/agent-ecosystem-acceptance-roadmap-2026-05-31.md`
 **Files:** `teaagent/run_evidence.py`, `tests/test_run_evidence.py`, `tests/acceptance/test_run_evidence_summary_flow.py`, `docs/specs/run-evidence-bundle-spec-2026-06-01.md`
 
 ### Daily Cockpit Parity
@@ -185,12 +185,12 @@ Items below were deferred at baseline and have since been implemented in-repo.
 **Acceptance test:** `test_daily_cockpit_parity_flow.py`
 **Dependencies:** Cockpit state model, serialization, run store integration
 **Size:** Medium (1-2 weeks)
-**Reference:** `docs/plans/agent-ecosystem-acceptance-roadmap-2026-05-31.md`
+**Reference:** `docs/archive/plans/agent-ecosystem-acceptance-roadmap-2026-05-31.md`
 **Files:** `teaagent/cockpit.py`, `tests/test_cockpit.py`, `tests/acceptance/test_daily_cockpit_parity_flow.py`
 
 ---
 
-## Open — High (P1)
+## Open — High (P1) — all shipped (retained for provenance)
 
 **Note:** Items extracted from strategic reference documents (competitive positioning, UX improvements, future roadmap).
 
@@ -199,77 +199,77 @@ Items below were deferred at baseline and have since been implemented in-repo.
 **Journey:** README already leads with governance-first positioning (permission gates, audit trail, undo, cost cap, model-agnostic)
 **Acceptance criteria:** README answers all three persona questions in first screen, governance table in top half, time to comprehension < 30 seconds
 **Size:** Small (3 days)
-**Reference:** `docs/plans/competitive-positioning-plan-2026-05-31.md`
+**Reference:** `docs/archive/plans/competitive-positioning-plan-2026-05-31.md`
 
 ### CP-2 — Security Whitepaper for Enterprise Evaluation [P1]
 **Status:** ✅ Complete
 **Journey:** Security whitepaper exists documenting governance model, control catalog, NIST mapping, data handling, deployment isolation, incident response
 **Acceptance criteria:** Document exists and reviewed by security background, every control has traceable code path, honest "known limitations" section
 **Size:** Medium (1 week)
-**Reference:** `docs/plans/competitive-positioning-plan-2026-05-31.md`
+**Reference:** `docs/archive/plans/competitive-positioning-plan-2026-05-31.md`
 
 ### CP-3 — Aider-Style Commit-Per-Change Visibility [P1]
 **Status:** ✅ Complete
 **Journey:** Surface git commit-per-change workflow prominently (stage in branch, review diff, commit/discard, structured commit messages with run metadata)
 **Acceptance criteria:** `teaagent show --diff` works without git knowledge, commit message includes run metadata, `teaagent commit` is idempotent
 **Size:** Medium (1 week)
-**Reference:** `docs/plans/competitive-positioning-plan-2026-05-31.md`
+**Reference:** `docs/archive/plans/competitive-positioning-plan-2026-05-31.md`
 
 ### UX1.1 — Post-Run Summary [P1]
 **Status:** ✅ Complete
 **Journey:** Emit structured summary at end of every run (tools called, files changed, cost, budget remaining, audit log location, undo command)
 **Acceptance criteria:** Run summary always emitted at session end, `--no-summary` flag suppresses it, summary includes files changed/cost/undo command
 **Size:** Small (3 days)
-**Reference:** `docs/plans/ux-improvement-roadmap-2026-05-31.md`
+**Reference:** `docs/archive/plans/ux-improvement-roadmap-2026-05-31.md`
 
 ### UX1.2 — Proactive Budget Warnings [P1]
 **Status:** ✅ Complete
 **Journey:** Emit budget warnings at 50%, 80%, 90% (with prompt), 100% (offer read-only mode)
 **Acceptance criteria:** Tests trigger at 50%/80%/90%/100%, TUI shows persistent budget status line, warning in post-run summary
 **Size:** Small (3 days)
-**Reference:** `docs/plans/ux-improvement-roadmap-2026-05-31.md`
+**Reference:** `docs/archive/plans/ux-improvement-roadmap-2026-05-31.md`
 
 ### UX1.3 — One-Command Undo with Diff Preview [P1]
 **Status:** ✅ Complete
 **Journey:** Add `--preview` flag to undo command, add `--last` shortcut, show unified diff of what will be reverted
 **Acceptance criteria:** `teaagent undo --last --preview` shows readable diff without executing, `teaagent undo --last` reverts all writes, post-run summary includes undo command
 **Size:** Small (3 days)
-**Reference:** `docs/plans/ux-improvement-roadmap-2026-05-31.md`
+**Reference:** `docs/archive/plans/ux-improvement-roadmap-2026-05-31.md`
 
 ### UX3.1 — teaagent init < 2 Minutes to First Useful Output [P1]
 **Status:** ✅ Complete
 **Journey:** Implement guided init flow (provider selection, permission mode, config write) that completes in < 2 minutes
 **Acceptance criteria:** Init completes in < 2 minutes with guided prompts, after init `teaagent "hello"` produces useful response, init is documented first step in README
 **Size:** Medium (1 week)
-**Reference:** `docs/plans/ux-improvement-roadmap-2026-05-31.md`
+**Reference:** `docs/archive/plans/ux-improvement-roadmap-2026-05-31.md`
 
 ### UX3.2 — First-Run Orientation Message [P1]
 **Status:** ✅ Complete
 **Journey:** On first run (no `.teaagent/`), show orientation message explaining governance features (approval gates, audit log, undo, budget cap)
 **Acceptance criteria:** Orientation message shown on first run, explains key governance features, includes next steps
 **Size:** Small (2 days)
-**Reference:** `docs/plans/ux-improvement-roadmap-2026-05-31.md`
+**Reference:** `docs/archive/plans/ux-improvement-roadmap-2026-05-31.md`
 
 ### UX2.1 — Persistent Decision Log [P1]
 **Status:** ✅ Complete
 **Journey:** Implement DecisionLog stored in `.teaagent/decisions.md`, inject into system prompt, CLI commands to list/add decisions
 **Acceptance criteria:** `teaagent memory decisions list` shows all decisions, `teaagent memory decisions add` appends entry, system prompt includes 10 most recent decisions
 **Size:** Medium (1 week)
-**Reference:** `docs/plans/ux-improvement-roadmap-2026-05-31.md`
+**Reference:** `docs/archive/plans/ux-improvement-roadmap-2026-05-31.md`
 
 ### UX2.2 — Proactive Context Compaction Warning [P1]
 **Status:** ✅ Complete
 **Journey:** Track context window usage, warn at 60% with `/compact` suggestion, implement one-command summary-and-continue
 **Acceptance criteria:** Warning triggers at configurable threshold (default 60%), `/compact` summarizes conversation and replaces with compressed version
 **Size:** Medium (1 week)
-**Reference:** `docs/plans/ux-improvement-roadmap-2026-05-31.md`
+**Reference:** `docs/archive/plans/ux-improvement-roadmap-2026-05-31.md`
 
 ### UX2.3 — Cross-Session Scratchpad [P1]
 **Status:** ✅ Complete
 **Journey:** Write structured scratchpad on session end (goal, progress, open questions, next step), offer resumption on next session start
 **Acceptance criteria:** Scratchpad written on clean exit/ctrl+c/crash, offered for resumption on next session start, `teaagent sessions list` shows recent sessions
 **Size:** Medium (1 week)
-**Reference:** `docs/plans/ux-improvement-roadmap-2026-05-31.md`
+**Reference:** `docs/archive/plans/ux-improvement-roadmap-2026-05-31.md`
 
 ---
 
@@ -282,70 +282,70 @@ Items below were deferred at baseline and have since been implemented in-repo.
 **Journey:** Removed incorrect "encrypted at rest" claim from audit.py docstring, updated threat-model.md with L3 plaintext row
 **Acceptance criteria:** grep returns no "encrypted at rest" in audit.py, threat-model.md has L3 plaintext row, no other file claims L3 encrypts
 **Size:** Small (1 day)
-**Reference:** `docs/plans/comprehensive-plan-all-aspects-2026-05-31.md`
+**Reference:** `docs/archive/plans/comprehensive-plan-all-aspects-2026-05-31.md`
 
 ### S2 — Gate ChildProcessCodeModeBackend as trusted-user only [P0]
 **Status:** ✅ Complete
 **Journey:** Added docstring warning, added trusted_only field that raises ValueError when False, updated security-spec.md with trust boundary table
 **Acceptance criteria:** ChildProcessCodeModeBackend(trusted_only=False) raises ValueError, docstring change auditable via git log
 **Size:** Small (1 day)
-**Reference:** `docs/plans/comprehensive-plan-all-aspects-2026-05-31.md`
+**Reference:** `docs/archive/plans/comprehensive-plan-all-aspects-2026-05-31.md`
 
 ### R1 — Fix fragile async loop management in approval paths [P0]
 **Status:** ✅ Complete
 **Journey:** Replaced new_loop pattern in approval_manager.py and policy.py with proper async loop handling to prevent "Event loop is closed" errors
 **Acceptance criteria:** No asyncio.set_event_loop(new_loop) pattern in approval paths, tests verify no closed loop errors
 **Size:** Small (2 days)
-**Reference:** `docs/plans/comprehensive-plan-all-aspects-2026-05-31.md`
+**Reference:** `docs/archive/plans/comprehensive-plan-all-aspects-2026-05-31.md`
 
 ### S-H3 — workspace_run_shell shell=True → argv-only path [P0]
 **Status:** ✅ Complete
 **Journey:** Converted shell=True to argv-only path in workspace_run_shell for security
 **Acceptance criteria:** shell=True removed, argv-only path used, tests pass
 **Size:** Small (2 days)
-**Reference:** `docs/plans/remediation-roadmap.md`
+**Reference:** `docs/archive/plans/remediation-roadmap.md`
 
 ### S-H4 — Shell normalization adversarial matrix gaps [P0]
 **Status:** ✅ Complete
 **Journey:** Completed ShellObfuscationTests coverage for adversarial matrix
 **Acceptance criteria:** ShellObfuscationTests pass, adversarial matrix complete
 **Size:** Medium (3 days)
-**Reference:** `docs/plans/remediation-roadmap.md`
+**Reference:** `docs/archive/plans/remediation-roadmap.md`
 
 ### S-H5 — MCP loopback no-auth default [P0]
 **Status:** ✅ Complete
 **Journey:** Required token when TEAAGENT_STRICT_LOCAL=1 for MCP loopback
 **Acceptance criteria:** MCP loopback requires token when strict local mode enabled, tests pass
 **Size:** Small (2 days)
-**Reference:** `docs/plans/remediation-roadmap.md`
+**Reference:** `docs/archive/plans/remediation-roadmap.md`
 
 ### S-H6 — Vote relay loopback without auth_policy [P0]
 **Status:** ✅ Complete
 **Journey:** Auto-load relay-tokens.json or env for vote relay auth
 **Acceptance criteria:** surface_auth.default_relay_token_file implemented, tests pass
 **Size:** Small (2 days)
-**Reference:** `docs/plans/remediation-roadmap.md`
+**Reference:** `docs/archive/plans/remediation-roadmap.md`
 
 ### S-H8 — Plugin audit fail-open [P0]
 **Status:** ✅ Complete
 **Journey:** Implemented fail-closed when TEAAGENT_PLUGINS_STRICT=1
 **Acceptance criteria:** Plugin fails closed when strict mode enabled, tests pass
 **Size:** Small (2 days)
-**Reference:** `docs/plans/remediation-roadmap.md`
+**Reference:** `docs/archive/plans/remediation-roadmap.md`
 
 ### S-M2 — Plaintext bearer token files [P1]
 **Status:** ✅ Complete
 **Journey:** Documented plaintext bearer token files as known limitation with operational guidance
 **Acceptance criteria:** Bearer token files documented as known limitation with chmod 600 guidance
 **Size:** Small (documentation only)
-**Reference:** `docs/plans/remediation-roadmap.md`
+**Reference:** `docs/archive/plans/remediation-roadmap.md`
 
 ### S-M3 — Audit verify swallows exceptions [P1]
 **Status:** ✅ Complete
 **Journey:** Verified audit verify raises exceptions properly
 **Acceptance criteria:** Audit verify raises exceptions properly, tests pass
 **Size:** Small (verification only)
-**Reference:** `docs/plans/remediation-roadmap.md``
+**Reference:** `docs/archive/plans/remediation-roadmap.md``
 
 ---
 
@@ -367,7 +367,7 @@ The following plans are marked as complete and are retained for reference:
 **Journey:** Monitor OpenCode GitHub releases monthly for governance-related features, escalate if approval gates added
 **Acceptance criteria:** Monthly checks performed, escalation trigger defined (50+ votes on governance issues)
 **Size:** Ongoing
-**Reference:** `docs/plans/competitive-positioning-plan-2026-05-31.md`
+**Reference:** `docs/archive/plans/competitive-positioning-plan-2026-05-31.md`
 **Process document:** `docs/processes/opencode-gap-watch.md`
 **Automation script:** `scripts/opencode_gap_watch.py`
 
@@ -376,14 +376,14 @@ The following plans are marked as complete and are retained for reference:
 **Journey:** Create model capability matrix document mapping features to models (extended thinking, tool use, streaming, multi-sig, cost tracking)
 **Acceptance criteria:** Matrix exists and updated with provider adapter changes, README links to matrix
 **Size:** Small (2 days)
-**Reference:** `docs/plans/competitive-positioning-plan-2026-05-31.md`
+**Reference:** `docs/archive/plans/competitive-positioning-plan-2026-05-31.md`
 
 ### CP-6 — Community Presence / Developer Relations [P3]
 **Status:** On hold — external acquisition and community-growth activity are not current goals.
 **Journey:** Historical proposal only; monitoring or public outreach requires a new owner-ratified positioning decision.
 **Acceptance criteria:** No activity is scheduled from this row while harness-first and DR-006 remain unchanged.
 **Size:** Not scheduled
-**Reference:** `docs/plans/competitive-positioning-plan-2026-05-31.md` (historical)
+**Reference:** `docs/archive/plans/competitive-positioning-plan-2026-05-31.md` (historical)
 **Process document:** `docs/processes/community-presence.md` (inactive reference)
 **Automation script:** `scripts/community_presence_monitor.py` (must not imply scheduled work)
 
@@ -392,9 +392,9 @@ The following plans are marked as complete and are retained for reference:
 ## Strategic Reference Documents
 
 For long-term planning, positioning, and UX research, see:
-- `docs/plans/competitive-positioning-plan-2026-05-31.md` - README rewrite, security whitepaper, demo scripts
-- `docs/plans/ux-improvement-roadmap-2026-05-31.md` - Post-run summary, budget warnings, undo UX, memory/context
-- `docs/plans/future-roadmap-risk-usability-backlog-2026-05-31.md` - Large strategic backlog with horizons
+- `docs/archive/plans/competitive-positioning-plan-2026-05-31.md` - README rewrite, security whitepaper, demo scripts
+- `docs/archive/plans/ux-improvement-roadmap-2026-05-31.md` - Post-run summary, budget warnings, undo UX, memory/context
+- `docs/archive/plans/future-roadmap-risk-usability-backlog-2026-05-31.md` - Large strategic backlog with horizons
 
 These are reference documents for strategic decisions. Extract actionable items to this backlog as needed.
 
@@ -506,3 +506,44 @@ Then manually refresh [scripts/refresh_agent_readme_survey.md](../scripts/refres
 | New index backends | `teaagent/context_pack.py` read-only graph evidence when adding search stores |
 | Strategic P2 research | hosted/cloud surface docs, background sessions, desktop/client-server packaging, repo-map quality evaluation |
 | Ergonomics KPI | `python3 scripts/measure_time_to_first_run.py --write docs/ergonomics-kpi.json` before regenerating the use-case matrix |
+
+---
+
+## Untriaged — orphaned items from older plans (added 2026-10-26)
+
+Items below were found in older plan and review documents and are not tracked in this file or `roadmap-status.md`. They carry **no priority, no schedule, and no shipped/beta status**. New work enters only through the DR-006 gate (see the Backlog Provenance rules above). Each row was checked against its cited source line on 2026-10-26.
+
+**Triage pass (2026-10-26):** rows marked **PROPOSED** carry a verdict checked against code and tests on that date; they take effect only when the owner ratifies them. Proposed so far: 6 Close-as-done, 1 Close-as-obsolete, 6 Hold, 1 Promote candidate (WS2-002). Three rows are verified defects or gaps with a `governance-gap` candidate tag: WS2-002 (batch timeout waits on running subagents), DU-010A (tick cost cap 0 becomes a zero-spend cap), DU-016 (MCP unknown-tool prompt never called in production). PHASE-01…06 and the 10 open DU items have no verdict yet.
+
+| ID | Title | Source file:line | Provenance | Status |
+| --- | --- | --- | --- | --- |
+| CQ-001 (remaining) | Eliminate remaining `type: ignore` comments (source says 28; current count of `type: ignore` lines under `teaagent/*.py` = 19 on 2026-10-26) | docs/plans/improvement-work-items.md:1202 | none (no friction, no governance gap) | **PROPOSED Hold** — still open: 19 `type: ignore` lines (source said 28); type hygiene only |
+| ARC-001 / ARC-002 | Retire legacy shim modules after downstream import migration stabilizes (same IDs at :1198-1199 carry different wording: approval consolidation; shared-types extraction) | docs/plans/improvement-work-items.md:1161 | none | **PROPOSED Hold** — 10 deprecated aliases remain in `teaagent/_compat_modules.py`; the ID has two meanings at the source, so split them before any gate decision |
+| Complexity violations | Remaining complexity violations (97 across ~80 functions; target <50) | docs/plans/improvement-work-items.md:524 | none | **PROPOSED Hold** — 61 C901 at ruff default (source said 97, basis not reproducible); CI cap `--max 99` passes |
+| approval_manager.py split | Split `approval_manager.py` (1205 lines); listed as still pending follow-up | docs/plans/improvement-work-items.md:100 | none | **PROPOSED Hold** — now `teaagent/approval/manager.py`, 1,473 lines and growing; its god-module exemption (`scripts/check_god_modules.py:27`) says "migration completed" with no ADR — owner to confirm the exemption is still valid |
+| WS1-002 | Replace raw approval-ID-first UX with readable selectors | docs/plans/system-improvement-work-directions-2026-06-06.md:66 | n/a | **PROPOSED Close-as-done** — selectors with tool/reason/path/risk/expiry in `teaagent/approval/selectors.py:22-26`; `approval approve --selector N` |
+| WS1-003 | Add default progress summaries for long runs | docs/plans/system-improvement-work-directions-2026-06-06.md:67 | n/a | **PROPOSED Close-as-done** — `teaagent/run_progress.py:15-20` wired into TUI and CLI; `tests/test_run_progress.py` |
+| WS2-002 | Add batch-level timeout and cancellation to subagent batch execution | docs/plans/system-improvement-work-directions-2026-06-06.md:81 | `governance-gap` candidate (runtime limit not enforced) | **PROPOSED Promote candidate** — partial and defective: `teaagent/subagents/_tools.py:317` exits a `with ThreadPoolExecutor` block, whose `shutdown(wait=True)` blocks on running subagents after the deadline, and `:345` labels them "before task started"; verified 2026-10-26 |
+| WS3-004 | Define cost state taxonomy (estimated, provider-reported, pending, unknown) | docs/plans/system-improvement-work-directions-2026-06-06.md:99 | n/a | **PROPOSED Close-as-done** — `teaagent/cost_state.py` (`derive_cost_state`, `normalize_cost_state`) used by `evidence_summary.py:353` and `ergonomics/run_summary.py:89`; `tests/test_cost_state_taxonomy.py` 6/6. Residual: no adapter reports `provider_reported` yet (`actual_cost_cents` stays None) |
+| WS4-002 | Expose approval queue depth and age | docs/plans/system-improvement-work-directions-2026-06-06.md:112 | n/a | **PROPOSED Close-as-done** — queue age/risk/expiry and `queue_depth` in `teaagent/approval/selectors.py:225-238`, consumed by CLI and TUI |
+| WDA-006 | Decide and document whether consensus validation gates destructive actions behind the approval queue or is explicitly deferred (ADR with expiry) | docs/plans/work-direction-decomposition-2026-06-10.md:41 | n/a | **PROPOSED Close-as-done** — ADR-0029 closed 2026-07-22 (delete/quarantine); destructive actions use the approval queue (ADR-0022); `teaagent/consensus/` is ADR-0043 row 5, not this item |
+| WDE-003 | Close open verification gaps: WS2-004 depth/concurrency bypass test; WS2-003 cost-cents inheritance test | docs/plans/work-direction-decomposition-2026-06-10.md:89 | n/a | **PROPOSED Close-as-done** — `tests/test_ws2_verification_gaps.py:18,39` pass locally 2026-10-26 |
+| Remote HTTP approval | Remote approval orchestration over HTTP (backend stub exists; implementation deferred) | docs/plans/subagent-swarm-orchestration-unification-2026-06-06.md:102 | `legacy-competitive` (remote multi-agent non-goal) | **PROPOSED Close-as-obsolete** — premise stale: opt-in HTTP backend exists (`teaagent/coordination/approval_backend.py:174-210`, `approval_http_client.py`, `approval_http_server.py`, `tests/test_http_remote_approval_backend.py`; default backend is `file`). The owner should place this surface at the ADR-0043 2026-12-09 review |
+| Foreign-hook fail-open friction F10 / SRV-PI-07 veto | Host hook fail-open on failure; a TeaAgent PreToolUse veto over foreign tool calls is not built | docs/reviews/architecture-rethink-2026-10-23.md:76 (SRV-PI-07); :123 (F10) | `friction-driven` (F10, `work-log/operator-friction-log.md:195`) | **PROPOSED Hold (keeps owner decision)** — veto deliberately not built; a build needs a dated owner request (`reviews/foreign-hook-safer-path-2026-10-23.md:7,47`) |
+| Telemetry test pins a private OTel attribute | `tests/test_telemetry.py:376` reads `provider._sdk_config.metric_readers`, removed in opentelemetry-sdk 1.44; passes only at the locked 1.41.1, so the next lock bump breaks it | `tests/test_telemetry.py:364-380`; found in the 2026-10-26 full-suite run | none (CI-health only) | **PROPOSED Hold** — passes at locked opentelemetry-sdk 1.41.1; when bumping, assert via a patched `PeriodicExportingMetricReader` instead of SDK privates |
+| PHASE-01 | Persistent Context — Create CLAUDE.md & Refactor AGENTS.md (13 open boxes) | `docs/plans/phase-01-persistent-context.md` | none | Untriaged — needs DR-006 gate. `CLAUDE.md` does not exist; AGENTS.md still holds the architecture rules |
+| PHASE-02 | Scope Governance — Feature Necessity Audit (15 open boxes) | `docs/plans/phase-02-scope-audit.md` | none | Untriaged — needs DR-006 gate. Gating shipped Beta CLI surfaces needs an owner decision; doc paths `docs/operations/` should read `docs/ops/` |
+| PHASE-03 | Competitive Analysis — Structured Devil's Advocate (16 open boxes) | `docs/plans/phase-03-competitive-analysis.md` | `legacy-competitive` candidate | Untriaged — needs DR-006 gate. Competitor analyses exist; held under DR-006 T1 unless owner-override |
+| PHASE-04 | PMF Measurement Framework (24 open boxes) | `docs/plans/phase-04-pmf-framework.md` | `legacy-competitive` candidate | Untriaged — needs DR-006 gate. Baseline is mostly synthetic (0 owner-origin runs, `roadmap-status.md:15`); overlaps VND-003/AGF-003 holds |
+| PHASE-05 | Founder Systematization — Reduce Single-Point-of-Failure Risk (24 open boxes) | `docs/plans/phase-05-founder-systematization.md` | none | Untriaged — needs DR-006 gate. Release/CI runbooks partly exist (`docs/governance/release-process.md`, `docs/ops/runbooks.md`) |
+| PHASE-06 | Data Flywheel — Turn Usage Signals into Product Improvement (23 open boxes) | `docs/plans/phase-06-data-flywheel.md` | none | Untriaged — needs DR-006 gate. Failure analysis partly exists (`teaagent/run_store.py`, `memory/failure_card.py`); overlaps VND-003/AGF-003 holds |
+| DU-008 | Command grammar doc + parser test | `docs/archive/plans/daily-driver-usefulness-master-plan-2026-06-01.md:57` | none | Untriaged — needs DR-006 gate. No grammar doc or parser test found; Phase 1 release criterion |
+| DU-010 | Approval/recovery copy taxonomy (provider-missing, undo-unavailable) | `docs/archive/plans/daily-driver-usefulness-master-plan-2026-06-01.md:59` | none | Untriaged — needs DR-006 gate. Partial: `tests/test_guided_recovery.py:25-64` covers approval and budget only |
+| DU-010A | Cost-cap zero semantics | `docs/archive/plans/daily-driver-usefulness-master-plan-2026-06-01.md:60` | `governance-gap` candidate (budget) | **Untriaged — verified defect.** `agent tick --max-cost-cents` defaults to 0 and help says "0 means unset" (`cli/_agent_parsers.py:1117`), but `ergonomics/background_run.py:532-534` forwards it as `--max-estimated-cost-cents 0`, which the runner treats as a zero-spend cap (`runner/_governed_execution.py:68-71`) |
+| DU-011 | TUI cockpit field contract (headless assertion) | `docs/archive/plans/daily-driver-usefulness-master-plan-2026-06-01.md:67` | none | Untriaged — needs DR-006 gate. `tests/test_control_cockpit.py` checks the dataclass only |
+| DU-014 | Long-run heartbeat with tool/cost/checkpoint fields | `docs/archive/plans/daily-driver-usefulness-master-plan-2026-06-01.md:70` | none | Untriaged — needs DR-006 gate. `teaagent/heartbeat.py:13-32` tracks tick_count only |
+| DU-015 | Compaction preview before `/compact` | `docs/archive/plans/daily-driver-usefulness-master-plan-2026-06-01.md:71` | none | Untriaged — needs DR-006 gate. `tui/core.py:988-1011` compacts without preview |
+| DU-016 | MCP unknown-tool default prompt | `docs/archive/plans/daily-driver-usefulness-master-plan-2026-06-01.md:77` | `governance-gap` candidate (approval) | **Untriaged — verified gap.** `check_unknown_tool_prompt` (`teaagent/mcp_trust.py:364`) is called only from tests; production relies on MCP tools being marked destructive (`mcp_tool_adapter.py:59`) |
+| DU-017 | Skill/rule/memory-source inspectability in TUI and run evidence | `docs/archive/plans/daily-driver-usefulness-master-plan-2026-06-01.md:78` | none | Untriaged — needs DR-006 gate. Skills are listed; project instructions and memory sources are not |
+| DU-018 | First-hour smoke script | `docs/archive/plans/daily-driver-usefulness-master-plan-2026-06-01.md:79` | none | Untriaged — needs DR-006 gate. `tests/acceptance/test_first_hour_e2e_flow.py` lacks TUI chat/cost/docs steps; no `scripts/` entry |
+| DU-020 | README readiness-badge discipline | `docs/archive/plans/daily-driver-usefulness-master-plan-2026-06-01.md:81` | none | Untriaged — needs DR-006 gate. No README readiness gate found |

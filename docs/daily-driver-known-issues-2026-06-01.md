@@ -27,7 +27,8 @@ If you used an older build, these are now corrected in `teaagent chat`:
 
 ## Open issues and workarounds
 
-### 1. `/undo` behaves differently in the TUI vs the CLI
+### 1. ~~`/undo` behaves differently in the TUI vs the CLI~~ **Resolved** (see daily-driver-current-status.md 'Recently fixed'; evidence: teaagent/tui/core.py:1116)
+Original report, retained for history:
 - `teaagent chat` `/undo` → surgical, restores only the last run's files (undo journal).
 - `teaagent tui` `/undo` → git-stash checkpoint restore (different mechanism/scope).
 - **Recommendation:** prefer `teaagent chat` for fine-grained undo today. In the TUI,
