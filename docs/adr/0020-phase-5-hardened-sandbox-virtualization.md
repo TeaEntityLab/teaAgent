@@ -288,7 +288,7 @@ class IsolationContext:
 - [ADR 0009: 5-Loop Governance System](0009-5-loop-governance-system.md)
 - [ADR 0019: Phase 4 - Federated Swarm Consensus](0019-phase-4-federated-swarm-consensus.md)
 - [Architecture - Phase 4-5 Roadmap](../architecture.md#phase-4-5-roadmap-beta)
-- [Governance Hardening Plan](../plans/governance-hardening.md)
+- [Governance Hardening Plan](../archive/plans/governance-hardening.md)
 - [Backlog Priority](../backlog-priority.md)
 
 ## Verification Commands

@@ -194,7 +194,7 @@ Implement a comprehensive 5-loop governance system that provides complete operat
 ## References
 
 - [ADR 0001: P0 Agent Harness Framework](0001-p0-framework.md)
-- [Governance Hardening Plan](../plans/governance-hardening.md)
+- [Governance Hardening Plan](../archive/plans/governance-hardening.md)
 - [Architecture - 5-Loop Governance System](../architecture.md#5-loop-governance-system-completed-hardening)
 - [Threat Model](../threat-model.md)
 - [Maturity Matrix](../maturity-matrix.md)

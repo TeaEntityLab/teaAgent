@@ -1,5 +1,7 @@
 # Governance Hardening Plan (in-repo)
 
+> **Archived 2026-10-26:** moved from `docs/plans/` to `docs/archive/plans/`. This plan is superseded or complete and is kept as provenance only. Current truth: [Documentation Index](../../INDEX.md) and [Historical Evidence Index](../INDEX.md).
+
 > Supersession note, 2026-06-05: This file is historical evidence from the
 > earliest governance pass (2026-05-28). The governance loops were hardened in
 > Phase 0 work. For current governance rules, use
@@ -53,6 +55,6 @@ teaagent tool lint --root .
 
 ## Related
 
-- [maturity-matrix.md](../maturity-matrix.md)
-- [threat-model.md](../threat-model.md)
-- [product-contract.md](../product-contract.md)
+- [maturity-matrix.md](../../maturity-matrix.md)
+- [threat-model.md](../../threat-model.md)
+- [product-contract.md](../../product-contract.md)

@@ -167,7 +167,7 @@ python3 scripts/community_presence_monitor.py
 - TeaAgent README: `README.md`
 - Security whitepaper: `docs/security-whitepaper.md` (if exists)
 - Architecture docs: `docs/architecture.md`
-- Competitive positioning: `docs/plans/competitive-positioning-plan-2026-05-31.md`
+- Competitive positioning: `docs/archive/plans/competitive-positioning-plan-2026-05-31.md`
 - Backlog priority: `docs/backlog-priority.md`
 
 ## Notes

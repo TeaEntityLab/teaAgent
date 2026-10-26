@@ -3,13 +3,15 @@
 
 > **Claim class:** evidence-snapshot
 > **Owns:** docs
-> **Last reviewed:** 2026-06-17
+> **Last reviewed:** 2026-10-26
 > **Review trigger:** New dated review packages, supersession links, completed plans, or front-door documentation changes.
 
 This index keeps historical documentation discoverable without asking every
-reader or agent to reread it as current truth. It does not move, delete, or
-rewrite the original evidence files. For current truth, start at
-[docs/INDEX.md](../INDEX.md).
+reader or agent to reread it as current truth. Plans that were superseded or
+completed are moved into `docs/archive/plans/` (see [Archived Plans](#archived-plans-2026-10-26)); other
+evidence files stay where they are. Moves are done with `git mv`, and each
+moved file gets an "Archived" banner under its title. Nothing is deleted or
+rewritten. For current truth, start at [docs/INDEX.md](../INDEX.md).
 
 ## Reader Contract
 
@@ -34,6 +36,32 @@ rewrite the original evidence files. For current truth, start at
 | Competitor and market surveys | You need historical market/UX hypotheses, not current positioning. | [Competitor Analyses vs Self Consolidation](../analysis/competitor-analyses-vs-self-consolidation-2026-06-10.md), [Competitor Signal Survey 2026-06-06](../analysis/competitor-signal-survey-2026-06-06.md), [Community Agent Pain Points Survey](../analysis/community-agent-pain-points-survey-2026-06-05.md) | [Harness-First Direction](../strategy/harness-first-direction-2026-06-13.md); refresh sources before external claims. |
 | Dynamic skill and long-result work | You need the evidence behind dynamic skill quarantine, lifecycle, and long-result concerns. | [Dynamic Skill Audit](../analysis/dynamic-skill-generation-and-long-result-audit-2026-06-05.md), [Dynamic Skill Critical Questioning](../reviews/dynamic-skill-critical-questioning-2026-06-05.md), [Dynamic Skill Work Items](../plans/dynamic-skill-and-long-result-work-items-2026-06-05.md) | Active skill docs and tests; use current code before dated findings. |
 | Seven control loops package | You need the historical design hypothesis for spec, review, memory, and goal loops. | [Seven Control Loops Product Direction](../strategy/seven-control-loops-product-direction-2026-06-05.md), [Seven Control Loops Critical Questioning](../reviews/seven-control-loops-critical-questioning-2026-06-05.md), [Seven Control Loops Work Items](../plans/seven-control-loops-work-items-2026-06-05.md) | Current architecture, active ticket indexes, and owner friction evidence. |
+
+## Archived Plans (2026-10-26)
+
+These plan files were moved from `docs/plans/` to `docs/archive/plans/` with
+`git mv`. Each was either marked superseded by a later document or was complete
+at the time of the move. Relative links inside them were updated to the new depth.
+
+| Archived file | Status at move | Current truth |
+| --- | --- | --- |
+| [comprehensive-plan-all-aspects-2026-05-31.md](plans/comprehensive-plan-all-aspects-2026-05-31.md) | Superseded | [Complete Work Plan](../plans/daily-driver-complete-work-plan-risk-roi-2026-06-04.md) |
+| [competitive-positioning-plan-2026-05-31.md](plans/competitive-positioning-plan-2026-05-31.md) | Superseded | [Competitor Signal Survey](../analysis/competitor-signal-survey-2026-06-04.md) |
+| [ux-improvement-roadmap-2026-05-31.md](plans/ux-improvement-roadmap-2026-05-31.md) | Superseded | [Daily-Driver Current Status](../daily-driver-current-status.md) |
+| [system-transparency-engineering-plan-2026-05-31.md](plans/system-transparency-engineering-plan-2026-05-31.md) | Superseded | [Daily-Driver Current Status](../daily-driver-current-status.md) |
+| [agent-ecosystem-acceptance-roadmap-2026-05-31.md](plans/agent-ecosystem-acceptance-roadmap-2026-05-31.md) | Superseded | [Ticket Plans Index](../plans/ticket-plans/index.md) |
+| [future-roadmap-risk-usability-backlog-2026-05-31.md](plans/future-roadmap-risk-usability-backlog-2026-05-31.md) | Superseded | [Roadmap Status](../roadmap-status.md) |
+| [remediation-roadmap.md](plans/remediation-roadmap.md) | Superseded | [Phase 0 Trust Repair Risk Brief](../security/phase-0-trust-repair-risk-brief-2026-06-04.md) |
+| [governance-hardening.md](plans/governance-hardening.md) | Superseded | [Documentation Operating Model](../governance/documentation-operating-model-2026-06-04.md) |
+| [daily-driver-backlog-2026-06-01.md](plans/daily-driver-backlog-2026-06-01.md) | Complete | [Daily-Driver Current Status](../daily-driver-current-status.md) |
+| [daily-driver-execution-readiness-2026-06-01.md](plans/daily-driver-execution-readiness-2026-06-01.md) | Complete | [Daily-Driver Current Status](../daily-driver-current-status.md) |
+| [daily-driver-hardening-plan-2026-06-01.md](plans/daily-driver-hardening-plan-2026-06-01.md) | Complete | [Daily-Driver Current Status](../daily-driver-current-status.md) |
+| [daily-driver-tui-postfix-execution-sheets-2026-06-01.md](plans/daily-driver-tui-postfix-execution-sheets-2026-06-01.md) | Complete (TICKET-12..15 fixed) | [Ticket Plans Index](../plans/ticket-plans/index.md) |
+| [daily-driver-second-pass-task-plan-2026-06-01.md](plans/daily-driver-second-pass-task-plan-2026-06-01.md) | Complete (TASK-DD2 items fixed) | [Ticket Plans Index](../plans/ticket-plans/index.md) |
+
+Not archived in this pass because an item is still open or unverified:
+`plans/daily-driver-usefulness-master-plan-2026-06-01.md` (DU-IDs are not
+tracked in any current ledger).
 
 ## High-Overlap Clusters
 

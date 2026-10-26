@@ -276,7 +276,7 @@ class SkillWriterConfig:
 - [ADR 0019: Phase 4 - Federated Swarm Consensus](0019-phase-4-federated-swarm-consensus.md)
 - [ADR 0020: Phase 5 - Hardened Sandbox Virtualization](0020-phase-5-hardened-sandbox-virtualization.md)
 - [Architecture - Phase 4-5 Roadmap](../architecture.md#phase-4-5-roadmap-beta)
-- [Governance Hardening Plan](../plans/governance-hardening.md)
+- [Governance Hardening Plan](../archive/plans/governance-hardening.md)
 - [Backlog Priority](../backlog-priority.md)
 
 ## Verification Commands

@@ -1,5 +1,7 @@
 # Comprehensive Plan — All Aspects — 2026-05-31
 
+> **Archived 2026-10-26:** moved from `docs/plans/` to `docs/archive/plans/`. This plan is superseded or complete and is kept as provenance only. Current truth: [Documentation Index](../../INDEX.md) and [Historical Evidence Index](../INDEX.md).
+
 > Supersession note, 2026-06-05: This file is historical evidence from the
 > Phase 0 audit pass. For current work prioritization, use
 > `docs/plans/daily-driver-complete-work-plan-risk-roi-2026-06-04.md` which
@@ -15,8 +17,8 @@ criteria. New findings from today's audit are marked `[NEW]`.
 **Prerequisite reading:**
 - `docs/analysis/comprehensive-audit-2026-05-29.md` — baseline audit
 - `docs/analysis/new-risk-findings-2026-05-31.md` — new findings this session
-- `docs/plans/remediation-roadmap.md` — previously accepted fix plan (P0–P4)
-- `docs/plans/future-roadmap-risk-usability-backlog-2026-05-31.md` — horizon roadmap
+- `docs/archive/plans/remediation-roadmap.md` — previously accepted fix plan (P0–P4)
+- `docs/archive/plans/future-roadmap-risk-usability-backlog-2026-05-31.md` — horizon roadmap
 
 **Principle:** Smallest verifiable fix per item. No big-bang refactors.
 Human review required before executing any plan that touches auth, audit, or
@@ -89,7 +91,7 @@ own acceptance in the remediation roadmap but is listed here for completeness:
 | S-M2 | Plaintext bearer token files | Medium |
 | S-M3 | Audit verify swallows exceptions | Medium |
 
-Ref: `docs/plans/remediation-roadmap.md` Phase P1 for tracking.
+Ref: `docs/archive/plans/remediation-roadmap.md` Phase P1 for tracking.
 
 ---
 
@@ -162,7 +164,7 @@ JetBrains) hang waiting for a response that never comes.
 
 | ID | Item | Severity | Plan |
 |---|---|---|---|
-| C-H3 | `ContextBus._reconnect()` closes all thread connections | High | `docs/plans/remediation-roadmap.md` P2.1 ✅ |
+| C-H3 | `ContextBus._reconnect()` closes all thread connections | High | `docs/archive/plans/remediation-roadmap.md` P2.1 ✅ |
 | C-H6 | `archive_to_rag` non-transactional | High | P2.2 (open) |
 | C-H2 | Multiple `AuditLogger` same path breaks hash chain | High | P2.3 ✅ |
 | C-M11 | Swarm heartbeat does not cancel executor work | Medium | P2.5 ✅ |

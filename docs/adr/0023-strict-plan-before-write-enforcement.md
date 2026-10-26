@@ -246,7 +246,7 @@ class PlanContract:
 - [ADR 0001: P0 Agent Harness Framework](0001-p0-framework.md) (Post-Implementation section)
 - [ADR 0009: 5-Loop Governance System](0009-5-loop-governance-system.md)
 - [ADR 0022: Centralized Approval Queue for Subagents](0022-centralized-approval-queue-subagents.md)
-- [Governance Hardening Plan](../plans/governance-hardening.md)
+- [Governance Hardening Plan](../archive/plans/governance-hardening.md)
 - [Architecture - Loop 2: Coding Safety Loop](../architecture.md#loop-2-coding-safety-loop-plan-binding--validation)
 
 ## Verification Commands

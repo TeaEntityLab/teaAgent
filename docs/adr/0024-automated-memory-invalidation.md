@@ -275,7 +275,7 @@ DEFAULT_RULES = [
 
 - [ADR 0001: P0 Agent Harness Framework](0001-p0-framework.md) (Post-Implementation section)
 - [ADR 0009: 5-Loop Governance System](0009-5-loop-governance-system.md)
-- [Governance Hardening Plan](../plans/governance-hardening.md)
+- [Governance Hardening Plan](../archive/plans/governance-hardening.md)
 - [Architecture - Loop 4: Memory / Failure Loop](../architecture.md#loop-4-memory--failure-loop-curation--warning-injection)
 
 ## Verification Commands

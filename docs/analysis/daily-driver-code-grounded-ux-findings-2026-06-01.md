@@ -18,7 +18,7 @@ theme it grounds (e.g. UX-F6) so the two docs reinforce rather than duplicate.
 
 **Scope note.** Findings are about *operator-facing correctness and trust*, not style.
 No code was changed in this pass. Fixes are specified in
-`docs/plans/daily-driver-hardening-plan-2026-06-01.md`; residual risk is tracked in
+`docs/archive/plans/daily-driver-hardening-plan-2026-06-01.md`; residual risk is tracked in
 `docs/analysis/daily-driver-risk-register-2026-06-01.md`.
 
 ---

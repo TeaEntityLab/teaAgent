@@ -96,7 +96,7 @@ docs or defaults.
 ## Second-Pass Delta
 
 The newest second-pass plan is
-`docs/plans/daily-driver-second-pass-task-plan-2026-06-01.md`. Treat it as the
+`docs/archive/plans/daily-driver-second-pass-task-plan-2026-06-01.md`. Treat it as the
 execution queue for DU-005A, DU-005B, DU-010A, DU-010B, and the verification gaps
 discovered after the controller-backed chat improvements.
 

@@ -78,5 +78,5 @@ When an escalation trigger is met:
 
 - OpenCode GitHub: [Link to be added]
 - OpenCode Issues: [Link to be added]
-- Competitive positioning plan: `docs/plans/competitive-positioning-plan-2026-05-31.md`
+- Competitive positioning plan: `docs/archive/plans/competitive-positioning-plan-2026-05-31.md`
 - Backlog priority: `docs/backlog-priority.md`

@@ -146,7 +146,7 @@ the earlier same-day refresh documents.
 
 1. **`daily-driver-second-pass-after-improvements-2026-06-01.md`** *(analysis)*
    Current fixed/still-active/new facts after the latest code changes.
-2. **`../plans/daily-driver-second-pass-task-plan-2026-06-01.md`** *(plans)*
+2. **`../archive/plans/daily-driver-second-pass-task-plan-2026-06-01.md`** *(plans)*
    Reviewable task queue for the newly discovered risks.
 3. **`daily-driver-verification-gap-audit-2026-06-01.md`** *(analysis)*
    Where current tests prove behavior, and where they only cover helpers or smoke paths.
@@ -267,7 +267,7 @@ This package **builds on** and does not replace:
 - `agent-market-ux-survey-2026-05-31.md` (themes UX-F1…UX-F8)
 - `agent-ecosystem-daily-use-gap-review-2026-05-31.md` (gaps F-ECO-001…F-ECO-014)
 - `agent-competitive-risks-2026-05-31.md`, `competitor-community-feedback-synthesis-2026-05-31.md`
-- `plans/ux-improvement-roadmap-2026-05-31.md`, `plans/competitive-positioning-plan-2026-05-31.md`
+- `archive/plans/ux-improvement-roadmap-2026-05-31.md`, `archive/plans/competitive-positioning-plan-2026-05-31.md`
 
 The May-31 work was **doc-level**; this package is **code-level + consolidation**.
 

@@ -1,5 +1,7 @@
 # Remediation Roadmap — Post-Audit 2026-05-29
 
+> **Archived 2026-10-26:** moved from `docs/plans/` to `docs/archive/plans/`. This plan is superseded or complete and is kept as provenance only. Current truth: [Documentation Index](../../INDEX.md) and [Historical Evidence Index](../INDEX.md).
+
 > Supersession note, 2026-06-05: This file is historical evidence from the
 > first audit pass. The P0–P4 items were absorbed into the daily-driver
 > workstreams and the Phase 0 trust repair work. For current prioritization,
@@ -69,8 +71,8 @@ Principle: **smallest verifiable step** per phase; no big-bang refactors.
 
 | # | Item | Status | Reference |
 |---|------|--------|-----------|
-| P4.1 | JSONL / NFS posture + migration ADR | ✅ tranche | [ADR 0008](../adr/0008-p4-strategic-posture.md), threat-model NFS row |
-| P4.2 | MCP TLS via reverse proxy (no native TLS) | ✅ documented | [http-surface-auth.md](../http-surface-auth.md), ADR 0008 |
+| P4.1 | JSONL / NFS posture + migration ADR | ✅ tranche | [ADR 0008](../../adr/0008-p4-strategic-posture.md), threat-model NFS row |
+| P4.2 | MCP TLS via reverse proxy (no native TLS) | ✅ documented | [http-surface-auth.md](../../http-surface-auth.md), ADR 0008 |
 | P4.3 | File P2P signature `auth_token` when `TEAAGENT_FEDERATED_SIGNATURE_TOKEN` set | ✅ shipped | `federated_sync.py`, `security_env.py` |
 | P4.3b | HTTP P2P multi-sig channel | ✅ shipped | `signature_relay.py`, `teaagent sync signature-relay` |
 | P4.4 | `jaraco.context` CVE-2026-23949 (Dependabot #10) | ✅ constrained | `pyproject.toml` `jaraco-context>=6.1.0`, `selftest` version check |

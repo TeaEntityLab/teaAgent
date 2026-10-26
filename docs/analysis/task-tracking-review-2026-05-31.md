@@ -21,16 +21,16 @@ Reviewed 52 markdown files containing task-related content. Identified 12 primar
 | File | Purpose | Status Tracking | Last Updated |
 |------|---------|-----------------|--------------|
 | `docs/backlog-priority.md` | Main backlog with P0-P2 priorities | ✅ Clear (implemented/shipped/beta) | 2026-05-28 |
-| `docs/plans/daily-driver-execution-readiness-2026-06-01.md` | Execution sheets for P0/P1 tickets | ❌ No completion markers | 2026-06-01 |
-| `docs/plans/daily-driver-hardening-plan-2026-06-01.md` | Phase-based hardening plan | ❌ No completion markers | 2026-06-01 |
-| `docs/plans/daily-driver-backlog-2026-06-01.md` | Ticket-ready items | ❌ No completion markers | 2026-06-01 |
+| `docs/archive/plans/daily-driver-execution-readiness-2026-06-01.md` | Execution sheets for P0/P1 tickets | ❌ No completion markers | 2026-06-01 |
+| `docs/archive/plans/daily-driver-hardening-plan-2026-06-01.md` | Phase-based hardening plan | ❌ No completion markers | 2026-06-01 |
+| `docs/archive/plans/daily-driver-backlog-2026-06-01.md` | Ticket-ready items | ❌ No completion markers | 2026-06-01 |
 | `docs/acceptance.md` | Acceptance test catalog | ✅ Clear (393 passed) | Current |
-| `docs/plans/agent-ecosystem-acceptance-roadmap-2026-05-31.md` | Journey-based acceptance | ❌ No completion markers | 2026-05-31 |
-| `docs/plans/remediation-roadmap.md` | Post-audit remediation | ✅ Clear (all ✅) | 2026-05-29 |
-| `docs/plans/governance-hardening.md` | Governance loop closure | ✅ Clear (shipped/beta) | 2026-05-28 |
-| `docs/plans/competitive-positioning-plan-2026-05-31.md` | Strategic positioning | ❌ No completion markers | 2026-05-31 |
-| `docs/plans/ux-improvement-roadmap-2026-05-31.md` | UX improvements | ❌ No completion markers | 2026-05-31 |
-| `docs/plans/future-roadmap-risk-usability-backlog-2026-05-31.md` | Large strategic backlog | ❌ No completion markers | 2026-05-31 |
+| `docs/archive/plans/agent-ecosystem-acceptance-roadmap-2026-05-31.md` | Journey-based acceptance | ❌ No completion markers | 2026-05-31 |
+| `docs/archive/plans/remediation-roadmap.md` | Post-audit remediation | ✅ Clear (all ✅) | 2026-05-29 |
+| `docs/archive/plans/governance-hardening.md` | Governance loop closure | ✅ Clear (shipped/beta) | 2026-05-28 |
+| `docs/archive/plans/competitive-positioning-plan-2026-05-31.md` | Strategic positioning | ❌ No completion markers | 2026-05-31 |
+| `docs/archive/plans/ux-improvement-roadmap-2026-05-31.md` | UX improvements | ❌ No completion markers | 2026-05-31 |
+| `docs/archive/plans/future-roadmap-risk-usability-backlog-2026-05-31.md` | Large strategic backlog | ❌ No completion markers | 2026-05-31 |
 | `.gemini/.../implementation_plan.md` | 5-Loop governance hardening | ❌ No completion markers | Unknown |
 
 ---
@@ -55,9 +55,9 @@ Reviewed 52 markdown files containing task-related content. Identified 12 primar
 **Issue:** Three daily driver plan files (execution-readiness, hardening, backlog) contain detailed tickets (TICKET-1 through TICKET-11) but have no completion markers. Previous session summary indicates these are complete, but the files don't reflect this.
 
 **Files affected:**
-- `docs/plans/daily-driver-execution-readiness-2026-06-01.md`
-- `docs/plans/daily-driver-hardening-plan-2026-06-01.md`
-- `docs/plans/daily-driver-backlog-2026-06-01.md`
+- `docs/archive/plans/daily-driver-execution-readiness-2026-06-01.md`
+- `docs/archive/plans/daily-driver-hardening-plan-2026-06-01.md`
+- `docs/archive/plans/daily-driver-backlog-2026-06-01.md`
 
 **Impact:** High - unclear what work remains vs. what's done
 
@@ -73,9 +73,9 @@ Reviewed 52 markdown files containing task-related content. Identified 12 primar
 **Issue:** Multiple strategic/positioning plan files have no completion status tracking, making it unclear what's actionable vs. aspirational.
 
 **Files affected:**
-- `docs/plans/competitive-positioning-plan-2026-05-31.md`
-- `docs/plans/ux-improvement-roadmap-2026-05-31.md`
-- `docs/plans/future-roadmap-risk-usability-backlog-2026-05-31.md`
+- `docs/archive/plans/competitive-positioning-plan-2026-05-31.md`
+- `docs/archive/plans/ux-improvement-roadmap-2026-05-31.md`
+- `docs/archive/plans/future-roadmap-risk-usability-backlog-2026-05-31.md`
 
 **Impact:** Medium - difficult to prioritize from these documents
 

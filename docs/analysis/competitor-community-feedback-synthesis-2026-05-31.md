@@ -188,6 +188,6 @@ These are used as directional feedback, not as statistical consensus.
 ## Handoff
 
 The companion plan is
-`docs/plans/future-roadmap-risk-usability-backlog-2026-05-31.md`.
+`docs/archive/plans/future-roadmap-risk-usability-backlog-2026-05-31.md`.
 It turns these signals into roadmap phases, task IDs, risk controls, acceptance
 tests, and usability work items.

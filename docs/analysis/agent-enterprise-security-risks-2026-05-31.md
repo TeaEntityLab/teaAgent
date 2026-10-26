@@ -9,7 +9,7 @@
 
 **Purpose:** Evidence-based risk inventory of the industry-wide security
 failures in AI coding agents, mapped to teaagent's controls and gaps.
-Informs `docs/plans/ux-improvement-roadmap-2026-05-31.md` item UX4.1.
+Informs `docs/archive/plans/ux-improvement-roadmap-2026-05-31.md` item UX4.1.
 
 **Sources:** Gravitee.io State of AI Agent Security 2026, NIST AI Agent
 Standards Initiative (Feb 2026), Kiteworks survey (225 leaders), Hacker News,
@@ -219,7 +219,7 @@ Additional requirements beyond minimum:
 
 | Gap | NIST Area | Severity | Plan |
 |---|---|---|---|
-| L3 audit plaintext (S-NEW1) | Storage | HIGH | `docs/plans/comprehensive-plan-all-aspects-2026-05-31.md` Plan S1 |
+| L3 audit plaintext (S-NEW1) | Storage | HIGH | `docs/archive/plans/comprehensive-plan-all-aspects-2026-05-31.md` Plan S1 |
 | MCP loopback no-auth default (S-H5) | Authorization | HIGH | Remediation roadmap P1.4 ✅ |
 | Plugin audit fail-open (S-H8) | Supply chain | HIGH | Remediation roadmap P3.7 ✅ |
 | No formal agent identity credential | Identity | MEDIUM | Not planned — NEW |

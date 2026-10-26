@@ -93,8 +93,8 @@ Dead-weight candidates (working tier, not linked from INDEX.md):
 
 | Month | Archive docs added |
 | --- | --- |
-| 2026-05 | 14 |
-| 2026-06 | 229 |
+| 2026-05 | 8 |
+| 2026-06 | 224 |
 | 2026-07 | 13 |
 | 2026-08 | 5 |
 | 2026-09 | 29 |

@@ -244,7 +244,7 @@ class ApprovalQueueConfig:
 - [ADR 0001: P0 Agent Harness Framework](0001-p0-framework.md)
 - [ADR 0009: 5-Loop Governance System](0009-5-loop-governance-system.md)
 - [ADR 0019: Phase 4 - Federated Swarm Consensus](0019-phase-4-federated-swarm-consensus.md)
-- [Governance Hardening Plan](../plans/governance-hardening.md)
+- [Governance Hardening Plan](../archive/plans/governance-hardening.md)
 - [Architecture - Loop 5: Swarm & Tournament Sandbox Hardening](../architecture.md#loop-5-swarm--tournament-sandbox-hardening)
 
 ## Verification Commands

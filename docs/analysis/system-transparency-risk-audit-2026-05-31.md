@@ -15,7 +15,7 @@ engineered.
 - Reviewed product and governance Markdown: `README.md`, `docs/product-contract.md`,
   `docs/acceptance.md`, `docs/maturity-matrix.md`, `docs/threat-model.md`,
   `docs/use-cases.md`, `docs/use-case-matrix.md`, `docs/backlog-priority.md`,
-  `docs/plans/remediation-roadmap.md`, and `docs/plans/governance-hardening.md`.
+  `docs/archive/plans/remediation-roadmap.md`, and `docs/archive/plans/governance-hardening.md`.
 - Reviewed core governance code paths around tool registration, policy, audit,
   hooks, MCP adapters, plugins, code-analysis tools, and external code-analysis
   backends.

@@ -1,5 +1,7 @@
 # Daily-Driver Second-Pass Task Plan
 
+> **Archived 2026-10-26:** moved from `docs/plans/` to `docs/archive/plans/`. This plan is superseded or complete and is kept as provenance only. Current truth: [Documentation Index](../../INDEX.md) and [Historical Evidence Index](../INDEX.md).
+
 > Supersession note, 2026-06-05: This file is historical evidence from the
 > second daily-driver review pass. The tasks were absorbed into the P0-A
 > through P1-D workstreams in
