@@ -53,7 +53,9 @@ def _start_automation_background_run(
         code_analysis=False,
         context_profile=spec.context_profile,
         selected_skills=list(spec.selected_skills),
-        max_estimated_cost_cents=spec.max_cost_cents,
+        # 0 means "unset" on automation specs (--max-cost-cents). Map it to None
+        # so no zero spend cap is forwarded; the run keeps the normal default.
+        max_estimated_cost_cents=spec.max_cost_cents or None,
     )
     command = build_agent_run_command(run_args, task or spec.task)
     record = (
