@@ -589,14 +589,13 @@ def build_control_cockpit(
         cockpit.errors.append('run/undo state load failed')
 
     try:
-        from teaagent.ergonomics._approval_grants import _grant_expired
         from teaagent.ergonomics._approval_state import ApprovalPresetStore
 
         grants = ApprovalPresetStore(root_path, readonly=True).list_grants()
         cockpit.active_rules = [
             f'{grant.tool_name} ({grant.scope})'
             for grant in grants
-            if not _grant_expired(grant)
+            if not grant.is_expired()
         ]
     except Exception:
         logger.exception('approval rules load failed')

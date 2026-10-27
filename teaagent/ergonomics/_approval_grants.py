@@ -82,6 +82,10 @@ class ApprovalGrant:
             return 'unrestricted (all paths)'
         return f'scoped: {", ".join(self.path_globs)}'
 
+    def is_expired(self) -> bool:
+        """Return True once ``expires_at`` has passed or cannot be parsed."""
+        return _grant_expired(self)
+
 
 @dataclass(frozen=True)
 class ScopedApprovalRecord:
