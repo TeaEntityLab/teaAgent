@@ -411,8 +411,10 @@ def _seed_run_with_undo(root: Path, run_id: str) -> None:
     audit.add_sink(journal)
     adapter = FakeAdapter(
         [
-            '{"type":"tool","tool_name":"workspace_write_file",'
-            '"arguments":{"path":"notes.txt","content":"new\\n"},"call_id":"w1"}',
+            (
+                '{"type":"tool","tool_name":"workspace_write_file",'
+                '"arguments":{"path":"notes.txt","content":"new\\n"},"call_id":"w1"}'
+            ),
             '{"type":"final","content":"done"}',
         ]
     )
