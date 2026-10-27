@@ -1415,7 +1415,7 @@ class TeaAgentTUI:
                 ttl_hours=8.0,
             )
             self.output_fn(
-                f'approval: registered session grant for {request.tool_name} (current directory)'
+                f'approval: registered session grant for {request.tool_name} (all paths in this workspace, this session, 8h)'
             )
             return True
 

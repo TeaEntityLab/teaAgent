@@ -195,7 +195,7 @@ def make_cli_approval_handler(  # noqa: C901
                 ttl_hours=8.0,
             )
             print(
-                f'[TeaAgent] Granted {request.tool_name} for current directory (session)',
+                f'[TeaAgent] Granted {request.tool_name} for all paths in this workspace, this session, 8h',
                 file=sys.stderr,
             )
             return True
