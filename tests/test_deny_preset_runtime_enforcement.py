@@ -22,14 +22,21 @@ Behaviour pinned (current code):
 - Without a deny preset the same flow executes the tool (control), so the blocking
   assertions cannot pass vacuously.
 
-Not pinned here: in ``prompt`` mode with an ``approval_handler`` that approves, the
-runner's ToolPermissionError path (``teaagent/runner/_governed_execution.py:314-335``)
-still asks the handler, and an approving handler runs a deny-matched call. Whether
-an interactive override should beat a deny preset is an open owner decision.
+- Deny preset in ``prompt`` mode with an approving ``approval_handler``: the call is
+  still blocked and the handler is never consulted. This is the owner decision
+  "block in all modes" (docs/reviews/dogfood-g1-g22-2026-09-15-risk.md:22;
+  docs/cli.md:923 "Matched deny grants hard-block in every mode"). The runner's
+  ToolPermissionError path (``teaagent/runner/_governed_execution.py``) records a
+  ``policy_denied`` block and re-raises for ``POLICY_DENIED`` instead of offering
+  interactive approval. Removing the deny grant (``approval revoke``) is the only
+  way to let such a call run again; the falsifier test pins that escape hatch.
 """
 
 from __future__ import annotations
 
+import io
+import json
+from contextlib import redirect_stdout
 from pathlib import Path
 from typing import Any
 
@@ -38,7 +45,14 @@ import pytest
 from teaagent.cli import main
 from teaagent.ergonomics._approval_state import ApprovalPresetStore
 from teaagent.policy import ApprovalPolicy
-from teaagent.runner import AgentRunner, ApprovalRequest, FinalAnswer, ToolRequest
+from teaagent.run_store import RunStore
+from teaagent.runner import (
+    AgentRunner,
+    ApprovalRequest,
+    FinalAnswer,
+    RunResult,
+    ToolRequest,
+)
 from teaagent.types import (
     AuditLogger,
     PermissionMode,
@@ -78,11 +92,18 @@ def _recording_registry(calls: list[dict[str, Any]]) -> ToolRegistry:
     return registry
 
 
-def _register_deny_via_cli(root: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    """Register the deny grant exactly as the G1 repro does (CLI, not the store API)."""
+def _register_deny_via_cli(root: Path, capsys: pytest.CaptureFixture[str]) -> str:
+    """Register the deny grant exactly as the G1 repro does (CLI, not the store API).
+
+    Returns the new grant's ``grant_id`` so callers can revoke it.
+    """
     rc = main(['approval', 'deny', _TOOL, '--root', str(root), '--path-glob', '*'])
     assert rc == 0
-    assert '"scope": "deny"' in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert '"scope": "deny"' in out
+    grant_id = json.loads(out)['grant_id']
+    assert isinstance(grant_id, str)
+    return grant_id
 
 
 def _run_tool_call(
@@ -90,9 +111,10 @@ def _run_tool_call(
     *,
     permission_mode: PermissionMode,
     approval_handler: Any = None,
+    audit: AuditLogger | None = None,
 ) -> tuple[Any, list[dict[str, Any]], AuditLogger]:
     calls: list[dict[str, Any]] = []
-    audit = AuditLogger()
+    audit = audit if audit is not None else AuditLogger()
     policy = ApprovalPolicy(
         permission_mode=permission_mode,
         approval_store=ApprovalPresetStore(root),
@@ -213,3 +235,109 @@ def test_without_deny_grant_allow_mode_runs_tool(tmp_path: Path) -> None:
     assert calls == [_ARGS]
     assert 'tool_call_started' in _event_types(audit)
     assert 'tool_call_blocked' not in _event_types(audit)
+
+
+def test_deny_grant_blocks_approving_handler_in_prompt_mode(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """(d) G-P1-4: a deny preset is terminal in ``prompt`` mode.
+
+    The handler would approve, but a matched deny must never reach it. Before the
+    fix, ``_governed_execution.py`` offered the ToolPermissionError to the handler
+    for destructive tools, and the approving handler ran the denied tool.
+    """
+    _register_deny_via_cli(tmp_path, capsys)
+    handler_calls: list[ApprovalRequest] = []
+
+    def approve(req: ApprovalRequest) -> bool:
+        handler_calls.append(req)
+        return True
+
+    result, calls, audit = _run_tool_call(
+        tmp_path, permission_mode=PermissionMode.PROMPT, approval_handler=approve
+    )
+
+    assert handler_calls == []
+    assert calls == []
+    assert result.status != 'completed'
+    event_types = _event_types(audit)
+    assert 'tool_call_started' not in event_types
+    assert 'tool_call_approved' not in event_types
+    assert 'tool_call_blocked' in event_types
+    assert 'policy_denied' in _reason_codes(audit, ('tool_call_blocked',))
+
+
+def test_why_denied_renders_policy_denied_description(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """(e) ``approval why-denied`` renders ``policy_denied`` with a real description."""
+    _register_deny_via_cli(tmp_path, capsys)
+    run_id = 'run-g1-4-why-denied'
+    store = RunStore(tmp_path)
+    audit = store.audit_logger(run_id)
+
+    def approve(_req: ApprovalRequest) -> bool:
+        return True
+
+    _run_tool_call(
+        tmp_path,
+        permission_mode=PermissionMode.PROMPT,
+        approval_handler=approve,
+        audit=audit,
+    )
+    store.logger_for_result(
+        RunResult(
+            run_id=run_id,
+            final_answer=None,
+            iterations=1,
+            tool_calls=0,
+            status='failed',
+        ),
+        audit,
+    )
+
+    out = io.StringIO()
+    with redirect_stdout(out):
+        code = main(['approval', 'why-denied', run_id, '--root', str(tmp_path)])
+
+    assert code == 0
+    rendered = out.getvalue()
+    assert 'Reason:   policy_denied' in rendered
+    assert 'Unknown denial reason' not in rendered
+    assert 'approval preset' in rendered
+
+
+def test_revoking_deny_grant_lets_approving_handler_run_tool(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """(f) Falsifier: ``approval revoke <deny_grant_id>`` is the escape hatch.
+
+    With the deny present the approving handler is never consulted. After revoke,
+    a new run with the same approving handler executes the tool, which shows the
+    block came from the deny grant and nothing else.
+    """
+    grant_id = _register_deny_via_cli(tmp_path, capsys)
+    handler_calls: list[ApprovalRequest] = []
+
+    def approve(req: ApprovalRequest) -> bool:
+        handler_calls.append(req)
+        return True
+
+    _, blocked_calls, _ = _run_tool_call(
+        tmp_path, permission_mode=PermissionMode.PROMPT, approval_handler=approve
+    )
+    assert blocked_calls == []
+    assert handler_calls == []
+
+    rc = main(['approval', 'revoke', grant_id, '--root', str(tmp_path)])
+    assert rc == 0
+    assert json.loads(capsys.readouterr().out)['status'] == 'revoked'
+
+    result, calls, audit = _run_tool_call(
+        tmp_path, permission_mode=PermissionMode.PROMPT, approval_handler=approve
+    )
+    assert result.status == 'completed'
+    assert calls == [_ARGS]
+    assert len(handler_calls) == 1
+    assert 'tool_call_started' in _event_types(audit)
+    assert 'policy_denied' not in _reason_codes(audit, _BLOCKING_EVENTS)

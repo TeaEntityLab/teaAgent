@@ -27,6 +27,7 @@ from teaagent.budget import RunBudget
 from teaagent.budget_monitor import BudgetAction, BudgetMonitor
 from teaagent.errors import (
     BudgetExceededError,
+    DenialReasonCode,
     RunCancelledError,
     ToolPermissionError,
 )
@@ -35,7 +36,6 @@ from teaagent.phase_tracker import PhaseTracker
 from ._events import RunEventType
 
 if TYPE_CHECKING:
-    from teaagent.errors import DenialReasonCode
     from teaagent.run_context import RunContext
 
     from ._core import AgentRunner
@@ -322,6 +322,16 @@ def authorize_tool_call(
             annotations=annotations,
             run_id=run_id,
         )
+        if exc_reason_code is DenialReasonCode.POLICY_DENIED:
+            # An explicit deny preset is terminal in every mode (owner decision
+            # "block in all modes"; docs/cli.md:923). Never offer it for approval.
+            runner.approval_manager.record_blocked(
+                approval_request=approval_request,
+                audit=runner.audit,
+                run_id=run_id,
+                reason_code=reason_code_str,
+            )
+            raise
         if runner.approval_manager.can_request_approval(tool.annotations.destructive):
             approved = runner.approval_manager.handle_approval_request(
                 approval_request=approval_request,

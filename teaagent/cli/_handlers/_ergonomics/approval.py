@@ -158,6 +158,7 @@ _DENIAL_REASON_DESCRIPTIONS: dict[str, str] = {
     'multisig_no_quorum': 'Blocked by multi-signature quorum — not enough peer approvals.',
     'auto_mode_blocked': 'Blocked by auto-mode tool restrictions.',
     'missing_state': 'Blocked — no matching approval state found.',
+    'policy_denied': 'Blocked by a deny grant (approval preset) — always terminal; not offered for approval. Remove it with `approval revoke <grant_id>`.',
 }
 
 
