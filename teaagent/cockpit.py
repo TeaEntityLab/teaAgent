@@ -542,19 +542,11 @@ def build_control_cockpit(
         }
 
     # ── review ──
-    try:
-        if cockpit.goal:
-            review_ids = cockpit.goal.get('review_ids', [])
-            cockpit.review = {
-                'review_ids_count': len(review_ids)
-                if isinstance(review_ids, list)
-                else 0,
-                'latest_review_status': 'unknown',
-            }
-    except Exception:
-        logger.exception('review load failed')
-        cockpit.errors.append('review load failed')
-        cockpit.review = None
+    # No recorded review source feeds the cockpit: the goal dict never carries
+    # ``review_ids`` (GoalRecord.review_ids is never written in production), and
+    # ``record_review_closed`` has no production caller. Report the section as
+    # unavailable (None) rather than a zeros dict that reads as "0 reviews".
+    cockpit.review = None
 
     # ── skill diagnostics ──
     try:

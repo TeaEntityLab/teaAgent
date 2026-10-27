@@ -145,8 +145,9 @@ def test_build_control_cockpit_with_goals() -> None:
         assert cockpit.spec['spec_hash'] == 'abc123'
         assert cockpit.spec['spec_exemption'] is None
 
-        assert cockpit.review is not None
-        assert cockpit.review['review_ids_count'] == 0
+        # No review source is recorded, so the section is unavailable, not zero.
+        assert cockpit.review is None
+        assert hasattr(cockpit, 'review')
 
 
 def _render_cockpit(tui: TeaAgentTUI) -> str:

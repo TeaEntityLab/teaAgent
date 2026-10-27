@@ -356,6 +356,8 @@ class TeaAgentTUI:
                 print(
                     f'  Review: {review.get("review_ids_count", 0)} reviews, gate={review.get("latest_review_status", "?")}'
                 )
+            else:
+                print('  Review: unavailable')
 
             # Skills
             skill = cc.skill
