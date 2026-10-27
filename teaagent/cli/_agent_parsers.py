@@ -144,7 +144,11 @@ def add_agent_run_arguments(
     p.add_argument(
         '--git-sandbox',
         action='store_true',
-        help='Run agent task in a git sandbox branch for safe rollbacks.',
+        help=(
+            'No effect (kept for compatibility): in a git repository the sandbox is '
+            'enabled automatically (prompted when interactive, automatic when '
+            'non-interactive or git_sandbox_consent=always).'
+        ),
     )
     p.add_argument(
         '--git-sandbox-auto-stash',

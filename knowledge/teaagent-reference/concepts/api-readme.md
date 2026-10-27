@@ -6,7 +6,7 @@ resource: "urn:teaagent:doc:docs/api/README.md"
 tags: ["teaagent", "api", "index", "reference"]
 teaagent:
   source_path: "docs/api/README.md"
-  source_sha256: "4993082e1bf3611761ecc53d3053a09d26562daa7cc55c2fe940af539a4be1dd"
+  source_sha256: "434c8063e26ee4e99c3329ad3369dfea78141afe26d7ca103a794569c0ea12f1"
   docs_tier: "working"
   authority: "canonical"
   lifecycle: "current"
