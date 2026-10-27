@@ -465,6 +465,49 @@ def test_cockpit_panel_renders_branch_undo_last_run_and_rules(tmp_path: Path) ->
     assert 'Rules: workspace_read_file (session)' in output
 
 
+def _append_shell_mutate_event(root: Path, run_id: str) -> None:
+    """Append a completed shell-mutate tool call to the run's audit log."""
+    from teaagent.audit import AuditLogger
+    from teaagent.audit_chain import last_chain_hash
+    from teaagent.run_store import RunStore
+
+    path = RunStore(root).run_path(run_id)
+    audit = AuditLogger(path=path)
+    audit._prev_hash = last_chain_hash(path)
+    audit.record(
+        'tool_call_completed',
+        run_id,
+        tool_name='workspace_run_shell_mutate',
+        call_id='shell-1',
+        status='ok',
+    )
+
+
+def test_cockpit_undo_is_partial_when_run_used_shell_mutations(tmp_path: Path) -> None:
+    _seed_run_with_undo(tmp_path, 'run-cockpit-shell')
+    _append_shell_mutate_event(tmp_path, 'run-cockpit-shell')
+
+    cockpit = build_control_cockpit(tmp_path)
+
+    assert cockpit.undo == 'partial'
+    assert cockpit.last_run_id == 'run-cockpit-shell'
+    assert cockpit.errors == []
+
+
+def test_cockpit_panel_qualifies_partial_undo(tmp_path: Path) -> None:
+    from teaagent.tui import TeaAgentTUI
+
+    _seed_run_with_undo(tmp_path, 'run-cockpit-shell-panel')
+    _append_shell_mutate_event(tmp_path, 'run-cockpit-shell-panel')
+
+    tui = TeaAgentTUI(input_fn=lambda _p: 'exit', output_fn=lambda _: None)
+    tui._control_cockpit = build_control_cockpit(tmp_path)
+    output = _render_cockpit(tui)
+
+    assert 'Undo: partial (shell commands not reversible)' in output
+    assert 'Undo: available' not in output
+
+
 def test_cockpit_run_context_is_none_without_git_or_runs(tmp_path: Path) -> None:
     cockpit = build_control_cockpit(tmp_path)
 

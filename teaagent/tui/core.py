@@ -374,7 +374,11 @@ class TeaAgentTUI:
 
             # Run context (DU-011)
             print(f'  Branch: {cc.branch}')
-            print(f'  Undo: {cc.undo}')
+            if cc.undo == 'partial':
+                undo_label = 'partial (shell commands not reversible)'
+            else:
+                undo_label = cc.undo
+            print(f'  Undo: {undo_label}')
             print(f'  Last run: {cc.last_run_id}')
             if cc.active_rules is None:
                 rules_label = 'unknown'
