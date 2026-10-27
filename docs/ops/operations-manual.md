@@ -150,8 +150,10 @@ Approve or deny:
 
 ```bash
 teaagent approval approve <approval_id>
-teaagent approval deny <approval_id>
+teaagent approval reject <call_id>
 ```
+
+`approval reject` refuses a queued call. `approval deny <tool> --path-glob <glob>` (or `--command-prefix`) is different: it registers a deny preset for future calls and cannot reject a call that is already queued.
 
 ### Session Management
 

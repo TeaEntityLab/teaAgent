@@ -184,7 +184,10 @@ def _approval(
     )
     check.add_argument('--path', default=None, help='Tool path argument to match.')
     check.add_argument(
-        '--command', default=None, help='Shell command argument to match.'
+        '--command',
+        dest='shell_command',
+        default=None,
+        help='Shell command argument to match.',
     )
     check.add_argument(
         '--arg',
@@ -211,7 +214,10 @@ def _approval(
     )
     explain.add_argument('--path', default=None, help='Tool path argument to match.')
     explain.add_argument(
-        '--command', default=None, help='Shell command argument to match.'
+        '--command',
+        dest='shell_command',
+        default=None,
+        help='Shell command argument to match.',
     )
     explain.add_argument(
         '--arg',
@@ -263,7 +269,10 @@ def _approval(
     grant.set_defaults(func=handlers['approval_grant'], command='approval')
     deny = subs.add_parser(
         'deny',
-        help='Deny a tool globally (no effect on queued calls).',
+        help=(
+            'Deny a tool call whose path or command matches a glob or prefix '
+            '(--path-glob or --command-prefix is required; there is no global deny).'
+        ),
     )
     deny.add_argument('tool_name')
     deny.add_argument('--root', default='.')

@@ -6,7 +6,7 @@ resource: "urn:teaagent:doc:docs/ops/operations-manual.md"
 tags: ["teaagent", "ops", "operations", "runbook"]
 teaagent:
   source_path: "docs/ops/operations-manual.md"
-  source_sha256: "66bc732bc3aa55f73c664da8998e0fbde375261721db983d97b48382709768d2"
+  source_sha256: "7cd93db0ca0dbbd2a04e9e63141d7f48ea8046afd0325f459bc6a4070421fe70"
   docs_tier: "working"
   authority: "canonical"
   lifecycle: "current"

@@ -362,8 +362,28 @@ def test_metrics_provider_records_run_lifecycle():
 
 
 @pytest.mark.skipif(not HAS_OTEL, reason='opentelemetry packages not installed')
-def test_metrics_provider_uses_console_reader_when_requested():
-    from teaagent.telemetry import configure_metrics
+def test_metrics_provider_uses_console_reader_when_requested(monkeypatch):
+    from opentelemetry.sdk.metrics.export import ConsoleMetricExporter
+
+    from teaagent.telemetry import _metrics, configure_metrics
+
+    # Spy on the public constructors instead of reading SDK internals, whose
+    # layout changes between opentelemetry-sdk releases.
+    reader_exporters: list[object] = []
+    provider_readers: list[list[object]] = []
+    real_reader = _metrics.PeriodicExportingMetricReader
+    real_provider = _metrics.MeterProvider
+
+    def spy_reader(exporter, *args, **kwargs):
+        reader_exporters.append(exporter)
+        return real_reader(exporter, *args, **kwargs)
+
+    def spy_provider(*args, **kwargs):
+        provider_readers.append(list(kwargs.get('metric_readers', [])))
+        return real_provider(*args, **kwargs)
+
+    monkeypatch.setattr(_metrics, 'PeriodicExportingMetricReader', spy_reader)
+    monkeypatch.setattr(_metrics, 'MeterProvider', spy_provider)
 
     sink, provider = configure_metrics(
         TelemetryConfig(service_name='test', console=True)
@@ -373,11 +393,10 @@ def test_metrics_provider_uses_console_reader_when_requested():
         assert provider is not None
         # console=True wires exactly one PeriodicExportingMetricReader backed by
         # a ConsoleMetricExporter.
-        readers = provider._sdk_config.metric_readers
-        assert len(readers) == 1
-        assert (
-            type(readers[0]._exporter).__name__ == 'ConsoleMetricExporter'  # type: ignore[attr-defined]
-        )
+        assert len(reader_exporters) == 1
+        assert isinstance(reader_exporters[0], ConsoleMetricExporter)
+        assert len(provider_readers) == 1
+        assert len(provider_readers[0]) == 1
         provider.force_flush(timeout_millis=100)
     finally:
         provider.shutdown()
