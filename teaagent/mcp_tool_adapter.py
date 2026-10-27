@@ -17,10 +17,12 @@ proxies the call through ``MCPHTTPClient``.  The tool name is taken verbatim
 from the MCP ``tools/list`` response so that the model can address it with the
 same name the MCP server advertises.
 
-The ``input_schema`` and ``output_schema`` follow the MCP response shapes:
-- ``input_schema`` comes directly from the MCP tool manifest.
-- ``output_schema`` is a fixed envelope ``{content: [...], isError: bool}``
-  that matches the MCP ``tools/call`` result shape.
+The input schema is read from the MCP wire key ``inputSchema`` (camelCase, as
+emitted by MCP ``tools/list``). The snake_case ``input_schema`` is accepted as a
+fallback for backward compatibility. A missing or non-dict schema falls back to
+an empty object schema and logs a warning. The ``output_schema`` is a fixed
+envelope ``{content: [...], isError: bool}`` that matches the MCP ``tools/call``
+result shape; the manifest's ``outputSchema`` is not read.
 
 ``annotations`` are fail-closed local policy: remote MCP ``readOnlyHint`` /
 ``destructiveHint`` / ``idempotentHint`` values are untrusted and cannot
@@ -34,10 +36,14 @@ pre-built ``MCPHTTPClient`` via the ``client`` parameter to reuse a session.
 from __future__ import annotations
 
 import contextlib
+import logging
+from collections.abc import Mapping
 from typing import Any, Optional
 
 from teaagent.mcp_client import MCPHTTPClient
 from teaagent.tools import ToolAnnotations, ToolRateLimit, ToolRegistry
+
+logger = logging.getLogger(__name__)
 
 _MCP_TOOL_OUTPUT_SCHEMA: dict[str, Any] = {
     'type': 'object',
@@ -64,6 +70,35 @@ def _infer_annotations(mcp_tool: dict[str, Any]) -> ToolAnnotations:
         external_effect=True,
         security_tier='High',
     )
+
+
+def _read_input_schema(mcp_tool: Mapping[str, object], name: str) -> dict[str, object]:
+    """Return the tool's input schema from the MCP manifest.
+
+    Prefers the wire key ``inputSchema``, then the legacy ``input_schema``. A
+    missing or non-dict schema falls back to the empty object schema and logs a
+    warning, so the gap is visible instead of silently widening the tool.
+    """
+    if 'inputSchema' in mcp_tool:
+        raw = mcp_tool['inputSchema']
+        key = 'inputSchema'
+    elif 'input_schema' in mcp_tool:
+        raw = mcp_tool['input_schema']
+        key = 'input_schema'
+    else:
+        logger.warning(
+            'MCP tool %r has no inputSchema; using empty object schema', name
+        )
+        return {'type': 'object', 'properties': {}}
+    if not isinstance(raw, dict):
+        logger.warning(
+            'MCP tool %r has a non-object %s (%s); using empty object schema',
+            name,
+            key,
+            type(raw).__name__,
+        )
+        return {'type': 'object', 'properties': {}}
+    return raw
 
 
 def _make_handler(
@@ -147,9 +182,7 @@ def register_mcp_tools(
         if name_prefix and not name.startswith(name_prefix):
             continue
         description: str = mcp_tool.get('description', f'Remote MCP tool: {name}')
-        input_schema: dict[str, Any] = mcp_tool.get(
-            'input_schema', {'type': 'object', 'properties': {}}
-        )
+        input_schema = _read_input_schema(mcp_tool, name)
         annotations = _infer_annotations(mcp_tool)
         handler = _make_handler(endpoint, auth_token, name)
         registry.register(
