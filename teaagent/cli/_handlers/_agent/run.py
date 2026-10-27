@@ -7,7 +7,7 @@ import os as _os
 import signal
 import sys
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, TextIO
 from uuid import uuid4
 
 from teaagent.approval import parse_permission_mode
@@ -127,7 +127,9 @@ _GIT_SANDBOX_DEPRECATION = (
 )
 
 
-def warn_deprecated_git_sandbox(args: argparse.Namespace, stream: Any = None) -> None:
+def warn_deprecated_git_sandbox(
+    args: argparse.Namespace, stream: Optional[TextIO] = None
+) -> None:
     """Print a deprecation warning to ``stream`` (default stderr) when ``--git-sandbox`` is set."""
     if getattr(args, 'git_sandbox', False):
         print(

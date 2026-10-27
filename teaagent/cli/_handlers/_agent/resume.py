@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from teaagent.chat_agent import ChatAgentConfig
 
 
-def _jsonable_observation(observation: Any) -> Any:
+def _jsonable_observation(observation: object) -> object:
     """Reduce one REPL session observation to JSON-safe data.
 
     REPL observations carry a ``RunResult`` dataclass under ``result``, which
