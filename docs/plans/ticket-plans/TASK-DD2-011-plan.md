@@ -1,7 +1,7 @@
 # TASK-DD2-011: Surface Corrupt Memory And Run State
 
 **Priority:** P1
-**Status:** Newly discovered
+**Status:** In Progress — partial (re-verified 2026-10-27): memory-catalog corruption is surfaced by `preflight.py` via `catalog.health_report`, but `daily.py` reports only run-store corruption. No friction entry; held under DR-006
 **Primary files:** `teaagent/memory/catalog.py`, `teaagent/run_store.py`, `teaagent/daily.py`
 
 ## Problem

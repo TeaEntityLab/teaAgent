@@ -1,7 +1,7 @@
 # TASK-DD2-012: Bound Failure-Card Matching
 
 **Priority:** P2
-**Status:** Newly discovered
+**Status:** In Progress — partial (re-verified 2026-10-27): stopwords, a 2-shared-word threshold and `limit=3` bound matching, but `get_failure_warnings` injects `error_message`/`task_description` without truncation. No friction entry; held under DR-006
 **Primary files:** `teaagent/memory/failure_card.py`, `teaagent/cli/_handlers/chat_commands.py`
 
 ## Problem
