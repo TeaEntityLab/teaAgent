@@ -14,7 +14,7 @@ event taxonomy. `docs/audit-event.schema.json` is listed in
 `teaagent/runner/_events.py` and `teaagent/ergonomics/background_run.py`, and
 the audit writer path is involved through `AuditLogger`.
 **Artifact under review:** `docs/adr/0032-run-event-taxonomy.md`, Amendment A1
-(Status: Proposed).
+(design accepted by the owner 2026-10-27; implementation pending).
 
 ## Goal
 
@@ -51,7 +51,7 @@ the audit schema file.
 | Failure mode | Control in the proposal | Residual risk |
 | --- | --- | --- |
 | Concurrent submit and stop from two processes fork the new chain | Relies on the `AuditLogger.record` tip-resync fix (2026-10-23) under the file lock | Depends on that fix staying in place. Covered by a two-logger strict-verify test (A1.6 #14). |
-| Command text leaks into the audit chain | Payload stores `command_digest` (sha256) and a `command_summary` of subcommand and provider only | `command_summary` is still a judgement call (Q3). Test asserts no task text or paths (A1.6 #5, #6). |
+| Command text leaks into the audit chain | Payload stores only `command_digest` (sha256 of argv); no readable command field (owner decision Q3) | Tests assert the digest excludes task text and that no readable command is written (A1.6 #5, #6). |
 | Emit failure makes `stop()` look like it failed, or silently loses the stop event | Record persisted first. Compliance mode raises. Otherwise logged at ERROR. | Outside compliance mode, a lost STOPPED event is not re-emitted on retry (Q4). Accepted gap until the owner decides. |
 | Repeated stop emits duplicate STOPPED events | Emit only on the first transition, after the early-return convergence branch | Low. Covered by A1.6 #8. |
 | Run evidence or receipts pick up background events | The lifecycle file is separate, and run-level readers never open it | Low. Golden test (A1.6 #20). |
@@ -105,12 +105,12 @@ No production `.teaagent/` directory and no real run data is touched by the dry 
   reviewer plus signature for Size B. The implementer must not self-approve.
 - G6 (schema conformance): the implementation must show the schema is unchanged
   and `check_audit_schema_conformance.py` passes.
-- Open questions Q1 to Q7 in ADR-0032 Amendment A1.7 must be answered before the
-  gate can close. Q1 (destination) and Q4 (emit-failure gap) change the failure
-  table above.
+- Design questions answered by the owner on 2026-10-27 (ADR-0032 A1.7): Q1
+  dedicated `lifecycle.jsonl`, Q3 digest only, Q4 persist-then-emit with a logged
+  gap and no retry, Q5 amend ADR 0032. Q2 and Q6 follow from Q1; Q7 is out of scope.
 
 ## Decision
 
-**Pending owner review.** Recommendation: approve the dedicated `lifecycle.jsonl`
-design (Q1, recommended option), and decide Q4 before implementation. Do not
-implement until the amendment status changes from Proposed to Accepted.
+**Design accepted by the owner (2026-10-27).** The implementation may proceed in
+its own PR. The Human Review gate for that PR stays open: the implementer must
+not self-approve, and a human reviewer signs off on the implementation diff.

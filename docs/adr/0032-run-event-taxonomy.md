@@ -272,12 +272,12 @@ The M0 spike covers RUN_STARTED, ITERATION_STARTED, TOOL_CALL_REQUESTED, TOOL_CA
 
 ---
 
-## Amendment A1 (Proposed): Background Lifecycle Events
+## Amendment A1 (Accepted 2026-10-27): Background Lifecycle Events
 
-> **Amendment status: Proposed (awaiting owner review).** This amendment does not
-> change the Status of ADR 0032 above, which remains "Accepted and Implemented".
-> Nothing in this section is in force until the owner accepts it and the
-> implementation lands. Owner drafting approval: 2026-10-27 (BG-001 §3.5).
+> **Amendment status: Accepted by the owner on 2026-10-27; implementation pending.**
+> This amendment does not change the Status of ADR 0032 above, which remains
+> "Accepted and Implemented". The owner's answers to the A1.7 questions are
+> recorded there; the payloads and tests below already reflect them.
 
 ### A1.1 Context
 
@@ -318,7 +318,6 @@ match the existing activation test
 | `pid` | int | Pid of the detached child |
 | `started_at` | str | ISO-8601 UTC, same value as the record |
 | `command_digest` | str | `sha256` hex of `json.dumps(command)` (the full argv, including the task text). The digest is one-way, so the task text is not written to the chain. |
-| `command_summary` | str | Only the subcommand and the provider token, for example `agent run <provider>`. No task text, no paths, no flags (see open question Q3). |
 | `label` | str or null | Record label, if any |
 
 `background_stopped` is emitted once, on the first transition in `stop()`,
@@ -427,8 +426,8 @@ protocol), the record file format, `background list/show`, the cockpit, and
    It breaks ADR 0032's single taxonomy and the schema's free-string
    convention.
 6. **Full command in the payload.** Rejected for the default. The spec (§6)
-   and this amendment record a digest. `command_summary` is the only readable
-   part (open question Q3).
+   and this amendment record a digest only; no readable command summary is
+   written (owner decision Q3, 2026-10-27).
 
 ### A1.6 Exact test list (to be written with the implementation; none in this change)
 
@@ -442,7 +441,7 @@ New file `tests/test_background_lifecycle_events.py`:
 3. `test_submitted_payload_keys_are_exact` (keys == the table in A1.2)
 4. `test_submitted_run_id_is_null_at_submit`
 5. `test_command_digest_is_sha256_of_argv_and_excludes_task_text`
-6. `test_command_summary_has_no_task_text_or_paths`
+6. `test_submitted_payload_has_no_readable_command` (digest only, Q3)
 7. `test_stop_emits_background_stopped_on_first_transition`
 8. `test_repeated_stop_emits_no_second_event`
 9. `test_stop_on_dead_process_still_emits_background_stopped` (BG-001 §3.6)
@@ -468,23 +467,22 @@ Existing gates that must stay green:
 24. `tests/test_background_run.py`, `tests/test_background_unified.py`,
     `tests/test_background_exit_code_fallback.py`
 
-### A1.7 Open questions for the owner
+### A1.7 Owner decisions (2026-10-27)
 
-- **Q1 Destination.** Accept the dedicated `lifecycle.jsonl` (recommended) or
-  choose the child run's log. This amendment does not decide it for you.
-- **Q2 Synthetic envelope id.** Accept `background:<background_id>` as the
-  envelope `run_id`?
-- **Q3 `command_summary`.** Keep `agent run <provider>` (readable, no task
-  text), or digest only, per the BG-001 §6 default?
-- **Q4 Emit-failure gap.** Outside compliance mode, a failed STOPPED emit leaves
-  the record stopped and the event missing, and a retry does not re-emit. Accept
-  the logged gap, or make STOPPED durable (emit before persist, and accept
-  duplicates)?
-- **Q5 Placement.** This amendment is appended to ADR 0032 because that ADR
-  says nothing about amendments and the repo has no amendment precedent. Would
-  you rather have this as a new ADR-0033, with its own index entry?
-- **Q6 Spec wording.** BG-001 §3.5 says the events are "consumed by audit like
-  all spine events". The chosen file is a separate chain. The spec wording
-  would need a matching edit, which is a follow-up and not part of this change.
-- **Q7 Readers.** Out of scope here: whether `background list/show` or the
-  cockpit should show lifecycle history.
+- **Q1 Destination — decided: dedicated `lifecycle.jsonl`.** The events go to
+  the hash-chained `<BackgroundRunStore.dir>/lifecycle.jsonl`, not the child
+  run's log.
+- **Q2 Synthetic envelope id — follows from Q1.** `background:<background_id>`
+  is the envelope `run_id` of the dedicated chain as drafted. Not asked
+  separately; raise it at implementation review if a different id is wanted.
+- **Q3 Command info — decided: digest only.** `command_digest` (sha256 of the
+  argv) is the only command field; there is no `command_summary`.
+- **Q4 Emit failure — decided: persist then emit; log the gap, no retry.** Outside
+  compliance mode a failed emit is logged at ERROR and not re-emitted (no
+  duplicates); compliance mode still raises.
+- **Q5 Placement — decided: amend ADR 0032** (this section), not a new ADR.
+- **Q6 Spec wording — follows from Q1.** BG-001 §3.5 says the events are
+  "consumed by audit like all spine events"; with the separate chain, that
+  wording is edited in the implementation change.
+- **Q7 Readers — out of scope.** Whether `background list/show` or the cockpit
+  shows lifecycle history is not decided here.
