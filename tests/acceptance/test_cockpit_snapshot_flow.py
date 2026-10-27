@@ -64,3 +64,13 @@ def test_cli_cockpit_emits_snapshot_contract() -> None:
         assert code == 0
         payload = json.loads(out.getvalue())
         assert payload['schema_version'] == COCKPIT_SNAPSHOT_SCHEMA_VERSION
+
+
+def test_build_cockpit_snapshot_control_exposes_run_context() -> None:
+    """DU-011: the shared snapshot carries branch, undo, last run and rules."""
+    with tempfile.TemporaryDirectory() as tmp:
+        control = build_cockpit_snapshot(tmp)['control']
+        assert control['branch'] == 'none'
+        assert control['undo'] == 'none'
+        assert control['last_run_id'] == 'none'
+        assert control['active_rules'] == []

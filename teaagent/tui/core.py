@@ -372,6 +372,16 @@ class TeaAgentTUI:
                 f'  Approval: {app.get("pending_count", 0)} pending, {app.get("blocked_count", 0)} blocked, mode={app.get("mode", "?")}'
             )
 
+            # Run context (DU-011)
+            print(f'  Branch: {cc.branch}')
+            print(f'  Undo: {cc.undo}')
+            print(f'  Last run: {cc.last_run_id}')
+            if cc.active_rules is None:
+                rules_label = 'unknown'
+            else:
+                rules_label = ', '.join(cc.active_rules) or 'none'
+            print(f'  Rules: {rules_label}')
+
             # Cost
             cost = cc.cost
             spent = cost.get('spent_cents', 0.0)
