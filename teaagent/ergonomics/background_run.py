@@ -223,6 +223,7 @@ def _enrich_liveness(
     *,
     record_path: Optional[Path] = None,
 ) -> dict[str, Any]:
+    data['run_outcome'] = _derive_run_outcome(data, record_path)
     run_id = data.get('run_id')
     if isinstance(run_id, str) and run_id:
         from teaagent.ergonomics.run_liveness import liveness_snapshot
@@ -239,7 +240,9 @@ def _enrich_liveness(
     return data
 
 
-_DERIVED_RECORD_KEYS = frozenset({'alive', 'orphaned'})
+# Keys computed at read time from process state and the audit log. They are
+# surfaced to callers but never written back into the record file.
+_DERIVED_RECORD_KEYS = frozenset({'alive', 'orphaned', 'run_outcome'})
 
 
 def _persist_record_state(path: Path, data: dict[str, Any]) -> None:
@@ -269,17 +272,72 @@ _TERMINAL_RUN_EVENTS = frozenset(
 )
 
 
-def _has_clean_exit_record(root: Path, run_id: str, tenant_id: str) -> bool:
+def _last_terminal_run_event(
+    root: Path, run_id: str, tenant_id: str
+) -> Optional[dict[str, object]]:
     try:
         from teaagent.run_store import RunStore
 
         events = RunStore(root, tenant_id=tenant_id, readonly=True).show_run(run_id)
     except (FileNotFoundError, OSError):
-        return False
-    return any(
-        isinstance(e, dict) and e.get('event_type') in _TERMINAL_RUN_EVENTS
+        return None
+    terminal = [
+        e
         for e in events
-    )
+        if isinstance(e, dict) and e.get('event_type') in _TERMINAL_RUN_EVENTS
+    ]
+    return terminal[-1] if terminal else None
+
+
+def _has_clean_exit_record(root: Path, run_id: str, tenant_id: str) -> bool:
+    return _last_terminal_run_event(root, run_id, tenant_id) is not None
+
+
+def _workspace_root_for_record(record_path: Path) -> tuple[Path, str]:
+    tenant_id = _get_tenant_id_from_path(record_path)
+    if tenant_id == 'default':
+        return record_path.parent.parent.parent, tenant_id
+    return record_path.parent.parent.parent.parent.parent, tenant_id
+
+
+def _event_field(event: dict[str, object], key: str) -> object:
+    payload = event.get('payload')
+    if isinstance(payload, dict) and key in payload:
+        return payload[key]
+    return event.get(key)
+
+
+def _outcome_from_terminal_event(event: dict[str, object]) -> str:
+    event_type = event.get('event_type')
+    if event_type == 'run_completed':
+        return 'completed'
+    if event_type == 'run_paused':
+        # BG-001 §3.2 vocabulary: a paused run is waiting on an approval.
+        return 'pending_approval'
+    if event_type == 'run_cancelled':
+        return 'cancelled'
+    if event_type == 'run_failed':
+        # RunCancelledError is recorded as run_failed; its message is the only
+        # marker that distinguishes a cancellation from a genuine failure.
+        message = _event_field(event, 'message')
+        if isinstance(message, str) and message.lower().startswith('run cancelled'):
+            return 'cancelled'
+        return 'failed'
+    return 'unknown'
+
+
+def _derive_run_outcome(data: dict[str, object], record_path: Optional[Path]) -> str:
+    """Run outcome from the audit log, kept distinct from process liveness."""
+    run_id = data.get('run_id')
+    if not isinstance(run_id, str) or not run_id or record_path is None:
+        return 'unknown'
+    w_root, tenant_id = _workspace_root_for_record(record_path)
+    terminal = _last_terminal_run_event(w_root, run_id, tenant_id)
+    if terminal is not None:
+        return _outcome_from_terminal_event(terminal)
+    if data.get('alive'):
+        return 'running'
+    return 'unknown'
 
 
 def _derive_orphan_state(record_path: Path, data: dict[str, Any]) -> None:
@@ -296,11 +354,7 @@ def _derive_orphan_state(record_path: Path, data: dict[str, Any]) -> None:
         # the run completed, so surface it as orphaned.
         data['orphaned'] = True
         return
-    tenant_id = _get_tenant_id_from_path(record_path)
-    if tenant_id == 'default':
-        w_root = record_path.parent.parent.parent
-    else:
-        w_root = record_path.parent.parent.parent.parent.parent
+    w_root, tenant_id = _workspace_root_for_record(record_path)
     if _has_clean_exit_record(w_root, run_id, tenant_id):
         if data.get('exit_code') is None:
             data['exit_code'] = 0
@@ -513,6 +567,8 @@ def build_agent_run_command(args: Any, task: Optional[str]) -> list[str]:  # noq
         cmd.append('--allow-destructive')
     for call_id in getattr(args, 'approve_call_id', []) or []:
         cmd.extend(['--approve-call-id', call_id])
+    for scoped in getattr(args, 'approve_scoped', []) or []:
+        cmd.extend(['--approve-scoped', scoped])
     if getattr(args, 'hitl_approval', False):
         cmd.append('--hitl-approval')
     if getattr(args, 'permission_mode', None):
