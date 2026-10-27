@@ -59,7 +59,7 @@ must exist.
 | **Cryptographic peer identity** | `agent_id` is a string; forgeable. Ed25519 identity and signed approvals are future work (SEC-NEW1). | [Remote multi-agent non-goals](../strategy/remote-multi-agent-non-goals-2026-06-06.md) |
 | **Remote approval orchestration** | Approval queues are local/file-backed. Durable coordination abstraction is future work (WS2-005). | [Remote multi-agent non-goals](../strategy/remote-multi-agent-non-goals-2026-06-06.md) |
 | **Federated trust by URL/name alone** | MCP trust is anchored to operator config, not PKI. | [Remote multi-agent non-goals](../strategy/remote-multi-agent-non-goals-2026-06-06.md) |
-| **Unbounded subagent batches** | Batch timeout/cancel is incomplete. | [Remote multi-agent non-goals](../strategy/remote-multi-agent-non-goals-2026-06-06.md) |
+| **No side effects after a subagent batch deadline** | A batch returns at its deadline and stops running children before their next tool call (G-P1-5, `teaagent/subagents/_tools.py`), but a tool call already in flight may still finish. Claim "no new tool call after the deadline", not "no side effect". | [Remote multi-agent non-goals](../strategy/remote-multi-agent-non-goals-2026-06-06.md) |
 
 ### Vendor and Ecosystem
 

@@ -49,7 +49,7 @@ Each line has this envelope:
 | `run_paused` | `AgentRunner.run` | `status`, `approval`, `cost_cents` |
 | `run_completed` | `AgentRunner.run` | `answer`, `metadata`, `cost_cents` |
 | `run_failed` | `AgentRunner.run` | `category`, `message`, `cost_cents` |
-| `heartbeat` | `Heartbeat.tick` | `tick`, `interval_seconds` |
+| `heartbeat` | `Heartbeat.tick` | `tick`, `interval_seconds`; with a progress provider (agent runs) also `tool`, `tool_in_flight`, `elapsed_seconds`, `cost_cents`, `checkpoint`, or `progress_unavailable` when the provider fails |
 
 ## Compatibility
 

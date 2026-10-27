@@ -407,7 +407,7 @@ class ControlCockpitState:
     # DU-011: run context. String sentinels: 'none' = source present but empty
     # (or not a git repo), 'unknown' = source failed to load.
     branch: str = 'unknown'  # branch name, 'detached HEAD', or 'none'
-    undo: str = 'unknown'  # available | none | unknown
+    undo: str = 'unknown'  # available | partial | none | unknown
     last_run_id: str = 'unknown'  # run id, 'none', or 'unknown'
     # Non-expired approval grants as 'tool (scope)'; None means unknown.
     active_rules: Optional[list[str]] = None
@@ -581,7 +581,17 @@ def build_control_cockpit(
             cockpit.undo = 'none'
         else:
             journal = UndoJournal(root_path, path=runs.undo_path(undo_run))
-            cockpit.undo = 'available' if journal.has_entries else 'none'
+            if not journal.has_entries:
+                cockpit.undo = 'none'
+            else:
+                # ADR-0042 / SEC-11: shell mutations are not in the journal, so
+                # undo for such a run must be disclosed as partial.
+                from teaagent.run_undo import audit_events_used_shell_mutate
+
+                events = runs.show_run(undo_run)
+                cockpit.undo = (
+                    'partial' if audit_events_used_shell_mutate(events) else 'available'
+                )
     except Exception:
         logger.exception('run/undo state load failed')
         cockpit.last_run_id = 'unknown'
@@ -589,14 +599,13 @@ def build_control_cockpit(
         cockpit.errors.append('run/undo state load failed')
 
     try:
-        from teaagent.ergonomics._approval_grants import _grant_expired
         from teaagent.ergonomics._approval_state import ApprovalPresetStore
 
         grants = ApprovalPresetStore(root_path, readonly=True).list_grants()
         cockpit.active_rules = [
             f'{grant.tool_name} ({grant.scope})'
             for grant in grants
-            if not _grant_expired(grant)
+            if not grant.is_expired()
         ]
     except Exception:
         logger.exception('approval rules load failed')
