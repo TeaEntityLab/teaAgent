@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 # test-type: behavior
+import logging
 import subprocess
 import tempfile
 import time
@@ -8,6 +9,8 @@ from io import StringIO
 from pathlib import Path
 from typing import TYPE_CHECKING
 from unittest.mock import patch
+
+import pytest
 
 from teaagent.cockpit import ControlCockpitState, build_control_cockpit
 
@@ -556,3 +559,114 @@ def test_cockpit_run_context_is_unknown_when_sources_fail(tmp_path: Path) -> Non
     assert 'Last run: unknown' in output
     assert 'Undo: unknown' in output
     assert 'Rules: unknown' in output
+
+
+# ── U-P1-9: failed sources are reported, model route is read from the run ────
+
+
+def test_cockpit_memory_load_failure_is_logged_and_reported(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    with (
+        caplog.at_level(logging.ERROR, logger='teaagent.cockpit'),
+        patch(
+            'teaagent.memory.MemoryCatalog',
+            side_effect=RuntimeError('memory store corrupt'),
+        ),
+    ):
+        cockpit = build_control_cockpit(tmp_path)
+
+    assert 'memory load failed' in cockpit.errors
+    assert any(
+        rec.levelno == logging.ERROR and 'memory' in rec.getMessage()
+        for rec in caplog.records
+    )
+    # Fallback shape stays stable so renderers keep working.
+    assert cockpit.memory is not None
+    assert set(cockpit.memory) >= {'total_entries', 'last_entry_summary'}
+
+
+def test_cockpit_skill_diagnostics_failure_is_logged_and_reported(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    with (
+        caplog.at_level(logging.ERROR, logger='teaagent.cockpit'),
+        patch(
+            'teaagent.skill_loader.get_skill_diagnostics',
+            side_effect=RuntimeError('skill index unreadable'),
+        ),
+    ):
+        cockpit = build_control_cockpit(tmp_path)
+
+    assert 'skill diagnostics load failed' in cockpit.errors
+    assert any(
+        rec.levelno == logging.ERROR and 'skill' in rec.getMessage()
+        for rec in caplog.records
+    )
+    assert cockpit.skill is not None
+    assert cockpit.skill['loaded_count'] == 0
+
+
+def _seed_model_route_run(root: Path, run_id: str, **route: str) -> None:
+    from teaagent.audit import AuditLogger
+    from teaagent.run_store import RunStore
+
+    audit = AuditLogger(path=RunStore(root).run_path(run_id))
+    audit.record(
+        'model_route',
+        run_id=run_id,
+        requested_provider=route.get('requested_provider', 'anthropic'),
+        requested_model=route.get('requested_model', ''),
+        resolved_provider=route.get('resolved_provider', 'anthropic'),
+        resolved_model=route.get('resolved_model', 'claude-sonnet-4'),
+        role='default',
+        routing_reason='explicit',
+        policy_source='cli',
+        estimated_cost_cents=0.0,
+        actual_cost_cents=0.0,
+        fallback_used=False,
+    )
+
+
+def test_cockpit_model_route_comes_from_latest_run(tmp_path: Path) -> None:
+    _seed_model_route_run(tmp_path, 'run-route-001', resolved_model='claude-sonnet-4')
+
+    cockpit = build_control_cockpit(tmp_path)
+
+    assert cockpit.model_route is not None
+    assert cockpit.model_route['provider'] == 'anthropic'
+    assert cockpit.model_route['model'] == 'claude-sonnet-4'
+    assert cockpit.model_route['source'] == 'cli'
+    assert cockpit.errors == []
+
+
+def test_cockpit_model_route_none_when_run_has_no_route(tmp_path: Path) -> None:
+    from teaagent.audit import AuditLogger
+    from teaagent.run_store import RunStore
+
+    audit = AuditLogger(path=RunStore(tmp_path).run_path('run-no-route'))
+    audit.record('final', run_id='run-no-route', content='done')
+
+    cockpit = build_control_cockpit(tmp_path)
+
+    assert cockpit.model_route is None
+    assert 'model route load failed' not in cockpit.errors
+
+
+def test_cockpit_model_route_failure_is_logged_and_reported(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    _seed_model_route_run(tmp_path, 'run-route-err')
+
+    with (
+        caplog.at_level(logging.ERROR, logger='teaagent.cockpit'),
+        patch(
+            'teaagent.run_store.RunStore.show_run',
+            side_effect=OSError('run file unreadable'),
+        ),
+    ):
+        cockpit = build_control_cockpit(tmp_path)
+
+    assert cockpit.model_route is None
+    assert 'model route load failed' in cockpit.errors
+    assert any(rec.levelno == logging.ERROR for rec in caplog.records)

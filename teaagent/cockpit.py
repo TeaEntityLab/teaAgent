@@ -482,7 +482,41 @@ def build_control_cockpit(
         cockpit.errors.append('goal/spec load failed')
 
     # ── model route ──
-    cockpit.model_route = None
+    # Read from the latest run's ``model_route`` audit event (the same event
+    # run_evidence.extract_routes reads). No route on the run is None, not an error.
+    try:
+        from teaagent.run_store import RunStore
+
+        runs_for_route = RunStore(root_path, readonly=True)
+        latest_for_route = runs_for_route.list_runs(limit=1)
+        route_events = (
+            [
+                event
+                for event in runs_for_route.show_run(latest_for_route[0].run_id)
+                if event.get('event_type') == 'model_route'
+            ]
+            if latest_for_route
+            else []
+        )
+        if route_events:
+            route_payload = route_events[-1].get('payload') or {}
+            cockpit.model_route = {
+                'provider': route_payload.get('resolved_provider')
+                or route_payload.get('requested_provider')
+                or '',
+                'model': route_payload.get('resolved_model') or 'default',
+                'source': route_payload.get('policy_source') or '',
+                'reason': route_payload.get('routing_reason') or '',
+                'estimated_cost_cents': float(
+                    route_payload.get('estimated_cost_cents') or 0
+                ),
+            }
+        else:
+            cockpit.model_route = None
+    except Exception:
+        logger.exception('model route load failed')
+        cockpit.model_route = None
+        cockpit.errors.append('model route load failed')
 
     # ── memory ──
     try:
@@ -496,6 +530,8 @@ def build_control_cockpit(
             'quarantine_count': _count_quarantine_lines(root_path),
         }
     except Exception:
+        logger.exception('memory load failed')
+        cockpit.errors.append('memory load failed')
         cockpit.memory = {
             'total_entries': 0,
             'last_entry_summary': '',
@@ -513,6 +549,8 @@ def build_control_cockpit(
                 'latest_review_status': 'unknown',
             }
     except Exception:
+        logger.exception('review load failed')
+        cockpit.errors.append('review load failed')
         cockpit.review = None
 
     # ── skill diagnostics ──
@@ -527,6 +565,8 @@ def build_control_cockpit(
             'governance_status': diag.get('governance_status', {}),
         }
     except Exception:
+        logger.exception('skill diagnostics load failed')
+        cockpit.errors.append('skill diagnostics load failed')
         cockpit.skill = {
             'loaded_count': 0,
             'shadowed_count': 0,
