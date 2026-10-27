@@ -682,6 +682,7 @@ def build_control_cockpit(
                     'alive': r.get('alive') is True,
                     'orphaned': r.get('orphaned') is True,
                     'liveness_stale': r.get('liveness_stale'),
+                    'run_outcome': r.get('run_outcome'),
                 }
                 for r in bg_rows[:10]
             ],

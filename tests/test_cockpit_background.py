@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import sys
@@ -64,6 +65,7 @@ def test_cockpit_counts_running_and_orphaned_background_runs(tmp_path: Path) -> 
             'alive',
             'orphaned',
             'liveness_stale',
+            'run_outcome',
         }
     assert 'background runs load failed' not in cockpit.errors
 
@@ -133,3 +135,33 @@ def test_cockpit_background_store_failure_is_recorded_not_fatal(
     tui = TeaAgentTUI(input_fn=lambda _p: 'exit', output_fn=lambda _: None)
     tui._control_cockpit = cockpit
     assert 'Background: unknown' in _render_cockpit(tui)
+
+
+def test_cockpit_background_item_surfaces_run_outcome(tmp_path: Path) -> None:
+    """BG-001 §3.2: outcome is a distinct fact from process liveness."""
+    store = BackgroundRunStore(tmp_path)
+    done = store.start([sys.executable, '-c', 'import sys; sys.exit(0)'], label='done')
+    store.update_run_id(done.background_id, 'run-bg-completed-001')
+    os.waitpid(done.pid, 0)
+    runs_dir = tmp_path / '.teaagent' / 'runs'
+    runs_dir.mkdir(parents=True, exist_ok=True)
+    (runs_dir / 'run-bg-completed-001.jsonl').write_text(
+        json.dumps(
+            {
+                'run_id': 'run-bg-completed-001',
+                'timestamp': '2026-10-01T00:00:01+00:00',
+                'event_type': 'run_completed',
+                'payload': {'answer': 'ok'},
+            }
+        )
+        + '\n',
+        encoding='utf-8',
+    )
+
+    cockpit = build_control_cockpit(tmp_path)
+
+    assert cockpit.background is not None
+    items = {item['background_id']: item for item in cockpit.background['items']}
+    item = items[done.background_id]
+    assert item['alive'] is False
+    assert item['run_outcome'] == 'completed'
