@@ -385,6 +385,13 @@ class TeaAgentTUI:
             else:
                 rules_label = ', '.join(cc.active_rules) or 'none'
             print(f'  Rules: {rules_label}')
+            if cc.background is None:
+                print('  Background: unknown')
+            else:
+                bg = cc.background
+                print(
+                    f'  Background: {bg.get("running_count", 0)} running, {bg.get("orphaned_count", 0)} orphaned'
+                )
 
             # Cost
             cost = cc.cost

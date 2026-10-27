@@ -411,6 +411,9 @@ class ControlCockpitState:
     last_run_id: str = 'unknown'  # run id, 'none', or 'unknown'
     # Non-expired approval grants as 'tool (scope)'; None means unknown.
     active_rules: Optional[list[str]] = None
+    # Detached background runs: {running_count, orphaned_count, items[<=10]};
+    # None means the background store failed to load.
+    background: Optional[dict] = None
 
 
 def _current_branch(root_path: Path) -> str:
@@ -651,6 +654,30 @@ def build_control_cockpit(
         logger.exception('approval rules load failed')
         cockpit.active_rules = None
         cockpit.errors.append('approval rules load failed')
+
+    # ── background runs: running / orphaned (U-P1-10) ──
+    try:
+        from teaagent.ergonomics.background_run import BackgroundRunStore
+
+        bg_rows = BackgroundRunStore(root_path, readonly=True).list()
+        cockpit.background = {
+            'running_count': sum(1 for r in bg_rows if r.get('alive') is True),
+            'orphaned_count': sum(1 for r in bg_rows if r.get('orphaned') is True),
+            'items': [
+                {
+                    'background_id': r.get('background_id'),
+                    'run_id': r.get('run_id'),
+                    'alive': r.get('alive') is True,
+                    'orphaned': r.get('orphaned') is True,
+                    'liveness_stale': r.get('liveness_stale'),
+                }
+                for r in bg_rows[:10]
+            ],
+        }
+    except Exception:
+        logger.exception('background runs load failed')
+        cockpit.background = None
+        cockpit.errors.append('background runs load failed')
 
     # ── context health (CTX-001) ──
     try:

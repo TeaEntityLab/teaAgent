@@ -86,12 +86,32 @@ def background_list_command(args: argparse.Namespace) -> int:
     if sys.stdout.isatty():
         from teaagent.ergonomics.human_output import format_ascii_table
 
-        headers = ['Background ID', 'PID', 'Label', 'Alive', 'Started At']
-        keys = ['background_id', 'pid', 'label', 'alive', 'started_at']
+        headers = [
+            'Background ID',
+            'PID',
+            'Label',
+            'Alive',
+            'Orphaned',
+            'Liveness Stale',
+            'Started At',
+        ]
+        keys = [
+            'background_id',
+            'pid',
+            'label',
+            'alive',
+            'orphaned',
+            'liveness_stale',
+            'started_at',
+        ]
         truncated = []
         for r in runs:
             tr = dict(r)
             tr['background_id'] = tr.get('background_id', '')[:10]
+            tr['alive'] = 'yes' if r.get('alive') else 'no'
+            tr['orphaned'] = 'yes' if r.get('orphaned') else 'no'
+            stale = r.get('liveness_stale')
+            tr['liveness_stale'] = '' if stale is None else ('yes' if stale else 'no')
             truncated.append(tr)
         print(format_ascii_table(headers, truncated, keys))
     else:
