@@ -6,6 +6,8 @@ import sys
 import time
 from pathlib import Path
 
+import pytest
+
 from teaagent.ergonomics.background_run import BackgroundRunStore, _run_id_from_log
 
 
@@ -156,3 +158,38 @@ def test_background_stop_and_logs(tmp_path: Path) -> None:
     stopped = store.stop(record.background_id, timeout_seconds=1.0)
     assert stopped['alive'] is False
     assert stopped['stop_signal'] in ('SIGTERM', 'SIGKILL')
+
+
+def test_repeated_stop_converges_without_resignaling(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """BG-001 §3.6: a second stop returns the first stop's record unchanged."""
+    import os
+
+    store = BackgroundRunStore(tmp_path)
+    record = store.start(
+        [sys.executable, '-c', 'import time; time.sleep(20)'],
+        label='repeat-stop',
+    )
+    first = store.stop(record.background_id, timeout_seconds=0.5)
+    assert first['stop_signal'] in {'SIGTERM', 'SIGKILL'}
+    assert first['stopped_at']
+
+    kill_calls: list[tuple[int, int]] = []
+    real_kill = os.kill
+
+    def _counting_kill(pid: int, sig: int) -> None:
+        kill_calls.append((pid, sig))
+        real_kill(pid, sig)
+
+    monkeypatch.setattr(os, 'kill', _counting_kill)
+    second = store.stop(record.background_id, timeout_seconds=0.5)
+
+    assert kill_calls == []
+    assert second['stopped_at'] == first['stopped_at']
+    assert second['stop_signal'] == first['stop_signal']
+    persisted = json.loads(
+        (store.dir / f'{record.background_id}.json').read_text(encoding='utf-8')
+    )
+    assert persisted['stopped_at'] == first['stopped_at']
+    assert persisted['stop_signal'] == first['stop_signal']

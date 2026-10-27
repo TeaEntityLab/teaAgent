@@ -190,6 +190,9 @@ class BackgroundRunStore:
         from contextlib import suppress
 
         data = self.get(background_id)
+        if data.get('stopped_at') and data.get('stop_signal'):
+            # BG-001 §3.6: repeated stop converges on the first stop's record.
+            return data
         pid = int(data['pid'])
         signal_name = 'SIGTERM'
         if _is_alive(pid):
@@ -206,6 +209,9 @@ class BackgroundRunStore:
         data['stopped_at'] = _utc_now()
         data['stop_signal'] = signal_name
         data['alive'] = False
+        # A stopped record is no longer an orphan candidate; drop the derived
+        # marker so it is never persisted as stored state.
+        data.pop('orphaned', None)
         if not self.readonly:
             _persist_record_state(self._record_path(background_id), data)
         return data
@@ -218,22 +224,26 @@ def _enrich_liveness(
     record_path: Optional[Path] = None,
 ) -> dict[str, Any]:
     run_id = data.get('run_id')
-    if not isinstance(run_id, str) or not run_id:
-        return data
-    from teaagent.ergonomics.run_liveness import liveness_snapshot
+    if isinstance(run_id, str) and run_id:
+        from teaagent.ergonomics.run_liveness import liveness_snapshot
 
-    snap = liveness_snapshot(root, run_id)
-    if snap is not None:
-        data['liveness_updated_at'] = snap['updated_at']
-        data['liveness_age_seconds'] = snap['age_seconds']
-        data['liveness_stale'] = snap['stale']
+        snap = liveness_snapshot(root, run_id)
+        if snap is not None:
+            data['liveness_updated_at'] = snap['updated_at']
+            data['liveness_age_seconds'] = snap['age_seconds']
+            data['liveness_stale'] = snap['stale']
+    # Orphan derivation runs for run_id-less records too (BG-001 §3.3): a dead
+    # process that never wrote its run_id must still surface as orphaned.
     if record_path is not None and not data.get('alive'):
         _derive_orphan_state(record_path, data)
     return data
 
 
+_DERIVED_RECORD_KEYS = frozenset({'alive', 'orphaned'})
+
+
 def _persist_record_state(path: Path, data: dict[str, Any]) -> None:
-    persisted = {k: v for k, v in data.items() if k != 'alive'}
+    persisted = {k: v for k, v in data.items() if k not in _DERIVED_RECORD_KEYS}
     atomic_write_text(path, json.dumps(persisted, sort_keys=True))
 
 
@@ -273,12 +283,18 @@ def _has_clean_exit_record(root: Path, run_id: str, tenant_id: str) -> bool:
 
 
 def _derive_orphan_state(record_path: Path, data: dict[str, Any]) -> None:
+    if data.get('alive') is True:
+        # A live process is never an orphan, even before it writes a run_id.
+        return
     if data.get('stop_signal') is not None:
         return
     if data.get('exit_code') == 0:
         return
     run_id = data.get('run_id')
     if not isinstance(run_id, str) or not run_id:
+        # Dead, not stopped, no clean exit, and no run_id: nothing can prove
+        # the run completed, so surface it as orphaned.
+        data['orphaned'] = True
         return
     tenant_id = _get_tenant_id_from_path(record_path)
     if tenant_id == 'default':
