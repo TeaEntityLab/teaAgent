@@ -121,7 +121,22 @@ def _start_background_run(args: argparse.Namespace) -> int:
     return 0
 
 
+_GIT_SANDBOX_DEPRECATION = (
+    '[TeaAgent] --git-sandbox is deprecated and has no effect: the git sandbox is '
+    'enabled automatically in git repositories. It will be removed in a future release.'
+)
+
+
+def warn_deprecated_git_sandbox(args: argparse.Namespace, stream: Any = None) -> None:
+    """Print a deprecation warning to ``stream`` (default stderr) when ``--git-sandbox`` is set."""
+    if getattr(args, 'git_sandbox', False):
+        print(
+            _GIT_SANDBOX_DEPRECATION, file=stream if stream is not None else sys.stderr
+        )
+
+
 def agent_run_task(args: argparse.Namespace) -> int:
+    warn_deprecated_git_sandbox(args)
     if getattr(args, 'background', False):
         return _start_background_run(args)
     try:

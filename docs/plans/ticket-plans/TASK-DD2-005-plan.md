@@ -22,7 +22,8 @@ lost or misreported during merge/discard/keep prompts.
 - A sandboxed run can merge, discard, or keep its branch without losing original branch state.
 - Dirty-worktree auto-stash is restored only after explicit resolution.
 - Run evidence records sandbox lifecycle state.
-- Help and docs do not imply opt-in when runtime defaults differ. — **Addressed (U-P1-19):** `--git-sandbox` help and `docs/api/{cli-api,README}.md` now state the automatic in-repo default; honoring or removing the flag stays open for human review.
+- Help and docs do not imply opt-in when runtime defaults differ. — **Addressed (U-P1-19):** `--git-sandbox` help and `docs/api/{cli-api,README}.md` now state the automatic in-repo default.
+- `--git-sandbox` flag item — **Resolved (owner decision 2026-10-27, U-P1-20):** the flag is DEPRECATED. It is still accepted, and passing it prints a deprecation warning to stderr (`warn_deprecated_git_sandbox` in `teaagent/cli/_handlers/_agent/run.py`). Runtime sandbox behavior is unchanged. The flag will be removed in a later release.
 
 ## Verification
 

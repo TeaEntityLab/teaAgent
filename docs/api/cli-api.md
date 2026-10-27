@@ -53,7 +53,7 @@ Alias: `run` and `ask` are identical.
 | `--max-estimated-cost-cents N` | int | 0 (no cap) | Cost cap in cents |
 | `--clarify` | flag | false | Run ambiguity scoring before model call |
 | `--allow-destructive` | flag | false | Allow write/patch/shell tools |
-| `--git-sandbox` | flag | no effect | Accepted for compatibility only. In a git repository the sandbox is enabled automatically (prompted when interactive, automatic when non-interactive or `git_sandbox_consent=always`) |
+| `--git-sandbox` | flag | no effect | **Deprecated.** Prints a deprecation warning to stderr and has no effect; it will be removed in a future release. In a git repository the sandbox is enabled automatically (prompted when interactive, automatic when non-interactive or `git_sandbox_consent=always`) |
 | `--git-sandbox-auto-stash` | flag | false | Auto-stash dirty state before sandbox |
 | `--parallel N` | int | — | Run N parallel approaches (tournament) |
 | `--approach HINT` | string | — | Hint for parallel approach (repeatable) |
