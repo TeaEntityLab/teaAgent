@@ -6,7 +6,7 @@ resource: "urn:teaagent:doc:docs/adr/0032-run-event-taxonomy.md"
 tags: ["teaagent", "adr", "event-spine", "decision-record"]
 teaagent:
   source_path: "docs/adr/0032-run-event-taxonomy.md"
-  source_sha256: "615ba5b7e02e46874e673b4fc9633714aaad35002b819c6cbd2678a4d05063a9"
+  source_sha256: "343d7af502637b1fbf5b7a1368687476df6999232e61bf31850e64e1be39d519"
   docs_tier: "working"
   authority: "canonical"
   lifecycle: "current"

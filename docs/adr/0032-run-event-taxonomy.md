@@ -269,3 +269,222 @@ PRE_COMPACT              # Hook observability: before context compaction; public
 ```
 
 The M0 spike covers RUN_STARTED, ITERATION_STARTED, TOOL_CALL_REQUESTED, TOOL_CALL_COMPLETED, TOOL_CALL_FAILED, RUN_COMPLETED, RUN_FAILED. Extended events are added in later phases as gates migrate.
+
+---
+
+## Amendment A1 (Proposed): Background Lifecycle Events
+
+> **Amendment status: Proposed (awaiting owner review).** This amendment does not
+> change the Status of ADR 0032 above, which remains "Accepted and Implemented".
+> Nothing in this section is in force until the owner accepts it and the
+> implementation lands. Owner drafting approval: 2026-10-27 (BG-001 §3.5).
+
+### A1.1 Context
+
+BG-001 §3.5 (`docs/specs/background-lifecycle-acceptance-spec-2026-07-11.md`)
+requires the two background lifecycle transitions to join the ADR 0032 taxonomy.
+Today they exist only as mutable fields on the background JSON record
+(`submitted` at `start()`, `stopped_at` / `stop_signal` at `stop()`). Those
+fields are overwritten on every read or stop, so the record cannot prove when a
+background run was submitted or how often and when it was stopped. A repeated
+`stop` converges on the first record and leaves no history. The
+`BackgroundRunStore` writes nothing to any audit chain today.
+
+The background child is an ordinary `teaagent agent run` process. It mints its
+own `run_id` at startup, and the background argv builder
+(`build_agent_run_command`) never passes one in. The parent that submits or
+stops a background run has no run of its own. Any emit site must account for
+both facts.
+
+### A1.2 Decision
+
+**Event names.** Two new `RunEventType` members, with serialized values that
+match the existing activation test
+`tests/lifecycle/test_background_lifecycle_spec.py::test_background_event_taxonomy_activates`:
+
+| Member | Serialized `event_type` |
+| --- | --- |
+| `RunEventType.BACKGROUND_SUBMITTED` | `background_submitted` |
+| `RunEventType.BACKGROUND_STOPPED` | `background_stopped` |
+
+**Payloads.** All payload values are JSON-safe. Unknown keys are not permitted.
+
+`background_submitted` is emitted once, after the record file is persisted:
+
+| Key | Type | Meaning |
+| --- | --- | --- |
+| `background_id` | str | uuid4 hex, as in the record |
+| `run_id` | null | Always `null` at submit: the child mints its run id later. Backfilled only in the record, never here. |
+| `pid` | int | Pid of the detached child |
+| `started_at` | str | ISO-8601 UTC, same value as the record |
+| `command_digest` | str | `sha256` hex of `json.dumps(command)` (the full argv, including the task text). The digest is one-way, so the task text is not written to the chain. |
+| `command_summary` | str | Only the subcommand and the provider token, for example `agent run <provider>`. No task text, no paths, no flags (see open question Q3). |
+| `label` | str or null | Record label, if any |
+
+`background_stopped` is emitted once, on the first transition in `stop()`,
+after the stop record is persisted:
+
+| Key | Type | Meaning |
+| --- | --- | --- |
+| `background_id` | str | As above |
+| `run_id` | str or null | The child run id if the record had backfilled it at stop time, otherwise `null` |
+| `pid` | int | Pid that was signalled (or found dead) |
+| `stop_signal` | `"SIGTERM"` or `"SIGKILL"` | The signal recorded by `stop()` (see §6 of BG-001 for the accepted race) |
+| `stopped_at` | str | ISO-8601 UTC, same value as the record |
+| `exit_code` | int or null | Exit code known to `get()` at stop time, else `null` |
+| `exit_code_derived` | bool | `true` only when `exit_code` is the U-P1-17 stand-in (a completed run's `0`). Never persisted to the record. |
+
+Rules that follow from these payloads:
+
+- `alive` is not a payload key. It is always false after a stop, and the record already says so.
+- A stop on an already-dead process still emits (BG-001 §3.6: the stop is recorded without raising).
+- A repeated `stop` on a stopped record returns early and emits nothing. The first stop's event is the only one.
+
+**Emitting process.** The parent CLI process that performs the transition:
+
+- `background_submitted`: the process that calls `BackgroundRunStore.start()`
+  (`agent run --background`, the automation tick, the deprecated ultrawork
+  wrapper).
+- `background_stopped`: the process that calls `BackgroundRunStore.stop()`.
+  This is a different process from the child, and the child may have been
+  SIGKILLed before it could write anything.
+
+**Destination (the choice this amendment makes).** A dedicated, append-only,
+hash-chained file in the same tenant-scoped directory as the records:
+`<BackgroundRunStore.dir>/lifecycle.jsonl`, written through
+`AuditLogger(path=...)`. The envelope `run_id` is the synthetic value
+`background:<background_id>`. Rationale:
+
+1. The schema requires a non-empty `run_id` on every event, and no parent run
+   exists. The synthetic namespace gives each background record one stable,
+   known-at-submit identifier that the envelope can carry.
+2. The submit event must survive even if the child never starts, and the stop
+   event must survive the child being SIGKILLed. A file the parent owns
+   satisfies both. A child-owned log does not.
+3. The file is a new state boundary. It keeps background lifecycle out of
+   every run's chain and out of the workspace-wide chain, so run evidence
+   folds (`build_evidence_from_events`) are unaffected.
+4. Concurrent writers (submit in one process, stop in another) are already
+   handled by `AuditLogger.record`, which reads the chain tip under the file
+   lock (the 2026-10-23 tip-resync fix). This amendment relies on that fix
+   and does not add a second lock.
+
+**Ordering and failure.** Persist the record first, then emit. The record
+remains the operational source of truth, and an emit failure cannot make
+`stop()` report failure. In compliance mode a failed emit raises. Outside
+compliance mode the failure is logged at ERROR with the category and the
+`background_id`, and the gap is accepted and visible (open question Q4).
+
+**What does not change.** `BackgroundRunRecord` fields (the BG-001 pinned
+protocol), the record file format, `background list/show`, the cockpit, and
+`exit_code` semantics. The derived `orphaned` state is not an event.
+
+### A1.3 Schema change
+
+- `RunEventType` (`teaagent/runner/_events.py`): add the two members. Add
+  matching entries to `_RUN_EVENT_TO_AUDIT_EVENT_TYPE`. The taxonomy-closure
+  check in `scripts/validate_event_spine_wiring.py` requires a lossless mapping
+  for every member and fails otherwise.
+- `docs/audit-event.schema.json`: **no change.** The schema has no `enum` for
+  `event_type` (it is `{"type": "string", "minLength": 1}`). The two new names
+  are valid as written, so the schema-sync gate (G6) is satisfied by
+  confirming the schema is unchanged. The owner's brief expected enum
+  additions there; they do not exist, and this amendment does not add one.
+- `docs/audit-events.md` lists event types. It needs a two-row addition in the
+  same change, and it is the only doc table to update.
+
+### A1.4 Compatibility
+
+- Additive. No existing event type is renamed, removed, or re-shaped.
+- Readers that ignore unknown `event_type` values are unaffected. The schema
+  accepts any non-empty string.
+- Run-level readers (`run_store`, evidence folds, receipts) never open
+  `lifecycle.jsonl`, so they see no new events.
+- Rollback: stop emitting and revert the enum members and mapping entries.
+  `lifecycle.jsonl` stays on disk. It is a valid chain, and nothing reads it.
+  No migration is needed.
+- Downgrade: an older build ignores the file entirely.
+
+### A1.5 Rejected alternatives
+
+1. **Emit into the child run's log** (`RunStore.run_path(run_id)`). Rejected.
+   At submit there is no `run_id`, and the child may never start. At stop the
+   child is already dead, and the stopper writing into the child's chain mixes
+   two owners in one chain. It also breaks the run's own evidence and receipt
+   boundary.
+2. **Child emits `background_submitted` via a new argv flag** (for example
+   `--background-id`). Rejected. It couples the argv builder to the event,
+   makes the submit record depend on the child reaching its startup code, and
+   misattributes a parent decision to the child.
+3. **Keep deriving the events from the record** (status quo). Rejected by
+   BG-001 §3.5. The record is mutable, `stop` is idempotent by overwrite, and
+   history is lost.
+4. **Write into the workspace-wide or `pending-*.jsonl` run audit.** Rejected.
+   The shared workspace chain would couple background lifecycle to unrelated
+   writers. `RunStore.audit_logger(None)` creates a new file per call, so it
+   gives no stable chain.
+5. **A new `background.*` event namespace or a separate schema file.** Rejected.
+   It breaks ADR 0032's single taxonomy and the schema's free-string
+   convention.
+6. **Full command in the payload.** Rejected for the default. The spec (§6)
+   and this amendment record a digest. `command_summary` is the only readable
+   part (open question Q3).
+
+### A1.6 Exact test list (to be written with the implementation; none in this change)
+
+Existing test to activate (its `skipif` is removed once the members exist):
+
+1. `tests/lifecycle/test_background_lifecycle_spec.py::test_background_event_taxonomy_activates`
+
+New file `tests/test_background_lifecycle_events.py`:
+
+2. `test_start_emits_background_submitted_after_record_persisted`
+3. `test_submitted_payload_keys_are_exact` (keys == the table in A1.2)
+4. `test_submitted_run_id_is_null_at_submit`
+5. `test_command_digest_is_sha256_of_argv_and_excludes_task_text`
+6. `test_command_summary_has_no_task_text_or_paths`
+7. `test_stop_emits_background_stopped_on_first_transition`
+8. `test_repeated_stop_emits_no_second_event`
+9. `test_stop_on_dead_process_still_emits_background_stopped` (BG-001 §3.6)
+10. `test_stopped_exit_code_derived_true_only_for_completed_stand_in` (U-P1-17)
+11. `test_stopped_exit_code_null_for_reaped_failed_run` (U-P1-17 regression)
+12. `test_envelope_run_id_is_background_namespace_and_non_empty`
+13. `test_envelope_run_id_never_collides_with_minted_run_ids`
+14. `test_lifecycle_chain_verifies_strict_with_submit_and_stop_from_two_loggers`
+    (same pattern as `tests/test_audit_chain_tip_resync.py`)
+15. `test_readonly_store_emits_nothing`
+16. `test_record_persist_failure_emits_nothing`
+17. `test_emit_failure_compliance_mode_raises`
+18. `test_emit_failure_outside_compliance_logs_and_returns`
+19. `test_tenant_scoped_lifecycle_path_under_tenant_dir`
+20. `test_run_evidence_fold_unchanged_without_background_events` (golden)
+
+Existing gates that must stay green:
+
+21. `scripts/validate_event_spine_wiring.py` (taxonomy closure)
+22. `scripts/check_audit_schema_conformance.py` and
+    `tests/test_audit_schema_conformance.py` (schema unchanged)
+23. `tests/lifecycle/test_background_lifecycle_spec.py` (all other tests)
+24. `tests/test_background_run.py`, `tests/test_background_unified.py`,
+    `tests/test_background_exit_code_fallback.py`
+
+### A1.7 Open questions for the owner
+
+- **Q1 Destination.** Accept the dedicated `lifecycle.jsonl` (recommended) or
+  choose the child run's log. This amendment does not decide it for you.
+- **Q2 Synthetic envelope id.** Accept `background:<background_id>` as the
+  envelope `run_id`?
+- **Q3 `command_summary`.** Keep `agent run <provider>` (readable, no task
+  text), or digest only, per the BG-001 §6 default?
+- **Q4 Emit-failure gap.** Outside compliance mode, a failed STOPPED emit leaves
+  the record stopped and the event missing, and a retry does not re-emit. Accept
+  the logged gap, or make STOPPED durable (emit before persist, and accept
+  duplicates)?
+- **Q5 Placement.** This amendment is appended to ADR 0032 because that ADR
+  says nothing about amendments and the repo has no amendment precedent. Would
+  you rather have this as a new ADR-0033, with its own index entry?
+- **Q6 Spec wording.** BG-001 §3.5 says the events are "consumed by audit like
+  all spine events". The chosen file is a separate chain. The spec wording
+  would need a matching edit, which is a follow-up and not part of this change.
+- **Q7 Readers.** Out of scope here: whether `background list/show` or the
+  cockpit should show lifecycle history.
