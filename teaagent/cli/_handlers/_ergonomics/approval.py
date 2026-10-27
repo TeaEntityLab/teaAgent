@@ -159,6 +159,10 @@ _DENIAL_REASON_DESCRIPTIONS: dict[str, str] = {
     'auto_mode_blocked': 'Blocked by auto-mode tool restrictions.',
     'missing_state': 'Blocked — no matching approval state found.',
     'policy_denied': 'Blocked by a deny grant (approval preset) — always terminal; not offered for approval. Remove it with `approval revoke <grant_id>`.',
+    'full_access_not_acknowledged': 'Blocked — danger-full-access was requested without the explicit full-access acknowledgement for this run.',
+    'skill_write_blocked': 'Blocked — writes into an active skill directory are not allowed; use the skill candidate install flow.',
+    'symlink_blocked': 'Blocked — the target path contains a symlink component; tool paths may not traverse symlinks.',
+    'expired': 'Denied automatically — the pending approval outlived TEAAGENT_PENDING_APPROVAL_TTL_SECONDS (default 24h). Re-run the task to ask again.',
 }
 
 
