@@ -48,6 +48,7 @@ Legend: ✅ Done (committed) · 🟡 In progress · ⬜ Not started · 🔵 Alre
 | U-P1-8 | UX | Make the long-run heartbeat record current tool, elapsed time, cost and next checkpoint (M4 background-lifecycle carve-out, DR-006 `owner-override: co-maintainer dogfood`). | `teaagent/heartbeat.py:40-52` | A test asserts the heartbeat audit payload carries the four fields. | ✅ | DU-014, `docs/backlog-priority.md` |
 | G-P1-6 | Governance | Read the MCP wire key `inputSchema` when adapting remote MCP tools; the adapter read only `input_schema`, so every remote tool silently got the permissive default schema and argument validation never ran. | `teaagent/mcp_tool_adapter.py:150-151`; `teaagent/mcp_server.py:287` | A remote tool declaring `inputSchema.required` rejects a call missing that argument. | 🟡 | 2026-10-27 ADR sweep |
 | G-P1-7 | Governance | Prove AGENTS.md "each tool requires a name, description, input schema, output schema, and annotations" for every built-in registry (workspace, subagent, code-analysis), not only the workspace set. | `tests/test_governance_compliance.py:22-30`; `teaagent/tools.py:131` | A test lints every built-in registry and finds zero error-level issues, or the gaps it finds are fixed. | 🟡 | 2026-10-27 ADR sweep |
+| G-P1-8 | Governance | Pin the owner-ratified pending-approval TTL auto-deny (dogfood G16: `TEAAGENT_PENDING_APPROVAL_TTL_SECONDS`, default 24h) with a test; the behavior is implemented but nothing under `tests/` exercises it. | `teaagent/run_store.py:405-431`; `teaagent/approval/selectors.py:101-104,160`; `docs/work-log/dogfood-findings-2026-09-15.md:140` | An expired pending approval is recorded as `tool_call_denied` with reason `expired` and disappears from pending views; a fresh one stays. | 🟡 | 2026-10-27 roadmap sweep |
 
 ## P2 - Cleanup (Polish/Debt/Defense in Depth)
 
@@ -100,13 +101,13 @@ Legend: ✅ Done (committed) · 🟡 In progress · ⬜ Not started · 🔵 Alre
 | Priority | Count | Distribution by Dimension |
 | --- | --- | --- |
 | P0 | 9 | Security 3, Architecture 2, UX 2, Governance 2 |
-| P1 | 24 | Security 4, Governance 7, Architecture 5, UX 8 |
+| P1 | 25 | Security 4, Governance 8, Architecture 5, UX 8 |
 | P2 | 41 | Security 11, Governance 15, Architecture 7, UX 8 |
-| **Total** | **74** | Counted from the ID rows above (recounted 2026-10-27; the P1 row was missing and P2 was stale) |
+| **Total** | **75** | Counted from the ID rows above (recounted 2026-10-27; the P1 row was missing and P2 was stale) |
 
 ### Status Summary
 | ✅ Done (verified) | 67 | S-P0-1, S-P0-2, S-P0-3, G-P0-1, G-P0-2, A-P0-1, A-P0-2, U-P0-1, U-P0-2, S-P1-1, S-P1-2, S-P1-3, S-P1-4, G-P1-1, G-P1-2, G-P1-3, G-P1-4, G-P1-5, A-P1-1, A-P1-2, A-P1-3, A-P1-4, A-P1-5, U-P1-1, U-P1-2, U-P1-3, U-P1-4, U-P1-5, U-P1-6, U-P1-7, U-P1-8, S-P2-1, S-P2-4, S-P2-5, S-P2-6, S-P2-7, S-P2-8, S-P2-9, S-P2-10, S-P2-11, G-P2-1, G-P2-2, G-P2-3, G-P2-5, G-P2-6, G-P2-7, G-P2-8, G-P2-9, G-P2-10, G-P2-11, G-P2-12, G-P2-13, G-P2-20, A-P2-1, A-P2-2, A-P2-3, A-P2-5, A-P2-6, A-P2-7, U-P2-1, U-P2-2, U-P2-3, U-P2-4, U-P2-5, U-P2-6, U-P2-7, U-P2-8 |
-| 🟡 In progress | 3 | G-P1-6, G-P1-7, G-P2-21 |
+| 🟡 In progress | 4 | G-P1-6, G-P1-7, G-P1-8, G-P2-21 |
 | ⬜ Not started | 0 | — |
 | 🔵 Already existed | 4 | S-P2-2, S-P2-3, G-P2-4, A-P2-4 |
 
