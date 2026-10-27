@@ -119,19 +119,6 @@ def test_lifecycle_roundtrip_exit_then_safe_stop(tmp_path: Path) -> None:
     assert 'alive' not in persisted
 
 
-_HAS_BACKGROUND_EVENT_TAXONOMY = {
-    'BACKGROUND_SUBMITTED',
-    'BACKGROUND_STOPPED',
-}.issubset(RunEventType.__members__)
-
-
-@pytest.mark.skipif(
-    not _HAS_BACKGROUND_EVENT_TAXONOMY,
-    reason=(
-        'background transition events are not in ADR-0032 taxonomy; see '
-        'docs/specs/background-lifecycle-acceptance-spec-2026-07-11.md §3.5'
-    ),
-)
 def test_background_event_taxonomy_activates() -> None:
     """Activation hook for auditable parent-side background transitions.
 

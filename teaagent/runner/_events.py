@@ -84,6 +84,12 @@ class RunEventType(str, Enum):
     TOOL_HOOK_POST_MUTATION = 'tool_hook_post_mutation'
     TOOL_HOOK_POST_FAILED = 'tool_hook_post_failed'
 
+    # ADR-0032 Amendment A1: parent-side background lifecycle transitions.
+    # Written to the dedicated <BackgroundRunStore.dir>/lifecycle.jsonl chain,
+    # never to a run's own log (see teaagent/ergonomics/background_run.py).
+    BACKGROUND_SUBMITTED = 'background_submitted'
+    BACKGROUND_STOPPED = 'background_stopped'
+
     # Planned (later phases): PLAN_RESOLVED, DECISION_RECEIVED,
     # CONTEXT_COMPACTED, BUDGET_CHECKPOINT, ITERATION_COMPLETED,
     # FINAL_VALIDATION, RECEIPT_EMITTED, SESSION_START, SESSION_END,
@@ -156,6 +162,9 @@ _RUN_EVENT_TO_AUDIT_EVENT_TYPE: dict[RunEventType, str] = {
     RunEventType.TOOL_HOOK_VETOED: 'tool_hook_vetoed',
     RunEventType.TOOL_HOOK_POST_MUTATION: 'tool_hook_post_mutation',
     RunEventType.TOOL_HOOK_POST_FAILED: 'tool_hook_post_failed',
+    # ADR-0032 Amendment A1 background lifecycle - emitted by BackgroundRunStore.
+    RunEventType.BACKGROUND_SUBMITTED: 'background_submitted',
+    RunEventType.BACKGROUND_STOPPED: 'background_stopped',
 }
 
 

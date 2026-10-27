@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
@@ -11,9 +12,15 @@ from pathlib import Path
 from typing import Any, Optional
 from uuid import uuid4
 
+from teaagent.audit import AuditLogger
+from teaagent.errors import ErrorCategory
 from teaagent.storage import atomic_write_text
 
 logger = logging.getLogger(__name__)
+
+# ADR-0032 Amendment A1: background lifecycle events live on their own chain,
+# never in a run's log. The envelope run_id is ``background:<background_id>``.
+LIFECYCLE_FILE_NAME = 'lifecycle.jsonl'
 
 
 def _utc_now() -> str:
@@ -42,6 +49,28 @@ def _get_tenant_id_from_path(path: Path) -> str:
     except Exception:
         logger.exception('tenant id extraction failed')
     return 'default'
+
+
+class _LifecycleAuditLogger(AuditLogger):
+    """AuditLogger that writes one explicit lifecycle payload.
+
+    ``AuditLogger.record(event_type, run_id, **payload)`` binds ``run_id`` to the
+    envelope parameter, so the A1.2 payload key ``run_id`` cannot travel as a
+    keyword argument. The payload is handed over whole through
+    ``_apply_audit_level``, the step ``record`` applies before redaction and
+    hashing. The hash chain, tip re-read and file lock are still AuditLogger's.
+    """
+
+    def __init__(self, path: Path, payload: dict[str, object]) -> None:
+        self._lifecycle_payload = dict(payload)
+        super().__init__(path=path)
+
+    def _apply_audit_level(self, payload: dict[str, object]) -> dict[str, object]:
+        return super()._apply_audit_level(dict(self._lifecycle_payload))
+
+
+def _command_digest(command: list[str]) -> str:
+    return hashlib.sha256(json.dumps(command).encode('utf-8')).hexdigest()
 
 
 @dataclass(frozen=True)
@@ -117,7 +146,58 @@ class BackgroundRunStore:
             label=label,
         )
         atomic_write_text(record_path, json.dumps(record.to_dict(), sort_keys=True))
+        self._emit_lifecycle(
+            'BACKGROUND_SUBMITTED',
+            background_id,
+            {
+                'background_id': background_id,
+                'run_id': None,
+                'pid': record.pid,
+                'started_at': record.started_at,
+                'command_digest': _command_digest(command),
+                'label': record.label,
+            },
+        )
         return record
+
+    def _emit_lifecycle(
+        self,
+        member_name: str,
+        background_id: str,
+        payload: dict[str, object],
+    ) -> None:
+        """Append one lifecycle event to ``lifecycle.jsonl`` (call after persist).
+
+        Outside compliance mode a failed append is logged at ERROR with its
+        category and ``background_id``, and is not retried (ADR 0032 A1.2, Q4).
+        In compliance mode the failure raises.
+        """
+        from teaagent.runner._events import RunEventType, run_event_to_audit_event_type
+        from teaagent.security_env import compliance_mode
+
+        audit_type = run_event_to_audit_event_type(RunEventType[member_name])
+        try:
+            audit = _LifecycleAuditLogger(self.dir / LIFECYCLE_FILE_NAME, payload)
+            audit.record(audit_type, f'background:{background_id}')
+            if audit.disk_error is not None:
+                raise audit.disk_error
+        except Exception as exc:
+            if compliance_mode():
+                raise
+            logger.error(
+                'background lifecycle event %s not recorded for background_id=%s '
+                '(category=%s): %s; not retried',
+                audit_type,
+                background_id,
+                ErrorCategory.SYSTEM.value,
+                exc,
+                extra={
+                    'event': 'background_lifecycle_emit_failed',
+                    'background_id': background_id,
+                    'error_category': ErrorCategory.SYSTEM.value,
+                    'error_severity': 'high',
+                },
+            )
 
     def get(self, background_id: str) -> dict[str, Any]:
         record_path = self._record_path(background_id)
@@ -214,6 +294,20 @@ class BackgroundRunStore:
         data.pop('orphaned', None)
         if not self.readonly:
             _persist_record_state(self._record_path(background_id), data)
+            run_id = data.get('run_id')
+            self._emit_lifecycle(
+                'BACKGROUND_STOPPED',
+                background_id,
+                {
+                    'background_id': background_id,
+                    'run_id': run_id if isinstance(run_id, str) and run_id else None,
+                    'pid': pid,
+                    'stop_signal': signal_name,
+                    'stopped_at': data['stopped_at'],
+                    'exit_code': data.get('exit_code'),
+                    'exit_code_derived': data.get('exit_code_derived') is True,
+                },
+            )
         return data
 
 
