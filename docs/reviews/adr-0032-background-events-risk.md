@@ -30,9 +30,10 @@ the audit schema file.
 - Emit on the parent side only: `BackgroundRunStore.start()` (submit, after the
   record is persisted) and the first transition in `BackgroundRunStore.stop()`
   (stop, after the record is persisted).
-- Writes go to `<BackgroundRunStore.dir>/lifecycle.jsonl`, a new hash-chained file
-  through `AuditLogger`, with the synthetic envelope `run_id`
-  `background:<background_id>`.
+- Writes go to `<BackgroundRunStore.dir>/lifecycle-<sha256(workspace root)[:12]>.jsonl`,
+  a new hash-chained file per workspace through `AuditLogger`, with the synthetic
+  envelope `run_id` `background:<background_id>`. The payload key that carries the
+  child run id is `child_run_id` (owner decision 2026-10-27, A1.7).
 - `docs/audit-event.schema.json` is **not** changed. Its `event_type` is an
   unconstrained string, so there is no enum to extend.
 
@@ -81,7 +82,7 @@ No production `.teaagent/` directory and no real run data is touched by the dry 
 
 - Code: revert the emit calls and the two enum members with their mapping
   entries. Each step is one file-local revert and an independent commit.
-- Data: `lifecycle.jsonl` stays on disk after rollback. It is a valid chain and
+- Data: the workspace lifecycle file (`lifecycle-<h>.jsonl`) stays on disk after rollback. It is a valid chain and
   nothing reads it. Deleting it is optional and does not affect any run.
 - Migration: none. The record format and all existing audit files are unchanged,
   so no stored-state migration is needed and none can be broken.
@@ -108,6 +109,10 @@ No production `.teaagent/` directory and no real run data is touched by the dry 
 - Design questions answered by the owner on 2026-10-27 (ADR-0032 A1.7): Q1
   dedicated `lifecycle.jsonl`, Q3 digest only, Q4 persist-then-emit with a logged
   gap and no retry, Q5 amend ADR 0032. Q2 and Q6 follow from Q1; Q7 is out of scope.
+  Owner decision 2026-10-27 (A1.7), recorded after the design was accepted: the
+  payload key is `child_run_id` (not `run_id`), and the file is per workspace,
+  `lifecycle-<sha256(workspace root)[:12]>.jsonl`, so each workspace has its own
+  HMAC chain key. The private `AuditLogger` override is dropped.
 
 ## Decision
 

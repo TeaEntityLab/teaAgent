@@ -1,14 +1,16 @@
 # test-type: lifecycle
 """ADR-0032 Amendment A1: background lifecycle events on a dedicated chain.
 
-Submit and stop transitions are appended to ``<BackgroundRunStore.dir>/lifecycle.jsonl``
-through ``AuditLogger``. The envelope ``run_id`` is ``background:<background_id>``.
+Submit and stop transitions are appended to
+``<BackgroundRunStore.dir>/lifecycle-<sha256(workspace root)[:12]>.jsonl``
+through ``AuditLogger`` (one chain and HMAC key per workspace). The envelope ``run_id`` is ``background:<background_id>``.
 Payload keys are the exact A1.2 tables; the command is recorded as a digest only.
 """
 
 from __future__ import annotations
 
 import hashlib
+import inspect
 import json
 import logging
 import sys
@@ -30,7 +32,7 @@ _SLEEP_CHILD = [sys.executable, '-c', 'import time; time.sleep(60)']
 _EXIT_CHILD = [sys.executable, '-c', 'pass']
 _SUBMIT_KEYS = {
     'background_id',
-    'run_id',
+    'child_run_id',
     'pid',
     'started_at',
     'command_digest',
@@ -38,7 +40,7 @@ _SUBMIT_KEYS = {
 }
 _STOP_KEYS = {
     'background_id',
-    'run_id',
+    'child_run_id',
     'pid',
     'stop_signal',
     'stopped_at',
@@ -48,7 +50,7 @@ _STOP_KEYS = {
 
 
 def _lifecycle_path(store: BackgroundRunStore) -> Path:
-    return store.dir / 'lifecycle.jsonl'
+    return background_run.lifecycle_log_path(store.root, directory=store.dir)
 
 
 def _lifecycle_rows(store: BackgroundRunStore) -> list[dict[str, Any]]:
@@ -144,7 +146,7 @@ def test_submitted_run_id_is_null_at_submit(tmp_path: Path) -> None:
     try:
         assert record.run_id is None
         (row,) = _lifecycle_rows(store)
-        assert row['payload']['run_id'] is None
+        assert row['payload']['child_run_id'] is None
     finally:
         store.stop(record.background_id, timeout_seconds=5)
 
@@ -204,7 +206,7 @@ def test_stop_emits_background_stopped_on_first_transition(tmp_path: Path) -> No
     assert payload['stopped_at'] == stopped['stopped_at']
     assert payload['exit_code'] is None
     assert payload['exit_code_derived'] is False
-    assert payload['run_id'] is None
+    assert payload['child_run_id'] is None
 
 
 def test_repeated_stop_emits_no_second_event(tmp_path: Path) -> None:
@@ -394,14 +396,8 @@ def test_tenant_scoped_lifecycle_path_under_tenant_dir(tmp_path: Path) -> None:
     store = BackgroundRunStore(tmp_path, tenant_id='acme')
     record = store.start(_SLEEP_CHILD)
     try:
-        expected = (
-            tmp_path
-            / '.teaagent'
-            / 'tenants'
-            / 'acme'
-            / 'background'
-            / 'lifecycle.jsonl'
-        )
+        expected = tmp_path / '.teaagent' / 'tenants' / 'acme' / 'background'
+        expected = background_run.lifecycle_log_path(tmp_path, directory=expected)
         assert expected.is_file()
         assert _lifecycle_path(store) == expected
     finally:
@@ -422,6 +418,33 @@ def test_run_evidence_fold_unchanged_without_background_events(tmp_path: Path) -
     after = build_run_evidence_bundle(tmp_path, run_id)
     assert repr(after) == repr(before)
     for path in (tmp_path / '.teaagent').rglob('*.jsonl'):
-        if path.name == 'lifecycle.jsonl':
+        if path.name.startswith('lifecycle-'):
             continue
         assert 'background_' not in path.read_text(encoding='utf-8')
+
+
+def test_lifecycle_file_is_per_workspace(tmp_path: Path) -> None:
+    """Each workspace root gets its own chain file; the same root keeps its name."""
+    root_a = tmp_path / 'workspace-a'
+    root_b = tmp_path / 'workspace-b'
+    root_a.mkdir()
+    root_b.mkdir()
+    name_a = background_run.lifecycle_log_path(root_a, directory=tmp_path).name
+    name_b = background_run.lifecycle_log_path(root_b, directory=tmp_path).name
+    assert name_a != name_b
+    assert name_a == background_run.lifecycle_log_path(root_a, directory=tmp_path).name
+    expected_hash = hashlib.sha256(str(root_a.resolve()).encode('utf-8')).hexdigest()
+    assert name_a == f'lifecycle-{expected_hash[:12]}.jsonl'
+
+
+def test_no_private_auditlogger_override() -> None:
+    """background_run defines no AuditLogger subclass (no private hook)."""
+    own_subclasses = [
+        obj
+        for _, obj in inspect.getmembers(background_run, inspect.isclass)
+        if obj.__module__ == background_run.__name__
+        and issubclass(obj, AuditLogger)
+        and obj is not AuditLogger
+    ]
+    assert own_subclasses == []
+    assert not hasattr(background_run, '_LifecycleAuditLogger')

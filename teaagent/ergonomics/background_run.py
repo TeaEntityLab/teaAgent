@@ -18,9 +18,16 @@ from teaagent.storage import atomic_write_text
 
 logger = logging.getLogger(__name__)
 
-# ADR-0032 Amendment A1: background lifecycle events live on their own chain,
-# never in a run's log. The envelope run_id is ``background:<background_id>``.
-LIFECYCLE_FILE_NAME = 'lifecycle.jsonl'
+
+def lifecycle_log_path(root: str | Path, *, directory: Path) -> Path:
+    """Return ``<directory>/lifecycle-<h>.jsonl`` for workspace ``root``.
+
+    ``h`` is the first 12 hex chars of sha256 of the resolved workspace root
+    (ADR-0032 Amendment A1, owner decision 2026-10-27). AuditLogger keys its
+    HMAC chain by file stem, so each workspace gets its own chain key.
+    """
+    digest = hashlib.sha256(str(Path(root).resolve()).encode('utf-8')).hexdigest()
+    return Path(directory) / f'lifecycle-{digest[:12]}.jsonl'
 
 
 def _utc_now() -> str:
@@ -49,24 +56,6 @@ def _get_tenant_id_from_path(path: Path) -> str:
     except Exception:
         logger.exception('tenant id extraction failed')
     return 'default'
-
-
-class _LifecycleAuditLogger(AuditLogger):
-    """AuditLogger that writes one explicit lifecycle payload.
-
-    ``AuditLogger.record(event_type, run_id, **payload)`` binds ``run_id`` to the
-    envelope parameter, so the A1.2 payload key ``run_id`` cannot travel as a
-    keyword argument. The payload is handed over whole through
-    ``_apply_audit_level``, the step ``record`` applies before redaction and
-    hashing. The hash chain, tip re-read and file lock are still AuditLogger's.
-    """
-
-    def __init__(self, path: Path, payload: dict[str, object]) -> None:
-        self._lifecycle_payload = dict(payload)
-        super().__init__(path=path)
-
-    def _apply_audit_level(self, payload: dict[str, object]) -> dict[str, object]:
-        return super()._apply_audit_level(dict(self._lifecycle_payload))
 
 
 def _command_digest(command: list[str]) -> str:
@@ -151,7 +140,7 @@ class BackgroundRunStore:
             background_id,
             {
                 'background_id': background_id,
-                'run_id': None,
+                'child_run_id': None,
                 'pid': record.pid,
                 'started_at': record.started_at,
                 'command_digest': _command_digest(command),
@@ -166,7 +155,7 @@ class BackgroundRunStore:
         background_id: str,
         payload: dict[str, object],
     ) -> None:
-        """Append one lifecycle event to ``lifecycle.jsonl`` (call after persist).
+        """Append one lifecycle event to the workspace lifecycle chain (call after persist).
 
         Outside compliance mode a failed append is logged at ERROR with its
         category and ``background_id``, and is not retried (ADR 0032 A1.2, Q4).
@@ -177,8 +166,8 @@ class BackgroundRunStore:
 
         audit_type = run_event_to_audit_event_type(RunEventType[member_name])
         try:
-            audit = _LifecycleAuditLogger(self.dir / LIFECYCLE_FILE_NAME, payload)
-            audit.record(audit_type, f'background:{background_id}')
+            audit = AuditLogger(path=lifecycle_log_path(self.root, directory=self.dir))
+            audit.record(audit_type, f'background:{background_id}', **payload)
             if audit.disk_error is not None:
                 raise audit.disk_error
         except Exception as exc:
@@ -294,13 +283,17 @@ class BackgroundRunStore:
         data.pop('orphaned', None)
         if not self.readonly:
             _persist_record_state(self._record_path(background_id), data)
-            run_id = data.get('run_id')
+            child_run_id = data.get('run_id')
             self._emit_lifecycle(
                 'BACKGROUND_STOPPED',
                 background_id,
                 {
                     'background_id': background_id,
-                    'run_id': run_id if isinstance(run_id, str) and run_id else None,
+                    'child_run_id': (
+                        child_run_id
+                        if isinstance(child_run_id, str) and child_run_id
+                        else None
+                    ),
                     'pid': pid,
                     'stop_signal': signal_name,
                     'stopped_at': data['stopped_at'],
