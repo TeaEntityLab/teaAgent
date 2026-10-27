@@ -63,7 +63,7 @@ only the daily-driver fixes:
 | [TASK-DD2-001](TASK-DD2-001-plan.md) | P1 | S | `_chat.py`, `tui/__init__.py` | Fixed: positional task forwarded to TUI REPL |
 | [TASK-DD2-002](TASK-DD2-002-plan.md) | P1 | S | `tui/__init__.py` | Fixed: `_load_tui_state` respects explicit CLI root flag |
 | [TASK-DD2-003](TASK-DD2-003-plan.md) | P1 | M | `tui/__init__.py`, `chat_session_controller.py` | Fixed: make TUI cost ledger authoritative |
-| [TASK-DD2-004](TASK-DD2-004-plan.md) | P0 | M | `teaagent/ergonomics/_approval_grants.py`, `teaagent/cli/_handlers/agent_helpers.py` | In progress (G-P1-9, 2026-10-27): path-scoped approvals hardened; tests: `test_empty_path_globs_rejected_ds12`, `test_smart_hitl_approval_p_without_path_stays_denied` |
+| [TASK-DD2-004](TASK-DD2-004-plan.md) | P0 | M | `teaagent/ergonomics/_approval_grants.py`, `teaagent/cli/_handlers/agent_helpers.py` | Fixed (G-P1-9, 2026-10-27): path-scoped approvals hardened; tests: `test_empty_path_globs_rejected_ds12`, `test_smart_hitl_approval_p_without_path_stays_denied` |
 | [TASK-DD2-005](TASK-DD2-005-plan.md) | P1 | M | `_agent.py`, `git_sandbox.py` | Fixed: git sandbox lifecycle preserves sandbox object through run completion (core fix). Broader ACs partially addressed — see plan file. |
 | [TASK-DD2-006](TASK-DD2-006-plan.md) | P1 | S | `teaagent/cli/_handlers/_chat.py` (was `chat_repl.py`, file removed), `docs/cli.md` | Fixed: lifecycle wording made honest; covered by chat command/help tests |
 | [TASK-DD2-007](TASK-DD2-007-plan.md) | P2 | M | `teaagent/cli/_handlers/_chat.py`, `tests/test_cli_chat.py` | Fixed: stale chat code removed/retired |
