@@ -42,6 +42,10 @@ Legend: ✅ Done (committed) · 🟡 In progress · ⬜ Not started · 🔵 Alre
 | U-P1-4 | UX | Reconcile stale dated documentation: add supersession notes to `tui-daily-driver-guide.md:54,67`, `tui-chat-reference.md:36-37`, and `run-evidence-and-audit-guide.md:82`, or update them. | As listed | No current-truth contradictions remain; docs-consistency CI passes. | ✅ | Current TUI cost, controller, undo, task-forwarding, root, and resume facts reconciled across operator, troubleshooting, and module docs on 2026-06-21; docs consistency and focused TUI tests pass |
 | U-P1-5 | UX | Remove `--no-tui` from all module documentation or implement it. | `docs/modules/cli/*`; `docs/modules/tui/inspection.md`; `docs/modules/chat_session_controller/api.md`; `docs/decisions/trade-offs.md:101` | Documentation matches code; either `rg --no-tui docs/` has no matches or the flag exists. | ✅ | This session — removed from 7 files; `rg --no-tui docs/` now returns only retrospective references (which document the removal) |
 | U-P1-6 | UX | Add a confirmation gate before chat mode forwards typos: `unknown command "x"; send as task? [y/N]`. | `teaagent/tui/_commands.py:396-397` | A typo no longer silently becomes an LLM task; add a test. | ✅ | Unknown commands require explicit confirmation before task forwarding; `tests/tui/test_tui_typo_confirmation.py` |
+| G-P1-4 | Governance | Make a matched deny preset terminal in `prompt` mode: `POLICY_DENIED` must not fall through to interactive approval, matching the owner decision "block in all modes" (`docs/reviews/dogfood-g1-g22-2026-09-15-risk.md:22`). | `teaagent/runner/_governed_execution.py:314-335`; `teaagent/approval/manager.py:987` | An approving handler is never offered a deny-matched call; the tool does not run; `tool_call_blocked` records `policy_denied`. | 🟡 | DENY-OVERRIDE, `docs/backlog-priority.md` |
+| G-P1-5 | Governance | Wire a per-batch cancel token into subagent batches so a timed-out batch stops its running children at their next step instead of letting them keep writing after the batch reported a timeout. | `teaagent/subagents/_tools.py:315-370`; `teaagent/subagents/_manager.py:165-185`; `teaagent/runner/_core.py:907` | After the batch deadline a running child makes no new tool call and the cancellation is audited. | 🟡 | WS2-002 residual, `docs/backlog-priority.md` |
+| U-P1-7 | UX | Extend the operator cockpit state with branch, undo availability, last run id and active rules (M4 cockpit carve-out, DR-006 `owner-override: co-maintainer dogfood`). | `teaagent/cockpit.py:367` | A headless test asserts the four fields are exposed and rendered. | 🟡 | DU-011, `docs/backlog-priority.md` |
+| U-P1-8 | UX | Make the long-run heartbeat record current tool, elapsed time, cost and next checkpoint (M4 background-lifecycle carve-out, DR-006 `owner-override: co-maintainer dogfood`). | `teaagent/heartbeat.py:40-52` | A test asserts the heartbeat audit payload carries the four fields. | 🟡 | DU-014, `docs/backlog-priority.md` |
 
 ## P2 - Cleanup (Polish/Debt/Defense in Depth)
 
@@ -95,7 +99,7 @@ Legend: ✅ Done (committed) · 🟡 In progress · ⬜ Not started · 🔵 Alre
 | --- | --- | --- |
 | P0 | 9 | Security 3, Architecture 2, UX 2, Governance 2 |
 | P2 | 36 | Security 11, Governance 10, Architecture 7, UX 8 |
-| **Total** | **63** | |
+| **Total** | **67** | |
 
 ### Status Summary
 | ✅ Done (verified) | 61 | S-P0-1, S-P0-2, S-P0-3, A-P0-1, A-P0-2, U-P0-1, U-P0-2, G-P0-1, G-P0-2; S-P1-1, S-P1-2, S-P1-3, S-P1-4, G-P1-1, G-P1-2, G-P1-3, A-P1-1, A-P1-2, A-P1-3, A-P1-4, A-P1-5, U-P1-1, U-P1-2, U-P1-3, U-P1-4, U-P1-5, U-P1-6; S-P2-1, S-P2-4, S-P2-5, S-P2-6, S-P2-7, S-P2-8, S-P2-9, S-P2-10, S-P2-11, G-P2-1, G-P2-2, G-P2-3, G-P2-5, G-P2-6, G-P2-7, G-P2-8, G-P2-9, G-P2-10, G-P2-11, G-P2-12, G-P2-13, A-P2-1, A-P2-2, A-P2-3, A-P2-5, A-P2-6, A-P2-7, U-P2-1, U-P2-2, U-P2-3, U-P2-4, U-P2-5, U-P2-6, U-P2-7, U-P2-8 |
