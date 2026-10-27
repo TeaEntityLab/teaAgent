@@ -9,7 +9,17 @@
   checkpoint/review path and no longer advertises bogus continuation hints.
 - Phase 2 guard has started: `teaagent agent run --background <id>` now refuses
   id-shaped inputs that match a known run or suspension record.
-- Full REPL-originated resume rehydration remains open.
+- Phase 2 status: **Fixed** (2026-10-27). REPL suspension checkpoints are now
+  JSON-safe (the `RunResult` in each observation is reduced to run id, status,
+  answer and error), and `prepare_run_resume` rehydrates the saved session
+  observations from `.teaagent/suspension-<run_id>.json` when the run has no
+  `tool_call_completed` events. Tests: `test_repl_suspend_resume_roundtrip`,
+  `test_repl_resume_restores_last_ten_observations`
+  (`tests/test_repl_resume_rehydrates_observations.py`).
+  Design note: Option B (suspension checkpoint as the source) was used instead
+  of Option A. Option A would have written synthetic `tool_call_completed`
+  events into the run audit log, which downstream telemetry, receipts and undo
+  read as real tool executions.
 
 ---
 
