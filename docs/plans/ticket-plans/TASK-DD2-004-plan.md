@@ -1,7 +1,7 @@
 # TASK-DD2-004: Harden Path-Scoped Approvals
 
 **Priority:** P0
-**Status:** Active
+**Status:** Complete — G-P1-9 (2026-10-27): the `t` confirmation now states "all paths in this workspace, this session, 8h", and `_path_matches` fails closed on a rejected path (`tests/test_approval_grant_scope.py`). Before: the `t` choice confirmation said "current directory" for an all-workspace `*` grant, and `_path_matches` fell back to `*` for rejected paths. Workspace containment already blocked out-of-workspace writes
 **Primary files:** `teaagent/cli/_handlers/agent_helpers.py`, `teaagent/tui/__init__.py`, `teaagent/ergonomics/_approval_grants.py`
 
 ## Problem

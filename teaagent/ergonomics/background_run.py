@@ -190,6 +190,9 @@ class BackgroundRunStore:
         from contextlib import suppress
 
         data = self.get(background_id)
+        if data.get('stopped_at') and data.get('stop_signal'):
+            # BG-001 §3.6: repeated stop converges on the first stop's record.
+            return data
         pid = int(data['pid'])
         signal_name = 'SIGTERM'
         if _is_alive(pid):
@@ -206,6 +209,9 @@ class BackgroundRunStore:
         data['stopped_at'] = _utc_now()
         data['stop_signal'] = signal_name
         data['alive'] = False
+        # A stopped record is no longer an orphan candidate; drop the derived
+        # marker so it is never persisted as stored state.
+        data.pop('orphaned', None)
         if not self.readonly:
             _persist_record_state(self._record_path(background_id), data)
         return data
@@ -217,23 +223,36 @@ def _enrich_liveness(
     *,
     record_path: Optional[Path] = None,
 ) -> dict[str, Any]:
+    data['run_outcome'] = _derive_run_outcome(data, record_path)
     run_id = data.get('run_id')
-    if not isinstance(run_id, str) or not run_id:
-        return data
-    from teaagent.ergonomics.run_liveness import liveness_snapshot
+    if isinstance(run_id, str) and run_id:
+        from teaagent.ergonomics.run_liveness import liveness_snapshot
 
-    snap = liveness_snapshot(root, run_id)
-    if snap is not None:
-        data['liveness_updated_at'] = snap['updated_at']
-        data['liveness_age_seconds'] = snap['age_seconds']
-        data['liveness_stale'] = snap['stale']
+        snap = liveness_snapshot(root, run_id)
+        if snap is not None:
+            data['liveness_updated_at'] = snap['updated_at']
+            data['liveness_age_seconds'] = snap['age_seconds']
+            data['liveness_stale'] = snap['stale']
+    # Orphan derivation runs for run_id-less records too (BG-001 §3.3): a dead
+    # process that never wrote its run_id must still surface as orphaned.
     if record_path is not None and not data.get('alive'):
         _derive_orphan_state(record_path, data)
     return data
 
 
+# Keys computed at read time from process state and the audit log. They are
+# surfaced to callers but never written back into the record file.
+_DERIVED_RECORD_KEYS = frozenset(
+    {'alive', 'orphaned', 'run_outcome', 'exit_code_derived'}
+)
+
+
 def _persist_record_state(path: Path, data: dict[str, Any]) -> None:
-    persisted = {k: v for k, v in data.items() if k != 'alive'}
+    persisted = {k: v for k, v in data.items() if k not in _DERIVED_RECORD_KEYS}
+    if data.get('exit_code_derived'):
+        # A derived exit code is a read-time stand-in; storing it would make
+        # it look authoritative on the next read.
+        persisted.pop('exit_code', None)
     atomic_write_text(path, json.dumps(persisted, sort_keys=True))
 
 
@@ -259,35 +278,96 @@ _TERMINAL_RUN_EVENTS = frozenset(
 )
 
 
-def _has_clean_exit_record(root: Path, run_id: str, tenant_id: str) -> bool:
+def _last_terminal_run_event(
+    root: Path, run_id: str, tenant_id: str
+) -> Optional[dict[str, object]]:
     try:
         from teaagent.run_store import RunStore
 
         events = RunStore(root, tenant_id=tenant_id, readonly=True).show_run(run_id)
     except (FileNotFoundError, OSError):
-        return False
-    return any(
-        isinstance(e, dict) and e.get('event_type') in _TERMINAL_RUN_EVENTS
+        return None
+    terminal = [
+        e
         for e in events
-    )
+        if isinstance(e, dict) and e.get('event_type') in _TERMINAL_RUN_EVENTS
+    ]
+    return terminal[-1] if terminal else None
+
+
+def _workspace_root_for_record(record_path: Path) -> tuple[Path, str]:
+    tenant_id = _get_tenant_id_from_path(record_path)
+    if tenant_id == 'default':
+        return record_path.parent.parent.parent, tenant_id
+    return record_path.parent.parent.parent.parent.parent, tenant_id
+
+
+def _event_field(event: dict[str, object], key: str) -> object:
+    payload = event.get('payload')
+    if isinstance(payload, dict) and key in payload:
+        return payload[key]
+    return event.get(key)
+
+
+def _outcome_from_terminal_event(event: dict[str, object]) -> str:
+    event_type = event.get('event_type')
+    if event_type == 'run_completed':
+        return 'completed'
+    if event_type == 'run_paused':
+        # BG-001 §3.2 vocabulary: a paused run is waiting on an approval.
+        return 'pending_approval'
+    if event_type == 'run_cancelled':
+        return 'cancelled'
+    if event_type == 'run_failed':
+        # RunCancelledError is recorded as run_failed; its message is the only
+        # marker that distinguishes a cancellation from a genuine failure.
+        message = _event_field(event, 'message')
+        if isinstance(message, str) and message.lower().startswith('run cancelled'):
+            return 'cancelled'
+        return 'failed'
+    return 'unknown'
+
+
+def _derive_run_outcome(data: dict[str, object], record_path: Optional[Path]) -> str:
+    """Run outcome from the audit log, kept distinct from process liveness."""
+    run_id = data.get('run_id')
+    if not isinstance(run_id, str) or not run_id or record_path is None:
+        return 'unknown'
+    w_root, tenant_id = _workspace_root_for_record(record_path)
+    terminal = _last_terminal_run_event(w_root, run_id, tenant_id)
+    if terminal is not None:
+        return _outcome_from_terminal_event(terminal)
+    if data.get('alive'):
+        return 'running'
+    return 'unknown'
 
 
 def _derive_orphan_state(record_path: Path, data: dict[str, Any]) -> None:
+    if data.get('alive') is True:
+        # A live process is never an orphan, even before it writes a run_id.
+        return
     if data.get('stop_signal') is not None:
         return
     if data.get('exit_code') == 0:
         return
     run_id = data.get('run_id')
     if not isinstance(run_id, str) or not run_id:
+        # Dead, not stopped, no clean exit, and no run_id: nothing can prove
+        # the run completed, so surface it as orphaned.
+        data['orphaned'] = True
         return
-    tenant_id = _get_tenant_id_from_path(record_path)
-    if tenant_id == 'default':
-        w_root = record_path.parent.parent.parent
-    else:
-        w_root = record_path.parent.parent.parent.parent.parent
-    if _has_clean_exit_record(w_root, run_id, tenant_id):
-        if data.get('exit_code') is None:
+    w_root, tenant_id = _workspace_root_for_record(record_path)
+    terminal = _last_terminal_run_event(w_root, run_id, tenant_id)
+    if terminal is not None:
+        # The audit log knows the outcome, so the run is not orphaned. Only a
+        # completed run may stand in for a lost exit code, and the stand-in is
+        # marked derived (BG-001 §1: a fallback exit_code=0 is not authoritative).
+        if (
+            data.get('exit_code') is None
+            and terminal.get('event_type') == 'run_completed'
+        ):
             data['exit_code'] = 0
+            data['exit_code_derived'] = True
         return
     data['orphaned'] = True
 
@@ -497,6 +577,8 @@ def build_agent_run_command(args: Any, task: Optional[str]) -> list[str]:  # noq
         cmd.append('--allow-destructive')
     for call_id in getattr(args, 'approve_call_id', []) or []:
         cmd.extend(['--approve-call-id', call_id])
+    for scoped in getattr(args, 'approve_scoped', []) or []:
+        cmd.extend(['--approve-scoped', scoped])
     if getattr(args, 'hitl_approval', False):
         cmd.append('--hitl-approval')
     if getattr(args, 'permission_mode', None):

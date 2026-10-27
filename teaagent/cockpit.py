@@ -408,9 +408,15 @@ class ControlCockpitState:
     # (or not a git repo), 'unknown' = source failed to load.
     branch: str = 'unknown'  # branch name, 'detached HEAD', or 'none'
     undo: str = 'unknown'  # available | partial | none | unknown
+    # Exact undo command from summarize_run for the latest run with an undo
+    # journal; set only when undo is available or partial, else None.
+    undo_command: Optional[str] = None
     last_run_id: str = 'unknown'  # run id, 'none', or 'unknown'
     # Non-expired approval grants as 'tool (scope)'; None means unknown.
     active_rules: Optional[list[str]] = None
+    # Detached background runs: {running_count, orphaned_count, items[<=10]};
+    # None means the background store failed to load.
+    background: Optional[dict] = None
 
 
 def _current_branch(root_path: Path) -> str:
@@ -482,7 +488,41 @@ def build_control_cockpit(
         cockpit.errors.append('goal/spec load failed')
 
     # ── model route ──
-    cockpit.model_route = None
+    # Read from the latest run's ``model_route`` audit event (the same event
+    # run_evidence.extract_routes reads). No route on the run is None, not an error.
+    try:
+        from teaagent.run_store import RunStore
+
+        runs_for_route = RunStore(root_path, readonly=True)
+        latest_for_route = runs_for_route.list_runs(limit=1)
+        route_events = (
+            [
+                event
+                for event in runs_for_route.show_run(latest_for_route[0].run_id)
+                if event.get('event_type') == 'model_route'
+            ]
+            if latest_for_route
+            else []
+        )
+        if route_events:
+            route_payload = route_events[-1].get('payload') or {}
+            cockpit.model_route = {
+                'provider': route_payload.get('resolved_provider')
+                or route_payload.get('requested_provider')
+                or '',
+                'model': route_payload.get('resolved_model') or 'default',
+                'source': route_payload.get('policy_source') or '',
+                'reason': route_payload.get('routing_reason') or '',
+                'estimated_cost_cents': float(
+                    route_payload.get('estimated_cost_cents') or 0
+                ),
+            }
+        else:
+            cockpit.model_route = None
+    except Exception:
+        logger.exception('model route load failed')
+        cockpit.model_route = None
+        cockpit.errors.append('model route load failed')
 
     # ── memory ──
     try:
@@ -496,6 +536,8 @@ def build_control_cockpit(
             'quarantine_count': _count_quarantine_lines(root_path),
         }
     except Exception:
+        logger.exception('memory load failed')
+        cockpit.errors.append('memory load failed')
         cockpit.memory = {
             'total_entries': 0,
             'last_entry_summary': '',
@@ -503,17 +545,11 @@ def build_control_cockpit(
         }
 
     # ── review ──
-    try:
-        if cockpit.goal:
-            review_ids = cockpit.goal.get('review_ids', [])
-            cockpit.review = {
-                'review_ids_count': len(review_ids)
-                if isinstance(review_ids, list)
-                else 0,
-                'latest_review_status': 'unknown',
-            }
-    except Exception:
-        cockpit.review = None
+    # No recorded review source feeds the cockpit: the goal dict never carries
+    # ``review_ids`` (GoalRecord.review_ids is never written in production), and
+    # ``record_review_closed`` has no production caller. Report the section as
+    # unavailable (None) rather than a zeros dict that reads as "0 reviews".
+    cockpit.review = None
 
     # ── skill diagnostics ──
     try:
@@ -527,6 +563,8 @@ def build_control_cockpit(
             'governance_status': diag.get('governance_status', {}),
         }
     except Exception:
+        logger.exception('skill diagnostics load failed')
+        cockpit.errors.append('skill diagnostics load failed')
         cockpit.skill = {
             'loaded_count': 0,
             'shadowed_count': 0,
@@ -538,20 +576,27 @@ def build_control_cockpit(
     # pending_count must reflect the real approval queue (per-run pending
     # approvals), not the memory-quarantine file — that count is surfaced under
     # memory.quarantine_count above.
+    # blocked_count is the number of runs paused on a pending approval: the
+    # cockpit contract's "blocked is loud" state (operator-cockpit contract).
     try:
-        from teaagent.integration.approval_parity import (
-            build_pending_approvals_snapshot,
+        from teaagent.approval.selectors import (
+            collect_pending_approval_views,
+            pending_approvals_payload,
         )
         from teaagent.run_store import RunStore
 
         _store = RunStore(root_path, readonly=True)
-        pending = int(build_pending_approvals_snapshot(_store).get('queue_depth', 0))
+        _views = collect_pending_approval_views(_store)
+        pending = int(pending_approvals_payload(_views).get('queue_depth', 0))
+        blocked = len({view.run_id for view in _views})
     except Exception:
         logger.exception('pending-approval count failed')
+        cockpit.errors.append('pending-approval count failed')
         pending = 0
+        blocked = 0
     cockpit.approval = {
         'pending_count': pending,
-        'blocked_count': 0,
+        'blocked_count': blocked,
         'mode': permission_mode,
     }
 
@@ -586,12 +631,22 @@ def build_control_cockpit(
             else:
                 # ADR-0042 / SEC-11: shell mutations are not in the journal, so
                 # undo for such a run must be disclosed as partial.
+                from teaagent.ergonomics.run_summary import summarize_run
                 from teaagent.run_undo import audit_events_used_shell_mutate
 
                 events = runs.show_run(undo_run)
                 cockpit.undo = (
                     'partial' if audit_events_used_shell_mutate(events) else 'available'
                 )
+                summary = summarize_run(
+                    root=root_path,
+                    run_id=undo_run,
+                    events=events,
+                    cost_cents=0.0,
+                    input_tokens=0,
+                    output_tokens=0,
+                )
+                cockpit.undo_command = str(summary['undo_command'])
     except Exception:
         logger.exception('run/undo state load failed')
         cockpit.last_run_id = 'unknown'
@@ -611,6 +666,31 @@ def build_control_cockpit(
         logger.exception('approval rules load failed')
         cockpit.active_rules = None
         cockpit.errors.append('approval rules load failed')
+
+    # ── background runs: running / orphaned (U-P1-10) ──
+    try:
+        from teaagent.ergonomics.background_run import BackgroundRunStore
+
+        bg_rows = BackgroundRunStore(root_path, readonly=True).list()
+        cockpit.background = {
+            'running_count': sum(1 for r in bg_rows if r.get('alive') is True),
+            'orphaned_count': sum(1 for r in bg_rows if r.get('orphaned') is True),
+            'items': [
+                {
+                    'background_id': r.get('background_id'),
+                    'run_id': r.get('run_id'),
+                    'alive': r.get('alive') is True,
+                    'orphaned': r.get('orphaned') is True,
+                    'liveness_stale': r.get('liveness_stale'),
+                    'run_outcome': r.get('run_outcome'),
+                }
+                for r in bg_rows[:10]
+            ],
+        }
+    except Exception:
+        logger.exception('background runs load failed')
+        cockpit.background = None
+        cockpit.errors.append('background runs load failed')
 
     # ── context health (CTX-001) ──
     try:

@@ -186,8 +186,8 @@ class TeaAgentTUI:
                 cost_state=self._determine_cost_state(),
             )
         except Exception:
+            # Keep the previous state on failure (spec section 3.4).
             logger.debug('control cockpit unavailable', exc_info=True)
-            self._control_cockpit = None
 
         self._refresh_cockpit_state()
 
@@ -218,8 +218,8 @@ class TeaAgentTUI:
                 ),
             )
         except Exception:
+            # Keep the previous state on failure (spec section 3.4).
             logger.debug('cockpit state unavailable', exc_info=True)
-            self._cockpit_state = None
 
     def _should_use_split_pane(self) -> bool:
         """Check if terminal is large enough for split-pane layout."""
@@ -356,6 +356,8 @@ class TeaAgentTUI:
                 print(
                     f'  Review: {review.get("review_ids_count", 0)} reviews, gate={review.get("latest_review_status", "?")}'
                 )
+            else:
+                print('  Review: unavailable')
 
             # Skills
             skill = cc.skill
@@ -378,6 +380,8 @@ class TeaAgentTUI:
                 undo_label = 'partial (shell commands not reversible)'
             else:
                 undo_label = cc.undo
+            if cc.undo_command:
+                undo_label = f'{undo_label} — {cc.undo_command}'
             print(f'  Undo: {undo_label}')
             print(f'  Last run: {cc.last_run_id}')
             if cc.active_rules is None:
@@ -385,6 +389,13 @@ class TeaAgentTUI:
             else:
                 rules_label = ', '.join(cc.active_rules) or 'none'
             print(f'  Rules: {rules_label}')
+            if cc.background is None:
+                print('  Background: unknown')
+            else:
+                bg = cc.background
+                print(
+                    f'  Background: {bg.get("running_count", 0)} running, {bg.get("orphaned_count", 0)} orphaned'
+                )
 
             # Cost
             cost = cc.cost
@@ -1408,7 +1419,7 @@ class TeaAgentTUI:
                 ttl_hours=8.0,
             )
             self.output_fn(
-                f'approval: registered session grant for {request.tool_name} (current directory)'
+                f'approval: registered session grant for {request.tool_name} (all paths in this workspace, this session, 8h)'
             )
             return True
 

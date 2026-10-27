@@ -244,8 +244,12 @@ def _path_matches(
         return True
 
     path_value: str | None = None
+    path_key_present = False
     for key in _PATH_ARGUMENT_KEYS:
         raw = arguments.get(key)
+        if raw is None:
+            continue
+        path_key_present = True
         if isinstance(raw, str) and raw.strip():
             # Normalize and validate path against workspace
             normalized = _normalize_and_validate_path(raw, workspace_root)
@@ -254,6 +258,11 @@ def _path_matches(
                 break
 
     if path_value is None:
+        if path_key_present:
+            # A path argument was supplied but rejected (outside the workspace,
+            # traversal, non-string). Fail closed: a '*' grant must not cover it.
+            return False
+        # No path argument at all: tool-scoped grants ('*') apply.
         return any(pattern == '*' for pattern in path_globs)
 
     for pattern in path_globs:

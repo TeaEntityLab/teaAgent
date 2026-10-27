@@ -44,6 +44,89 @@ def test_killed_background_run_marked_orphaned(tmp_path: Path) -> None:
     assert rows[0]['orphaned'] is True
 
 
+def _dead_pid() -> int:
+    """Return the pid of a child that has already exited and been reaped."""
+    import subprocess
+
+    proc = subprocess.Popen([sys.executable, '-c', 'import sys; sys.exit(3)'])
+    assert proc.wait(timeout=10) == 3
+    return proc.pid
+
+
+def _write_record(
+    store: BackgroundRunStore, background_id: str, **fields: object
+) -> Path:
+    log_path = store.dir / f'{background_id}.log'
+    log_path.write_text('', encoding='utf-8')
+    record: dict[str, object] = {
+        'background_id': background_id,
+        'command': ['noop'],
+        'started_at': '2026-10-27T00:00:00+00:00',
+        'log_path': str(log_path),
+    }
+    record.update(fields)
+    path = store.dir / f'{background_id}.json'
+    path.write_text(json.dumps(record), encoding='utf-8')
+    return path
+
+
+def test_dead_run_without_run_id_marked_orphaned(tmp_path: Path) -> None:
+    """BG-001 §3.3: a dead process that never wrote a run_id is orphaned."""
+    store = BackgroundRunStore(tmp_path)
+    _write_record(store, 'bg-no-runid-dead', pid=_dead_pid())
+
+    shown = store.get('bg-no-runid-dead')
+    assert shown['alive'] is False
+    assert shown.get('run_id') is None
+    assert shown['orphaned'] is True
+
+    rows = {row['background_id']: row for row in store.list()}
+    assert rows['bg-no-runid-dead']['orphaned'] is True
+
+
+def test_dead_run_without_run_id_nonzero_exit_orphaned(tmp_path: Path) -> None:
+    """A recorded non-zero exit with no run_id and no stop is orphaned."""
+    store = BackgroundRunStore(tmp_path)
+    _write_record(store, 'bg-no-runid-exit3', pid=_dead_pid(), exit_code=3)
+
+    shown = store.get('bg-no-runid-exit3')
+    assert shown['orphaned'] is True
+    assert shown['exit_code'] == 3
+
+
+def test_dead_run_without_run_id_clean_exit_not_orphaned(tmp_path: Path) -> None:
+    """A dead run without run_id that exited 0 is not orphaned."""
+    store = BackgroundRunStore(tmp_path)
+    _write_record(store, 'bg-no-runid-clean', pid=_dead_pid(), exit_code=0)
+
+    shown = store.get('bg-no-runid-clean')
+    assert shown['alive'] is False
+    assert not shown.get('orphaned')
+
+
+def test_live_run_without_run_id_not_orphaned(tmp_path: Path) -> None:
+    """A still-running process that has not written its run_id is not orphaned."""
+    store = BackgroundRunStore(tmp_path)
+    record = store.start([sys.executable, '-c', 'import time; time.sleep(20)'])
+    try:
+        shown = store.get(record.background_id)
+        assert shown['alive'] is True
+        assert not shown.get('orphaned')
+    finally:
+        store.stop(record.background_id, timeout_seconds=0.5)
+
+
+def test_stopped_run_without_run_id_not_orphaned(tmp_path: Path) -> None:
+    """A run stopped through the store is not orphaned even without run_id."""
+    store = BackgroundRunStore(tmp_path)
+    record = store.start([sys.executable, '-c', 'import time; time.sleep(20)'])
+    stopped = store.stop(record.background_id, timeout_seconds=0.5)
+
+    assert stopped['stop_signal'] is not None
+    assert not stopped.get('orphaned')
+    assert not store.get(record.background_id).get('orphaned')
+
+
 def test_clean_exit_not_orphaned(tmp_path: Path) -> None:
     """A process that exits 0 is not orphaned."""
     store = BackgroundRunStore(tmp_path)

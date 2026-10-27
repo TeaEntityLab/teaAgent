@@ -1,7 +1,7 @@
 # TASK-DD2-006: Make Lifecycle Wording Honest
 
 **Priority:** P1
-**Status:** Active
+**Status:** Complete (re-verified 2026-10-27: no `--detach`/`attach`/printed `resume` remains; suspension copy says "suspension checkpoint, not background execution" in `teaagent/cli/_handlers/_agent/resume.py` and `teaagent/tui/rendering.py`)
 **Primary files:** `teaagent/cli/_handlers/chat_repl.py` (file removed; see `_chat.py`), `teaagent/cli/_handlers/_chat.py`, `docs/*`
 
 ## Problem

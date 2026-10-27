@@ -83,7 +83,7 @@ See the [Backwards Compatibility](integration-guide.md#backwards-compatibility) 
 
 **Session** — a saved conversation history (`ChatSession`) that persists multi-turn context across REPL invocations. Sessions are stored in `.teaagent/sessions/`. See [data-formats.md § Session JSON Schema](data-formats.md#session-json-schema).
 
-**Git sandbox** — when `--git-sandbox` is set, the agent runs in an isolated branch. Changes are discarded on failure or promoted to the main branch on success. Use `teaagent runs commit <run_id>` to merge a sandbox run.
+**Git sandbox** — in a git repository the agent runs in an isolated branch by default, and `--git-sandbox` has no effect. Interactive runs ask first (Enter or `y` enables it, `n` runs in the local workspace for that run, `always` saves `git_sandbox_consent=always`); non-interactive runs and runs with `git_sandbox_consent=always` enable it automatically. Changes are discarded on failure or promoted to the main branch on success. Use `teaagent runs commit <run_id>` to merge a sandbox run.
 
 ---
 

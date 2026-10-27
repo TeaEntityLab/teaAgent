@@ -22,7 +22,7 @@ lost or misreported during merge/discard/keep prompts.
 - A sandboxed run can merge, discard, or keep its branch without losing original branch state.
 - Dirty-worktree auto-stash is restored only after explicit resolution.
 - Run evidence records sandbox lifecycle state.
-- Help and docs do not imply opt-in when runtime defaults differ.
+- Help and docs do not imply opt-in when runtime defaults differ. — **Addressed (U-P1-19):** `--git-sandbox` help and `docs/api/{cli-api,README}.md` now state the automatic in-repo default; honoring or removing the flag stays open for human review.
 
 ## Verification
 

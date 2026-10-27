@@ -1,4 +1,6 @@
 # TICKET-15 — Cleanup: Redundant Audit Field + Stale Help Text
+
+**Status:** Complete (re-verified 2026-10-27: no `audit_trail` field in `teaagent/cli`; `/undo` help is journal-first in `teaagent/tui/rendering.py`)
 **Priority:** P3 | **Size:** XS | **CG Findings:** CG-14, CG-15-doc
 
 ---
