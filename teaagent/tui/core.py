@@ -380,6 +380,8 @@ class TeaAgentTUI:
                 undo_label = 'partial (shell commands not reversible)'
             else:
                 undo_label = cc.undo
+            if cc.undo_command:
+                undo_label = f'{undo_label} — {cc.undo_command}'
             print(f'  Undo: {undo_label}')
             print(f'  Last run: {cc.last_run_id}')
             if cc.active_rules is None:

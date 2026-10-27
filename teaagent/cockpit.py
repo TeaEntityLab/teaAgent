@@ -408,6 +408,9 @@ class ControlCockpitState:
     # (or not a git repo), 'unknown' = source failed to load.
     branch: str = 'unknown'  # branch name, 'detached HEAD', or 'none'
     undo: str = 'unknown'  # available | partial | none | unknown
+    # Exact undo command from summarize_run for the latest run with an undo
+    # journal; set only when undo is available or partial, else None.
+    undo_command: Optional[str] = None
     last_run_id: str = 'unknown'  # run id, 'none', or 'unknown'
     # Non-expired approval grants as 'tool (scope)'; None means unknown.
     active_rules: Optional[list[str]] = None
@@ -621,12 +624,22 @@ def build_control_cockpit(
             else:
                 # ADR-0042 / SEC-11: shell mutations are not in the journal, so
                 # undo for such a run must be disclosed as partial.
+                from teaagent.ergonomics.run_summary import summarize_run
                 from teaagent.run_undo import audit_events_used_shell_mutate
 
                 events = runs.show_run(undo_run)
                 cockpit.undo = (
                     'partial' if audit_events_used_shell_mutate(events) else 'available'
                 )
+                summary = summarize_run(
+                    root=root_path,
+                    run_id=undo_run,
+                    events=events,
+                    cost_cents=0.0,
+                    input_tokens=0,
+                    output_tokens=0,
+                )
+                cockpit.undo_command = str(summary['undo_command'])
     except Exception:
         logger.exception('run/undo state load failed')
         cockpit.last_run_id = 'unknown'
