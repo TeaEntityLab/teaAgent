@@ -576,20 +576,27 @@ def build_control_cockpit(
     # pending_count must reflect the real approval queue (per-run pending
     # approvals), not the memory-quarantine file — that count is surfaced under
     # memory.quarantine_count above.
+    # blocked_count is the number of runs paused on a pending approval: the
+    # cockpit contract's "blocked is loud" state (operator-cockpit contract).
     try:
-        from teaagent.integration.approval_parity import (
-            build_pending_approvals_snapshot,
+        from teaagent.approval.selectors import (
+            collect_pending_approval_views,
+            pending_approvals_payload,
         )
         from teaagent.run_store import RunStore
 
         _store = RunStore(root_path, readonly=True)
-        pending = int(build_pending_approvals_snapshot(_store).get('queue_depth', 0))
+        _views = collect_pending_approval_views(_store)
+        pending = int(pending_approvals_payload(_views).get('queue_depth', 0))
+        blocked = len({view.run_id for view in _views})
     except Exception:
         logger.exception('pending-approval count failed')
+        cockpit.errors.append('pending-approval count failed')
         pending = 0
+        blocked = 0
     cockpit.approval = {
         'pending_count': pending,
-        'blocked_count': 0,
+        'blocked_count': blocked,
         'mode': permission_mode,
     }
 

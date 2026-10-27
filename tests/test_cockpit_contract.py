@@ -170,6 +170,7 @@ def test_cockpit_shows_blocked(tmp_path: Path) -> None:
     assert queue['queue_depth'] == 1
     assert [p['run_id'] for p in queue['pending']] == ['run-blocked-001']
     assert snapshot['control']['approval']['pending_count'] == 1
+    assert snapshot['control']['approval']['blocked_count'] == 1
 
     tui = _tui()
     tui._control_cockpit = build_control_cockpit(tmp_path)
@@ -257,3 +258,18 @@ def test_cockpit_undo_command_renders_on_undo_line(tmp_path: Path) -> None:
     assert len(undo_lines) == 1
     assert 'Undo: available' in undo_lines[0]
     assert 'teaagent undo run-cmd-002' in undo_lines[0]
+
+
+def test_cockpit_pending_approval_failure_is_reported(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A failed approval-queue load is listed in errors, not silently zero."""
+    import teaagent.approval.selectors as selectors
+
+    def _boom(_store: object) -> list[object]:
+        raise RuntimeError('queue unreadable')
+
+    monkeypatch.setattr(selectors, 'collect_pending_approval_views', _boom)
+    cockpit = build_control_cockpit(tmp_path)
+    assert 'pending-approval count failed' in cockpit.errors
+    assert cockpit.approval['blocked_count'] == 0
