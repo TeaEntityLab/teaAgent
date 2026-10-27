@@ -186,8 +186,8 @@ class TeaAgentTUI:
                 cost_state=self._determine_cost_state(),
             )
         except Exception:
+            # Keep the previous state on failure (spec section 3.4).
             logger.debug('control cockpit unavailable', exc_info=True)
-            self._control_cockpit = None
 
         self._refresh_cockpit_state()
 
@@ -218,8 +218,8 @@ class TeaAgentTUI:
                 ),
             )
         except Exception:
+            # Keep the previous state on failure (spec section 3.4).
             logger.debug('cockpit state unavailable', exc_info=True)
-            self._cockpit_state = None
 
     def _should_use_split_pane(self) -> bool:
         """Check if terminal is large enough for split-pane layout."""
