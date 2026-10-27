@@ -242,11 +242,17 @@ def _enrich_liveness(
 
 # Keys computed at read time from process state and the audit log. They are
 # surfaced to callers but never written back into the record file.
-_DERIVED_RECORD_KEYS = frozenset({'alive', 'orphaned', 'run_outcome'})
+_DERIVED_RECORD_KEYS = frozenset(
+    {'alive', 'orphaned', 'run_outcome', 'exit_code_derived'}
+)
 
 
 def _persist_record_state(path: Path, data: dict[str, Any]) -> None:
     persisted = {k: v for k, v in data.items() if k not in _DERIVED_RECORD_KEYS}
+    if data.get('exit_code_derived'):
+        # A derived exit code is a read-time stand-in; storing it would make
+        # it look authoritative on the next read.
+        persisted.pop('exit_code', None)
     atomic_write_text(path, json.dumps(persisted, sort_keys=True))
 
 
@@ -287,10 +293,6 @@ def _last_terminal_run_event(
         if isinstance(e, dict) and e.get('event_type') in _TERMINAL_RUN_EVENTS
     ]
     return terminal[-1] if terminal else None
-
-
-def _has_clean_exit_record(root: Path, run_id: str, tenant_id: str) -> bool:
-    return _last_terminal_run_event(root, run_id, tenant_id) is not None
 
 
 def _workspace_root_for_record(record_path: Path) -> tuple[Path, str]:
@@ -355,9 +357,17 @@ def _derive_orphan_state(record_path: Path, data: dict[str, Any]) -> None:
         data['orphaned'] = True
         return
     w_root, tenant_id = _workspace_root_for_record(record_path)
-    if _has_clean_exit_record(w_root, run_id, tenant_id):
-        if data.get('exit_code') is None:
+    terminal = _last_terminal_run_event(w_root, run_id, tenant_id)
+    if terminal is not None:
+        # The audit log knows the outcome, so the run is not orphaned. Only a
+        # completed run may stand in for a lost exit code, and the stand-in is
+        # marked derived (BG-001 §1: a fallback exit_code=0 is not authoritative).
+        if (
+            data.get('exit_code') is None
+            and terminal.get('event_type') == 'run_completed'
+        ):
             data['exit_code'] = 0
+            data['exit_code_derived'] = True
         return
     data['orphaned'] = True
 
