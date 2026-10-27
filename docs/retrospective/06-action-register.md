@@ -98,12 +98,13 @@ Legend: ✅ Done (committed) · 🟡 In progress · ⬜ Not started · 🔵 Alre
 | Priority | Count | Distribution by Dimension |
 | --- | --- | --- |
 | P0 | 9 | Security 3, Architecture 2, UX 2, Governance 2 |
-| P2 | 36 | Security 11, Governance 10, Architecture 7, UX 8 |
-| **Total** | **67** | |
+| P1 | 22 | Security 4, Governance 5, Architecture 5, UX 8 |
+| P2 | 41 | Security 11, Governance 15, Architecture 7, UX 8 |
+| **Total** | **72** | Counted from the ID rows above (recounted 2026-10-27; the P1 row was missing and P2 was stale) |
 
 ### Status Summary
-| ✅ Done (verified) | 61 | S-P0-1, S-P0-2, S-P0-3, A-P0-1, A-P0-2, U-P0-1, U-P0-2, G-P0-1, G-P0-2; S-P1-1, S-P1-2, S-P1-3, S-P1-4, G-P1-1, G-P1-2, G-P1-3, A-P1-1, A-P1-2, A-P1-3, A-P1-4, A-P1-5, U-P1-1, U-P1-2, U-P1-3, U-P1-4, U-P1-5, U-P1-6; S-P2-1, S-P2-4, S-P2-5, S-P2-6, S-P2-7, S-P2-8, S-P2-9, S-P2-10, S-P2-11, G-P2-1, G-P2-2, G-P2-3, G-P2-5, G-P2-6, G-P2-7, G-P2-8, G-P2-9, G-P2-10, G-P2-11, G-P2-12, G-P2-13, A-P2-1, A-P2-2, A-P2-3, A-P2-5, A-P2-6, A-P2-7, U-P2-1, U-P2-2, U-P2-3, U-P2-4, U-P2-5, U-P2-6, U-P2-7, U-P2-8 |
-| 🟡 In progress | 0 | — |
+| ✅ Done (verified) | 67 | S-P0-1, S-P0-2, S-P0-3, G-P0-1, G-P0-2, A-P0-1, A-P0-2, U-P0-1, U-P0-2, S-P1-1, S-P1-2, S-P1-3, S-P1-4, G-P1-1, G-P1-2, G-P1-3, G-P1-4, G-P1-5, A-P1-1, A-P1-2, A-P1-3, A-P1-4, A-P1-5, U-P1-1, U-P1-2, U-P1-3, U-P1-4, U-P1-5, U-P1-6, U-P1-7, U-P1-8, S-P2-1, S-P2-4, S-P2-5, S-P2-6, S-P2-7, S-P2-8, S-P2-9, S-P2-10, S-P2-11, G-P2-1, G-P2-2, G-P2-3, G-P2-5, G-P2-6, G-P2-7, G-P2-8, G-P2-9, G-P2-10, G-P2-11, G-P2-12, G-P2-13, G-P2-20, A-P2-1, A-P2-2, A-P2-3, A-P2-5, A-P2-6, A-P2-7, U-P2-1, U-P2-2, U-P2-3, U-P2-4, U-P2-5, U-P2-6, U-P2-7, U-P2-8 |
+| 🟡 In progress | 1 | G-P2-21 |
 | ⬜ Not started | 0 | — |
 | 🔵 Already existed | 4 | S-P2-2, S-P2-3, G-P2-4, A-P2-4 |
 

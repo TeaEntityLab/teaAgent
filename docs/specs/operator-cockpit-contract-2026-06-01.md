@@ -50,7 +50,7 @@ render per surface, not recompute per surface.
 | blocked (approvals) | ✓ (warnings) | ✗ | ✓ | **TUI panel hides pending approvals** |
 | budget | ✓ | ✗ (fake, CG-03) | ✓ | must use real `cost_cents` (P1-1) |
 | last_run summary | ✗ | ✗ | ✓ | CLI/TUI show JSON, not the formatted summary |
-| recoverable | ✗ | ✗ | ⚠ | **no surface lists what is undoable** |
+| recoverable | ✗ | ✗ | ⚠ | **no surface lists what is undoable** (2026-10-27: the TUI control cockpit and its snapshot now report undo availability for the latest run with an undo journal, U-P1-7; per-file undo listing is still absent) |
 | memory | ✗ | ✓ (last 3) | ✓ | — |
 
 **Legend:** ✓ present · ⚠ partial/inconsistent · ✗ absent.

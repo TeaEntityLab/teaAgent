@@ -16,7 +16,7 @@ production or WAN deployments:
 | Prompt-injection detection | Approval gates only; no detector layer | SEC-NEW2 module with tests |
 | Behavioral contracts at run start | No signed pre-run contract artifact | SEC-NEW3 module with tests |
 | Shared workspace as silent default for subagents | Process/filesystem isolation modes differ | WS2-001 explicit isolation default + docs |
-| Unbounded subagent batches | Batch timeout/cancel incomplete | WS2-002 batch deadline enforcement |
+| Unbounded subagent batches | Closed 2026-10-27: the batch deadline bounds the call and a per-batch cancel token stops running children before their next tool call; an in-flight call may still finish | WS2-002 + G-P1-5 (`tests/test_subagent_batch_cancel_token.py`) |
 | Child budget inheritance | Child runs may not inherit all caps | WS2-003 budget envelope propagation |
 | Depth/concurrency bypass | Definitionless launches must not bypass policy | WS2-004 global depth controls |
 
