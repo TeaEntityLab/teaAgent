@@ -404,6 +404,24 @@ class ControlCockpitState:
     errors: list[str] = field(default_factory=list)
     last_updated: Optional[float] = None
 
+    # DU-011: run context. String sentinels: 'none' = source present but empty
+    # (or not a git repo), 'unknown' = source failed to load.
+    branch: str = 'unknown'  # branch name, 'detached HEAD', or 'none'
+    undo: str = 'unknown'  # available | none | unknown
+    last_run_id: str = 'unknown'  # run id, 'none', or 'unknown'
+    # Non-expired approval grants as 'tool (scope)'; None means unknown.
+    active_rules: Optional[list[str]] = None
+
+
+def _current_branch(root_path: Path) -> str:
+    """Return the checked-out branch name, or 'none' outside a git repository."""
+    named = _run_git(['symbolic-ref', '--short', '-q', 'HEAD'], cwd=root_path)
+    if named is not None and named.stdout.strip():
+        return named.stdout.strip()
+    if _run_git(['rev-parse', '--is-inside-work-tree'], cwd=root_path) is not None:
+        return 'detached HEAD'
+    return 'none'
+
 
 def build_control_cockpit(
     root: Path | str,
@@ -543,6 +561,47 @@ def build_control_cockpit(
         'limit_cents': cost_limit_cents,
         'state': cost_state,
     }
+
+    # ── run context: branch, last run, undo, active rules (DU-011) ──
+    try:
+        cockpit.branch = _current_branch(root_path)
+    except Exception:
+        logger.exception('git branch lookup failed')
+        cockpit.errors.append('git branch lookup failed')
+
+    try:
+        from teaagent.run_store import RunStore
+        from teaagent.run_undo import UndoJournal
+
+        runs = RunStore(root_path)
+        recent_runs = runs.list_runs(limit=1)
+        cockpit.last_run_id = recent_runs[0].run_id if recent_runs else 'none'
+        undo_run = runs.latest_run_with_undo()
+        if undo_run is None:
+            cockpit.undo = 'none'
+        else:
+            journal = UndoJournal(root_path, path=runs.undo_path(undo_run))
+            cockpit.undo = 'available' if journal.has_entries else 'none'
+    except Exception:
+        logger.exception('run/undo state load failed')
+        cockpit.last_run_id = 'unknown'
+        cockpit.undo = 'unknown'
+        cockpit.errors.append('run/undo state load failed')
+
+    try:
+        from teaagent.ergonomics._approval_grants import _grant_expired
+        from teaagent.ergonomics._approval_state import ApprovalPresetStore
+
+        grants = ApprovalPresetStore(root_path, readonly=True).list_grants()
+        cockpit.active_rules = [
+            f'{grant.tool_name} ({grant.scope})'
+            for grant in grants
+            if not _grant_expired(grant)
+        ]
+    except Exception:
+        logger.exception('approval rules load failed')
+        cockpit.active_rules = None
+        cockpit.errors.append('approval rules load failed')
 
     # ── context health (CTX-001) ──
     try:

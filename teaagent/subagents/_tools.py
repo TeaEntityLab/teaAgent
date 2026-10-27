@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 import time
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from typing import Any
@@ -15,6 +16,9 @@ from teaagent.subagents._manager import SubagentManager
 from teaagent.subagents._team_orchestrator import TeamOrchestrator
 from teaagent.subagents._types import DEFAULT_SUBAGENT_ISOLATION
 from teaagent.tools import ToolAnnotations, ToolRegistry
+
+# How often the batch loop re-checks the parent cancel token while waiting.
+_BATCH_CANCEL_POLL_SECONDS = 0.05
 
 
 def register_subagent_tools(
@@ -311,10 +315,15 @@ def _register_batch(
                 max_tool_calls=_as_int(task_obj.get('max_tool_calls')),
                 batch_index=batch_index,
                 isolation=isolation,
+                cancel_token=batch_token,
             )
 
         results: list[tuple[int, dict[str, Any]]] = []
         deadline = time.monotonic() + max(timeout_seconds, 1)
+        # One token per batch. Children check it before every tool dispatch, so
+        # setting it at the deadline stops them instead of letting them run on.
+        batch_token = threading.Event()
+        parent_cancel = config.cancel_token
         # Not a context manager: its __exit__ calls shutdown(wait=True), which
         # would block until every running subagent finishes and defeat the deadline.
         pool = ThreadPoolExecutor(max_workers=max_workers)
@@ -328,9 +337,11 @@ def _register_batch(
                 remaining = deadline - time.monotonic()
                 if remaining <= 0:
                     break
+                if parent_cancel is not None and parent_cancel.is_set():
+                    batch_token.set()
                 done, pending = wait(
                     pending,
-                    timeout=remaining,
+                    timeout=min(remaining, _BATCH_CANCEL_POLL_SECONDS),
                     return_when=FIRST_COMPLETED,
                 )
                 for future in done:
@@ -354,16 +365,18 @@ def _register_batch(
                         results.append((idx, _subagent_error(str(exc))))
                     continue
                 else:
-                    # Python threads cannot be killed and subagent runs expose no
-                    # cooperative cancel hook, so the still-running thread is
-                    # abandoned: it keeps running in the background and its result
-                    # is ignored.
+                    # Python threads cannot be killed. The batch token is already
+                    # set, so the child stops at its next cancel check; only a tool
+                    # call it had already dispatched may still finish. Its result
+                    # is discarded.
                     message = (
                         f'batch timeout after {timeout_seconds}s while task was '
-                        'running; result discarded'
+                        'running; cancel requested, result discarded'
                     )
                 results.append((idx, _subagent_error(message)))
         finally:
+            # Set on every exit path so no child outlives the batch.
+            batch_token.set()
             # Do not wait for abandoned threads; completed results were already
             # collected above.
             pool.shutdown(wait=False, cancel_futures=True)

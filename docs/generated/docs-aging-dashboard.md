@@ -4,7 +4,7 @@
 
 **Stale threshold:** 90 days since `Last reviewed`
 **Current-truth docs scanned:** 17
-**Needs attention (working tier only):** 7
+**Needs attention (working tier only):** 9
 **Archive-tier docs (exempt from staleness):** 0
 
 Regenerate: `python3 scripts/report_docs_aging.py`
@@ -29,7 +29,7 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 
 | Document | Status | Last reviewed | File mtime | Notes |
 | --- | --- | --- | --- | --- |
-| `docs/maturity-matrix.md` | stale_by_mtime | 2026-09-16 | 2026-10-26 | Missing owner banner; File modified after last reviewed date |
+| `docs/maturity-matrix.md` | stale_by_mtime | 2026-09-16 | 2026-10-27 | Missing owner banner; File modified after last reviewed date |
 
 ### project
 
@@ -41,7 +41,19 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 
 | Document | Status | Last reviewed | File mtime | Notes |
 | --- | --- | --- | --- | --- |
-| `docs/roadmap-status.md` | stale_by_mtime | 2026-10-23 | 2026-10-26 | Missing review trigger banner; File modified after last reviewed date |
+| `docs/roadmap-status.md` | stale_by_mtime | 2026-10-23 | 2026-10-27 | Missing review trigger banner; File modified after last reviewed date |
+
+### strategy
+
+| Document | Status | Last reviewed | File mtime | Notes |
+| --- | --- | --- | --- | --- |
+| `docs/backlog-priority.md` | stale_by_mtime | 2026-10-26 | 2026-10-27 | Missing owner banner; File modified after last reviewed date |
+
+### verification
+
+| Document | Status | Last reviewed | File mtime | Notes |
+| --- | --- | --- | --- | --- |
+| `docs/acceptance.md` | stale_by_mtime | 2026-09-16 | 2026-10-27 | File modified after last reviewed date |
 
 ## Review Triggers (Current-Truth Docs)
 
@@ -67,10 +79,10 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 
 ## Corpus Cost (G5 Signal)
 
-**Total docs:** 675 (baseline 582 at diagnosis, delta +93)
-**Live corpus (non-archive):** 377
+**Total docs:** 676 (baseline 582 at diagnosis, delta +94)
+**Live corpus (non-archive):** 378
 **Archive-tier docs (total):** 298
-**Working-tier docs unreferenced by INDEX.md:** 323
+**Working-tier docs unreferenced by INDEX.md:** 324
 
 Dead-weight candidates (working tier, not linked from INDEX.md):
 
@@ -94,7 +106,7 @@ Dead-weight candidates (working tier, not linked from INDEX.md):
 - `adr/0017-backend-adapter-interfaces.md`
 - `adr/0018-async-from-sync-pattern.md`
 - `adr/0019-phase-4-federated-swarm-consensus.md`
-- ... and 303 more
+- ... and 304 more
 
 ### Archive-tier growth (files added per month, last 6 months)
 

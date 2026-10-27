@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import threading
+import time
 import warnings
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -9,7 +10,7 @@ from pathlib import Path
 from typing import Any, Optional, cast, overload
 from uuid import uuid4
 
-from teaagent.audit import AuditLogger
+from teaagent.audit import AuditEvent, AuditLogger
 from teaagent.auto_mode import AutoModeConfig
 from teaagent.browser_tools import register_browser_tools
 from teaagent.budget import RunBudget
@@ -22,7 +23,7 @@ from teaagent.code_analysis import (
 )
 from teaagent.context import ContextCompactor
 from teaagent.errors import ToolValidationError
-from teaagent.heartbeat import Heartbeat
+from teaagent.heartbeat import Heartbeat, ProgressProvider
 from teaagent.hooks import HookRegistry
 from teaagent.integration.run_contract import build_run_budget
 from teaagent.llm import (
@@ -697,10 +698,57 @@ def _create_runner_and_engine(
     return runner, engine
 
 
+def _heartbeat_progress(
+    config: ChatAgentConfig,
+    audit_logger: AuditLogger,
+    engine: ModelDecisionEngine,
+) -> ProgressProvider:
+    """Build the progress snapshot read by each heartbeat tick.
+
+    The tool name and in-flight flag come from the runner's ``tool_call_*``
+    audit events. The checkpoint is the last completed tool call, because the
+    runner saves its checkpoint right after each completion; it is None when
+    no checkpoint store is configured. Elapsed time counts from this call.
+    """
+    started_at = time.monotonic()
+
+    def _progress() -> dict[str, object]:
+        tool: Optional[str] = None
+        tool_in_flight = False
+        last_done: Optional[AuditEvent] = None
+        finished: set[object] = set()
+        for event in reversed(list(audit_logger.events)):
+            if event.event_type in ('tool_call_completed', 'tool_call_failed'):
+                finished.add(event.payload.get('call_id'))
+                if last_done is None and event.event_type == 'tool_call_completed':
+                    last_done = event
+            elif event.event_type == 'tool_call_started' and tool is None:
+                tool = event.payload.get('tool_name')
+                tool_in_flight = event.payload.get('call_id') not in finished
+            if tool is not None and last_done is not None:
+                break
+        checkpoint = None
+        if last_done is not None and config.checkpoint_store is not None:
+            checkpoint = {
+                'call_id': last_done.payload.get('call_id'),
+                'at': last_done.created_at,
+            }
+        return {
+            'tool': tool,
+            'tool_in_flight': tool_in_flight,
+            'elapsed_seconds': round(time.monotonic() - started_at, 3),
+            'cost_cents': float(engine.usage.cost_cents),
+            'checkpoint': checkpoint,
+        }
+
+    return _progress
+
+
 def _setup_heartbeat(
     config: ChatAgentConfig,
     audit_logger: AuditLogger,
     run_id: str,
+    engine: ModelDecisionEngine,
 ) -> Optional[Heartbeat]:
     """Setup heartbeat monitoring if configured.
 
@@ -714,6 +762,7 @@ def _setup_heartbeat(
             run_id,
             interval_seconds=config.heartbeat_seconds,
             liveness_root=config.root,
+            progress=_heartbeat_progress(config, audit_logger, engine),
         )
         heartbeat.start()
     return heartbeat
@@ -870,7 +919,7 @@ def _run_chat_agent_impl(
         run_id,
         audit_logger,
     )
-    heartbeat = _setup_heartbeat(config, audit_logger, run_id)
+    heartbeat = _setup_heartbeat(config, audit_logger, run_id, engine)
     run_started_extra = _build_run_started_extra(runner, context_extra, config)
     return _execute_chat_run(
         task=task,
