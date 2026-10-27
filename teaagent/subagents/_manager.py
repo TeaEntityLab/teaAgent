@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
@@ -172,6 +173,7 @@ def _build_subagent_config(
     def_used: str,
     approval_handler: Any,
     inherited_mode: Any,
+    cancel_token: Optional[threading.Event] = None,
 ) -> Any:
     return replace(
         parent_config,
@@ -182,6 +184,11 @@ def _build_subagent_config(
         model=(sub_def.model if sub_def and sub_def.model else parent_config.model),
         permission_mode=inherited_mode,
         approval_handler=approval_handler,
+        # A batch passes its own token so the deadline can stop the child; other
+        # callers keep the parent's token.
+        cancel_token=(
+            cancel_token if cancel_token is not None else parent_config.cancel_token
+        ),
     )
 
 
@@ -244,6 +251,7 @@ class SubagentManager:
         isolation: str = DEFAULT_SUBAGENT_ISOLATION,
         skill_path: Optional[str | Path] = None,
         skill_risk_level: Optional[Any] = None,
+        cancel_token: Optional[threading.Event] = None,
     ) -> dict[str, Any]:
         """Spawn and run an isolated subagent, returning a serializable result payload."""
         if depth >= self._parent_config.max_subagent_depth:
@@ -347,6 +355,7 @@ class SubagentManager:
             def_used,
             approval_handler,
             inherited_mode,
+            cancel_token=cancel_token,
         )
 
         return self._execute_subagent_run(

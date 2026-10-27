@@ -971,6 +971,9 @@ class AgentRunner:
                             raw_decision_preview=preview,
                         )
 
+                # decide() may have blocked for seconds; re-check before dispatch.
+                if self.cancel_token is not None and self.cancel_token.is_set():
+                    raise RunCancelledError('run cancelled by cancel token')
                 tool_calls, context = self._execute_tool_decision(
                     decision,
                     context,
