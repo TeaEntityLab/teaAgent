@@ -971,14 +971,10 @@ class ApprovalManager:
                 reason_code=reason_code,
             )
 
-        if self.jit_state.is_tool_session_approved(tool_name):
-            return
-        from teaagent.policy import compute_scoped_payload_digest
-
-        payload_digest = compute_scoped_payload_digest(tool_name, arguments or {})
-        if self.jit_state.consume_once(call_id, payload_digest):
-            return
-
+        # A matched deny preset is terminal over every grant (owner decision
+        # 2026-10-27, extending G-P1-4). It is checked before the session and
+        # once allows below, so neither can override it, and before consume_once,
+        # so a denied attempt leaves a once grant unconsumed.
         preset_decision = self._store_manager.check_preset(
             tool_name=tool_name,
             permission_mode=self.permission_mode.value,
@@ -989,6 +985,15 @@ class ApprovalManager:
                 f"Tool call '{call_id}' for '{tool_name}' is denied by an approval preset.",
                 reason_code=DenialReasonCode.POLICY_DENIED,
             )
+
+        if self.jit_state.is_tool_session_approved(tool_name):
+            return
+        from teaagent.policy import compute_scoped_payload_digest
+
+        payload_digest = compute_scoped_payload_digest(tool_name, arguments or {})
+        if self.jit_state.consume_once(call_id, payload_digest):
+            return
+
         if (
             preset_decision == 'allow'
             and self.approval_store
