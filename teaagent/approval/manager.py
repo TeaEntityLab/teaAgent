@@ -226,7 +226,7 @@ class MultiSigQuorumConfig:
 
 
 @dataclass(frozen=True)
-class ApprovalRequest:
+class PeerApprovalRequest:
     """Request for peer approval broadcast via P2P sync."""
 
     request_id: str
@@ -237,6 +237,13 @@ class ApprovalRequest:
     timestamp: float
     requester_agent_id: str
     signatures: list[PeerSignature] = field(default_factory=list)
+
+
+# Deprecated alias (A-P1-8, owner decision Q4): the P2P request was renamed to
+# PeerApprovalRequest because two other classes are also named ApprovalRequest
+# (approval.backend and runner._types). This name is the same class object.
+# Plain alias: this module has no module-level __getattr__ deprecation pattern.
+ApprovalRequest = PeerApprovalRequest
 
 
 class PermissionModeEnforcer:
@@ -542,7 +549,7 @@ class MultiSigQuorumManager:
             arguments,
             request_id=request_id,
         )
-        request = ApprovalRequest(
+        request = PeerApprovalRequest(
             request_id=request_id,
             tool_name=tool_name,
             call_id=call_id,
@@ -597,7 +604,9 @@ class MultiSigQuorumManager:
             tool_name, call_id, arguments, request_id=request_id, run_id=run_id
         )
 
-    def _collect_peer_signatures(self, request: ApprovalRequest) -> list[PeerSignature]:
+    def _collect_peer_signatures(
+        self, request: PeerApprovalRequest
+    ) -> list[PeerSignature]:
         """Collect peer signatures for approval request.
 
         Integrates with federated_sync to broadcast the request via P2P sync,
@@ -1467,6 +1476,7 @@ def _normalize_shell_arg(command: str) -> str:
 __all__ = [
     'ApprovalManager',
     'ApprovalRequest',
+    'PeerApprovalRequest',
     'ApprovalStoreManager',
     'JITApprovalManager',
     'JITApprovalState',
