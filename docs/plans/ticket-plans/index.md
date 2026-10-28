@@ -59,7 +59,7 @@ only the daily-driver fixes:
 | [TICKET-13](TICKET-13-plan.md) | P2 | S | `chat_session_controller.py` | Fixed: exception swallowing replaced with proper isinstance checks and dependency injection |
 | [TICKET-15](TICKET-15-plan.md) | P3 | XS | `chat_repl.py`, `_agent.py` | Fixed: redundant `audit_trail` field removed; stale `/undo` help text updated |
 | [TICKET-16 Phase 1](TICKET-16-plan.md) | P1 | XS | `chat_repl.py` | Fixed: print only working suspend review command; remove broken hints |
-| [TICKET-16 Phase 2](TICKET-16-plan.md) | P1 | M | `chat_repl.py`, `_agent.py`, `run_store.py` | Partial (re-verified 2026-10-27): `run_started` is written at suspend, but observations are not rehydrated on resume (`integration/resume_preparation.py` reads `observations_for_run`, empty for REPL suspensions); the plan requires human review |
+| [TICKET-16 Phase 2](TICKET-16-plan.md) | P1 | M | `cli/_handlers/_agent/resume.py`, `integration/resume_preparation.py` | Fixed (2026-10-27, owner-approved plan): REPL suspension checkpoint is JSON-safe and resume rehydrates its saved observations; tests: `test_repl_suspend_resume_roundtrip`, `test_repl_resume_restores_last_ten_observations` |
 | [TASK-DD2-001](TASK-DD2-001-plan.md) | P1 | S | `_chat.py`, `tui/__init__.py` | Fixed: positional task forwarded to TUI REPL |
 | [TASK-DD2-002](TASK-DD2-002-plan.md) | P1 | S | `tui/__init__.py` | Fixed: `_load_tui_state` respects explicit CLI root flag |
 | [TASK-DD2-003](TASK-DD2-003-plan.md) | P1 | M | `tui/__init__.py`, `chat_session_controller.py` | Fixed: make TUI cost ledger authoritative |

@@ -18,6 +18,29 @@ if TYPE_CHECKING:
     from teaagent.chat_agent import ChatAgentConfig
 
 
+def _jsonable_observation(observation: object) -> object:
+    """Reduce one REPL session observation to JSON-safe data.
+
+    REPL observations carry a ``RunResult`` dataclass under ``result``, which
+    ``json.dumps`` rejects. The checkpoint keeps only the fields a resumed
+    session needs: the run id, status, final answer text and error message.
+    """
+    from teaagent.runner._types import RunResult
+
+    if not isinstance(observation, dict):
+        return json.loads(json.dumps(observation, default=str))
+    record = dict(observation)
+    result = record.get('result')
+    if isinstance(result, RunResult):
+        record['result'] = {
+            'run_id': result.run_id,
+            'status': result.status,
+            'answer': result.final_answer.content if result.final_answer else None,
+            'error_message': result.error_message,
+        }
+    return json.loads(json.dumps(record, default=str))
+
+
 def suspend_to_background(
     config: ChatAgentConfig,
     session_context: dict,
@@ -70,9 +93,10 @@ def suspend_to_background(
         'session_context': {
             'observations_count': len(session_context.get('observations', [])),
             'compaction_count': session_context.get('compaction_count', 0),
-            'observations': session_context.get('observations', [])[-10:]
-            if session_context.get('observations')
-            else [],  # Keep last 10 for context
+            'observations': [
+                _jsonable_observation(obs)
+                for obs in session_context.get('observations', [])[-10:]
+            ],  # Keep last 10 for context; resume rehydrates these (TICKET-16 P2)
         },
         'targeted_files': [
             str(f.resolve().relative_to(root.resolve()))

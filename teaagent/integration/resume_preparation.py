@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -46,6 +47,31 @@ def _compact_observations(
             'resume_compaction': {'truncated': True, 'kept_observations': 20}
         }
     return observations, None
+
+
+def _suspended_session_observations(
+    root: str | Path, run_id: str
+) -> list[dict[str, Any]]:
+    """Return the observations saved in a REPL suspension checkpoint, if any.
+
+    Reads ``.teaagent/suspension-<run_id>.json`` (written by
+    ``suspend_to_background``). A missing or unreadable checkpoint yields an
+    empty list so resume proceeds as it did before rehydration existed.
+    """
+    checkpoint_file = Path(root) / '.teaagent' / f'suspension-{run_id}.json'
+    try:
+        data = json.loads(checkpoint_file.read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        return []
+    if not isinstance(data, dict):
+        return []
+    session_context = data.get('session_context')
+    if not isinstance(session_context, dict):
+        return []
+    observations = session_context.get('observations')
+    if not isinstance(observations, list):
+        return []
+    return [obs for obs in observations if isinstance(obs, dict)]
 
 
 def _resolve_pending_approval(
@@ -145,6 +171,10 @@ def prepare_run_resume(
             pending_warning = _unmatched_effect_warning(checkpoint)
         else:
             initial_observations = store.observations_for_run(run_id)
+            if not initial_observations:
+                # REPL suspensions write no tool_call_completed events; their
+                # session observations live in the suspension checkpoint.
+                initial_observations = _suspended_session_observations(root, run_id)
             initial_observations, initial_context_extra = _compact_observations(
                 initial_observations, auto_compact=auto_compact
             )
