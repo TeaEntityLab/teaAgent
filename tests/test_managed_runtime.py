@@ -240,6 +240,31 @@ def test_run_task_uses_runner(google_adk_setup) -> None:
     assert call_kwargs['new_message'].parts[0].text == 'hello'
 
 
+def test_run_task_runs_real_adk_agent_with_fresh_session_id(google_adk_setup) -> None:
+    """A never-seen session_id must not raise SessionNotFoundError.
+
+    google-adk 2.3 auto-created sessions by default; 2.13 requires
+    ``auto_create_session=True`` on the Runner. This runs a real ADK
+    Runner with a model-free agent so no network or API key is needed.
+    """
+    from google.adk.agents import BaseAgent
+    from google.adk.events import Event
+    from google.genai import types
+
+    class _EchoAgent(BaseAgent):
+        async def _run_async_impl(self, ctx):  # type: ignore[no-untyped-def]
+            yield Event(
+                author=self.name,
+                invocation_id=ctx.invocation_id,
+                content=types.Content(role='model', parts=[types.Part(text='echo-ok')]),
+            )
+
+    runtime = GoogleADKRuntime(agent_name='demo_app', agent=_EchoAgent(name='echo'))
+    output = runtime.run_task('hi', context={'session_id': 'fresh-session-id'})
+
+    assert output == 'echo-ok'
+
+
 @pytest.fixture
 def vertex_mock_setup():
     import sys
