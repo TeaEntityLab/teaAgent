@@ -4,6 +4,13 @@ All notable changes to TeaAgent are tracked here.
 
 ## Unreleased
 
+### Deprecated
+
+- **`--git-sandbox`** (`teaagent agent run`) is deprecated. It has had no effect
+  since the git sandbox became automatic in git repositories. The flag is still
+  accepted, but passing it prints a deprecation warning to stderr. It will be
+  removed in a future release. Sandbox runtime behavior is unchanged.
+
 - **Dependency bumps** (one PR per bump, each reproduced on current `main`
   with `uv lock --upgrade-package`; supersedes the stalled Dependabot PRs):
   `actions/setup-python` 7, `github/codeql-action` 4.37.3, `pytest` 9.1.1,
