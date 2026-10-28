@@ -79,10 +79,10 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 
 ## Corpus Cost (G5 Signal)
 
-**Total docs:** 678 (baseline 582 at diagnosis, delta +96)
-**Live corpus (non-archive):** 380
+**Total docs:** 679 (baseline 582 at diagnosis, delta +97)
+**Live corpus (non-archive):** 381
 **Archive-tier docs (total):** 298
-**Working-tier docs unreferenced by INDEX.md:** 326
+**Working-tier docs unreferenced by INDEX.md:** 327
 
 Dead-weight candidates (working tier, not linked from INDEX.md):
 
@@ -106,7 +106,7 @@ Dead-weight candidates (working tier, not linked from INDEX.md):
 - `adr/0017-backend-adapter-interfaces.md`
 - `adr/0018-async-from-sync-pattern.md`
 - `adr/0019-phase-4-federated-swarm-consensus.md`
-- ... and 306 more
+- ... and 307 more
 
 ### Archive-tier growth (files added per month, last 6 months)
 
