@@ -47,7 +47,7 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 
 | Document | Status | Last reviewed | File mtime | Notes |
 | --- | --- | --- | --- | --- |
-| `docs/backlog-priority.md` | stale_by_mtime | 2026-10-26 | 2026-10-28 | Missing owner banner; File modified after last reviewed date |
+| `docs/backlog-priority.md` | stale_by_mtime | 2026-10-26 | 2026-10-27 | Missing owner banner; File modified after last reviewed date |
 
 ### verification
 
