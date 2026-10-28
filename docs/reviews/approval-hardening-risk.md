@@ -56,3 +56,15 @@ Proceed with the four commits, each reviewed separately. Q1 (deny precedence, F1
 ## Human Approval Gate
 
 **OPEN.** No approval has been recorded. The owner reviews this report before the branch merges.
+
+## Test-weakening sign-off (owner, 2026-10-28)
+
+The owner approved the six test removals or reductions that `check_test_assertion_regression` flags against `main`. Each one exercised only the archived `ApprovalPolicy` multi-sig and high-risk copy (A-P1-7):
+
+- `test_approval_async_from_sync.py::test_policy_signature_collection_from_running_loop`
+- `test_policy.py::test_high_risk_detection_default_patterns`, `test_del_shuts_down_signature_executor`, `test_del_is_safe_to_call_twice`
+- `test_sec_tier1_hardening.py::test_policy_approval_hash_binds_request_id`, and the `ApprovalPolicy` assertion in `test_approval_hash_is_single_source_of_truth`
+
+The live path stays covered. SEC-09 request-id binding on `MultiSigQuorumManager` is pinned by `test_multisig_hash_binds_unique_request_id`. The manager-against-canonical hash agreement remains in `test_approval_hash_is_single_source_of_truth`. The removed tests are archived with the code in `docs/archive/code/policy-multisig-highrisk-tests-2026-10-28.py.txt`.
+
+This sign-off covers the test removals only. The PR's Human Review gate for the approval changes stays open.
