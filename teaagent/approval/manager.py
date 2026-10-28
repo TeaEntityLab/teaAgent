@@ -55,8 +55,13 @@ def is_protected_skill_path(workspace_root: Path, target_path: Path) -> bool:
     """
     try:
         relative = target_path.resolve().relative_to(workspace_root.resolve())
-    except (ValueError, OSError):
+    except ValueError:
+        # Outside the workspace: not a protected skill directory.
         return False
+    except OSError:
+        # Fail closed (owner decision 2026-10-27, approval split-plan Q6, F5):
+        # a path that cannot be resolved cannot be shown to be unprotected.
+        return True
 
     relative_str = str(relative)
 
@@ -1146,8 +1151,12 @@ class ApprovalManager:
                 current = current / part
                 if current.is_symlink():
                     return True
-        except (ValueError, OSError):
+        except ValueError:
             return False
+        except OSError:
+            # Fail closed (owner decision 2026-10-27, approval split-plan Q6, F3):
+            # a component whose symlink status cannot be read is treated as unsafe.
+            return True
         return False
 
     def _assert_paths_in_workspace(
