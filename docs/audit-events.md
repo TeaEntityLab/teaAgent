@@ -49,6 +49,8 @@ Each line has this envelope:
 | `run_paused` | `AgentRunner.run` | `status`, `approval`, `cost_cents` |
 | `run_completed` | `AgentRunner.run` | `answer`, `metadata`, `cost_cents` |
 | `run_failed` | `AgentRunner.run` | `category`, `message`, `cost_cents` |
+| `background_submitted` | `BackgroundRunStore.start` (`lifecycle-<h>.jsonl`, one per workspace, `h` = first 12 hex of sha256 of the workspace root; envelope `run_id` `background:<background_id>`) | `background_id`, `child_run_id` (always null), `pid`, `started_at`, `command_digest`, `label` |
+| `background_stopped` | `BackgroundRunStore.stop` on the first transition (`lifecycle-<h>.jsonl`, one per workspace; envelope `run_id` `background:<background_id>`) | `background_id`, `child_run_id`, `pid`, `stop_signal`, `stopped_at`, `exit_code`, `exit_code_derived` |
 | `heartbeat` | `Heartbeat.tick` | `tick`, `interval_seconds`; with a progress provider (agent runs) also `tool`, `tool_in_flight`, `elapsed_seconds`, `cost_cents`, `checkpoint`, or `progress_unavailable` when the provider fails |
 
 ## Compatibility

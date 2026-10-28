@@ -119,9 +119,14 @@ when the owner runs the dogfood session.
    `RunEventType`: `BACKGROUND_SUBMITTED`, `BACKGROUND_STOPPED` with
    payloads `{background_id, pid, command_digest, label?}` /
    `{background_id, stop_signal, stopped_at}` — emitted by the parent
-   (submitter/stopper), consumed by audit like all spine events. Today
-   these transitions exist only as JSON record fields, invisible to the
-   audit chain.
+   (submitter/stopper) and written to the dedicated, hash-chained
+   `<BackgroundRunStore.dir>/lifecycle-<sha256(workspace root)[:12]>.jsonl`
+   (ADR 0032 Amendment A1, owner decision Q6; per-workspace file and
+   `child_run_id` payload key by owner decision 2026-10-27), not to a run's own
+   audit log. The envelope `run_id` is `background:<background_id>`, and the
+   payload key that carries the child run id is `child_run_id`. The command is recorded as `command_digest`
+   only. Before this change these transitions existed only as JSON record
+   fields, invisible to any audit chain.
 6. **Stop is safe and idempotent.** `stop` on an already-dead process
    records the stop without raising; repeated `stop` calls converge on the
    same terminal record.

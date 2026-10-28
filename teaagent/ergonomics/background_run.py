@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
@@ -11,9 +12,22 @@ from pathlib import Path
 from typing import Any, Optional
 from uuid import uuid4
 
+from teaagent.audit import AuditLogger
+from teaagent.errors import ErrorCategory
 from teaagent.storage import atomic_write_text
 
 logger = logging.getLogger(__name__)
+
+
+def lifecycle_log_path(root: str | Path, *, directory: Path) -> Path:
+    """Return ``<directory>/lifecycle-<h>.jsonl`` for workspace ``root``.
+
+    ``h`` is the first 12 hex chars of sha256 of the resolved workspace root
+    (ADR-0032 Amendment A1, owner decision 2026-10-27). AuditLogger keys its
+    HMAC chain by file stem, so each workspace gets its own chain key.
+    """
+    digest = hashlib.sha256(str(Path(root).resolve()).encode('utf-8')).hexdigest()
+    return Path(directory) / f'lifecycle-{digest[:12]}.jsonl'
 
 
 def _utc_now() -> str:
@@ -42,6 +56,10 @@ def _get_tenant_id_from_path(path: Path) -> str:
     except Exception:
         logger.exception('tenant id extraction failed')
     return 'default'
+
+
+def _command_digest(command: list[str]) -> str:
+    return hashlib.sha256(json.dumps(command).encode('utf-8')).hexdigest()
 
 
 @dataclass(frozen=True)
@@ -118,7 +136,58 @@ class BackgroundRunStore:
             label=label,
         )
         atomic_write_text(record_path, json.dumps(record.to_dict(), sort_keys=True))
+        self._emit_lifecycle(
+            'BACKGROUND_SUBMITTED',
+            background_id,
+            {
+                'background_id': background_id,
+                'child_run_id': None,
+                'pid': record.pid,
+                'started_at': record.started_at,
+                'command_digest': _command_digest(command),
+                'label': record.label,
+            },
+        )
         return record
+
+    def _emit_lifecycle(
+        self,
+        member_name: str,
+        background_id: str,
+        payload: dict[str, object],
+    ) -> None:
+        """Append one lifecycle event to the workspace lifecycle chain (call after persist).
+
+        Outside compliance mode a failed append is logged at ERROR with its
+        category and ``background_id``, and is not retried (ADR 0032 A1.2, Q4).
+        In compliance mode the failure raises.
+        """
+        from teaagent.runner._events import RunEventType, run_event_to_audit_event_type
+        from teaagent.security_env import compliance_mode
+
+        audit_type = run_event_to_audit_event_type(RunEventType[member_name])
+        try:
+            audit = AuditLogger(path=lifecycle_log_path(self.root, directory=self.dir))
+            audit.record(audit_type, f'background:{background_id}', **payload)
+            if audit.disk_error is not None:
+                raise audit.disk_error
+        except Exception as exc:
+            if compliance_mode():
+                raise
+            logger.error(
+                'background lifecycle event %s not recorded for background_id=%s '
+                '(category=%s): %s; not retried',
+                audit_type,
+                background_id,
+                ErrorCategory.SYSTEM.value,
+                exc,
+                extra={
+                    'event': 'background_lifecycle_emit_failed',
+                    'background_id': background_id,
+                    'error_category': ErrorCategory.SYSTEM.value,
+                    'error_severity': 'high',
+                },
+            )
 
     def get(self, background_id: str) -> dict[str, Any]:
         record_path = self._record_path(background_id)
@@ -215,6 +284,24 @@ class BackgroundRunStore:
         data.pop('orphaned', None)
         if not self.readonly:
             _persist_record_state(self._record_path(background_id), data)
+            child_run_id = data.get('run_id')
+            self._emit_lifecycle(
+                'BACKGROUND_STOPPED',
+                background_id,
+                {
+                    'background_id': background_id,
+                    'child_run_id': (
+                        child_run_id
+                        if isinstance(child_run_id, str) and child_run_id
+                        else None
+                    ),
+                    'pid': pid,
+                    'stop_signal': signal_name,
+                    'stopped_at': data['stopped_at'],
+                    'exit_code': data.get('exit_code'),
+                    'exit_code_derived': data.get('exit_code_derived') is True,
+                },
+            )
         return data
 
 

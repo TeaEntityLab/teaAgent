@@ -51,7 +51,7 @@ def _compact_observations(
 
 def _suspended_session_observations(
     root: str | Path, run_id: str
-) -> list[dict[str, Any]]:
+) -> list[dict[str, object]]:
     """Return the observations saved in a REPL suspension checkpoint, if any.
 
     Reads ``.teaagent/suspension-<run_id>.json`` (written by
