@@ -25,7 +25,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# High-risk keyword patterns derived from policy.py::_is_high_risk_operation
+# High-risk keyword patterns derived from the archived policy.py::_is_high_risk_operation
+# (docs/archive/code/policy-multisig-highrisk-2026-10-28.py.txt, A-P1-7)
 # and teaagent consensus RiskLevel semantics.
 # ---------------------------------------------------------------------------
 

@@ -1,0 +1,297 @@
+# ARCHIVED 2026-10-28 (A-P1-7, owner decision Q3 on the approval split plan, 2026-10-27).
+#
+# Origin: teaagent/policy.py, ApprovalPolicy, as of origin/main f92e776d (2026-10-28).
+# Reason: a second multi-sig quorum and high-risk implementation with no production
+# caller. The live path is MultiSigQuorumManager in teaagent/approval/manager.py.
+# The hard-coded default high-risk list ('/prod', '/production', 'database', 'delete',
+# 'rm -rf') in _is_high_risk_operation was never active in production; the live
+# MultiSigQuorumManager.is_high_risk uses config.high_risk_patterns (default empty).
+# Policy: archive rather than delete (owner policy, unless the code is wrong).
+#
+# Not executable. Kept verbatim (text only) so the removed code can be read or
+# restored with `git show <archive-commit>^:teaagent/policy.py`.
+# The matching tests are in policy-multisig-highrisk-tests-2026-10-28.py.txt.
+#
+# Sections below are verbatim line ranges from the origin commit:
+#   1. ApprovalPolicy._signature_executor field (lines 70-72)
+#   2. ApprovalPolicy.__post_init__ executor creation (lines 76-83)
+#   3. The archived-methods note (lines 162-165)
+#   4. Methods _check_command_args .. _run_async_signature_collection and __del__ (lines 204-461)
+
+# ---- 1. dataclass field (origin lines 70-72) ----
+    _signature_executor: concurrent.futures.ThreadPoolExecutor = field(
+        init=False, repr=False
+    )
+# ---- 2. __post_init__ executor creation (origin lines 76-83) ----
+        # Frozen dataclass: bypass setattr guard for non-field attributes.
+        object.__setattr__(
+            self,
+            '_signature_executor',
+            concurrent.futures.ThreadPoolExecutor(
+                max_workers=2, thread_name_prefix='sig-collect'
+            ),
+        )
+# ---- 3. archived-methods note (origin lines 162-165) ----
+    # Note: Multi-sig quorum methods are kept here for backward compatibility
+    # and complex federated_sync integration. They can be migrated to ApprovalManager
+    # in a future iteration.
+
+# ---- 4. archived methods and __del__ (origin lines 204-461) ----
+    def _check_command_args(self, arguments: dict[str, Any], pattern: str) -> bool:
+        if 'command' not in arguments and 'cmd' not in arguments:
+            return False
+        command_arg = arguments.get('command') or arguments.get('cmd', '')
+        if isinstance(command_arg, str):
+            normalized_cmd = self._normalize_shell_arg(command_arg)
+            return pattern in normalized_cmd
+        if isinstance(command_arg, list):
+            joined_cmd = ' '.join(str(item) for item in command_arg)
+            normalized_cmd = self._normalize_shell_arg(joined_cmd)
+            return pattern in normalized_cmd
+        normalized_cmd = self._normalize_shell_arg(str(command_arg))
+        return pattern in normalized_cmd
+
+    def _is_high_risk_operation(
+        self, tool_name: str, arguments: dict[str, Any] | None
+    ) -> bool:
+        if not arguments:
+            return False
+
+        for pattern in self.multi_sig_config.high_risk_patterns:
+            if pattern in tool_name:
+                return True
+            args_str = json.dumps(arguments, sort_keys=True)
+            if pattern in args_str:
+                return True
+
+        default_high_risk = ['/prod', '/production', 'database', 'delete', 'rm -rf']
+
+        for pattern in default_high_risk:
+            if pattern in tool_name.lower():
+                return True
+            if arguments:
+                args_str = json.dumps(arguments, sort_keys=True).lower()
+                if pattern in args_str:
+                    return True
+                if self._check_command_args(arguments, pattern):
+                    return True
+
+        return False
+
+    def _check_multi_sig_quorum(
+        self,
+        tool_name: str,
+        call_id: str,
+        arguments: dict[str, Any] | None,
+    ) -> bool:
+        """Check multi-signature quorum for high-risk operations.
+
+        Returns:
+            True if quorum is reached and operation is approved, False otherwise.
+        """
+        if not self.multi_sig_config.enabled:
+            return False
+
+        if not self.agent_id:
+            print(
+                '[Governance] Multi-Signature Quorum enabled but agent_id not set. Falling back to standard approval.'
+            )
+            return False
+
+        # Create approval request — bind the unique request_id into the signed
+        # hash so a captured peer signature cannot be replayed (SEC-09).
+        request_id = hashlib.sha256(
+            f'{self.agent_id}{call_id}{time.time()}'.encode()
+        ).hexdigest()[:16]
+        request_hash = self._generate_approval_hash(
+            tool_name, call_id, arguments, request_id=request_id
+        )
+        request = ApprovalRequest(
+            request_id=request_id,
+            tool_name=tool_name,
+            call_id=call_id,
+            arguments=arguments or {},
+            request_hash=request_hash,
+            timestamp=time.time(),
+            requester_agent_id=self.agent_id,
+        )
+
+        # Broadcast approval request to peers
+        print(
+            f'[Governance] Multi-Signature Quorum is enabled. Seeking {self.multi_sig_config.required_approvals} peer approvals...'
+        )
+        print(
+            f'[Broadcast...] Sending JIT signature requests to peers {self.multi_sig_config.peer_agent_ids}...'
+        )
+
+        # In a real implementation, this would broadcast via teaagent sync
+        # For now, we simulate the quorum check
+        signatures = self._collect_peer_signatures(request)
+
+        if len(signatures) >= self.multi_sig_config.required_approvals:
+            print(
+                f'[✓] Quorum Reached ({len(signatures)}/{self.multi_sig_config.required_approvals} approvals).'
+            )
+            for sig in signatures:
+                print(
+                    f'[{sig.peer_id}]: SIGNED (SSH-Key-ID: {sig.ssh_key_id or "unknown"})'
+                )
+            return True
+        else:
+            print(
+                f'[✗] Quorum Not Reached ({len(signatures)}/{self.multi_sig_config.required_approvals} required).'
+            )
+            return False
+
+    def _generate_approval_hash(
+        self,
+        tool_name: str,
+        call_id: str,
+        arguments: dict[str, Any] | None,
+        *,
+        request_id: str = '',
+        run_id: str = '',
+    ) -> str:
+        """Generate the canonical approval-request hash (see _multisig_crypto)."""
+        from teaagent.approval._multisig_crypto import generate_approval_hash
+
+        return generate_approval_hash(
+            tool_name, call_id, arguments, request_id=request_id, run_id=run_id
+        )
+
+    def _collect_peer_signatures(self, request: ApprovalRequest) -> list[PeerSignature]:
+        """Collect peer signatures for approval request.
+
+        This integrates with federated_sync to:
+        1. Broadcast the request via teaagent sync to peer agents
+        2. Wait for peers to sign with their SSH keys
+        3. Collect and verify signatures
+        """
+        from teaagent.approval._multisig_crypto import resolve_allow_dev_signatures
+        from teaagent.security_env import allow_dev_signatures as env_allow_dev
+
+        # SEC-15: fail closed before any broadcast when dev-hash signatures
+        # would be honored over a non-loopback relay (they bypass SSH auth).
+        allow_dev = resolve_allow_dev_signatures(
+            self.multi_sig_config, env_enabled=env_allow_dev()
+        )
+        try:
+            from teaagent.federated_sync import (
+                ApprovalRequestMessage,
+                FederatedGraphSync,
+            )
+        except ImportError:
+            # Federated sync not available - return empty list (no quorum)
+            logger.warning('Federated sync not available for multi-sig quorum')
+            return []
+
+        # Initialize federated sync for P2P broadcast
+        sync = FederatedGraphSync(
+            root=self.workspace_root,
+            agent_id=self.agent_id or 'unknown',
+        )
+
+        # Create approval request message for broadcast
+        submit_url = None
+        local_relay = self.multi_sig_config.local_relay_base_url
+        if local_relay:
+            submit_url = f'{local_relay.rstrip("/")}/api/v1/approval-signatures'
+
+        approval_request = ApprovalRequestMessage(
+            request_id=request.request_id,
+            tool_name=request.tool_name,
+            call_id=request.call_id,
+            arguments=request.arguments or {},
+            request_hash=request.request_hash,
+            timestamp=request.timestamp,
+            requester_agent_id=request.requester_agent_id,
+            required_approvals=self.multi_sig_config.required_approvals,
+            timeout_seconds=self.multi_sig_config.timeout_seconds,
+            signature_submit_url=submit_url,
+        )
+
+        # Broadcast to configured peer agents
+        sync.broadcast_approval_request(
+            approval_request,
+            self.multi_sig_config.peer_agent_ids,
+            peer_relay_urls=self.multi_sig_config.peer_relay_urls,
+        )
+
+        # Collect signatures from peers — offload async to avoid event loop starvation
+        signature_messages = self._run_async_signature_collection(
+            sync,
+            request.request_id,
+            required_approvals=self.multi_sig_config.required_approvals,
+            relay_base_url=local_relay,
+        )
+
+        # Convert signature messages to PeerSignature objects with verification
+        peer_signatures = []
+        for sig_msg in signature_messages:
+            message_to_verify = request.request_hash
+            is_valid = _verify_ssh_signature(
+                signature=sig_msg.signature,
+                message=message_to_verify,
+                ssh_key_id=sig_msg.peer_id,
+                peer_public_keys=self.multi_sig_config.peer_public_keys,
+                allow_dev_signatures=allow_dev,
+            )
+
+            if not is_valid:
+                print(
+                    f'[Security] Rejected invalid signature from peer {sig_msg.peer_id}'
+                )
+                continue
+
+            peer_sig = PeerSignature(
+                peer_id=sig_msg.peer_id,
+                signature=sig_msg.signature,
+                timestamp=sig_msg.timestamp,
+                ssh_key_id=sig_msg.ssh_key_id,
+            )
+            peer_signatures.append(peer_sig)
+
+        return peer_signatures
+
+    def _run_async_signature_collection(
+        self,
+        sync: Any,
+        request_id: str,
+        *,
+        required_approvals: int = 1,
+        relay_base_url: str | None = None,
+    ) -> Any:
+        """Run async signature collection without starving the event loop.
+
+        Detects whether an event loop is active and dispatches accordingly:
+        - If called from a thread with a running event loop, offloads to a
+          ThreadPoolExecutor so the coroutine runs in a fresh thread with its
+          own event loop (avoids ``RuntimeError: Cannot run the event loop
+          from within a running event loop``).
+        - Otherwise, runs the coroutine via ``asyncio.run()``.
+        """
+        coro = sync.collect_approval_signatures(
+            request_id,
+            timeout_seconds=self.multi_sig_config.timeout_seconds,
+            required_approvals=required_approvals,
+            relay_base_url=relay_base_url,
+        )
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop is not None and loop.is_running():
+            from teaagent.async_bridge import run_coroutine_sync
+
+            timeout = self.multi_sig_config.timeout_seconds + 5
+            return run_coroutine_sync(
+                coro,
+                executor=self._signature_executor,
+                timeout_seconds=timeout,
+            )
+        return asyncio.run(coro)
+
+    def __del__(self) -> None:
+        with contextlib.suppress(Exception):
+            self._signature_executor.shutdown(wait=False, cancel_futures=True)

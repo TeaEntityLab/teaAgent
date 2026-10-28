@@ -12,6 +12,7 @@ import pytest
 from teaagent.approval import (
     JITApprovalManager,
     MultiSigQuorumConfig,
+    MultiSigQuorumManager,
     parse_permission_mode,
 )
 from teaagent.ergonomics.approval_store import ApprovalPresetStore
@@ -958,61 +959,32 @@ def test_policy_with_multi_sig_disabled() -> None:
         )
 
 
-def test_high_risk_detection_default_patterns() -> None:
-    """Verify default high-risk pattern detection."""
-    config = MultiSigQuorumConfig(enabled=True, required_approvals=2)
-    policy = ApprovalPolicy(
-        permission_mode=PermissionMode.PROMPT,
-        multi_sig_config=config,
-        agent_id='test-agent',
-    )
-
-    # Should detect /prod path as high-risk
-    assert policy._is_high_risk_operation(
-        'workspace_write_file', {'path': '/prod/config.json'}
-    )
-
-    # Should detect /production path in arguments
-    assert policy._is_high_risk_operation(
-        'workspace_run_shell_mutate', {'command': 'deploy /production/app'}
-    )
-
-    # Should detect delete operations
-    assert policy._is_high_risk_operation(
-        'workspace_run_shell_mutate', {'command': 'rm -rf /tmp'}
-    )
-
-
 def test_high_risk_detection_custom_patterns() -> None:
-    """Verify custom high-risk pattern detection."""
+    """Verify custom high-risk pattern detection on the live multi-sig manager."""
     config = MultiSigQuorumConfig(
         enabled=True, high_risk_patterns=['/critical', 'deploy']
     )
-    policy = ApprovalPolicy(
-        permission_mode=PermissionMode.PROMPT,
-        multi_sig_config=config,
-        agent_id='test-agent',
-    )
+    manager = MultiSigQuorumManager(config=config, agent_id='test-agent')
 
     # Should detect custom patterns
-    assert policy._is_high_risk_operation(
-        'workspace_write_file', {'path': '/critical/data.json'}
-    )
+    assert manager.is_high_risk('workspace_write_file', {'path': '/critical/data.json'})
 
-    assert policy._is_high_risk_operation(
+    assert manager.is_high_risk(
         'workspace_run_shell_mutate', {'command': './deploy.sh'}
     )
 
 
 def test_approval_request_hash_generation() -> None:
-    """Verify approval request hash generation is deterministic."""
-    policy = ApprovalPolicy(agent_id='test-agent')
+    """Verify approval request hash generation is deterministic (live manager)."""
+    manager = MultiSigQuorumManager(
+        config=MultiSigQuorumConfig(enabled=True), agent_id='test-agent'
+    )
 
-    hash1 = policy._generate_approval_hash(
+    hash1 = manager._generate_approval_hash(
         'workspace_write_file', 'call-1', {'path': 'test.txt'}
     )
 
-    hash2 = policy._generate_approval_hash(
+    hash2 = manager._generate_approval_hash(
         'workspace_write_file', 'call-1', {'path': 'test.txt'}
     )
 
@@ -1020,7 +992,7 @@ def test_approval_request_hash_generation() -> None:
     assert hash1 == hash2
 
     # Different inputs should produce different hash
-    hash3 = policy._generate_approval_hash(
+    hash3 = manager._generate_approval_hash(
         'workspace_write_file', 'call-1', {'path': 'different.txt'}
     )
     assert hash1 != hash3
@@ -1045,20 +1017,18 @@ def test_multi_sig_quorum_without_agent_id() -> None:
         )
 
 
-@pytest.mark.skip(
-    reason='Multi-sig quorum requires federated_sync P2P broadcast — integration test, not unit-testable'
-)
-def test_multi_sig_quorum_stub_returns_false() -> None:
-    """Verify stub implementation returns False (no quorum)."""
-    config = MultiSigQuorumConfig(enabled=True, required_approvals=2)
-    policy = ApprovalPolicy(
-        permission_mode=PermissionMode.PROMPT,
-        multi_sig_config=config,
-        agent_id='test-agent',
-    )
+def test_multi_sig_quorum_stub_returns_false(monkeypatch: pytest.MonkeyPatch) -> None:
+    """With no peer signatures collected, the live quorum check does not reach quorum.
 
-    # Stub implementation should return False (no signatures collected)
-    result = policy._check_multi_sig_quorum(
+    Retargeted from the archived ``ApprovalPolicy._check_multi_sig_quorum``. The peer
+    broadcast is replaced by an empty signature list, so no P2P transport is needed
+    and the test is no longer skipped.
+    """
+    config = MultiSigQuorumConfig(enabled=True, required_approvals=2)
+    manager = MultiSigQuorumManager(config=config, agent_id='test-agent')
+    monkeypatch.setattr(manager, '_collect_peer_signatures', lambda request: [])
+
+    result = manager.check_quorum(
         'workspace_write_file', 'call-1', {'path': '/prod/config.json'}
     )
 
@@ -1190,25 +1160,6 @@ def test_root_path_globs_star_accepted() -> None:
         )
         assert grant is not None
         assert '*' in grant.path_globs
-
-
-def test_del_shuts_down_signature_executor() -> None:
-    """ENG-01: __del__ must shut down the ThreadPoolExecutor to prevent thread leaks."""
-    policy = ApprovalPolicy()
-    executor = policy._signature_executor
-    policy.__del__()
-    with pytest.raises(RuntimeError):
-        executor.submit(lambda: None)
-
-
-def test_del_is_safe_to_call_twice() -> None:
-    policy = ApprovalPolicy()
-    executor = policy._signature_executor
-    policy.__del__()
-    policy.__del__()  # must not raise
-    # The executor stays shut down after repeated __del__ calls.
-    with pytest.raises(RuntimeError):
-        executor.submit(lambda: None)
 
 
 def test_prompt_auto_denies_on_timeout() -> None:
