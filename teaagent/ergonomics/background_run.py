@@ -108,6 +108,7 @@ class BackgroundRunStore:
             )
         finally:
             log_handle.close()
+        _SPAWNED[proc.pid] = proc
         record = BackgroundRunRecord(
             background_id=background_id,
             pid=proc.pid,
@@ -262,6 +263,22 @@ def _exit_code_from_wait_status(status: int) -> int:
     if os.WIFSIGNALED(status):
         return -os.WTERMSIG(status)
     return status
+
+
+# Popen handles for children this process started, keyed by pid. Dropping a
+# Popen whose child has already exited makes Popen.__del__ call waitpid itself,
+# which reaps the child and discards its status before the store can read it.
+# Holding the handle here until the pid is reaped keeps the reap in
+# _refresh_process_state/_reap, where the real exit code is recorded.
+_SPAWNED: dict[int, subprocess.Popen[bytes]] = {}
+
+
+def _release_spawned(pid: int, exit_code: Optional[int]) -> None:
+    """Drop the handle for ``pid`` once it is no longer alive."""
+    proc = _SPAWNED.pop(pid, None)
+    if proc is not None and exit_code is not None:
+        # Record the known status so Popen.__del__ does not poll again.
+        proc.returncode = exit_code
 
 
 def _process_exists(pid: int) -> bool:
@@ -478,6 +495,7 @@ def _refresh_process_state(
 
     data['alive'] = alive
     if not alive:
+        _release_spawned(pid, exit_code)
         data['stopped_at'] = _utc_now()
         if exit_code is not None:
             data['exit_code'] = exit_code
@@ -503,12 +521,15 @@ def _refresh_process_state(
 
 def _reap(pid: int) -> bool:
     try:
-        finished_pid, _ = os.waitpid(pid, os.WNOHANG)
+        finished_pid, status = os.waitpid(pid, os.WNOHANG)
     except ChildProcessError:
         return False
     except OSError:
         return False
-    return finished_pid == pid
+    if finished_pid == pid:
+        _release_spawned(pid, _exit_code_from_wait_status(status))
+        return True
+    return False
 
 
 def _is_alive(pid: int) -> bool:
