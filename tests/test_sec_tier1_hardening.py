@@ -20,7 +20,6 @@ from teaagent.approval_manager import (
 from teaagent.audit import AuditLogger
 from teaagent.budget import RunBudget
 from teaagent.errors import ConfigError, DenialReasonCode, ToolPermissionError
-from teaagent.policy import ApprovalPolicy
 from teaagent.runner import AgentRunner, FinalAnswer
 from teaagent.tools import ToolRegistry
 
@@ -127,35 +126,18 @@ def test_preapproved_call_ids_blocked_when_disabled(
 # --- SEC-09: single-source approval hash eliminates the replay window ---
 
 
-def test_policy_approval_hash_binds_request_id() -> None:
-    """SEC-09: the ApprovalPolicy hash (previously a replayable 1-hour bucket)
-    now binds the unique request_id, so a captured signature cannot be replayed.
-    """
-    policy = ApprovalPolicy(agent_id='agent-a')
-    hash_a = policy._generate_approval_hash(
-        'workspace_write_file', 'call-1', {'path': 'a.txt'}, request_id='req-a'
-    )
-    hash_b = policy._generate_approval_hash(
-        'workspace_write_file', 'call-1', {'path': 'a.txt'}, request_id='req-b'
-    )
-    assert hash_a != hash_b
-
-
 def test_approval_hash_is_single_source_of_truth() -> None:
-    """SEC-09: policy, manager, and the canonical helper agree — no drift."""
+    """SEC-09: the live manager and the canonical helper agree — no drift.
+
+    The ApprovalPolicy copy of this check was removed with the archived
+    duplicate multi-sig path (A-P1-7).
+    """
     args = {'path': 'a.txt'}
     canonical = generate_approval_hash(
         'workspace_write_file', 'call-1', args, request_id='req-1'
     )
-    policy = ApprovalPolicy(agent_id='agent-a')
     manager = MultiSigQuorumManager(
         config=MultiSigQuorumConfig(enabled=True), agent_id='agent-a'
-    )
-    assert (
-        policy._generate_approval_hash(
-            'workspace_write_file', 'call-1', args, request_id='req-1'
-        )
-        == canonical
     )
     assert (
         manager._generate_approval_hash(

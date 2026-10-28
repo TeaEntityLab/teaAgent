@@ -156,8 +156,16 @@ def _override_active() -> str | None:
     """Return the override reason if weakening is explicitly allowed, else None."""
     if os.environ.get('ALLOW_TEST_WEAKENING') == '1':
         return 'env ALLOW_TEST_WEAKENING=1'
-    code, msg = _git(['log', '-1', '--pretty=%B'])
-    if code == 0:
+    refs = ['HEAD']
+    # On pull_request CI, HEAD is GitHub's synthetic merge commit; the PR
+    # head (and its trailer) is the merge's second parent.
+    code, parents = _git(['rev-list', '--parents', '-n1', 'HEAD'])
+    if code == 0 and len(parents.split()) > 2:
+        refs.append('HEAD^2')
+    for ref in refs:
+        code, msg = _git(['log', '-1', '--pretty=%B', ref])
+        if code != 0:
+            continue
         for line in msg.splitlines():
             if line.lower().startswith('allow-test-weakening:'):
                 reason = line.split(':', 1)[1].strip()

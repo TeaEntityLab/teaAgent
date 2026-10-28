@@ -1,0 +1,129 @@
+# ARCHIVED 2026-10-28 (A-P1-7, owner decision Q3 on the approval split plan, 2026-10-27).
+#
+# Tests that exercised only the archived ApprovalPolicy multi-sig / high-risk path
+# (see policy-multisig-highrisk-2026-10-28.py.txt). They were removed from tests/ with
+# that code. Text is verbatim from the origin commit f92e776d; not executable.
+#
+# Sections:
+#   1. tests/test_policy.py: test_high_risk_detection_default_patterns (origin lines 961-985)
+#   2. tests/test_policy.py: ApprovalPolicy executor __del__ tests (origin lines 1195-1213)
+#   3. tests/test_shell_obfuscation_adversarial.py: _make_policy and the high-risk tests
+#      (origin lines 237-end)
+#   4. tests/test_sec_tier1_hardening.py: test_policy_approval_hash_binds_request_id
+#      (origin lines 130-143); the live duplicate is test_multisig_hash_binds_unique_request_id
+#
+# Retargeted, not archived (the original text is in git history at f92e776d):
+#   - tests/test_policy.py: test_high_risk_detection_custom_patterns -> MultiSigQuorumManager.is_high_risk
+#   - tests/test_policy.py: test_approval_request_hash_generation -> MultiSigQuorumManager
+#   - tests/test_policy.py: test_multi_sig_quorum_stub_returns_false -> MultiSigQuorumManager.check_quorum
+#     (was @pytest.mark.skip; now unskipped, with the peer broadcast stubbed)
+#   - tests/test_shell_obfuscation_adversarial.py: the five high-risk cases -> MultiSigQuorumManager.is_high_risk
+#   - tests/test_approval_async_from_sync.py: test_policy_signature_collection_from_running_loop
+#     -> test_multisig_signature_collection_from_running_loop (MultiSigQuorumManager)
+#   - tests/test_sec_tier1_hardening.py: test_approval_hash_is_single_source_of_truth lost its
+#     ApprovalPolicy assertion; the manager and canonical-helper assertion is unchanged.
+
+# ---- 1. tests/test_policy.py (origin lines 961-985) ----
+def test_high_risk_detection_default_patterns() -> None:
+    """Verify default high-risk pattern detection."""
+    config = MultiSigQuorumConfig(enabled=True, required_approvals=2)
+    policy = ApprovalPolicy(
+        permission_mode=PermissionMode.PROMPT,
+        multi_sig_config=config,
+        agent_id='test-agent',
+    )
+
+    # Should detect /prod path as high-risk
+    assert policy._is_high_risk_operation(
+        'workspace_write_file', {'path': '/prod/config.json'}
+    )
+
+    # Should detect /production path in arguments
+    assert policy._is_high_risk_operation(
+        'workspace_run_shell_mutate', {'command': 'deploy /production/app'}
+    )
+
+    # Should detect delete operations
+    assert policy._is_high_risk_operation(
+        'workspace_run_shell_mutate', {'command': 'rm -rf /tmp'}
+    )
+
+
+# ---- 2. tests/test_policy.py (origin lines 1195-1213) ----
+def test_del_shuts_down_signature_executor() -> None:
+    """ENG-01: __del__ must shut down the ThreadPoolExecutor to prevent thread leaks."""
+    policy = ApprovalPolicy()
+    executor = policy._signature_executor
+    policy.__del__()
+    with pytest.raises(RuntimeError):
+        executor.submit(lambda: None)
+
+
+def test_del_is_safe_to_call_twice() -> None:
+    policy = ApprovalPolicy()
+    executor = policy._signature_executor
+    policy.__del__()
+    policy.__del__()  # must not raise
+    # The executor stays shut down after repeated __del__ calls.
+    with pytest.raises(RuntimeError):
+        executor.submit(lambda: None)
+
+
+# ---- 3. tests/test_shell_obfuscation_adversarial.py (origin lines 237-end) ----
+def _make_policy() -> ApprovalPolicy:
+    return ApprovalPolicy()
+
+
+def test_dollar_sub_detected_as_high_risk() -> None:
+    policy = _make_policy()
+    assert policy._is_high_risk_operation(
+        'workspace_run_shell_mutate',
+        {'command': 'echo $(echo /prod/config)'},
+    )
+
+
+def test_backtick_detected_as_high_risk() -> None:
+    policy = _make_policy()
+    assert policy._is_high_risk_operation(
+        'workspace_run_shell_mutate',
+        {'command': 'deploy `echo /production`'},
+    )
+
+
+def test_brace_expansion_detected_as_high_risk() -> None:
+    policy = _make_policy()
+    assert policy._is_high_risk_operation(
+        'workspace_run_shell_mutate',
+        {'command': 'rm -rf /pr{od,oduction}'},
+    )
+
+
+def test_chained_command_detected_as_high_risk() -> None:
+    policy = _make_policy()
+    assert policy._is_high_risk_operation(
+        'workspace_run_shell_mutate',
+        {'command': 'echo safe && rm -rf /prod'},
+    )
+
+
+def test_safe_command_not_flagged() -> None:
+    policy = _make_policy()
+    assert not policy._is_high_risk_operation(
+        'workspace_run_shell_mutate',
+        {'command': 'pytest tests/'},
+    )
+# ---- 4. tests/test_sec_tier1_hardening.py (origin lines 130-143) ----
+def test_policy_approval_hash_binds_request_id() -> None:
+    """SEC-09: the ApprovalPolicy hash (previously a replayable 1-hour bucket)
+    now binds the unique request_id, so a captured signature cannot be replayed.
+    """
+    policy = ApprovalPolicy(agent_id='agent-a')
+    hash_a = policy._generate_approval_hash(
+        'workspace_write_file', 'call-1', {'path': 'a.txt'}, request_id='req-a'
+    )
+    hash_b = policy._generate_approval_hash(
+        'workspace_write_file', 'call-1', {'path': 'a.txt'}, request_id='req-b'
+    )
+    assert hash_a != hash_b
+
+
