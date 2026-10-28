@@ -320,10 +320,39 @@ class JITApprovalManager:
         self,
         enable_jit_prompt: bool = True,
         approval_timeout_seconds: float = _JIT_APPROVAL_TIMEOUT_SECONDS,
+        approval_store: ApprovalPresetStore | None = None,
+        permission_mode: str = PermissionMode.PROMPT.value,
     ) -> None:
         self.jit_state = JITApprovalState()
         self.enable_jit_prompt = enable_jit_prompt
         self.approval_timeout_seconds = approval_timeout_seconds
+        self.approval_store = approval_store
+        self.permission_mode = permission_mode
+
+    def _deny_preset_matches(
+        self, tool_name: str, arguments: dict[str, object] | None
+    ) -> bool:
+        """Return True when a deny preset blocks this tool call.
+
+        Mirrors the deny check in ``ApprovalManager.assert_allowed`` (owner
+        decision 2026-10-27: a deny preset is terminal over grants). With
+        ``arguments=None`` the payload is unknown, so path- or command-scoped
+        denies cannot be evaluated; the check fails closed and treats any deny
+        grant recorded for the tool as a match.
+        """
+        if self.approval_store is None:
+            return False
+        if arguments is None:
+            return any(
+                grant.scope == 'deny' and grant.tool_name == tool_name
+                for grant in self.approval_store.list_grants()
+            )
+        decision = self.approval_store.check(
+            tool_name,
+            permission_mode=self.permission_mode,
+            arguments=arguments,
+        )
+        return decision.get('decision') == 'deny'
 
     def is_approved(
         self,
@@ -331,7 +360,15 @@ class JITApprovalManager:
         tool_name: str,
         call_id: str,
         payload_digest: str | None = None,
+        arguments: dict[str, object] | None = None,
     ) -> bool:
+        """Peek whether a call is approved. Never consumes a once grant.
+
+        A matched deny preset is checked first and wins over session and once
+        grants, matching ``assert_allowed``.
+        """
+        if self._deny_preset_matches(tool_name, arguments):
+            return False
         return self.jit_state.is_tool_session_approved(tool_name) or (
             self.jit_state.is_call_approved(call_id, payload_digest)
         )
@@ -869,7 +906,11 @@ class ApprovalManager:
             from teaagent.approval.backend import backend_from_mode
 
             self._approval_backend = backend_from_mode(permission_mode)
-        self._jit_manager = JITApprovalManager(enable_jit_prompt=enable_jit_prompt)
+        self._jit_manager = JITApprovalManager(
+            enable_jit_prompt=enable_jit_prompt,
+            approval_store=approval_store,
+            permission_mode=permission_mode.value,
+        )
         self._multisig_manager = MultiSigQuorumManager(
             config=self.multi_sig_config,
             agent_id=agent_id,

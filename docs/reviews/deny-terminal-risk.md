@@ -19,7 +19,7 @@
 - **Blast radius.**
   - Only calls that match an explicit deny preset change outcome. They change from allowed to `POLICY_DENIED` in every permission mode where the grant applies.
   - A session approval or once grant can no longer override a deny preset. No other call changes outcome.
-  - `ApprovalManager.is_approved` (`teaagent/approval/manager.py:335`) still returns True for a session-approved tool even under a deny preset. It has no callers in `teaagent/` (the `is_approved` hits under `teaagent/consensus/` are a different class). It is a query, not an allow path, and is left unchanged; flagged below.
+  - `JITApprovalManager.is_approved` (`teaagent/approval/manager.py`) returned True for a session-approved tool even under a deny preset. It has no callers in `teaagent/` (the `is_approved` hits under `teaagent/consensus/` are a different class). It is a query, not an allow path; it is made deny-aware in the `is_approved` section below.
 - **Failure modes.**
   - A user who relied on a session approval to override a deny preset is now blocked. The escape hatch is `teaagent approval revoke <deny_grant_id>`; the falsifier test pins it.
   - A once grant is now left in place when a call is denied, so it stays available for a later call with the same payload. That is the intended "not consumed on denial" behaviour, but the grant's lifetime is now longer than before for denied attempts. It is still bound to the exact call id and payload digest.
@@ -28,7 +28,11 @@
 - **Not changed.**
   - Permission-mode denials (`READ_ONLY_MODE`, `WORKSPACE_WRITE_MODE`, `PLAN_CONTRACT_DENIED`, `FULL_ACCESS_NOT_ACKNOWLEDGED`) still run before every grant, as before.
   - Workspace-path and protected-skill-path checks still run before the grant checks, as before.
-  - `is_approved` (`manager.py:335`) keeps its current behaviour; no caller depends on the deny-aware answer today. Owner decision needed if a caller is added.
+  - `is_approved` is now deny-aware; see the `is_approved` section below.
+
+## `is_approved` (owner decision 2026-10-28)
+
+`JITApprovalManager.is_approved` (`teaagent/approval/manager.py`, the method the owner called `ApprovalManager.is_approved`) is now deny-aware. It takes an optional `arguments` and checks a matched deny preset before any session or once logic, so it returns False for a session-approved or once-granted call that a deny preset blocks. It never consumes a once grant. With `arguments=None` the payload is unknown, so path- and command-scoped denies cannot be evaluated; the check fails closed and treats any deny grant recorded for the tool as a match. `ApprovalManager` passes its approval store and permission mode into the manager, so the peek agrees with `assert_allowed`. `assert_allowed` itself is unchanged. Tests: `tests/test_deny_preset_terminal_over_grants.py`, four `is_approved` cases (deny + session False, deny + once False with the grant unconsumed, no-deny control True, path-scoped deny).
 
 ## Dry run and rollback
 
@@ -49,4 +53,4 @@
 
 ## Decision
 
-Proceed to human review. The change aligns code with the owner decision of 2026-10-27 and does not change any non-deny decision. **Human review gate: OPEN.** The owner should confirm that (a) a session or once grant must never override a deny preset, and (b) `ApprovalManager.is_approved` remains a non-deny-aware query until a caller needs otherwise.
+Proceed to human review. The change aligns code with the owner decision of 2026-10-27 and does not change any non-deny decision. **Human review gate: OPEN.** The owner should confirm that (a) a session or once grant must never override a deny preset, and (b) the fail-closed tool-level deny check in `is_approved` (used when no arguments are passed) is acceptable.

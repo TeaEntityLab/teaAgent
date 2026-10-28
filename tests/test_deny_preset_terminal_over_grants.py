@@ -16,6 +16,8 @@ Pinned behaviour:
   with a session or once grant on the runner's coordinator and a deny preset: the
   tool handler never runs and the audit records ``policy_denied``.
 - Control: with no deny preset, session and once grants still allow the call.
+- ``JITApprovalManager.is_approved``: a matched deny preset returns False before any
+  session or once logic; without arguments it fails closed on any tool-level deny.
 - Falsifier: revoking the deny grant restores the session allow.
 """
 
@@ -29,6 +31,7 @@ import pytest
 
 from teaagent.approval.manager import (
     ApprovalManager,
+    JITApprovalManager,
     JITApprovalState,
     PermissionMode,
 )
@@ -191,6 +194,93 @@ def test_no_deny_preset_session_and_once_still_allow(tmp_path: Path) -> None:
     )
     # The allowed once grant is consumed, as before.
     assert _CALL_ID not in once_manager.get_jit_state().approved_call_ids
+
+
+# --- JITApprovalManager.is_approved (peek used by callers outside assert_allowed)
+
+
+def _jit_with_store(root: Path) -> JITApprovalManager:
+    return JITApprovalManager(
+        enable_jit_prompt=False,
+        approval_store=ApprovalPresetStore(root),
+        permission_mode=PermissionMode.PROMPT.value,
+    )
+
+
+def test_is_approved_false_for_session_approved_tool_under_deny(
+    tmp_path: Path,
+) -> None:
+    """deny + session approval -> is_approved is False (deny is terminal)."""
+    ApprovalPresetStore(tmp_path).deny(_TOOL, path_globs=['*'])
+    jit = _jit_with_store(tmp_path)
+    jit.jit_state.approve_session(_TOOL)
+
+    assert (
+        jit.is_approved(tool_name=_TOOL, call_id=_CALL_ID, arguments=dict(_ARGS))
+        is False
+    )
+    # Also false when the caller cannot supply arguments (fail-closed).
+    assert jit.is_approved(tool_name=_TOOL, call_id=_CALL_ID) is False
+
+
+def test_is_approved_false_under_deny_and_once_grant_stays_unconsumed(
+    tmp_path: Path,
+) -> None:
+    """deny + once grant -> is_approved is False and the grant is left in place."""
+    ApprovalPresetStore(tmp_path).deny(_TOOL, path_globs=['*'])
+    jit = _jit_with_store(tmp_path)
+    digest = compute_scoped_payload_digest(_TOOL, dict(_ARGS))
+    jit.jit_state.approve_once(_CALL_ID, payload_digest=digest)
+
+    assert (
+        jit.is_approved(
+            tool_name=_TOOL,
+            call_id=_CALL_ID,
+            payload_digest=digest,
+            arguments=dict(_ARGS),
+        )
+        is False
+    )
+    assert jit.jit_state.is_call_approved(_CALL_ID, digest)
+
+
+def test_is_approved_true_for_session_approved_tool_without_deny(
+    tmp_path: Path,
+) -> None:
+    """Control: no deny preset -> session-approved tool is approved."""
+    jit = _jit_with_store(tmp_path)
+    jit.jit_state.approve_session(_TOOL)
+
+    assert (
+        jit.is_approved(tool_name=_TOOL, call_id=_CALL_ID, arguments=dict(_ARGS))
+        is True
+    )
+
+
+def test_is_approved_path_scoped_deny_only_blocks_matching_arguments(
+    tmp_path: Path,
+) -> None:
+    """A path-scoped deny blocks matching arguments and leaves other paths alone."""
+    ApprovalPresetStore(tmp_path).deny(_TOOL, path_globs=['secret/*'])
+    jit = _jit_with_store(tmp_path)
+    jit.jit_state.approve_session(_TOOL)
+
+    assert (
+        jit.is_approved(
+            tool_name=_TOOL,
+            call_id=_CALL_ID,
+            arguments={'path': 'secret/key.txt', 'content': 'x'},
+        )
+        is False
+    )
+    assert (
+        jit.is_approved(
+            tool_name=_TOOL,
+            call_id=_CALL_ID,
+            arguments={'path': 'public/a.txt', 'content': 'x'},
+        )
+        is True
+    )
 
 
 # --- ApprovalPolicy / governed runner path -----------------------------------
