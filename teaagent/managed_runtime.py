@@ -455,6 +455,8 @@ class GoogleADKRuntime:
             app_name=self._agent_name,
             agent=agent,
             session_service=session_service,
+            # google-adk 2.13 defaults to False; 2.3 created sessions implicitly.
+            auto_create_session=True,
         )
         user_id = str(context.get('user_id', 'teaagent'))
         session_id = str(context.get('session_id', secrets.token_hex(8)))

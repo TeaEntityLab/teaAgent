@@ -10,6 +10,7 @@ Part of Tranche 2: Post-Audit Security & Concurrency Gates.
 
 from __future__ import annotations
 
+from teaagent.approval.manager import MultiSigQuorumConfig, MultiSigQuorumManager
 from teaagent.policy import ApprovalPolicy
 
 
@@ -234,45 +235,52 @@ def test_simple_command_no_obfuscation() -> None:
     assert 'tests/' in normalized
 
 
-def _make_policy() -> ApprovalPolicy:
-    return ApprovalPolicy()
+def _make_high_risk_detector() -> MultiSigQuorumManager:
+    """Live high-risk classifier with the default high-risk patterns configured."""
+    return MultiSigQuorumManager(
+        config=MultiSigQuorumConfig(
+            enabled=True,
+            high_risk_patterns=['/prod', '/production', 'rm -rf'],
+        ),
+        agent_id='test-agent',
+    )
 
 
 def test_dollar_sub_detected_as_high_risk() -> None:
-    policy = _make_policy()
-    assert policy._is_high_risk_operation(
+    detector = _make_high_risk_detector()
+    assert detector.is_high_risk(
         'workspace_run_shell_mutate',
         {'command': 'echo $(echo /prod/config)'},
     )
 
 
 def test_backtick_detected_as_high_risk() -> None:
-    policy = _make_policy()
-    assert policy._is_high_risk_operation(
+    detector = _make_high_risk_detector()
+    assert detector.is_high_risk(
         'workspace_run_shell_mutate',
         {'command': 'deploy `echo /production`'},
     )
 
 
 def test_brace_expansion_detected_as_high_risk() -> None:
-    policy = _make_policy()
-    assert policy._is_high_risk_operation(
+    detector = _make_high_risk_detector()
+    assert detector.is_high_risk(
         'workspace_run_shell_mutate',
         {'command': 'rm -rf /pr{od,oduction}'},
     )
 
 
 def test_chained_command_detected_as_high_risk() -> None:
-    policy = _make_policy()
-    assert policy._is_high_risk_operation(
+    detector = _make_high_risk_detector()
+    assert detector.is_high_risk(
         'workspace_run_shell_mutate',
         {'command': 'echo safe && rm -rf /prod'},
     )
 
 
 def test_safe_command_not_flagged() -> None:
-    policy = _make_policy()
-    assert not policy._is_high_risk_operation(
+    detector = _make_high_risk_detector()
+    assert not detector.is_high_risk(
         'workspace_run_shell_mutate',
         {'command': 'pytest tests/'},
     )

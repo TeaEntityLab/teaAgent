@@ -43,6 +43,7 @@ This directory contains all Architecture Decision Records (ADRs) for the TeaAgen
 | [0041](0041-execution-surface-unification-and-harness-thinning.md) | Execution Surface Unification and Harness Thinning | Accepted | 2026-06-30 | 2026-06-30 |
 | [0042](0042-shell-mutation-reversibility-boundary.md) | Shell-Mutation Reversibility Boundary (SEC-11) | Accepted | 2026-07-01 | 2027-01-01 (expiry review) |
 | [0043](0043-legacy-competitive-surface-quarantine.md) | Legacy-Competitive Surface Quarantine (Non-Goal Retention) | Accepted — quarantine declared 2026-09-09 | 2026-09-09 | 2026-12-09 (expiry review) |
+| [0044](0044-approval-package-layout.md) | Approval Package Layout | Proposed (human review gate open) | 2026-10-28 | - |
 
 ## ADR Categories
 
