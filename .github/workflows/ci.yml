@@ -381,7 +381,11 @@ jobs:
           # every UI merge (#96-#98). Check the merged PR head (second parent),
           # which already passed this gate on the PR. Single-parent pushes,
           # including web-UI edits, are still checked on their own message.
-          if [ "$(git rev-list --parents -n1 "$COMMIT" | wc -w)" -gt 2 ]; then
+          # Only on push: a PR head that is itself a merge (a branch synced
+          # with main) carries its own trailers, and its second parent is
+          # main's generated "Merge pull request" commit, which has none.
+          if [ "${{ github.event_name }}" = "push" ] && \
+             [ "$(git rev-list --parents -n1 "$COMMIT" | wc -w)" -gt 2 ]; then
             COMMIT="$(git rev-parse "$COMMIT^2")"
           fi
           git log --format=%B -1 "$COMMIT" > /tmp/ci_head_commit_msg.txt
