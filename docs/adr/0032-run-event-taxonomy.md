@@ -314,7 +314,7 @@ match the existing activation test
 | Key | Type | Meaning |
 | --- | --- | --- |
 | `background_id` | str | uuid4 hex, as in the record |
-| `run_id` | null | Always `null` at submit: the child mints its run id later. Backfilled only in the record, never here. |
+| `child_run_id` | null | Always `null` at submit: the child mints its run id later. Backfilled only in the record, never here. |
 | `pid` | int | Pid of the detached child |
 | `started_at` | str | ISO-8601 UTC, same value as the record |
 | `command_digest` | str | `sha256` hex of `json.dumps(command)` (the full argv, including the task text). The digest is one-way, so the task text is not written to the chain. |
@@ -326,7 +326,7 @@ after the stop record is persisted:
 | Key | Type | Meaning |
 | --- | --- | --- |
 | `background_id` | str | As above |
-| `run_id` | str or null | The child run id if the record had backfilled it at stop time, otherwise `null` |
+| `child_run_id` | str or null | The child run id if the record had backfilled it at stop time, otherwise `null` |
 | `pid` | int | Pid that was signalled (or found dead) |
 | `stop_signal` | `"SIGTERM"` or `"SIGKILL"` | The signal recorded by `stop()` (see §6 of BG-001 for the accepted race) |
 | `stopped_at` | str | ISO-8601 UTC, same value as the record |
@@ -350,8 +350,10 @@ Rules that follow from these payloads:
 
 **Destination (the choice this amendment makes).** A dedicated, append-only,
 hash-chained file in the same tenant-scoped directory as the records:
-`<BackgroundRunStore.dir>/lifecycle.jsonl`, written through
-`AuditLogger(path=...)`. The envelope `run_id` is the synthetic value
+`<BackgroundRunStore.dir>/lifecycle-<sha256(workspace root)[:12]>.jsonl`, written
+through `AuditLogger(path=...)`. The `<h>` suffix is the first 12 hex chars of
+sha256 of the resolved workspace root, so each workspace has its own chain and
+HMAC key (A1.7, owner decision 2026-10-27). The envelope `run_id` is the synthetic value
 `background:<background_id>`. Rationale:
 
 1. The schema requires a non-empty `run_id` on every event, and no parent run
@@ -398,9 +400,9 @@ protocol), the record file format, `background list/show`, the cockpit, and
 - Readers that ignore unknown `event_type` values are unaffected. The schema
   accepts any non-empty string.
 - Run-level readers (`run_store`, evidence folds, receipts) never open
-  `lifecycle.jsonl`, so they see no new events.
+  the workspace lifecycle file (`lifecycle-<h>.jsonl`), so they see no new events.
 - Rollback: stop emitting and revert the enum members and mapping entries.
-  `lifecycle.jsonl` stays on disk. It is a valid chain, and nothing reads it.
+  The workspace lifecycle file (`lifecycle-<h>.jsonl`) stays on disk. It is a valid chain, and nothing reads it.
   No migration is needed.
 - Downgrade: an older build ignores the file entirely.
 
@@ -471,7 +473,8 @@ Existing gates that must stay green:
 
 - **Q1 Destination — decided: dedicated `lifecycle.jsonl`.** The events go to
   the hash-chained `<BackgroundRunStore.dir>/lifecycle.jsonl`, not the child
-  run's log.
+  run's log. (Name superseded by the owner decision below: the file is now
+  `lifecycle-<h>.jsonl`, one per workspace.)
 - **Q2 Synthetic envelope id — follows from Q1.** `background:<background_id>`
   is the envelope `run_id` of the dedicated chain as drafted. Not asked
   separately; raise it at implementation review if a different id is wanted.
@@ -484,5 +487,17 @@ Existing gates that must stay green:
 - **Q6 Spec wording — follows from Q1.** BG-001 §3.5 says the events are
   "consumed by audit like all spine events"; with the separate chain, that
   wording is edited in the implementation change.
+- **Owner decision 2026-10-27 — payload key `child_run_id`.** The A1.2 payload
+  key `run_id` is renamed `child_run_id` in both `background_submitted` and
+  `background_stopped`. The envelope `run_id` stays `background:<background_id>`.
+  With no `run_id` payload key, `AuditLogger.record(event_type, run_id,
+  **payload)` is called normally. The private `_LifecycleAuditLogger` subclass
+  and its `_apply_audit_level` override are removed. `AuditLogger` is unchanged.
+- **Owner decision 2026-10-27 — per-workspace lifecycle file.** The file is
+  `<BackgroundRunStore.dir>/lifecycle-<sha256(workspace root)[:12]>.jsonl`
+  (`lifecycle_log_path`), not one shared `lifecycle.jsonl`. `AuditLogger` keys
+  its HMAC chain by file stem, so a per-workspace stem gives each workspace its
+  own chain key. A single shared file would make every workspace's chain verify
+  against one key.
 - **Q7 Readers — out of scope.** Whether `background list/show` or the cockpit
   shows lifecycle history is not decided here.
