@@ -97,3 +97,47 @@ def test_rename_within_file_flags_old_name() -> None:
     head = 'def test_new():\n    assert 1\n'
     regs = find_regressions('tests/x.py', base, head)
     assert [r.function for r in regs] == ['test_old']
+
+
+def _fake_git(messages: dict[str, str], parents: str):
+    """Fake ``_git``: ``log -1`` per ref, and a ``rev-list --parents`` line for HEAD."""
+
+    def fake(args: list[str]) -> tuple[int, str]:
+        if args[:2] == ['rev-list', '--parents']:
+            return 0, parents
+        if args[:2] == ['log', '-1']:
+            ref = args[-1] if len(args) > 3 else 'HEAD'
+            return (0, messages[ref]) if ref in messages else (128, '')
+        return 128, ''
+
+    return fake
+
+
+def test_override_read_from_pr_head_of_a_merge_ref(monkeypatch) -> None:
+    """On pull_request CI, HEAD is GitHub's merge commit; the trailer is on HEAD^2."""
+    monkeypatch.delenv('ALLOW_TEST_WEAKENING', raising=False)
+    monkeypatch.setattr(
+        _mod,
+        '_git',
+        _fake_git(
+            {
+                'HEAD': 'Merge abc into def',
+                'HEAD^2': 'x\n\nAllow-test-weakening: moved',
+            },
+            'merge base pr',
+        ),
+    )
+    assert _mod._override_active() == 'commit trailer: moved'
+
+
+def test_override_not_taken_from_second_parent_of_a_plain_commit(monkeypatch) -> None:
+    monkeypatch.delenv('ALLOW_TEST_WEAKENING', raising=False)
+    monkeypatch.setattr(
+        _mod,
+        '_git',
+        _fake_git(
+            {'HEAD': 'fix: plain', 'HEAD^2': 'Allow-test-weakening: ignored'},
+            'head parent',
+        ),
+    )
+    assert _mod._override_active() is None
