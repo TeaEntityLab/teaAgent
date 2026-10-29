@@ -6,7 +6,7 @@ resource: "urn:teaagent:doc:docs/roadmap-status.md"
 tags: ["teaagent", "roadmap", "status", "constitution"]
 teaagent:
   source_path: "docs/roadmap-status.md"
-  source_sha256: "428a2a55b9e0074a40da2866da965576af182b4d31ffa00b4ddbeed19bb27aa2"
+  source_sha256: "e7c6b566d2654ee9e489dbb7a78a974d3119a85953287f53fa468133c71cec75"
   docs_tier: "constitution"
   authority: "canonical"
   lifecycle: "current"
