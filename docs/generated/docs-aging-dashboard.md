@@ -41,7 +41,7 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 
 | Document | Status | Last reviewed | File mtime | Notes |
 | --- | --- | --- | --- | --- |
-| `docs/roadmap-status.md` | stale_by_mtime | 2026-10-27 | 2026-10-28 | Missing review trigger banner; File modified after last reviewed date |
+| `docs/roadmap-status.md` | stale_by_mtime | 2026-10-27 | 2026-10-29 | Missing review trigger banner; File modified after last reviewed date |
 
 ### strategy
 
@@ -79,10 +79,10 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 
 ## Corpus Cost (G5 Signal)
 
-**Total docs:** 685 (baseline 582 at diagnosis, delta +103)
-**Live corpus (non-archive):** 387
-**Archive-tier docs (total):** 298
-**Working-tier docs unreferenced by INDEX.md:** 333
+**Total docs:** 687 (baseline 582 at diagnosis, delta +105)
+**Live corpus (non-archive):** 388
+**Archive-tier docs (total):** 299
+**Working-tier docs unreferenced by INDEX.md:** 334
 
 Dead-weight candidates (working tier, not linked from INDEX.md):
 
@@ -106,7 +106,7 @@ Dead-weight candidates (working tier, not linked from INDEX.md):
 - `adr/0017-backend-adapter-interfaces.md`
 - `adr/0018-async-from-sync-pattern.md`
 - `adr/0019-phase-4-federated-swarm-consensus.md`
-- ... and 313 more
+- ... and 314 more
 
 ### Archive-tier growth (files added per month, last 6 months)
 
