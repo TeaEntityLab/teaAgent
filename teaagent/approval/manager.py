@@ -16,12 +16,16 @@ from typing import (
 
 from teaagent.approval._denial_format import format_denial_message
 from teaagent.approval._jit import (
-    _JIT_APPROVAL_TIMEOUT_SECONDS,  # noqa: F401 - kept importable from this facade
+    _JIT_APPROVAL_TIMEOUT_SECONDS as _JIT_APPROVAL_TIMEOUT_SECONDS,  # re-export
+)
+from teaagent.approval._jit import (
     JITApprovalManager,
     JITApprovalState,
 )
 from teaagent.approval._multisig import (
-    _SSH_VERIFICATION_IMPLEMENTED,  # noqa: F401 - kept importable from this facade
+    _SSH_VERIFICATION_IMPLEMENTED as _SSH_VERIFICATION_IMPLEMENTED,  # re-export
+)
+from teaagent.approval._multisig import (
     ApprovalRequest,
     MultiSigQuorumConfig,
     MultiSigQuorumManager,
@@ -34,15 +38,10 @@ from teaagent.approval._permission_mode import PermissionMode, PermissionModeEnf
 from teaagent.approval._preset_scope import ApprovalStoreManager
 from teaagent.approval._shell_normalize import _normalize_shell_arg
 from teaagent.approval._skill_protection import (
-    _CANDIDATE_SKILL_PREFIX,  # noqa: F401 - kept importable from this facade
-    _PROTECTED_SKILL_PATTERNS,  # noqa: F401 - kept importable from this facade
     _is_skill_dev_opt_in,
     is_protected_skill_path,
 )
 from teaagent.errors import DenialReasonCode, ToolPermissionError
-from teaagent.read_only_gate import (
-    read_only_runtime_block_reason,  # noqa: F401 - dir() parity
-)
 
 if TYPE_CHECKING:
     from teaagent.approval.backend import ApprovalBackend as _ApprovalBackend
