@@ -7,22 +7,11 @@ multi-sig quorum across the system.
 
 from __future__ import annotations
 
-import asyncio  # noqa: F401 - kept importable from this facade (dir() parity)
-import concurrent.futures  # noqa: F401 - kept importable from this facade (dir() parity)
-import hashlib  # noqa: F401 - kept importable from this facade (dir() parity)
 import logging
-import os  # noqa: F401 - kept importable from this facade (dir() parity)
-import re  # noqa: F401 - kept importable from this facade (dir() parity)
-import shlex  # noqa: F401 - kept importable from this facade (dir() parity)
-import sys  # noqa: F401 - kept importable from this facade (dir() parity)
-import time  # noqa: F401 - kept importable from this facade (dir() parity)
-from dataclasses import dataclass, field  # noqa: F401 - kept importable (dir() parity)
-from enum import Enum  # noqa: F401 - kept importable from this facade (dir() parity)
 from pathlib import Path
-from typing import (  # noqa: F401 - Optional kept (dir() parity)
+from typing import (
     TYPE_CHECKING,
     Any,
-    Optional,
 )
 
 from teaagent.approval._denial_format import format_denial_message
