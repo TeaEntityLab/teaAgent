@@ -2,10 +2,10 @@
 
 ## Status
 
-Proposed — 2026-10-28
+Accepted — 2026-10-29 (owner)
 
 **Decision owner:** project owner (approval split plan Q5, 2026-10-27).
-**Human Review gate:** open. This ADR is not accepted until the owner records acceptance. The split it describes is blocked on this ADR and on the review in `docs/reviews/approval-hardening-risk.md`.
+**Human Review gate:** closed. The owner accepted this ADR on 2026-10-29 after the split landed as pure moves (TeaEntityLab/teaAgent#111). The approval-hardening review it depended on shipped in TeaEntityLab/teaAgent#108.
 
 **Review trigger:** owner acceptance, or completion of the split (plan steps 0-10), whichever comes first.
 

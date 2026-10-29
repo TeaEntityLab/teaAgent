@@ -24,7 +24,6 @@ DEFAULT_EXEMPTIONS: set[str] = {
     # Known debt — tracked in the action register for future splitting.
     # See A-P2-2 (CLI handler god modules), A-P0-1 (approval queue), and
     # general architecture-debt items.
-    'teaagent/approval/manager.py',  # Approval policy core; migration completed.
     'teaagent/audit.py',  # Core audit infrastructure
     'teaagent/chat_agent.py',  # Library entry point
     'teaagent/cli/__init__.py',  # CLI root dispatch
