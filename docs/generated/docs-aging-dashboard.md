@@ -41,7 +41,7 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 
 | Document | Status | Last reviewed | File mtime | Notes |
 | --- | --- | --- | --- | --- |
-| `docs/roadmap-status.md` | stale_by_mtime | 2026-10-27 | 2026-10-28 | Missing review trigger banner; File modified after last reviewed date |
+| `docs/roadmap-status.md` | stale_by_mtime | 2026-10-27 | 2026-10-29 | Missing review trigger banner; File modified after last reviewed date |
 
 ### strategy
 
